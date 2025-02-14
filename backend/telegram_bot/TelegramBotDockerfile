@@ -1,0 +1,17 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY . .
+
+RUN apt-get update && apt-get install -y git
+
+RUN pip install --upgrade pip
+RUN pip3 install -r /app/infra/requirements.txt --no-cache-dir
+
+WORKDIR /app/telegram_bot
+
+RUN mkdir -p /logs
+
+CMD ["python3", "-m", "bot"]
+# CMD ["ls"]

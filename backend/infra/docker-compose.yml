@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: 89639339335/hotels_ai_hub_mongo:latest
+    hostname: mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    env_file:
+      - ./.env
+    healthcheck:
+      test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongosh) -eq 1
+      interval: 100s
+      # interval: 100m
+      # start_period: 30s
+
+  redis:
+    image: redis:latest
+
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  redis_storage:
+    image: redis:latest
+    volumes:
+      - redis_storage_data:/data
+
+  backend:
+    image: 89639339335/hotels_ai_hub_backend:latest
+    restart: always
+    volumes:
+      - static_value:/app/static
+      - media_value:/app/media
+    depends_on:
+      - redis
+      - mongo
+    env_file:
+      - .env
+
+
+  bot:
+    image: 89639339335/hotels_ai_hub_bot:latest
+    ports:
+      - "9999:9999"
+    restart: always
+    volumes:
+      - media_value:/app/media
+    depends_on:
+      - backend
+    env_file:
+      - .env
+
+  frontend:
+    image: 89639339335/hotels_ai_hub_frontend:latest
+    command: node .output/server/index.mjs
+    restart: always
+
+  nginx:
+    image: 89639339335/hotels_ai_hub_nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - static_value:/var/html/static
+      - media_value:/var/html/media
+    depends_on:
+      - backend
+    env_file:
+      - .env
+    command: sh -c "/app/certbot_script.sh"
+
+volumes:
+  mongo_data:
+  redis_data:
+  redis_storage_data:
+  static_value:
+  media_value:

@@ -1,0 +1,61 @@
+"""Настройки проекта."""
+import os
+from datetime import timedelta
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Загрузка переменных окружения
+load_dotenv(dotenv_path=Path("./infra/.env"))
+
+# Базовые настройки
+BASE_DIR = Path(__file__).resolve().parent.parent
+MEDIA_DIR = BASE_DIR / "media/images"
+MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+STATIC_DIR = BASE_DIR / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
+
+# Хост и протокол
+HOST = os.getenv("HOST", "localhost")
+PROTOCOL = "https" if HOST != "localhost" else "http"
+HOST_URL = f"{PROTOCOL}://{HOST}"
+FRONTEND_URL = f"{HOST_URL}:3000"
+BACKEND_URL = f"{HOST_URL}:8000"
+
+# Подключения
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "mydatabase")
+
+# OpenAI
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "change_me")
+
+# CORS
+ALLOWED_ORIGINS = [
+    HOST_URL,
+    FRONTEND_URL,
+    BACKEND_URL,
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+]
+
+# Остальные
+CHAT_TIMEOUT = timedelta(days=1)
+FLOOD_TIMEOUTS = {
+    "manual": timedelta(seconds=3),
+    "automatic": timedelta(seconds=10),
+}
+SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru"}
+
+# Instagram API настройки
+INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "change_me")
+INSTAGRAM_APP_ID = os.getenv("INSTAGRAM_APP_ID", "change_me")
+INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET", "change_me")
+INSTAGRAM_VERIFY_TOKEN = os.getenv("INSTAGRAM_VERIFY_TOKEN", "change_me")
+INSTAGRAM_BOT_NAME = os.getenv("INSTAGRAM_BOT_NAME", "change_me")
+INSTAGRAM_BOT_ID = os.getenv("INSTAGRAM_BOT_ID", "change_me")
