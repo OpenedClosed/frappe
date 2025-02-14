@@ -1302,8 +1302,8 @@
     border-color: #94a3b8;
   }
   .p-checkbox:not(.p-disabled):has(.p-checkbox-input:hover).p-highlight .p-checkbox-box {
-    border-color: #045A92;
-    background: #045A92;
+    border-color: #306345;
+    background: #306345;
     color: #ffffff;
   }
   .p-checkbox:not(.p-disabled):has(.p-checkbox-input:focus-visible) .p-checkbox-box {
@@ -1325,7 +1325,7 @@
     background-color: #f8fafc;
   }
   .p-checkbox.p-variant-filled:not(.p-disabled):has(.p-checkbox-input:hover).p-highlight .p-checkbox-box {
-    background: #045A92;
+    background: #306345;
   }
 
   .p-input-filled .p-checkbox .p-checkbox-box {
@@ -1338,7 +1338,7 @@
     background-color: #f8fafc;
   }
   .p-input-filled .p-checkbox:not(.p-disabled):has(.p-checkbox-input:hover).p-highlight .p-checkbox-box {
-    background: #045A92;
+    background: #306345;
   }
 
   .p-chips {
@@ -2038,7 +2038,7 @@
     background: #94a3b8;
   }
   .p-inputswitch:not(.p-disabled):has(.p-inputswitch-input:hover).p-highlight .p-inputswitch-slider {
-    background: #045A92;
+    background: #306345;
   }
   .p-inputswitch:not(.p-disabled):has(.p-inputswitch-input:focus-visible) .p-inputswitch-slider {
     outline: 1px solid var(--p-focus-ring-color);
@@ -2673,11 +2673,11 @@
     border-color: #94a3b8;
   }
   .p-radiobutton:not(.p-disabled):has(.p-radiobutton-input:hover).p-highlight .p-radiobutton-box {
-    border-color: #045A92;
+    border-color: #306345;
     background: #ffffff;
   }
   .p-radiobutton:not(.p-disabled):has(.p-radiobutton-input:hover).p-highlight .p-radiobutton-box .p-radiobutton-icon {
-    background-color: #045A92;
+    background-color: #306345;
   }
   .p-radiobutton:not(.p-disabled):has(.p-radiobutton-input:focus-visible) .p-radiobutton-box {
     outline: 1px solid var(--p-focus-ring-color);
@@ -3182,9 +3182,9 @@
     outline-color: transparent;
   }
   .p-button:not(:disabled):hover {
-    background: #045A92;
+    background: #306345;
     color: #ffffff;
-    border-color: #045A92;
+    border-color: #306345;
   }
   .p-button:not(:disabled):active {
     background: #0e7490;
@@ -3668,13 +3668,13 @@
   }
 
   .p-button.p-button-link {
-    color: #045A92;
+    color: #306345;
     background: transparent;
     border: transparent;
   }
   .p-button.p-button-link:not(:disabled):hover {
     background: transparent;
-    color: #045A92;
+    color: #306345;
     border-color: transparent;
   }
   .p-button.p-button-link:not(:disabled):hover .p-button-label {
@@ -3687,7 +3687,7 @@
   }
   .p-button.p-button-link:not(:disabled):active {
     background: transparent;
-    color: #045A92;
+    color: #306345;
     border-color: transparent;
   }
 
@@ -7008,7 +7008,7 @@
     right: -0.875rem;
   }
   .p-overlaypanel .p-overlaypanel-close:enabled:hover {
-    background: #045A92;
+    background: #306345;
     color: #ffffff;
   }
   .p-overlaypanel:after {
@@ -7397,9 +7397,9 @@
   }
 
   .p-fileupload-choose:not(.p-disabled):hover {
-    background: #045A92;
+    background: #306345;
     color: #ffffff;
-    border-color: #045A92;
+    border-color: #306345;
   }
   .p-fileupload-choose:not(.p-disabled):active {
     background: #0e7490;
