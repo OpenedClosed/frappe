@@ -10,7 +10,7 @@
     <Button
       icon="pi pi-comments"
       label="Open Chat"
-      class="chat-toggle-button"
+      class="chat-toggle-button text-white"
       @click="toggleChat"
     />
 

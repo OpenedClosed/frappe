@@ -119,10 +119,6 @@ export default defineI18nConfig(() => {
       ru: {
         chat: "Чат",
         newChat: "Новый чат",
-        "chatMode": {
-          "auto": "🤖",
-          "manual": "👨‍💼"
-        },
         sendMessage: "Отправить сообщение...",
         chatAgain: "Начать заново",
         language: "Язык",

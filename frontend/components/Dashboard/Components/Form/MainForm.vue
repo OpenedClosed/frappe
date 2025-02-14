@@ -53,7 +53,7 @@
           <Button v-else label="Создать запись" icon="pi pi-check" @click="createItem" />
 
           <!-- Special button for chat_sessions entity -->
-          <Button v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
+          <Button  v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
 
           <!-- Navigation: go back to list -->
           <Button label="Назад к списку" icon="pi pi-arrow-left" class="p-button-text" @click="goBack" />

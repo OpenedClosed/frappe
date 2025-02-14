@@ -4,8 +4,9 @@
       <!-- Left Section: Title -->
       <h2 class="font-bold">PaNa Medica</h2>
         <!-- Toggle Container -->
+
         <div class="flex items-center gap-2 bg-light dark:bg-gray-300 px-4  py-1 md:py-2 rounded-lg shadow ml-4">
-          <span class="text-lg font-medium">{{ t("chatMode.manual") }}</span>
+          <span class="text-lg font-medium">👨‍💼</span>
           
           <!-- PrimeVue InputSwitch with Tailwind classes -->
           <InputSwitch
@@ -13,7 +14,7 @@
             :class="inputSwitchClasses"
           />
 
-          <span class="text-lg font-medium">{{ t("chatMode.auto") }}</span>
+          <span class="text-lg font-medium">🤖</span>
         </div>
     </div>
     <!-- Right Section: Toggle + Menu Button -->
