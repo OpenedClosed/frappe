@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <Menubar class="rounded-none">
+    <Menubar class="rounded-none bg-primary ">
       <template #start>
         <div class="flex flex-row items-center justify-between">
           <Button text icon="pi pi-bars" class="xl:hidden" @click="isSidebarOpen = true" aria-label="Menu" />
@@ -16,6 +16,7 @@
             :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
             type="button"
             label="Администратор"
+            class="text-white"
             @click="toggle"
             aria-haspopup="true"
             aria-controls="overlay_tmenu"

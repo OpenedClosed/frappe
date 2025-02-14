@@ -13,12 +13,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#1089EA',      
-        light: '#40A0EE',      
-        secondary: '#076497',    
-        secondaryDark: '#033A55',
-        accent: '#FA7642',       
-        accentDark: '#9E2D00',   
+        // Primary green
+        primary: '#458457',
+        // A lighter tint of the primary green
+        light: '#63a475',
+        // A slightly darker green
+        secondary: '#306345',
+        // Even darker green
+        secondaryDark: '#1e412c',
+        // An orange accent (complementary to green)
+        accent: '#FA7642',
+        // Darker version of the accent
+        accentDark: '#9E2D00',
+        // Keep white as is
         white: '#FFFFFF',
       },
       fontFamily: {
@@ -26,12 +33,7 @@ module.exports = {
       },
     },
   },
-  
-  // corePlugins: {
-  //   preflight: false,
-  // },
   plugins: [
     require("@tailwindcss/typography"),
   ],
- 
-}
+};

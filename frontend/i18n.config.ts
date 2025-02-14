@@ -95,7 +95,6 @@ export default defineI18nConfig(() => {
           CANCEL_SELECT_MESSAGE: "Cancel Selection",
         },
         additionalMessages: {
-          denisDrive: "PaNa Medica",
           chatRefreshed: "Chat Refreshed",
           chatRefreshedSuccessfully: "The chat has been refreshed successfully.",
           errorRefreshingChat: "Error refreshing chat:",
@@ -202,7 +201,6 @@ export default defineI18nConfig(() => {
           CANCEL_SELECT_MESSAGE: "Отменить выбор",
         },
         additionalMessages: {
-          denisDrive: "PaNa Medica",
           chatRefreshed: "Чат обновлен",
           chatRefreshedSuccessfully: "Чат успешно обновлен.",
           errorRefreshingChat: "Ошибка при обновлении чата:",
@@ -305,7 +303,6 @@ export default defineI18nConfig(() => {
           CANCEL_SELECT_MESSAGE: "Скасувати вибір",
         },
         additionalMessages: {
-          denisDrive: "PaNa Medica",
           chatRefreshed: "Чат оновлено",
           chatRefreshedSuccessfully: "Чат успішно оновлено.",
           errorRefreshingChat: "Помилка під час оновлення чату:",
@@ -408,7 +405,6 @@ export default defineI18nConfig(() => {
           CANCEL_SELECT_MESSAGE: "Anuluj wybór",
         },
         additionalMessages: {
-          denisDrive: "PaNa Medica",
           chatRefreshed: "Czat odświeżony",
           chatRefreshedSuccessfully: "Czat został pomyślnie odświeżony.",
           errorRefreshingChat: "Błąd podczas odświeżania czatu:",

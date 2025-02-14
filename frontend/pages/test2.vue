@@ -49,7 +49,7 @@
   
         <div slot="room-header-info">
           <div>
-            <h2 class="font-bold">DenisDrive</h2>
+            <h2 class="font-bold">PaNa Medica</h2>
             <p>Time left: {{ formatTime(countdown) }}</p>
           </div>
         </div>

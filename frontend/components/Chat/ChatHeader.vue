@@ -2,7 +2,7 @@
   <div class="w-full flex items-center justify-between">
     <div class="flex flex-row items-center gap-2">
       <!-- Left Section: Title -->
-      <h2 class="font-bold">DenisDrive</h2>
+      <h2 class="font-bold">PaNa Medica</h2>
         <!-- Toggle Container -->
         <div class="flex items-center gap-2 bg-light dark:bg-gray-300 px-4  py-1 md:py-2 rounded-lg shadow ml-4">
           <span class="text-lg font-medium">{{ t("chatMode.manual") }}</span>
