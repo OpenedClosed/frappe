@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mongo:
-    image: 89639339335/hotels_ai_hub_mongo:latest
+    image: 89639339335/dentist_mongo:latest
     hostname: mongo
     restart: always
     volumes:
@@ -29,7 +29,7 @@ services:
       - redis_storage_data:/data
 
   backend:
-    image: 89639339335/hotels_ai_hub_backend:latest
+    image: 89639339335/dentist_backend:latest
     restart: always
     volumes:
       - static_value:/app/static
@@ -42,7 +42,7 @@ services:
 
 
   bot:
-    image: 89639339335/hotels_ai_hub_bot:latest
+    image: 89639339335/dentist_bot:latest
     ports:
       - "9999:9999"
     restart: always
@@ -54,12 +54,12 @@ services:
       - .env
 
   frontend:
-    image: 89639339335/hotels_ai_hub_frontend:latest
+    image: 89639339335/dentist_frontend:latest
     command: node .output/server/index.mjs
     restart: always
 
   nginx:
-    image: 89639339335/hotels_ai_hub_nginx:latest
+    image: 89639339335/dentist_nginx:latest
     ports:
       - "80:80"
       - "443:443"

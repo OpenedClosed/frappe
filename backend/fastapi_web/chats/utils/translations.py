@@ -5,36 +5,48 @@ TRANSLATIONS = {
         "please_choose": {
             "en": "Please choose:",
             "ru": "Пожалуйста, выберите:",
-            "ar": "يرجى الاختيار:"
+            "pl": "Proszę wybrać:",
+            "uk": "Будь ласка, виберіть:",
+            "ge": "გთხოვთ, აირჩიეთ:"
         },
         "brief_completed": {
             "en": "Brief completed! You can now ask your question.",
             "ru": "Бриф завершён! Теперь вы можете задать свой вопрос.",
-            "ar": "تم إكمال الموجز! يمكنك الآن طرح سؤالك."
+            "pl": "Brief zakończony! Możesz teraz zadać pytanie.",
+            "uk": "Бриф завершено! Тепер ви можете задати своє питання.",
+            "ge": "ბრიფი დასრულდა! ახლა შეგიძლიათ დასვათ თქვენი შეკითხვა."
         },
     },
     "choices": {
         "consultant": {
             "en": "Consultant",
             "ru": "Консультант",
-            "ar": "مستشار"
+            "pl": "Konsultant",
+            "uk": "Консультант",
+            "ge": "კონსულტანტი"
         },
         "get_auto_mode": {
             "en": "🔄 Switch to Auto Mode",
             "ru": "🔄 Вернуться в авто-режим",
-            "ar": "🔄 العودة إلى الوضع التلقائي"
+            "pl": "🔄 Przełącz na tryb automatyczny",
+            "uk": "🔄 Повернутися в авто-режим",
+            "ge": "🔄 გადართვა ავტომატურ რეჟიმზე"
         }
     },
     "info": {
         "manual_mode_enabled": {
             "en": "Chat has been switched to manual mode. A consultant will assist you soon!",
             "ru": "Чат переведён в ручной режим. Скоро вам поможет консультант!",
-            "ar": "تم تحويل الدردشة إلى الوضع اليدوي. سيساعدك المستشار قريبًا!"
+            "pl": "Czat został przełączony na tryb ręczny. Konsultant wkrótce Ci pomoże!",
+            "uk": "Чат переведено в ручний режим. Незабаром вам допоможе консультант!",
+            "ge": "ჩეთი გადართულია ხელით რეჟიმზე. კონსულტანტი მალე დაგეხმარებათ!"
         },
         "auto_mode_enabled": {
             "en": "You are back in automatic mode. Feel free to ask any questions!",
             "ru": "Вы снова в автоматическом режиме. Не стесняйтесь задавать вопросы!",
-            "ar": "أنت الآن في الوضع التلقائي. لا تتردد في طرح أي أسئلة!"
+            "pl": "Jesteś z powrotem w trybie automatycznym. Śmiało pytaj!",
+            "uk": "Ви знову в автоматичному режимі. Не соромтеся задавати питання!",
+            "ge": "თქვენ კვლავ ავტომატურ რეჟიმში ხართ. ნუ მოგერიდებათ დასვათ შეკითხვები!"
         }
     },
     "errors": {
@@ -53,50 +65,43 @@ TRANSLATIONS = {
                 "📞 WhatsApp: +995 555 497 992\n\n"
                 "Благодарим вас за терпение, скоро ответим! 🙌"
             ),
-            "ar": (
-                "مرحبًا! 😊 شكرًا لك على سؤالك!\n\n"
-                "في الوقت الحالي، ليس لدي المعلومات الدقيقة، ولكن سينضم مديرنا إلى الدردشة قريبًا لمساعدتك. 🚀\n\n"
-                "إذا كان طلبك عاجلاً، يمكنك أيضًا الاتصال بنا عبر:\n"
-                "📞 واتساب: +995 555 497 992\n\n"
-                "نحن نقدر صبرك وسنرد عليك في أقرب وقت ممكن! 🙌"
+            "pl": (
+                "Cześć! 😊 Dziękujemy za pytanie!\n\n"
+                "Obecnie nie mam dokładnych informacji, ale nasz menedżer wkrótce dołączy do czatu, aby Ci pomóc. 🚀\n\n"
+                "Jeśli Twoje zapytanie jest pilne, możesz skontaktować się z nami poprzez:\n"
+                "📞 WhatsApp: +995 555 497 992\n\n"
+                "Dziękujemy za cierpliwość, wkrótce odpowiemy! 🙌"
+            ),
+            "uk": (
+                "Вітаю! 😊 Дякуємо за ваше питання!\n\n"
+                "Наразі у мене немає точної інформації, але наш менеджер незабаром приєднається до чату, щоб допомогти вам. 🚀\n\n"
+                "Якщо ваш запит терміновий, ви також можете зв'язатися з нами через:\n"
+                "📞 WhatsApp: +995 555 497 992\n\n"
+                "Дякуємо за терпіння, незабаром відповімо! 🙌"
+            ),
+            "ge": (
+                "გამარჯობა! 😊 გმადლობთ თქვენს შეკითხვაზე!\n\n"
+                "ამჟამად არ მაქვს ზუსტი ინფორმაცია, მაგრამ ჩვენი მენეჯერი მალე შემოგიერთდება ჩეთში, რათა დაგეხმაროთ. 🚀\n\n"
+                "თუ თქვენი მოთხოვნა სასწრაფოა, შეგიძლიათ დაგვიკავშირდეთ:\n"
+                "📞 WhatsApp: +995 555 497 992\n\n"
+                "გმადლობთ მოთმინებისთვის, მალე დაგიბრუნებთ პასუხს! 🙌"
             )
-        },
-        "chat_not_exist": {
-            "en": "Chat does not exist.",
-            "ru": "Чат не существует.",
-            "ar": "المحادثة غير موجودة."
-        },
-        "invalid_chat_data": {
-            "en": "Invalid chat data.",
-            "ru": "Неверные данные чата.",
-            "ar": "بيانات المحادثة غير صالحة."
-        },
-        "chat_status_invalid": {
-            "en": "Chat is in status {status}.",
-            "ru": "Чат в статусе {status}.",
-            "ar": "المحادثة في حالة {status}."
-        },
-        "invalid_choice": {
-            "en": "Invalid choice. Must pick from: {choices}.",
-            "ru": "Неверный выбор. Нужно выбрать из: {choices}.",
-            "ar": "اختيار غير صالح. يجب الاختيار من: {choices}."
-        },
-        "invalid_answer": {
-            "en": "Invalid answer. Must pick from: {choices}.",
-            "ru": "Неверный ответ. Нужно выбрать из: {choices}.",
-            "ar": "إجابة غير صالحة. يجب الاختيار من: {choices}."
         }
     },
     "attention": {
         "too_fast": {
             "en": "You are sending messages too quickly. Please wait a bit.",
             "ru": "Вы отправляете сообщения слишком быстро. Пожалуйста, подождите немного.",
-            "ar": "أنت ترسل الرسائل بسرعة كبيرة. يرجى الانتظار قليلاً."
+            "pl": "Wysyłasz wiadomości zbyt szybko. Proszę chwilę poczekać.",
+            "uk": "Ви надсилаєте повідомлення занадто швидко. Будь ласка, зачекайте трохи.",
+            "ge": "თქვენ ძალიან სწრაფად აგზავნით შეტყობინებებს. გთხოვთ, დაელოდეთ ცოტა."
         },
         "unknown_command": {
             "en": "Unknown command. Please check your input.",
             "ru": "Неизвестная команда. Проверьте правильность ввода.",
-            "ar": "أمر غير معروف. يرجى التحقق من الإدخال."
+            "pl": "Nieznana komenda. Proszę sprawdzić poprawność wpisu.",
+            "uk": "Невідома команда. Перевірте правильність введення.",
+            "ge": "უცნობი ბრძანება. გთხოვთ, შეამოწმოთ შეყვანილი ინფორმაცია."
         }
     }
 }

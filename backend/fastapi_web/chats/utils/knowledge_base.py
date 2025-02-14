@@ -24,7 +24,7 @@ BRIEF_QUESTIONS = [
             "uk": "Ви зараз у Варшаві (або поблизу) чи перебуваєте в іншому місті?",
             "ge": "ახლა ვარშავაში ხართ (ან მის ახლოს) თუ სხვა ქალაქში იმყოფებით?"
         },
-        question_type="choice",
+        question_type="text",
         expected_answers=["Local", "Visiting / Tourist"],
         expected_answers_translations={
             "en": ["Local", "Visiting / Tourist"],

@@ -1,0 +1,148 @@
+name: dentist_workflow
+
+on:
+  push:
+    branches:
+      - main
+ 
+env:
+  HOST: ${{ secrets.HOST }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  MONGO_URL: ${{ secrets.MONGO_URL }}
+  MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  REDIS_STORAGE_URL: ${{ secrets.REDIS_STORAGE_URL }}
+  CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
+  SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+  BOT_LINK: ${{ secrets.BOT_LINK }}
+  TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+  TOKEN: ${{ secrets.TOKEN }}
+  CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
+
+
+
+jobs:
+  build_and_push_to_docker_hub:
+    name: Push Docker images to Docker Hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to Docker
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push mongo to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./mongo
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
+
+      - name: Push backend to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/fastapi_web/FastApiWebDockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
+
+      - name: Push bot to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/telegram_bot/TelegramBotDockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
+
+      - name: Push frontend to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./frontend
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend:latest
+
+      - name: Push nginx proxy to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./nginx
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_nginx:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push_to_docker_hub
+
+    steps:
+      - name: Execute remote SSH commands to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          script: |
+            sudo docker-compose down --remove-orphans
+            touch .env
+            cat > .env << EOF
+            DOLLAR='$'
+            HOST=${{ env.HOST }}
+
+            # Подключение к Redis
+            REDIS_URL=${{ env.REDIS_URL }}
+
+            # Подключение к MongoDB
+            MONGO_URL=${{ env.MONGO_URL }}
+            MONGO_DB_NAME=${{ env.MONGO_DB_NAME }}
+
+            # OpenAI API
+            OPENAI_API_KEY=${{ env.OPENAI_API_KEY }}
+
+            # Настройки Redis
+            REDIS_STORAGE_URL=${{ env.REDIS_STORAGE_URL }}
+
+            # Настройки Telegram API
+            CHANNEL_USERNAME=${{ env.CHANNEL_USERNAME }}
+            SERVICE_NAME=${{ env.SERVICE_NAME }}
+            BOT_LINK=${{ env.BOT_LINK }}
+            TOKEN=${{ env.TOKEN }}
+            CERTBOT_EMAIL=${{ env.CERTBOT_EMAIL }}
+            EOF
+
+            sudo docker-compose pull
+            sudo docker-compose up -d
+            sleep 10
+            sudo docker exec -it mongo mongo -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
+            sudo docker system prune -a -f --volumes
+
+
+  send_message:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Send success message
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            ✅ Workflow ${{ github.workflow }} успешно выполнен!
+            Ветка: ${{ github.ref_name }}
+            Хост: ${{ env.HOST }}
+
+      - name: Send failure message
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            ❌ Workflow ${{ github.workflow }} завершился с ошибкой!
+            Ветка: ${{ github.ref_name }}
+            Хост: ${{ env.HOST }}
