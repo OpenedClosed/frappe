@@ -4,10 +4,10 @@
             <form @submit.prevent="sendLogin" class="flex flex-col items-center gap-3">
                 <div class="w-full flex flex-col justify-center items-center mb-4">
                     <div class="flex justify-center items-center w-full">
-                        <div class="h-[46px]  mt-6 ml-[20px]">
-                            <!-- <img class="h-full w-full dark:hidden block" src="/main/logo.svg" />
-                            <img class="h-full w-full dark:block hidden" src="/main/logo-dark.svg" /> -->
+                        <div class="h-[46px]  m-3">
+                          <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto" />
                         </div>
+                        
                     </div>
                     <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">
                         Вход в аккаунт

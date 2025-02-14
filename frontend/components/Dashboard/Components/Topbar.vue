@@ -15,7 +15,7 @@
             text
             :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
             type="button"
-            label="Administrator"
+            label="Администратор"
             @click="toggle"
             aria-haspopup="true"
             aria-controls="overlay_tmenu"
@@ -73,12 +73,12 @@ const menuOpen = ref(false);
 // Use a computed property for the menu items so that the icon updates reactively.
 const items = computed(() => [
   {
-    label: "Change Theme",
+    label: "Сменить тему",
     icon: colorMode.preference === 'dark' ? 'pi pi-sun' : 'pi pi-moon',
     command: toggleTheme,
   },
   {
-    label: "Logout",
+    label: "Выйти",
     icon: "pi pi-power-off",
     command: onLogout,
   },

@@ -2,9 +2,7 @@
   <div>
     <!-- If we are in "form" view -->
     <div v-if="isForm" class="p-4">
-      <h2 class="text-xl font-bold mb-4">
-        {{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle }}
-      </h2>
+      <h2 class="text-xl font-bold mb-4">{{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle }}</h2>
 
       <!-- Global error -->
       <div v-if="errorMessage" class="my-2 p-2 bg-red-100 text-red-700 rounded">
@@ -24,53 +22,41 @@
           @update:modelValue="updateItemData"
         />
 
+        <!-- 2) Inlines rendering -->
+        <div  v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
+          <div v-if="itemData[inlineDef.field].length > 0">
+            <h3 class="text-lg font-bold mb-2">
+              {{ inlineDef.plural_name.en || inlineDef.name }}
+            </h3>
+
+            <InlineList
+              :inlineDef="inlineDef"
+              :parentEntity="currentEntity"
+              :parentId="currentId"
+              :items="itemData[inlineDef.field]"
+              :readOnly="isReadOnly"
+              @reloadParent="reloadCurrentData"
+            />
+          </div>
+        </div>
+
         <!-- Control Buttons -->
         <div class="mt-4 flex flex-col md:flex-row gap-2">
           <!-- Existing item: edit, save and delete -->
           <template v-if="!isNewItem">
-            <Button
-              v-if="isReadOnly"
-              label="Редактировать"
-              icon="pi pi-pencil"
-              @click="toggleEditMode"
-            />
-            <Button
-              v-else
-              label="Сохранить"
-              icon="pi pi-save"
-              @click="saveItem"
-            />
-            <Button
-              label="Удалить"
-              icon="pi pi-trash"
-              class="p-button-danger"
-              @click="deleteItem"
-            />
+            <Button v-if="isReadOnly" label="Редактировать" icon="pi pi-pencil" @click="toggleEditMode" />
+            <Button v-else label="Сохранить" icon="pi pi-save" @click="saveItem" />
+            <Button label="Удалить" icon="pi pi-trash" class="p-button-danger" @click="deleteItem" />
           </template>
 
           <!-- New record: create -->
-          <Button
-            v-else
-            label="Создать запись"
-            icon="pi pi-check"
-            @click="createItem"
-          />
+          <Button v-else label="Создать запись" icon="pi pi-check" @click="createItem" />
 
           <!-- Special button for chat_sessions entity -->
-          <Button
-            v-if="currentEntity === 'chat_sessions'"
-            label="Открыть чат"
-            icon="pi pi-comments"
-            @click="openChat(itemData?.chat_id)"
-          />
+          <Button v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
 
           <!-- Navigation: go back to list -->
-          <Button
-            label="Назад к списку"
-            icon="pi pi-arrow-left"
-            class="p-button-text"
-            @click="goBack"
-          />
+          <Button label="Назад к списку" icon="pi pi-arrow-left" class="p-button-text" @click="goBack" />
         </div>
       </div>
     </div>
@@ -79,11 +65,7 @@
     <div v-else class="flex flex-col justify-between">
       <EmbeddedChat :id="itemData.chat_id" :user_id="itemData.client_id" />
       <div class="w-full mt-4">
-        <Button
-          label="Назад к записи"
-          icon="pi pi-arrow-left"
-          @click="goToFormView"
-        />
+        <Button label="Назад к записи" icon="pi pi-arrow-left" @click="goToFormView" />
       </div>
     </div>
   </div>
@@ -92,6 +74,7 @@
 <script setup>
 import DynamicForm from "~/components/Dashboard/Components/Form/DynamicForm.vue";
 import EmbeddedChat from "~/components/AdminChat/EmbeddedChat.vue";
+import InlineList from "~/components/Dashboard/Components/Form/InlineList.vue";
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter, useAsyncData } from "#imports";
 
@@ -99,6 +82,7 @@ import { useRoute, useRouter, useAsyncData } from "#imports";
 const route = useRoute();
 const router = useRouter();
 const nuxtApp = useNuxtApp();
+const inlines = ref([]);
 
 const currentChatId = ref("");
 const isForm = ref(true);
@@ -140,7 +124,6 @@ async function getAdminData() {
 
 const { data: adminData } = await useAsyncData("adminData", getAdminData);
 
-
 const filteredFields = computed(() => {
   // If this is a new item, filter out fields marked as readonly
   if (isNewItem.value) {
@@ -177,7 +160,10 @@ async function initPage() {
     const detailFields = entityConfig.model.detail_fields || [];
 
     // Filter fields based on detail_fields
-    fields.value = allFields.filter(field => detailFields.includes(field.name));
+    fields.value = allFields.filter((field) => detailFields.includes(field.name));
+
+    // *** Get any inlines ***
+    inlines.value = entityConfig.model.inlines || [];
 
     if (!isNewItem.value) {
       // Edit mode: fetch existing data and store its original snapshot
@@ -198,13 +184,15 @@ async function initPage() {
   }
 }
 
-
 function findEntityConfig() {
   const group = adminData.value[currentGroup.value];
   if (!group) return null;
-  return group.entities.find(
-    (entity) => entity.registered_name === currentEntity.value
-  );
+  return group.entities.find((entity) => entity.registered_name === currentEntity.value);
+}
+
+function reloadCurrentData() {
+  // Just call fetchItemData again
+  fetchItemData(currentId.value);
 }
 
 // ------------------ Form Handlers ------------------
@@ -266,12 +254,9 @@ async function saveItem() {
     console.log("Нет изменений для сохранения.");
     return;
   }
-console.log("changedFields", changedFields);
+  console.log("changedFields", changedFields);
   try {
-    await nuxtApp.$api.patch(
-      `api/admin/${currentEntity.value}/${currentId.value}`,
-      changedFields
-    );
+    await nuxtApp.$api.patch(`api/admin/${currentEntity.value}/${currentId.value}`, changedFields);
     console.log("Изменения сохранены");
     // Update originalData to the new saved state
     originalData.value = JSON.parse(JSON.stringify(itemData.value));
@@ -298,10 +283,7 @@ async function createItem() {
   console.log("Data to send:", dataToSend);
 
   try {
-    const res = await nuxtApp.$api.post(
-      `api/admin/${currentEntity.value}/`,
-      dataToSend
-    );
+    const res = await nuxtApp.$api.post(`api/admin/${currentEntity.value}/`, dataToSend);
     console.log("Запись создана:", res.data);
     router.push(`/admin/${currentGroup.value}/${currentEntity.value}/${res.data.id}`);
   } catch (error) {
@@ -309,7 +291,6 @@ async function createItem() {
     errorMessage.value = parseError(error);
   }
 }
-
 
 async function deleteItem() {
   const confirmation = confirm("Вы действительно хотите удалить эту запись?");

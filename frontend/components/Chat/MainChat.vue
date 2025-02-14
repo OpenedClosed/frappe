@@ -35,7 +35,7 @@
         -->
 
         <!-- Your chat component -->
-        <ChatComponent @close-chat="toggleChat" />
+        <ChatComponent @close-chat="toggleChat" :is-telegram="false"/>
       </div>
     </transition>
   </div>

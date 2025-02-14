@@ -38,7 +38,7 @@
           <!-- Группа заголовок -->
           <h3 class="text-md uppercase flex justify-start text-ellipsis items-center mb-2 px-2">
             <i class="mr-2 flex" :class="group.icon"></i>
-            {{ group.header }}
+            {{ group.header[currentLanguage] || group.header['en'] }}
           </h3>
           <!-- Элементы группы -->
           <ul class="flex flex-col ml-4 space-y-2">
@@ -53,7 +53,7 @@
                 }"
               >
                 <i :class="item.iconClass" class="mr-3"></i>
-                <span class="text-sm">{{ item.name }}</span>
+                <span class="text-sm">{{ item.name[currentLanguage] || item.name['en']}}</span>
               </RouterLink>
             </li>
           </ul>
