@@ -12,6 +12,7 @@
           <InputSwitch
             v-model="isAutoMode" 
             :class="inputSwitchClasses"
+            @change="changeMode"
           />
 
           <span class="text-lg font-medium">🤖</span>
@@ -65,19 +66,18 @@ const menuItems = computed(() => [
     icon: "pi pi-replay",
     command: () => props.refreshChat(),
   },
-  {
-    label: t("closeChat"),
-    icon: "pi pi-times",
-    command: () => props.closeChat(),
-    visible: !props.isTelegram,
-  },
+  // {
+  //   label: t("closeChat"),
+  //   icon: "pi pi-times",
+  //   command: () => props.closeChat(),
+  //   visible: !props.isTelegram,
+  // },
 ]);
 
-
-watch(isAutoMode, (newValue) => {
-  console.log("Manual mode changed to:", newValue);
-  emit("toggle-chat-mode", newValue);
-});
+function changeMode() {
+  console.log("Manual mode changed to:", isAutoMode.value);
+  emit("toggle-chat-mode", isAutoMode.value);
+}
 
 /**
  * We want 'autoMode' to be the reverse of 'isAutoMode':
