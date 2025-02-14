@@ -9,7 +9,7 @@
           
           <!-- PrimeVue InputSwitch with Tailwind classes -->
           <InputSwitch
-            v-model="autoMode" 
+            v-model="isAutoMode" 
             :class="inputSwitchClasses"
           />
 
@@ -33,6 +33,8 @@ import { useI18n } from "vue-i18n";
 import Button from "primevue/button";
 import InputSwitch from "primevue/inputswitch";
 
+const { isAutoMode } =  useChatState()
+
 const { t } = useI18n();
 
 const props = defineProps({
@@ -48,13 +50,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // Add this if your parent toggles isManualMode
-  // isManualMode = true => "Manual mode"
-  // isManualMode = false => "Auto mode"
-  isManualMode: {
-    type: Boolean,
-    default: false,
-  },
+
 });
 
 const emit = defineEmits(["toggle-chat-mode"]);
@@ -76,14 +72,20 @@ const menuItems = computed(() => [
   },
 ]);
 
+
+watch(isAutoMode, (newValue) => {
+  console.log("Manual mode changed to:", newValue);
+  emit("toggle-chat-mode", newValue);
+});
+
 /**
- * We want 'autoMode' to be the reverse of 'isManualMode':
- *   - autoMode = true  => isManualMode = false
- *   - autoMode = false => isManualMode = true
+ * We want 'autoMode' to be the reverse of 'isAutoMode':
+ *   - autoMode = true  => isAutoMode = false
+ *   - autoMode = false => isAutoMode = true
  */
 const autoMode = computed({
   get() {
-    return !props.isManualMode;
+    return isAutoMode.value;
   },
   set(value) {
     // When user toggles, emit the updated "manual" state

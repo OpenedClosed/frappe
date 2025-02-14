@@ -7,6 +7,7 @@ export function useChatLogic(options = {}) {
   const { isTelegram = false } = options; // если нужно переключение под Telegram
   const { t } = useI18n();
   const toast = useToast();
+  const { isAutoMode } =  useChatState()
 
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
@@ -189,9 +190,9 @@ export function useChatLogic(options = {}) {
     );
   }
 
-  const toggleChatMode = (isManualMode) => {
-    isManualMode = !isManualMode;
-    const command = isManualMode ? "/manual" : "/auto";
+  const toggleChatMode = (isAutoMode) => {
+    console.log("toggleChatMode", isAutoMode);
+    const command = isAutoMode ?  "/auto" : "/manual";
   
     console.log("Переключение режима чата. Отправка команды:", command);
   
@@ -252,6 +253,7 @@ export function useChatLogic(options = {}) {
           if (data.remaining_time) {
             startCountdown(data.remaining_time);
           }
+          isAutoMode.value = !data.manual_mode; 
           break;
 
         case "get_messages": {

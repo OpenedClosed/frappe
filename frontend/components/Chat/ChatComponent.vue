@@ -35,8 +35,7 @@
         :isTelegram="isTelegram"
         :refreshChat="refreshChat"
         :closeChat="closeChat"
-        :isManualMode="isManualMode"
-        @toggle-chat-mode="toggleChatMode(isManualMode)"
+        @toggle-chat-mode="toggleChatMode($event)"
       />
       </div>
     </vue-advanced-chat>
@@ -67,7 +66,6 @@ import ReloadButton from "~/components/Chat/ReloadButton.vue";
 // Подключаем наш composable
 import { useChatLogic } from "~/composables/useChatLogic";
 
-const isManualMode = ref(true); // start in "Manual" mode
 
 const props = defineProps({
   isTelegram: {
