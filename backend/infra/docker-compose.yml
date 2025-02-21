@@ -53,25 +53,29 @@ services:
     env_file:
       - .env
 
-  frontend:
-    image: 89639339335/dentist_frontend:latest
-    command: node .output/server/index.mjs
+  frontend_chat:
+    build:
+      context: ./frontend_chat
+    ports:
+      - "3000:3000"
+    restart: always
+
+  frontend_admin:
+    build:
+      context: ./frontend_admin
+    ports:
+      - "3001:3000"
     restart: always
 
   nginx:
-    image: 89639339335/dentist_nginx:latest
+    image: nginx:latest
     ports:
       - "80:80"
-      - "443:443"
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
-      - static_value:/var/html/static
-      - media_value:/var/html/media
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
     depends_on:
-      - backend
-    env_file:
-      - .env
-    command: sh -c "/app/certbot_script.sh"
+      - frontend_chat
+      - frontend_admin
 
 volumes:
   mongo_data:
