@@ -5,8 +5,8 @@
       <h2 class="font-bold">PaNa Medica</h2>
         <!-- Toggle Container -->
 
-        <div class="flex items-center gap-2 bg-light dark:bg-gray-300 px-4  py-1 md:py-2 rounded-lg shadow ml-4">
-          <span class="text-lg font-medium">👨‍💼</span>
+        <div class="flex items-center gap-2 bg-light dark:bg-gray-300 px-4  py-[2px] md:py-[2px] rounded-lg shadow ml-4">
+          <span class="text-2xl font-medium">👩‍💼</span>
           
           <!-- PrimeVue InputSwitch with Tailwind classes -->
           <InputSwitch
@@ -15,7 +15,7 @@
             @change="changeMode"
           />
 
-          <span class="text-lg font-medium">🤖</span>
+          <span class="text-2xl font-medium">👩‍⚕️</span>
         </div>
     </div>
     <!-- Right Section: Toggle + Menu Button -->
