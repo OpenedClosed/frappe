@@ -21,9 +21,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   console.log("Access Token:", token.value);
   console.log("Refresh Token:", refresh_token.value);
 
-  if (to.path === "/" || to.path === "/telegram-chat" || to.path.includes("/chat")) {
-    return;
-  }
 
   try {
     await useNuxtApp().$api.get(`api/admin/info`);

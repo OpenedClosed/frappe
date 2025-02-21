@@ -1,34 +1,41 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-      {
-        "label": "Start Frontend",
-        "type": "shell",
-        "command": "cd frontend && yarn dev",
-        "group": "build",
-        "problemMatcher": [],
-        "isBackground": true
-      },
-      {
-        "label": "Start Backend",
-        "type": "shell",
-        "command": "cd backend/fastapi_web && source venv/bin/activate && uvicorn main:app --host localhost --port 8000 --reload",
-        "group": "build",
-        "problemMatcher": [],
-        "isBackground": true,
-        "options": {
-          "shell": {
-            "executable": "/bin/bash",
-            "args": ["-c"]
-          }
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Frontend Admin",
+      "type": "shell",
+      "command": "cd frontend_admin && yarn dev",
+      "group": "build",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Start Frontend Chat",
+      "type": "shell",
+      "command": "cd frontend_chat && yarn dev",
+      "group": "build",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Start Backend",
+      "type": "shell",
+      "command": "cd backend/fastapi_web && source venv/bin/activate && uvicorn main:app --host localhost --port 8000 --reload",
+      "group": "build",
+      "problemMatcher": [],
+      "isBackground": true,
+      "options": {
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
         }
-      },
-      {
-        "label": "Run Full Stack",
-        "dependsOn": ["Start Frontend", "Start Backend"],
-        "group": "build",
-        "problemMatcher": []
       }
-    ]
-  }
-  
+    },
+    {
+      "label": "Run Full Stack",
+      "dependsOn": ["Start Frontend Admin", "Start Frontend Chat", "Start Backend"],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
