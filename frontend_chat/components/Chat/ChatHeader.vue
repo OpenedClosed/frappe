@@ -15,7 +15,7 @@
             @change="changeMode"
           />
 
-          <span class="text-2xl font-medium">👩‍⚕️</span>
+          <span class="text-2xl font-medium">🚀</span>
         </div>
     </div>
     <!-- Right Section: Toggle + Menu Button -->
