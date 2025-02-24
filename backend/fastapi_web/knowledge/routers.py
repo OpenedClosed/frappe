@@ -163,12 +163,16 @@ async def patch_knowledge_base(req: PatchKnowledgeRequest):
     #     raise HTTPException(500, "Failed to update knowledge base")
     return UpdateResponse(knowledge=validated, diff=diff)
 
+
 @knowledge_base_router.put("/knowledge_base/apply", response_model=UpdateResponse)
 async def apply_knowledge_base(new_data: KnowledgeBase):
     """Полностью заменяет базу знаний предоставленными данными после валидации."""
     now = datetime.now()
     new_data.update_date = now
-    new_doc = {"app_name": "main", **new_data.dict()}
+    new_data.app_name = "main"
+    new_doc = new_data.model_dump()
+    # new_doc_dict = {"app_name": "main", "knowledge_base": new_data["knowledge_base"]}
+    # new_doc = KnowledgeBase(**new_doc_dict).model_dump()
     old_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
     if old_doc:
         old_doc.pop("_id", None)
@@ -181,6 +185,7 @@ async def apply_knowledge_base(new_data: KnowledgeBase):
     if result.modified_count == 0 and not result.upserted_id:
         raise HTTPException(500, "Failed to update knowledge base")
     return UpdateResponse(knowledge=new_data, diff=diff)
+
 
 
 
