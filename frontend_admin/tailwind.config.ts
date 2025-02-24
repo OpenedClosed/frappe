@@ -1,5 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-// tailwind.config.js
 module.exports = {
   darkMode: 'class',
   content: [
@@ -13,20 +12,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary green
-        primary: '#458457',
-        // A lighter tint of the primary green
-        light: '#63a475',
-        // A slightly darker green
-        secondary: '#306345',
-        // Even darker green
-        secondaryDark: '#1e412c',
-        // An orange accent (complementary to green)
-        accent: '#FA7642',
-        // Darker version of the accent
-        accentDark: '#9E2D00',
-        // Keep white as is
-        white: '#FFFFFF',
+        primary: "var(--color-primary)",
+        primaryLight: "var(--color-primary-light)",
+        primaryDark: "var(--color-primary-dark)",
+
+        secondary: "var(--color-secondary)",
+        secondaryLight: "var(--color-secondary-light)",
+        secondaryDark: "var(--color-secondary-dark)",
+
+        accent: "var(--color-accent)",
+        accentDark: "var(--color-accent-dark)",
+
+        neutral: "var(--color-neutral)",
+        neutralDark: "var(--color-neutral-dark)",
+        neutralLight: "var(--color-neutral-light)",
+
+        white: "var(--color-white)",
+        black: "var(--color-black)",
       },
       fontFamily: {
         play: ['Play', 'sans-serif'],

@@ -56,7 +56,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["toggle-chat-mode"]);
-
+const { $event, $listen } = useNuxtApp();
 const menuItems = computed(() => [
   // {
   //   separator: true, // draws a line
@@ -65,6 +65,11 @@ const menuItems = computed(() => [
     label: t("newChat"),
     icon: "pi pi-replay",
     command: () => props.refreshChat(),
+  },
+  {
+    label: t("showCommands"),
+    icon: "pi pi-send",
+    command: () => $event("show-commands"),
   },
   // {
   //   label: t("closeChat"),

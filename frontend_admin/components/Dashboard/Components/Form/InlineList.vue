@@ -1,173 +1,235 @@
-<!-- File: InlineList.vue -->
 <template>
-    <div>
-      <!-- Display each item (e.g. ChatMessage) -->
-      <table class="table-auto w-full border-collapse">
-        <thead>
-          <tr>
-            <th v-for="field in inlineDef.fields" :key="field.name" class="border p-2">
-              {{ field.title.en || field.name }}
-            </th>
-            <th class="border p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(childItem, index) in items" :key="index" class="border">
-            <td
-              v-for="field in inlineDef.fields"
-              :key="field.name"
-              class="border p-2"
-            >
-              <!-- If readOnly or field.read_only, just show data -->
-              <span v-if="isFieldReadOnly(field)">
-                {{ childItem[field.name] }}
-              </span>
-              <!-- Else allow inline editing (InputText, etc) -->
-              <template v-else>
-                <input
-                  class="border w-full px-2 py-1"
-                  v-model="childItem[field.name]"
-                  :disabled="readOnly"
-                />
-              </template>
-            </td>
-            <td class="border p-2 text-center">
-              <button
-                v-if="!readOnly"
-                class="p-1 text-blue-500"
-                @click="updateChild(childItem)"
-              >
-                Save
-              </button>
-              <button
-                v-if="!readOnly"
-                class="p-1 text-red-500 ml-2"
-                @click="deleteChild(childItem)"
-              >
-                Delete
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-  
-      <!-- Create new inline item -->
-      <div v-if="!readOnly" class="mt-4">
-        <h4 class="font-semibold">Add New</h4>
-        <div class="flex gap-4">
-          <div v-for="field in inlineDef.fields" :key="field.name" class="flex flex-col">
-            <label class="font-semibold text-sm">
-              {{ field.title.en || field.name }}
-            </label>
-            <input
-              v-model="newItem[field.name]"
-              class="border px-2 py-1 w-full"
-              :disabled="field.read_only"
-            />
-          </div>
-        </div>
-        <button class="mt-2 p-2 bg-green-500 text-white" @click="createChild">
-          Create
+  <div>
+    <!-- Existing inline items -->
+    <div
+      v-for="(childItem, index) in localItems"
+      :key="index"
+      class="mb-4 border p-4 rounded"
+    >
+      <h4 class="font-semibold mb-2">
+        {{ inlineDef.title?.en || inlineDef.name }} #{{ index + 1 }}
+      </h4>
+
+      <!-- Use DynamicForm to render each inline item -->
+      <DynamicForm
+        :fields="inlineDef.fields"
+        :modelValue="childItem"
+        :readOnly="readOnly"
+        @update:modelValue="(updated) => updateLocalItem(index, updated)"
+      />
+
+      <!-- Actions: Save / Delete (only if not readOnly) -->
+      <div class="flex gap-2 mt-2" v-if="!readOnly">
+        <button
+          class="p-2 bg-blue-500 text-white rounded"
+          @click="saveOneInline(index)"
+        >
+          Save
+        </button>
+        <button
+          class="p-2 bg-red-500 text-white rounded"
+          @click="deleteOneInline(index)"
+        >
+          Delete
         </button>
       </div>
     </div>
-  </template>
-  
-  <script setup>
-  import { ref, watch, toRefs } from "vue";
-  import { useNuxtApp } from "#imports";
-  
-  const props = defineProps({
-    inlineDef: { type: Object, required: true },
-    parentEntity: { type: String, required: true },
-    parentId: { type: String, required: true },
-    items: { type: Array, default: () => [] },
-    readOnly: { type: Boolean, default: false }
-  });
-  
-  const emit = defineEmits(["reloadParent"]);
-  
-  // We'll keep a local copy of the items array if you want to edit "locally"
-  const localItems = ref(props.items ? [...props.items] : []);
-  watch(
-    () => props.items,
-    (newVal) => {
-      localItems.value = [...newVal];
-    }
-  );
-  
-  // For creating a new inline record:
-  const newItem = ref({});
-  
-  /**
-   * Decide if a field is effectively read-only
-   * (because it's read_only in config or the parent form is readOnly).
-   */
-  function isFieldReadOnly(field) {
-    return field.read_only === true || props.readOnly;
+
+    <!-- Create new inline item -->
+    <div v-if="!readOnly" class="mt-4 p-4 border rounded">
+      <h4 class="font-semibold mb-2">Add New</h4>
+
+      <!-- DynamicForm for new item -->
+      <DynamicForm
+        :fields="inlineDef.fields"
+        :modelValue="newItem"
+        @update:modelValue="(updated) => (newItem = updated)"
+      />
+
+      <button
+        class="mt-2 p-2 bg-green-500 text-white rounded"
+        @click="addNewInline"
+      >
+        Create
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, watch } from "vue";
+import { useNuxtApp, useRoute } from "#imports";
+import DynamicForm from "~/components/Dashboard/Components/Form/DynamicForm.vue";
+
+/**
+ * Props:
+ * - `inlineDef` includes info about how to render these inline items
+ *   (fields, name, possibly the key where these items live in the parent object).
+ * - `parentEntity` and `parentId` indicate which parent resource we're patching.
+ * - `items` is the array of inline items (stored on the parent).
+ * - `readOnly` indicates if the user can edit these items.
+ */
+const props = defineProps({
+  inlineDef: { type: Object, required: true },
+  parentEntity: { type: String, required: true },
+  parentId: { type: String, required: true },
+  items: { type: Array, default: () => [] },
+  readOnly: { type: Boolean, default: false },
+});
+
+const emit = defineEmits(["reloadParent"]);
+
+const nuxtApp = useNuxtApp();
+const route = useRoute();
+
+// Local copy of the inline items array
+const localItems = ref([...props.items]);
+
+// Whenever parent `items` changes, update localItems
+watch(
+  () => props.items,
+  (newVal) => {
+    localItems.value = [...newVal];
   }
-  
-  const nuxtApp = useNuxtApp();
-  
-  /**
-   * Update an existing inline item via `PATCH`.
-   * Typically you have a separate route for the inline entity (e.g. `chat_messages`).
-   */
-  async function updateChild(childItem) {
-    try {
-      // Suppose the inline entity is "chat_messages".
-      // We need to find the route or ID for the child record
-      // Often the child has its own "id". Check your data structure for the actual key.
-      if (!childItem.id) {
-        alert("No ID found on inline item!");
-        return;
-      }
-  
-      await nuxtApp.$api.patch(`api/admin/${props.inlineDef.name.toLowerCase()}s/${childItem.id}`, childItem);
-      alert("Inline item updated!");
-      emit("reloadParent");
-    } catch (error) {
-      console.error(error);
-      alert("Error updating inline");
-    }
+);
+
+/**
+ * Returns an object containing only the fields that have changed
+ * between originalItem and updatedItem, plus the item's 'id' if present.
+ */
+function getChangedFields(originalItem, updatedItem) {
+  const diff = {};
+
+  // Always include `id` so the server knows which record we're updating
+  if (updatedItem.id) {
+    diff.id = updatedItem.id;
   }
-  
-  /**
-   * Delete inline item via `DELETE`.
-   */
-  async function deleteChild(childItem) {
-    try {
-      if (!childItem.id) {
-        alert("No ID found on inline item!");
-        return;
-      }
-      await nuxtApp.$api.delete(`api/admin/${props.inlineDef.name.toLowerCase()}s/${childItem.id}`);
-      alert("Inline item deleted!");
-      emit("reloadParent");
-    } catch (error) {
-      console.error(error);
-      alert("Error deleting inline");
-    }
-  }
-  
-  /**
-   * Create a new inline item. Often you'll want to pass the parent ID or foreign key.
-   */
-  async function createChild() {
-    try {
-      // Example: The ChatMessage might need the `chat_session_id` or something to link it to the parent.
-      // Suppose the backend expects "chat_id" or "chat_session_id". 
-      // Adjust this to match your actual foreign key field name.
-      newItem.value.chat_session_id = props.parentId;
-  
-      await nuxtApp.$api.post(`api/admin/${props.inlineDef.name.toLowerCase()}s/`, newItem.value);
-      alert("Inline item created!");
-      newItem.value = {};
-      emit("reloadParent");
-    } catch (error) {
-      console.error(error);
-      alert("Error creating inline");
+
+  // Compare each key in the updatedItem
+  for (const key in updatedItem) {
+    if (updatedItem[key] !== originalItem[key]) {
+      diff[key] = updatedItem[key];
     }
   }
-  </script>
-  
+
+  return diff;
+}
+
+
+// For creating a new inline record
+const newItem = ref({});
+
+/**
+ * Helper method to update an item in our local array state.
+ */
+function updateLocalItem(index, updated) {
+  localItems.value[index] = { ...updated };
+}
+
+/**
+ * For "Save" of one inline item:
+ *  - We already have `localItems` with the user changes.
+ *  - Typically we patch the *parent* item with the updated array.
+ */
+async function saveOneInline(index) {
+  try {
+    const updatedItem = localItems.value[index];
+    const originalItem = props.items[index] || {};
+
+    // Build an object of only the changed fields
+    const changes = getChangedFields(originalItem, updatedItem);
+
+    // If changes only has { id } and nothing else, nothing actually changed
+    // (optional safety check, but can be helpful)
+    if (Object.keys(changes).length === 1 && changes.id) {
+      alert("No changes detected.");
+      return;
+    }
+
+    // Build the PATCH data with only the changed fields for this one item
+    const patchData = {
+      [props.inlineDef.field]: [changes],
+    };
+    console.log("patchData", patchData);
+
+    // Send the PATCH to the parent
+    await nuxtApp.$api.patch(
+      `api/admin/${props.parentEntity}/${props.parentId}`,
+      patchData
+    );
+
+    alert("Inline item updated (via parent PATCH)!");
+    emit("reloadParent");
+  } catch (error) {
+    console.error("Error saving inline item:", error);
+    alert("Error updating inline item.");
+  }
+}
+
+
+/**
+ * For "Delete" of one inline item:
+ *  - Remove that item from localItems
+ *  - Patch the parent with the updated array
+ */
+async function deleteOneInline(index) {
+  // Optional: confirm before deleting
+  const confirmation = confirm("Are you sure you want to delete this item?");
+  if (!confirmation) return;
+
+  try {
+    // Remove the item from the array
+    localItems.value.splice(index, 1);
+
+    // Patch the parent with the updated array
+    const patchData = {
+      [props.inlineDef.field]: [...localItems.value],
+    };
+
+    await nuxtApp.$api.patch(
+      `api/admin/${props.parentEntity}/${props.parentId}`,
+      patchData
+    );
+
+    alert("Inline item deleted (via parent PATCH)!");
+    emit("reloadParent");
+  } catch (error) {
+    console.error("Error deleting inline item:", error);
+    alert("Error deleting inline item.");
+  }
+}
+
+/**
+ * For creating a new inline item:
+ *  - Push the new item into localItems
+ *  - Patch the parent with the updated array
+ */
+async function addNewInline() {
+  try {
+    // Add any needed foreign key to link to the parent,
+    // e.g. if your backend requires it:
+    // newItem.value.chat_session_id = props.parentId;
+
+    // Push to the local array
+    localItems.value.push({ ...newItem.value });
+
+    // Patch the parent
+    const patchData = {
+      [props.inlineDef.field]: [...localItems.value],
+    };
+
+    await nuxtApp.$api.patch(
+      `api/admin/${props.parentEntity}/${props.parentId}`,
+      patchData
+    );
+
+    // Clear the create form
+    newItem.value = {};
+    alert("Inline item created (via parent PATCH)!");
+    emit("reloadParent");
+  } catch (error) {
+    console.error("Error creating inline item:", error);
+    alert("Error creating inline item.");
+  }
+}
+</script>

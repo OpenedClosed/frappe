@@ -42,6 +42,7 @@
 
     <!-- Кнопки выбора (если есть варианты и таймер не истёк) -->
     <ChoiceButtons v-if="choiceOptions.length && !timerExpired" :choiceOptions="choiceOptions" :handleChoiceClick="handleChoiceClick" />
+    <CommandsSection/>
 
     <!-- Кнопка "Начать заново" (если таймер истёк) -->
     <ReloadButton v-if="timerExpired" :reloadLabel="t('chatAgain')" :reloadPage="reloadPage" />
@@ -61,6 +62,7 @@ import Toast from "primevue/toast";
 // Локальные компоненты
 import ChatHeader from "~/components/Chat/ChatHeader.vue";
 import ChoiceButtons from "~/components/Chat/ChoiceButtons.vue";
+import CommandsSection from "~/components/Chat/CommandsSection.vue";
 import ReloadButton from "~/components/Chat/ReloadButton.vue";
 
 // Подключаем наш composable
@@ -81,6 +83,11 @@ const emit = defineEmits(["close-chat"]);
 function closeChat() {
   emit("close-chat");
 }
+
+const { $event, $listen } = useNuxtApp();
+$listen("command-clicked", async (command) => {
+  handleChoiceClick(command);
+});
 
 // Получаем из composable все нужные refs и методы
 // (кроме closeChat - его оставляем здесь локально)

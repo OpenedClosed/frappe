@@ -11,6 +11,29 @@
   @tailwind variants;
 }
 
+/* Main Colors */
+:root {
+  --color-primary: #458457;
+  --color-primary-light: #63a475;
+  --color-primary-dark: #B37401;
+
+  --color-secondary: #306345;
+  --color-secondary-light: #4C78A0;
+  --color-secondary-dark: #1e412c;
+
+  --color-accent: #FA7642;
+  --color-accent-dark: #9E2D00;
+
+  --color-neutral: #F4F4F4;
+  --color-neutral-dark: #2C2C2C;
+  --color-neutral-light: #EAEAEA;
+
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+}
+
+
+
 @import url('https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap');
 
 

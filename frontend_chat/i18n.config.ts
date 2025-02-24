@@ -17,6 +17,7 @@ export default defineI18nConfig(() => {
       en: {
         chat: "Chat",
         newChat: "New chat",
+        showCommands: "Show commands", // ADDED
         sendMessage: "Send a message...",
         chatAgain: "Chat again",
         language: "Language",
@@ -119,6 +120,7 @@ export default defineI18nConfig(() => {
       ru: {
         chat: "Чат",
         newChat: "Новый чат",
+        showCommands: "Показать команды", // ADDED
         sendMessage: "Отправить сообщение...",
         chatAgain: "Начать заново",
         language: "Язык",
@@ -221,6 +223,7 @@ export default defineI18nConfig(() => {
       uk: {
         chat: "Чат",
         newChat: "Новий чат",
+        showCommands: "Показати команди", // ADDED
         sendMessage: "Надіслати повідомлення...",
         chatAgain: "Почати знову",
         language: "Мова",
@@ -323,6 +326,7 @@ export default defineI18nConfig(() => {
       pl: {
         chat: "Czat",
         newChat: "Nowy czat",
+        showCommands: "Pokaż polecenia", // ADDED
         sendMessage: "Wyślij wiadomość...",
         chatAgain: "Rozpocznij ponownie",
         language: "Język",

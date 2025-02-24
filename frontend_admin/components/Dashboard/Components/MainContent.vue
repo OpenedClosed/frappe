@@ -1,4 +1,3 @@
-
 <!-- pages/admin/[group]/[entity]/index.vue -->
 <template>
   <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto">
@@ -7,10 +6,14 @@
       <!-- Navigation Sidebar Component -->
       <NavigationSidebar :navItems="navItems" />
 
-      <!-- Main Content with Data Table -->
-      <div v-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between">
+      <!-- Check if group is "knowledge-base" -->
+      <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col basis-11/12 min-w-0 justify-start">
+        <KnowledgeBase />
+      </div>
+
+      <!-- Default behavior: Show Data Table -->
+      <div v-else-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between">
         <DynamicDataTable
-          v-if="currentEntity && !currentId"
           :title="currentEntityName"
           :displayedColumns="displayedColumns"
           :tableData="filteredTableData"
@@ -26,6 +29,7 @@
           @filterChange="handleFilterChange"
         />
       </div>
+
       <div v-else class="flex flex-col basis-11/12 min-w-0 justify-start">
         <MainForm />
       </div>
@@ -60,11 +64,11 @@ import { useRoute, useRouter } from "vue-router";
 import { useAsyncData, useNuxtApp } from "#app"; // Nuxt 3 usage
 import { debounce } from "lodash";
 
-
 // Components
 import NavigationSidebar from "./NavigationSidebar.vue";
 import DynamicDataTable from "./DynamicDataTable.vue";
 import MainForm from "~/components/Dashboard/Components/Form/MainForm.vue";
+import KnowledgeBase from "~/components/Dashboard/Components/KnowledgeBase.vue";
 
 // ------------------ State & Refs ------------------
 const showFilter = ref(false);
@@ -115,9 +119,7 @@ async function getAdminData() {
   return responseData;
 }
 
-
 import * as XLSX from "xlsx";
-
 
 const onExportToExcel = async () => {
   try {
@@ -165,7 +167,6 @@ const onExportToExcel = async () => {
       detail: "Data exported to Excel successfully",
       life: 3000,
     });
-
   } catch (error) {
     console.error("Export Error:", error);
     toast.value?.add({
@@ -247,7 +248,7 @@ function validateRoute(data, validCombos) {
   }
 
   // If route doesn't have :group or we can't find it in data => redirect to first group
-  if (!currentGroup.value || !data[currentGroup.value]) {
+  if ((!currentGroup.value || !data[currentGroup.value]) && currentGroup.value !== "knowledge-base") {
     const firstGroup = groupKeys[0];
     const firstEntity = data[firstGroup].entities[0]?.registered_name;
     if (firstGroup && firstEntity) {
@@ -353,12 +354,11 @@ function onPageChange(event) {
 /**
  * Based on the current entity config, build "displayedColumns" from the entity.model.list_display.
  */
- function setupColumns(entityConfig) {
+function setupColumns(entityConfig) {
   if (!entityConfig || !entityConfig.model || !entityConfig.model.list_display) {
     displayedColumns.value = [];
     return;
   }
-
 
   // Map columns dynamically from entity config
   displayedColumns.value = entityConfig.model.list_display.map((field) => {

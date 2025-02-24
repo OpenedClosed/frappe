@@ -19,7 +19,7 @@ export function useChatLogic(options = {}) {
   const rooms = ref([
     {
       roomId: "1",
-      avatar: "/favicon.ico",
+      avatar: "/main/avatar.jpg",
       users: [
         { _id: "1234", username: "User" },
         { _id: "4321", username: "AI" },

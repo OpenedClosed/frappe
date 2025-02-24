@@ -10,4 +10,3 @@ RUN yarn
 FROM base as prod
 COPY . .
 RUN yarn build
-CMD ["yarn", "start"]
