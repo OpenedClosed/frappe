@@ -45,12 +45,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Push mongo to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./mongo
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
+      # - name: Push mongo to Docker Hub
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./mongo
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
 
       - name: Push backend to Docker Hub
         uses: docker/build-push-action@v3
@@ -60,27 +60,27 @@ jobs:
           file: ./backend/fastapi_web/FastApiWebDockerfile
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
-      - name: Push bot to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./backend
-          file: ./backend/telegram_bot/TelegramBotDockerfile
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
+      # - name: Push bot to Docker Hub
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./backend
+      #     file: ./backend/telegram_bot/TelegramBotDockerfile
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
 
-      - name: Push frontend admin to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./frontend_admin
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
+      # - name: Push frontend admin to Docker Hub
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./frontend_admin
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
 
-      - name: Push frontend chat to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./frontend_chat
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
+      # - name: Push frontend chat to Docker Hub
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./frontend_chat
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
 
       - name: Push nginx proxy to Docker Hub
         uses: docker/build-push-action@v3

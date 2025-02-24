@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
+from chats.utils.commands import COMMAND_HANDLERS, command_handler
 
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
@@ -102,7 +103,7 @@ async def handle_chat_creation(
             "client_id": client_id,
             "status": chat_session.compute_status(settings.CHAT_TIMEOUT.total_seconds()).value,
         }
-
+  
     client = Client(
         client_id=client_id,
         source=chat_source,
@@ -128,4 +129,15 @@ async def handle_chat_creation(
         "chat_id": chat_id,
         "client_id": client_id,
         "status": ChatStatus.IN_PROGRESS.value,
+    }
+
+
+@chat_router.get("/commands", summary="Получить список доступных команд")
+async def get_available_commands():
+    """Возвращает список всех зарегистрированных команд с их описанием."""
+    return {
+        "commands": [
+            {"command": cmd, "description": data["help_text"]}
+            for cmd, data in COMMAND_HANDLERS.items()
+        ]
     }
