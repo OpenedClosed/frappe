@@ -52,13 +52,13 @@ jobs:
       #     context: ./mongo
       #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
 
-      # - name: Push backend to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./backend
-      #     file: ./backend/fastapi_web/FastApiWebDockerfile
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
+      - name: Push backend to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/fastapi_web/FastApiWebDockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
       # - name: Push bot to Docker Hub
       #   uses: docker/build-push-action@v3
