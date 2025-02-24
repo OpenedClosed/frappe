@@ -16,11 +16,25 @@ from openai_base.openai_init import openai_client
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
-from ..utils.help_functions import find_last_bot_message, send_message_to_bot
+from ..utils.help_functions import find_last_bot_message, get_current_datetime, get_weather_by_address, get_weather_for_region, send_message_to_bot
 from ..utils.knowledge_base import BRIEF_QUESTIONS, KNOWLEDGE_BASE
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
 from .ws_helpers import ConnectionManager, custom_json_dumps
+from fastapi import HTTPException
+
+async def get_knowledge_base() -> Dict[str, dict]:
+    document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
+    if not document:
+        raise HTTPException(404, "Knowledge base not found")
+    document.pop("_id", None)
+    if document["knowledge_base"]:
+        return document["knowledge_base"]
+    else:
+        print('7777')
+        return KNOWLEDGE_BASE
+
+
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -156,22 +170,32 @@ async def save_and_broadcast_new_message(
     await redis_db.set(redis_key_session, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
     if chat_session.client.source == ChatSource.INSTAGRAM:
+        print('????')
+        print(chat_session.client.external_id, chat_session.external_id)
         recipient_id = chat_session.client.external_id
-        if recipient_id == chat_session.external_id:
+        sender_role = new_msg.sender_role
+        if sender_role != SenderRole.CLIENT:
             if recipient_id:
                 await send_instagram_message(recipient_id, new_msg.message)
+
 
 
 async def send_instagram_message(recipient_id: str, message: str) -> None:
     """Отправляет сообщение пользователю в Instagram Direct через API."""
 
-    url = f"https://graph.facebook.com/v18.0/me/messages?access_token={settings.INSTAGRAM_ACCESS_TOKEN}"
+    url = f"https://graph.instagram.com/v21.0/me/messages"
+
     payload = {
         "recipient": {"id": recipient_id},
-        "message": {"text": message}
+        "message": {"text": message},
+        "metadata": "broadcast"
     }
+    print(settings.INSTAGRAM_ACCESS_TOKEN)
 
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
 
     response = requests.post(url, json=payload, headers=headers)
 
@@ -179,6 +203,7 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
         print(f"Ошибка отправки сообщения в Instagram: {response.text}")
     else:
         print(f"Сообщение успешно отправлено в Instagram (ID: {recipient_id})")
+
 
 
 # ==============================
@@ -238,6 +263,7 @@ async def handle_get_messages(
 
     remaining_time = max(await redis_db.ttl(redis_key_session), 0)
     messages = [msg.model_dump() for msg in chat_session.messages]
+    messages.sort(key=lambda x: x["timestamp"])
 
     response = custom_json_dumps({
         "type": "get_messages",
@@ -382,18 +408,26 @@ async def handle_command(
     new_msg: ChatMessage,
     user_language: str
 ) -> bool:
-    msg_text = new_msg.message
+    """
+    Обработка команды от пользователей.
+    """
+    msg_text = new_msg.message.strip()
     if not msg_text.startswith("/"):
         return False
+    
     command_alias = msg_text.split()[0].lower()
-    handler = COMMAND_HANDLERS.get(command_alias)
-    if handler:
+    command_data = COMMAND_HANDLERS.get(command_alias)
+
+    if command_data:
+        handler = command_data["handler"]
         await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session)
         await handler(manager, chat_session, new_msg, user_language, redis_key_session)
     else:
         unknown_cmd_msg = get_translation("attention", "unknown_command", user_language)
         await broadcast_attention(manager, client_id, chat_id, unknown_cmd_msg)
+    
     return True
+
 
 def get_translation(category: str, key: str, language: str, **kwargs) -> str:
     """
@@ -528,8 +562,20 @@ async def start_brief(
 ) -> None:
     """Инициализирует бриф: если вопрос есть — задаём, если нет — завершаем."""
     question = chat_session.get_current_question(BRIEF_QUESTIONS)
+    hello_text = get_translation(
+        "brief",
+        "hello_text",
+        user_language,
+        default_key="en"
+    )
+    if hello_text:
+        msg = ChatMessage(
+            message=f"{hello_text}",
+            sender_role=SenderRole.AI,
+        )
+        await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
     if not question:
-        await complete_brief(manager, chat_session, redis_key_session, user_language)
+        # await complete_brief(manager, chat_session, redis_key_session, user_language)
         return
 
     await ask_brief_question(manager, chat_session, question, redis_key_session, user_language)
@@ -777,7 +823,8 @@ async def process_user_query_after_brief(
 
     user_info = extract_brief_info(chat_session)
     chat_history = chat_session.messages[-25:]
-    gpt_data = await determine_topics_via_gpt(user_msg.message, user_info, KNOWLEDGE_BASE)
+    knowledge_base = await get_knowledge_base()
+    gpt_data = await determine_topics_via_gpt(user_msg.message, user_info, knowledge_base)
 
     topics = gpt_data.get("topics", [])
     confidence = gpt_data.get("confidence", 0.0)
@@ -817,15 +864,13 @@ async def process_user_query_after_brief(
             message=failure_message,
             sender_role=SenderRole.AI,
             choice_options=[
-                get_translation("choices", "get_auto_mode", user_language),
-                "/auto"
+                (get_translation("choices", "get_auto_mode", user_language), "/auto"),
             ],
             choice_strict=False
         )
 
     else:
-        # 🔥 Оптимизация: Теперь все темы обрабатываются за один вызов `extract_knowledge`
-        snippet_list: List[str] = extract_knowledge(topics, user_msg.message)
+        snippet_list: List[str] = await extract_knowledge(topics, user_msg.message)
 
         if 0.3 <= confidence < 0.7:
             partial_text = await generate_ai_answer(
@@ -923,8 +968,6 @@ async def determine_topics_via_gpt(
         confidence = result.get("confidence", 0.0)
         out_of_scope = result.get("out_of_scope", False)
         consultant_call = result.get("consultant_call", False)
-        print('===============ТЕМЫ===================')
-        print(topics)
 
         return {
             "topics": topics if isinstance(topics, list) else [],
@@ -938,16 +981,14 @@ async def determine_topics_via_gpt(
 
 # def extract_knowledge(
 #         topics: List[Dict[str, Optional[str]]], user_message: str) -> List[str]:
-#     """Извлекает ответы из KNOWLEDGE_BASE для списка тем/подтем."""
+#     """Извлекает ответы из knowledge_base для списка тем/подтем."""
 #     snippets: List[str] = []
-#     print("-------- ВЫЧЛЕНЯЕМ ЗНАНИЯ ---------")
-#     print(topics)
 #     for item in topics:
 #         topic = item.get("topic", "")
 #         subtopic = item.get("subtopic", "")
-#         if topic not in KNOWLEDGE_BASE:
+#         if topic not in knowledge_base:
 #             continue
-#         topic_data = KNOWLEDGE_BASE[topic]
+#         topic_data = knowledge_base[topic]
 #         subs = topic_data.get("subtopics", {})
 
 #         if subtopic and subtopic in subs:
@@ -964,21 +1005,22 @@ async def determine_topics_via_gpt(
 
 from typing import List, Dict, Optional
 
-def extract_knowledge(topics: List[Dict[str, Optional[str]]], user_message: str) -> List[str]:
-    """Извлекает ответы из KNOWLEDGE_BASE для списка тем, подтем и вопросов."""
+async def extract_knowledge(topics: List[Dict[str, Optional[str]]], user_message: Optional[str]=None, knowledge_base: Optional[Dict[str, dict]]={}) -> List[str]:
+    """Извлекает ответы из knowledge_base для списка тем, подтем и вопросов."""
     snippets: List[str] = []
-    
-    print("-------- ВЫЧЛЕНЯЕМ ЗНАНИЯ ---------")
+    print('===========================TOPICS===========================')
     print(topics)
-
+    print()
+    if not knowledge_base:
+        knowledge_base = await get_knowledge_base()
     for item in topics:
         topic_name = item.get("topic", "")
         subtopics = item.get("subtopics", [])
 
-        if topic_name not in KNOWLEDGE_BASE:
+        if topic_name not in knowledge_base:
             continue
 
-        topic_data = KNOWLEDGE_BASE[topic_name]
+        topic_data = knowledge_base[topic_name]
         subs = topic_data.get("subtopics", {})
 
         if subtopics:
@@ -1007,7 +1049,6 @@ def extract_knowledge(topics: List[Dict[str, Optional[str]]], user_message: str)
     return snippets if snippets else ["No relevant data found."]
 
 
-
 async def generate_ai_answer(
     user_message: str,
     snippets: List[str],
@@ -1018,10 +1059,6 @@ async def generate_ai_answer(
     return_json: bool = False
 ) -> Union[str, Dict[str, Any]]:
     """Генерирует ответ через GPT с учётом истории чата и языка."""
-    print("+++++++++++++ ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ +++++++++++++++")
-    print(user_info)
-    print("+++++++++++++ СНИППЕТЫ +++++++++++++++")
-    print(snippets)
     joined_snippets = "\n- " + "\n- ".join(snippets) if snippets else ""
     style_description = "Please provide a short partial answer." if style == "partial" else "Please provide a thorough, confident answer."
     if return_json:
@@ -1029,12 +1066,22 @@ async def generate_ai_answer(
 
     system_language_instruction = f"Language settings:\n- The interface language for the user is '{user_language}'.\n- You should prioritize responding in the language of the user's message.\n"
 
-    now = datetime.now(timezone.utc)
-    formatted_datetime = now.strftime("%d-%m-%Y %H:%M:%S UTC%z")
-    formatted_datetime.replace("UTC+0000", "UTC")
+    current_datetime = get_current_datetime()
+    weather_info = {
+        # "Tbilisi": await get_weather_for_region("Tbilisi, Georgia"),
+        # "Batumi": await get_weather_for_region("Batumi, Georgia")
+        # "Nika Hotel & Club": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
+
+        # "Nika Hotel & Club": await get_weather_by_address(address="деревня Чанчхало, Аджария, Грузия"),
+        # "Moscow": await get_weather_by_address(address="Москва")
+    }
+    print('+'*100)
+    print(weather_info)
+    # weather_info = {}
 
     system_prompt = AI_PROMPTS["system_ai_answer"].format(
-        current_datetime=formatted_datetime,
+        current_datetime=current_datetime,
+        weather_info=weather_info,
         user_info=user_info,
         joined_snippets=joined_snippets,
         style_description=style_description,
@@ -1072,15 +1119,12 @@ async def check_relevance_to_brief(question: str, user_message: str) -> bool:
         question=question,
         user_message=user_message
     )
-    print([{"role": "system", "content": system_prompt.strip()}])
 
     response = await openai_client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "system", "content": system_prompt.strip()}],
         temperature=0.1
     )
-    print(response.choices[0].message.content.strip().lower())
-    print(response.choices[0].message.content.strip().lower() == "yes")
     return response.choices[0].message.content.strip().lower() == "yes"
 
 

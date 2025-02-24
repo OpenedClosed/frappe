@@ -119,7 +119,14 @@ class ClientInline(InlineAdmin):
         """Получить список клиентов."""
         filters = filters or {}
         results = await super().get_queryset(filters=filters, sort_by=sort_by, order=order)
-        return [await self.format_document(client) for client in results]
+        
+        unique_clients = {}
+        for client in results:
+            client_id = client.get("client_id")
+            if client_id and client_id not in unique_clients:
+                unique_clients[client_id] = client
+        
+        return [await self.format_document(client) for client in unique_clients.values()]
 
     async def get_metadata_display(self, obj: dict) -> str:
         """Отображение метаданных клиента."""
@@ -146,29 +153,51 @@ class ChatSessionAdmin(BaseAdmin):
         "ru": "Сессии чата"
     }
     icon: str = "pi pi-comments"
+    
+    # Отображаемые поля
     list_display = [
         "chat_id",
-        "client_id",
+        "client_id_display",
+        "client_source_display",
+        "company_name",
         "status_display",
         "duration_display",
         "created_at",
-        "admin_marker",]
+        "admin_marker",
+    ] 
+    
+    # Поля в деталях
     detail_fields = [
         "chat_id",
-        "client_id",
+        "client_id_display",
+        "client_source_display",
+        "company_name",
         "status_display",
         "duration_display",
-        "created_at"]
-    computed_fields = ["status_display", "duration_display"]
+        "created_at",
+        "admin_marker",
+    ]
+    
+    # Вычисляемые поля
+    computed_fields = ["client_id_display", "client_source_display", "status_display", "duration_display"]
+
+    # Только для чтения
     read_only_fields = ["created_at", "last_activity"]
+
+    # Заголовки полей с переводом
     field_titles = {
         "chat_id": {"en": "Chat ID", "pl": "ID czatu", "uk": "Ідентифікатор чату", "ru": "ID чата"},
-        "client_id": {"en": "Client ID", "pl": "ID klienta", "uk": "Ідентифікатор клієнта", "ru": "ID клиента"},
+        "client_id_display": {"en": "Client ID", "pl": "ID klienta", "uk": "Ідентифікатор клієнта", "ru": "ID клиента"},
+        "client_source_display": {"en": "Client Source", "pl": "Źródło klienta", "uk": "Джерело клієнта", "ru": "Источник клиента"},
+        "company_name": {"en": "Company Name", "pl": "Nazwa firmy", "uk": "Назва компанії", "ru": "Название компании"},
         "status_display": {"en": "Status", "pl": "Status", "uk": "Статус", "ru": "Статус"},
         "duration_display": {"en": "Duration", "pl": "Czas trwania", "uk": "Тривалість", "ru": "Длительность"},
         "created_at": {"en": "Created At", "pl": "Utworzono", "uk": "Створено", "ru": "Создано"},
         "last_activity": {"en": "Last Activity", "pl": "Ostatnia aktywność", "uk": "Остання активність", "ru": "Последняя активность"},
+        "admin_marker": {"en": "Admin Marker", "pl": "Znacznik administratora", "uk": "Мітка адміністратора", "ru": "Админская метка"},
     }
+
+    # Инлайн-модели
     inlines = {"messages": ChatMessageInline, "client": ClientInline}
 
     async def get_queryset(
@@ -189,8 +218,7 @@ class ChatSessionAdmin(BaseAdmin):
             diff = (datetime.utcnow() - obj["last_activity"]).total_seconds()
             ttl_value = settings.CHAT_TIMEOUT.total_seconds() - max(diff, 0)
         chat_session = ChatSession(**obj)
-        return chat_session.compute_status(
-            ttl_value).value.capitalize().replace('_', ' ')
+        return chat_session.compute_status(ttl_value).value.capitalize().replace('_', ' ')
 
     async def get_duration_display(self, obj: dict) -> str:
         """Длительность чата."""
@@ -202,6 +230,19 @@ class ChatSessionAdmin(BaseAdmin):
         hours, remainder = divmod(duration.total_seconds(), 3600)
         minutes, _ = divmod(remainder, 60)
         return f"{int(hours)}h {int(minutes)}m"
+
+    async def get_client_id_display(self, obj: dict) -> str:
+        """Возвращает ID клиента (external_id если есть, иначе client_id)."""
+        if "client" in obj and isinstance(obj["client"], dict):
+            return obj["client"].get("external_id", obj["client"].get("client_id", "N/A"))
+        return "N/A"
+
+    async def get_client_source_display(self, obj: dict) -> str:
+        """Возвращает источник клиента."""
+        if "client" in obj and isinstance(obj["client"], dict):
+            return obj["client"].get("source", "Unknown").replace("_", " ").capitalize()
+        return "Unknown"
+
 
 
 admin_registry.register("chat_sessions", ChatSessionAdmin(mongo_db))

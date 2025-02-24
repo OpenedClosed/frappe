@@ -39,8 +39,12 @@ ALLOWED_ORIGINS = [
     FRONTEND_URL,
     BACKEND_URL,
     "http://localhost",
+    "http://localhost:3000",
+    "http://localhost:4000",
+    "http://localhost:3001",
     "http://127.0.0.1",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
     "http://127.0.0.1:8000",
 ]
 
@@ -51,6 +55,9 @@ FLOOD_TIMEOUTS = {
     "automatic": timedelta(seconds=10),
 }
 SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru"}
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "change_me")
+WEATHER_API_URL = "http://api.openweathermap.org/data/2.5/weather"
+WEATHER_CACHE_LIFETIME = timedelta(hours=1)
 
 # Instagram API настройки
 INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "change_me")

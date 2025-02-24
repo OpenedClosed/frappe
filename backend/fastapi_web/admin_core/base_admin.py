@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from fastapi.exceptions import HTTPException
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 from pydantic import BaseModel, ValidationError, create_model
+import logging
 
 
 class BaseAdminCore:
@@ -86,28 +87,51 @@ class BaseAdminCore:
 
     async def create(self, data: dict) -> dict:
         """Создать документ."""
-        valid = await self._process_data(data)
+        valid = await self._process_data(data=data)
+
         res = await self.db.insert_one(valid)
-        created = await self.get(str(res.inserted_id))
-        if not created:
+
+        if not res.inserted_id:
+            raise HTTPException(500, "Failed to create object.")
+
+        print("Inserted Data:", valid)
+        print("InsertOneResult:", res)
+        print("Inserted ID:", res.inserted_id)  # ObjectId
+
+        # Используем `ObjectId`, а не `str(ObjectId)`
+        created_old = await self.get(str(res.inserted_id))
+        created_raw_obj = await self.db.find_one({"_id": res.inserted_id})  # <-- исправлено
+
+        print("Direct DB Fetch:", created_raw_obj)  # Проверяем, действительно ли объект есть в базе
+
+        if not created_raw_obj:
             raise HTTPException(500, "Failed to retrieve created object.")
+        
+        created = await self.format_document(created_raw_obj)
+
         return created
 
+
     async def update(self, object_id: str, data: dict) -> dict:
-        """Обновить документ."""
-        existing_obj = await self.get(object_id)
-        if not existing_obj:
+        """Обновляет объект по object_id."""
+        raw_existing_obj = await self.db.find_one({"_id": ObjectId(object_id)})
+        if not raw_existing_obj:
             raise HTTPException(404, "Item not found for update.")
-        valid = await self._process_data(data, partial=True)
-        id_field_key = self.detect_id_field()
-        print(id_field_key)
-        res = await self.db.update_one({id_field_key: ObjectId(object_id)}, {"$set": valid})
-        if res.matched_count == 0:
-            raise HTTPException(500, "Failed to update object.")
-        updated = await self.get(object_id)
-        if not updated:
-            raise HTTPException(500, "Failed to retrieve updated object.")
-        return updated
+        try:
+            valid = await self._process_data(data=data, existing_obj=raw_existing_obj, partial=True)
+            for cf in self.computed_fields:
+                if cf in valid:
+                    del valid[cf]
+            id_field_key = self.detect_id_field()
+            res = await self.db.update_one({id_field_key: ObjectId(object_id)}, {"$set": valid})
+            if res.matched_count == 0:
+                raise HTTPException(500, "Failed to update object.")
+            updated_raw = await self.db.find_one({id_field_key: ObjectId(object_id)})
+            if not updated_raw:
+                raise HTTPException(500, "Failed to retrieve updated object.")
+            return await self.format_document(updated_raw)
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
 
     async def delete(self, object_id: str) -> dict:
         """Удалить документ."""
@@ -119,38 +143,86 @@ class BaseAdminCore:
             raise HTTPException(500, "Failed to delete object.")
         return {"status": "success"}
 
-    async def process_inlines(self, data: dict) -> dict:
-        """Обработка вложенных данных при создании/обновлении."""
+    async def process_inlines(self, existing_doc: Optional[dict], update_data: dict, partial: bool = False) -> dict:
+        """Рекурсивный мерж inline-данных с поддержкой вложенности."""
         inline_data = {}
-        for field, inline_cls in self.inlines.items():
-            if field in data:
-                inline_inst = inline_cls(self.db)
-                raw_val = data.pop(field)
-                inline_data[field] = [
-                    await inline_inst.validate_data(x)
-                    for x in (raw_val if isinstance(raw_val, list) else [raw_val])
-                ]
-        return inline_data
+        try:
+            for field, inline_cls in self.inlines.items():
+                existing_inlines = existing_doc.get(field, []) if existing_doc else []
+                if field in update_data:
+                    inline_inst = inline_cls(self.db)
+                    update_inlines = update_data.pop(field)
+                    if not isinstance(update_inlines, list):
+                        update_inlines = [update_inlines]
+                    merged_inlines = []
+                    if existing_doc:
+                        existing_by_id = {item["id"]: item for item in existing_inlines if "id" in item}
+                        for item in update_inlines:
+                            if not isinstance(item, dict):
+                                continue
+                            if "id" in item:
+                                if item.get("_delete", False):
+                                    existing_by_id.pop(item["id"], None)
+                                    continue
+                                existing_item = existing_by_id.get(item["id"], {})
+                                merged = {**existing_item, **item}
+                                validated = await inline_inst.validate_data(merged, partial=False)
+                                final_inline = {**merged, **validated}
+                                if inline_inst.inlines:
+                                    sub_inlines = await inline_inst.process_inlines(existing_item, final_inline, partial=partial)
+                                    final_inline.update(sub_inlines)
+                                merged_inlines.append(final_inline)
+                                existing_by_id.pop(item["id"], None)
+                            else:
+                                validated = await inline_inst.validate_data(item, partial=False)
+                                full_validated = inline_inst.model.parse_obj(validated).dict()
+                                final_inline = full_validated
+                                if inline_inst.inlines:
+                                    sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
+                                    final_inline.update(sub_inlines)
+                                merged_inlines.append(final_inline)
+                        merged_inlines.extend(existing_by_id.values())
+                        inline_data[field] = merged_inlines
+                    else:
+                        validated_items = []
+                        for item in update_inlines:
+                            if not isinstance(item, dict):
+                                continue
+                            validated = await inline_inst.validate_data(item, partial=False)
+                            full_validated = inline_inst.model.parse_obj(validated).dict()
+                            final_inline = full_validated
+                            if inline_inst.inlines:
+                                sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
+                                final_inline.update(sub_inlines)
+                            validated_items.append(final_inline)
+                        inline_data[field] = validated_items
+                else:
+                    inline_data[field] = existing_inlines
+            return inline_data
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
+
+
 
     async def get_inlines(self, doc: dict) -> dict:
-        """Получение данных из inlines."""
+        """Получение инлайнов из документа."""
         inl_data = {}
-        for field, inline_cls in self.inlines.items():
-            inline_inst = inline_cls(self.db)
-
-            parent_id = doc.get("_id")
-            if not parent_id:
-                inl_data[field] = []
-                continue
-
-            filters = {"_id": parent_id}
-
-            found = await inline_inst.get_queryset(filters=filters)
-            inl_data[field] = [
-                await inline_inst.format_document(child) if "id" not in child else child
-                for child in found
-            ]
-        return inl_data
+        try:
+            for field, inline_cls in self.inlines.items():
+                inline_inst = inline_cls(self.db)
+                parent_id = doc.get("_id")
+                if not parent_id:
+                    inl_data[field] = []
+                    continue
+                filters = {"_id": parent_id}
+                found = await inline_inst.get_queryset(filters=filters)
+                inl_data[field] = [
+                    await inline_inst.format_document(child) if "id" not in child else child
+                    for child in found
+                ]
+            return inl_data
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
 
     async def format_document(self, doc: dict) -> dict:
         """Формирование результирующего документа."""
@@ -164,58 +236,51 @@ class BaseAdminCore:
         return result
 
     async def validate_data(self, data: dict, partial: bool = False) -> dict:
-        """Валидация данных."""
+        """Валидация данных (без учёта инлайнов)."""
         errors: Dict[str, Any] = {}
         validated: dict = {}
+
         try:
             if partial:
                 for field, val in data.items():
-                    if field == "id":
+                    if field == "id" or field in self.read_only_fields:
                         continue
-                    if field in self.read_only_fields:
-                        errors[field] = f"Field '{field}' is read-only."
-                    elif field in self.model.__annotations__:
-                        temp_model = create_model(
-                            "TempModel", **{field: (self.model.__annotations__[field], ...)}
-                        )
+                    if field in self.model.__annotations__:
+                        if field in self.inlines:
+                            validated[field] = val
+                            continue
+                        field_type = self.model.__annotations__[field]
+                        temp_model = create_model("TempModel", **{field: (field_type, ...)})
                         validated_field = temp_model(**{field: val})
-                        validated[field] = validated_field.dict()[field]
+                        validated[field] = validated_field.dict(exclude_unset=True)[field]
             else:
-                obj = self.model(**data)
-                validated.update(obj.dict())
+                filtered_data = {k: v for k, v in data.items() if k not in self.inlines}
+                obj = self.model(**filtered_data)
+                validated.update(obj.dict(exclude_unset=True))
         except ValidationError as e:
             for err in e.errors():
                 loc = err["loc"]
                 ref = errors
-                for k in loc[:-1]:
-                    ref = ref.setdefault(k, {})
+                for part in loc[:-1]:
+                    ref = ref.setdefault(part, {})
                 ref[loc[-1]] = err["msg"]
-
-        for field, inline_cls in self.inlines.items():
-            if field in data:
-                inline_inst = inline_cls(self.db)
-                inline_values = data[field]
-                inline_err_list = []
-                try:
-                    validated[field] = [
-                        await inline_inst.validate_data(item, partial=partial)
-                        for item in (inline_values if isinstance(inline_values, list) else [inline_values])
-                    ]
-                except HTTPException as ex:
-                    inline_err_list.append(ex.detail)
-                if inline_err_list:
-                    errors[field] = inline_err_list
 
         if errors:
             raise HTTPException(400, detail=errors)
         return validated
 
-    async def _process_data(self, data: dict, partial: bool = False) -> dict:
-        """Общая валидация и работа с инлайнами."""
-        valid = await self.validate_data(data, partial=partial)
-        inline_data = await self.process_inlines(data)
-        valid.update(inline_data)
-        return valid
+
+    async def _process_data(self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False) -> dict:
+        """Обрабатывает данные (валидация и мерж инлайнов)."""
+        try:
+            valid = await self.validate_data(data, partial=partial)
+            if self.inlines:
+                inline_data = await self.process_inlines(existing_obj, data, partial=partial)
+                valid.update(inline_data)
+            return valid
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
+
 
     def _nested_find(self, doc: Any, target_id: str) -> bool:
         """Рекурсивный поиск id во вложенных структурах."""
@@ -272,6 +337,9 @@ class BaseAdminCore:
     def __str__(self) -> str:
         """Строковое представление."""
         return self.verbose_name
+    
+
+
 
 
 class InlineAdmin(BaseAdminCore):
@@ -349,7 +417,7 @@ class InlineAdmin(BaseAdminCore):
         if not existing_obj:
             raise HTTPException(404, "Item not found for update.")
 
-        valid = await self._process_data(data, partial=True)
+        valid = await self._process_data(data=data, partial=True)
         if not valid:
             raise HTTPException(400, "No valid fields to update.")
 

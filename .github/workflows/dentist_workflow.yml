@@ -19,6 +19,14 @@ env:
   TOKEN: ${{ secrets.TOKEN }}
   CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
 
+  WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+  INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+  INSTAGRAM_APP_ID: ${{ secrets.INSTAGRAM_APP_ID }}
+  INSTAGRAM_APP_SECRET: ${{ secrets.INSTAGRAM_APP_SECRET }}
+  INSTAGRAM_VERIFY_TOKEN: ${{ secrets.INSTAGRAM_VERIFY_TOKEN }}
+  INSTAGRAM_BOT_NAME: ${{ secrets.INSTAGRAM_BOT_NAME }}
+  INSTAGRAM_BOT_ID: ${{ secrets.INSTAGRAM_BOT_ID }}
+
 
 
 jobs:
@@ -86,6 +94,47 @@ jobs:
     needs: build_and_push_to_docker_hub
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Debug repository contents
+        run: |
+          echo "### GitHub Actions workspace:"
+          pwd
+          echo "### Listing root directory:"
+          ls -lah
+          echo "### Listing all files recursively:"
+          find . -type d
+          echo "### Checking backend/infra/:"
+          ls -lah backend/infra || echo "backend/infra/ not found"
+          echo "### Checking scripts/:"
+          ls -lah scripts || echo "scripts/ not found"
+
+
+      - name: Copy docker-compose.yml to server root
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.USER }} 
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          source: "backend/infra/docker-compose.yml"
+          target: "~/"  # Копируем в корень пользователя
+          strip_components: 2  # Убираем 2 уровня директорий
+          overwrite: true
+
+      - name: Copy restart_containers.sh to scripts folder
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          source: "scripts/restart_containers.sh"
+          target: "~/scripts/"
+          strip_components: 1  # Убираем 1 уровень директорий
+          overwrite: true
+
       - name: Execute remote SSH commands to deploy
         uses: appleboy/ssh-action@master
         with:
@@ -94,6 +143,13 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
+            # Даем права на выполнение скрипта
+            chmod +x ~/scripts/restart_containers.sh
+
+            # Проверяем, есть ли запись в cron
+            CRON_JOB="*/5 * * * * ~/scripts/restart_containers.sh >> ~/scripts/restart_log.txt 2>&1"
+            (crontab -l | grep -qF "$CRON_JOB") || (echo "$CRON_JOB" | crontab -)
+
             sudo docker-compose down --remove-orphans
             touch .env
             cat > .env << EOF
@@ -119,6 +175,15 @@ jobs:
             BOT_LINK=${{ env.BOT_LINK }}
             TOKEN=${{ env.TOKEN }}
             CERTBOT_EMAIL=${{ env.CERTBOT_EMAIL }}
+
+            WEATHER_API_KEY=${{ env.WEATHER_API_KEY }}
+            INSTAGRAM_ACCESS_TOKEN=${{ env.INSTAGRAM_ACCESS_TOKEN }}
+            INSTAGRAM_APP_ID=${{ env.INSTAGRAM_APP_ID }}
+            INSTAGRAM_APP_SECRET=${{ env.INSTAGRAM_APP_SECRET }}
+            INSTAGRAM_VERIFY_TOKEN=${{ env.INSTAGRAM_VERIFY_TOKEN }}
+            INSTAGRAM_BOT_NAME=${{ env.INSTAGRAM_BOT_NAME }}
+            INSTAGRAM_BOT_ID=${{ env.INSTAGRAM_BOT_ID }}
+
             EOF
 
             sudo docker-compose pull

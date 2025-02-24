@@ -3,7 +3,7 @@ import hashlib
 import logging
 import uuid
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Any
 
 import httpx
 from fastapi import Request, WebSocket
@@ -12,8 +12,12 @@ from telegram_bot.infra import settings as bot_settings
 from chats.db.mongo.enums import ChatSource, SenderRole
 from chats.db.mongo.schemas import ChatMessage, ChatSession
 from db.mongo.db_init import mongo_db
+from db.redis.db_init import redis_db
 from infra import settings
-
+import httpx
+import json
+import locale
+from datetime import timezone
 
 async def generate_client_id(
     source: Union[Request, WebSocket],
@@ -118,3 +122,142 @@ async def send_message_to_bot(chat_id: str, chat_session: dict) -> None:
         )
         if response.status_code != 200:
             logging.info(f"Сообщение не отправлено! Ошибка: {response.text}")
+
+
+locale.setlocale(locale.LC_TIME, "C")
+
+def get_current_datetime():
+    """Возвращает текущую дату и время с днем недели в формате: 'Monday, 08-02-2025 14:30:00 UTC+4'"""
+    now = datetime.now(timezone.utc)
+    formatted_datetime = now.strftime("%A, %d-%m-%Y %H:%M:%S UTC%z")
+    formatted_datetime = formatted_datetime.replace("UTC+0000", "UTC")
+    return formatted_datetime
+
+
+async def get_weather_for_region(region_name: str) -> Dict[str, Any]:
+    """Асинхронно получает прогноз погоды на 5 дней с кэшированием в Redis."""
+
+    redis_key = f"weather:{region_name.lower()}"
+
+    cached_weather = await redis_db.get(redis_key)
+    if cached_weather:
+        return json.loads(cached_weather)
+
+    params = {
+        "q": region_name,
+        "appid": settings.WEATHER_API_KEY,
+        "units": "metric",
+        "lang": "en",
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get("http://api.openweathermap.org/data/2.5/forecast", params=params)
+            data = response.json()
+
+            if response.status_code == 200:
+                forecast = {}
+
+                for entry in data["list"]:
+                    date = entry["dt_txt"].split(" ")[0]  # Дата без времени
+                    temp = entry["main"]["temp"]
+                    description = entry["weather"][0]["description"].capitalize()
+
+                    if date not in forecast:
+                        forecast[date] = {"temp_min": temp, "temp_max": temp, "description": description}
+                    else:
+                        forecast[date]["temp_min"] = min(forecast[date]["temp_min"], temp)
+                        forecast[date]["temp_max"] = max(forecast[date]["temp_max"], temp)
+
+                weather_data = {"forecast": forecast}
+                await redis_db.set(redis_key, json.dumps(weather_data), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
+                return weather_data
+            else:
+                return {"error": "Weather data unavailable"}
+        except Exception as e:
+            print(f"Error fetching weather data: {e}")
+            return {"error": "Weather data unavailable"}
+        
+
+
+
+
+async def get_coordinates(address: str) -> Dict[str, float]:
+    """Получает координаты (широта, долгота) для заданного адреса через OpenWeatherMap Geocoding API."""
+    geocode_url = "http://api.openweathermap.org/geo/1.0/direct"
+    params = {
+        "q": address,
+        "limit": 1,
+        "appid": settings.WEATHER_API_KEY,
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(geocode_url, params=params)
+            data = response.json()
+
+            if response.status_code == 200 and data:
+                return {"lat": data[0]["lat"], "lon": data[0]["lon"]}
+            else:
+                print("Ошибка геокодинга:", data)
+                return {}
+        except Exception as e:
+            print(f"Ошибка при получении координат: {e}")
+            return {}
+
+
+async def get_weather_for_location(lat: float, lon: float) -> Dict[str, Any]:
+    """Получает прогноз погоды по координатам (широта и долгота)."""
+
+    redis_key = f"weather:{lat},{lon}"
+    cached_weather = await redis_db.get(redis_key)
+    
+    if cached_weather:
+        return json.loads(cached_weather)
+
+    weather_url = "http://api.openweathermap.org/data/2.5/forecast"
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "appid": settings.WEATHER_API_KEY,
+        "units": "metric",
+        "lang": "ru",  # русский язык
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(weather_url, params=params)
+            data = response.json()
+
+            if response.status_code == 200:
+                forecast = {}
+
+                for entry in data["list"]:
+                    date = entry["dt_txt"].split(" ")[0]  # Дата без времени
+                    temp = entry["main"]["temp"]
+                    description = entry["weather"][0]["description"].capitalize()
+
+                    if date not in forecast:
+                        forecast[date] = {"temp_min": temp, "temp_max": temp, "description": description}
+                    else:
+                        forecast[date]["temp_min"] = min(forecast[date]["temp_min"], temp)
+                        forecast[date]["temp_max"] = max(forecast[date]["temp_max"], temp)
+
+                weather_data = {"forecast": forecast}
+                await redis_db.set(redis_key, json.dumps(weather_data), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
+                return weather_data
+            else:
+                return {"error": "Погода недоступна"}
+        except Exception as e:
+            print(f"Ошибка получения погоды: {e}")
+            return {"error": "Погода недоступна"}
+
+
+async def get_weather_by_address(address: str) -> str:
+    """Получает прогноз погоды для адреса."""
+    coordinates = await get_coordinates(address)
+
+    if not coordinates:
+        return {"error": "Не удалось получить координаты"}
+
+    return await get_weather_for_location(coordinates["lat"], coordinates["lon"])

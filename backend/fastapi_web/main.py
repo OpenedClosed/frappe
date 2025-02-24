@@ -11,6 +11,7 @@ from infra.middlewares import BasicAuthMiddleware
 from infra import settings
 from db.mongo.db_init import mongo_db_on_startapp
 from chats.routers import chat_router
+from knowledge.routers import knowledge_base_router
 from chats.integrations.instagram import instagram_router
 from admin_core.routes_generator import (auto_discover_admin_modules,
                                          generate_admin_routes,
@@ -69,6 +70,7 @@ async def on_shutdown():
 
 chat_router.include_router(instagram_router, prefix="/instagram")
 base_api_router.include_router(chat_router, prefix="/chats")
+base_api_router.include_router(knowledge_base_router, prefix="/knowledge")
 app.include_router(base_api_router)
 
 app.add_middleware(BasicAuthMiddleware, username="admin", password="admin")

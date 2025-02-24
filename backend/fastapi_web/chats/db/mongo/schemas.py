@@ -40,12 +40,11 @@ class ChatMessage(IdModel):
     message: str
     sender_role: SenderRole
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    choice_options: Optional[List[str]] = None
+    choice_options: Optional[List] = None
     choice_strict: bool = False
     gpt_evaluation: Optional[GptEvaluation] = None
     reply_to: Optional[str] = None
     external_id: Optional[str] = None
-    command_name: Optional[str] = None
 
 
 
@@ -60,14 +59,14 @@ class Client(IdModel):
 class ChatSession(BaseModel):
     """Модель чата."""
     chat_id: str
-    client: Client
+    client: Optional[Client] = None
     bot_id: Optional[str] = None
     company_name: Optional[str] = None
     external_id: Optional[str] = None  # ID Instagram-бота
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    last_activity: datetime
+    last_activity: datetime = Field(default_factory=datetime.utcnow)
     manual_mode: bool = False
-    messages: List[ChatMessage] = []
+    messages: Optional[List[ChatMessage]] = []
     brief_answers: List[BriefAnswer] = []
     closed_by_request: Optional[bool] = False
     admin_marker: bool = False
