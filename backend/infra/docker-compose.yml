@@ -64,7 +64,7 @@ services:
     restart: always
 
   nginx:
-    image: nginx:latest
+    image: 89639339335/dentist_nginx:latest
     ports:
       - "80:80"
       - "443:443"
