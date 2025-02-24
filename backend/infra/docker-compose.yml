@@ -67,11 +67,16 @@ services:
     image: nginx:latest
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt
+      - static_value:/var/html/static
+      - media_value:/var/html/media
     depends_on:
-      - frontend_chat
-      - frontend_admin
+      - backend
+    env_file:
+      - .env
+    command: sh -c "/app/certbot_script.sh"
 
 volumes:
   mongo_data:
