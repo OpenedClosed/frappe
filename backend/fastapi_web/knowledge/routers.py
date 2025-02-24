@@ -132,20 +132,19 @@ async def patch_knowledge_base(req: PatchKnowledgeRequest):
     old_knowledge = old_doc.get("knowledge_base", old_doc)
     patch_knowledge = req.patch_data.get("knowledge_base", req.patch_data)
     merged_data = deep_merge(old_knowledge, patch_knowledge)
-    logging.info('===========================HERE===========================')
-    logging.info('===========================OLD===========================')
-    logging.info(old_knowledge)
-    logging.info('===========================PATCH===========================')
-    logging.info(patch_knowledge)
-    logging.info('===========================RESULT===========================')
-    logging.info(merged_data)
+    # logging.info('===========================HERE===========================')
+    # logging.info('===========================OLD===========================')
+    # logging.info(old_knowledge)
+    # logging.info('===========================PATCH===========================')
+    # logging.info(patch_knowledge)
+    # logging.info('===========================RESULT===========================')
+    # logging.info(merged_data)
     merged_doc = {
         "app_name": "main",
         "knowledge_base": merged_data if isinstance(merged_data, dict) else {},
         "brief_questions": old_doc.get("brief_questions", {}),
         "update_date": now
     }
-    logging.info(merged_doc)
     # print(merged_doc)
 
     # merged_doc["app_name"] = "main"
@@ -221,36 +220,114 @@ async def analyze_update_snippets_via_gpt(
         snippet_lines.append(line)
     kb_full_structure = "\n".join(snippet_lines)
 
-    system_prompt = f"""
 
-You are an AI assistant specialized in analyzing a dentist's knowledge base.
-Your task is to determine which **existing** topics, subtopics, and questions from the actual knowledge base are **relevant** to the user's request.
-You **MUST NOT** create new topics, subtopics, or questions. 
-You **MUST NOT** modify or infer missing information.
-You **MUST STRICTLY USE ONLY EXISTING DATA** from the knowledge base.
+#     system_prompt = f"""
+# You are an AI assistant specialized in analyzing a knowledge base.
+# Your task is to extract **only the relevant existing topics, subtopics, and questions** from the knowledge base that match the user's request.
+# ⚠️ **You MUST NOT create, modify, or interpret the user's request.**
+# ⚠️ **You MUST ONLY use the knowledge base to find relevant topics.**
+# ⚠️ **If no relevant topics exist, return exactly: {{"topics": []}}**.
+
+# ### **Actual Knowledge Base Structure**
+# The knowledge base consists of the following topics, subtopics, and questions:
+# {kb_full_structure} (if empty: return {{"topics": []}})
+
+# ### **Rules**:
+# 1. **Strictly Use Existing Data**:
+#    - You **must only return** topics, subtopics, and questions **that already exist** in the knowledge base.
+#    - ⚠️ **DO NOT interpret or apply the user's request. Only use it for searching.**
+#    - If a user asks about something **not present** in the knowledge base, **DO NOT invent, add, or modify anything**.
+#    - If no relevant topics exist, return exactly this: {{"topics": []}}.
+
+# 2. **Match the User Request for Searching Only**:
+#    - The user's request is **ONLY used to identify relevant parts of the knowledge base**.
+#    - **DO NOT execute any modifications based on the request.**
+#    - Example: If the user asks to change "dogs should be walked 3 times a day instead of 2," your task is **ONLY to find the related question** (e.g., "How often should I walk my dog?").
+
+# 3. **Precise Matching**:
+#    - If the user's request mentions a **specific question**, return **only that question** and its corresponding topic/subtopic.
+#    - If the request **asks to modify an entire topic or subtopic**, return **ALL** existing questions from that topic/subtopic.
+#    - If the request **is general** (e.g., "update all responses"), return **the entire knowledge base**.
+
+# 4. **Preserve the Original Structure**:
+#    - Each `"topic"` contains `"subtopics"`, and each `"subtopic"` contains `"questions"`.
+#    - You **MUST NOT** modify this hierarchy.
+#    - You **MUST NOT** rename or restructure any fields.
+
+# 5. **Match Language**:
+#    - The topics, subtopics, and questions **must remain in their original language** unless the user explicitly requests a translation.
+#    - If the request does not specify a language change, **strictly maintain the existing language**.
+
+# 6. **Handling General Requests**:
+#    - If the user asks for changes **across the entire knowledge base**, **return everything that exists**.
+#    - If the user asks for modifications **only in one topic/subtopic**, **return all related questions from that topic/subtopic**.
+
+# 7. **Ensure Output Format**:
+#    - The response **must strictly** follow this JSON format:
+# ```json
+# {{
+#   "topics": [
+#     {{
+#       "topic": "Existing Topic Name",
+#       "subtopics": [
+#         {{
+#           "subtopic": "Existing Subtopic Name",
+#           "questions": ["Existing Question 1", "Existing Question 2"]
+#         }}
+#       ]
+#     }}
+#   ]
+# }}
+# """
+
+    system_prompt = f"""
+You are an AI assistant specialized in analyzing a knowledge base.
+Your task is to extract **only the relevant existing topics, subtopics, and questions** from the knowledge base that match the user's request.
+⚠️ **You MAY apply internal transformations (such as translation) for better matching during search, but the output must strictly use original keys from the database.**
+⚠️ **You MUST NOT modify, rename, or translate any keys in the output.**
+⚠️ **You MUST STRICTLY USE ONLY EXISTING DATA from the knowledge base.**
+⚠️ **If no relevant topics exist, return exactly: {{"topics": []}}**.
 
 ### **Actual Knowledge Base Structure**
 The knowledge base consists of the following topics, subtopics, and questions:
 {kb_full_structure} (if empty: return {{"topics": []}})
 
 ### **Rules**:
-1. **Strictly Use Existing Data**:
+1. **Strictly Use Existing Data (NO Modifications Allowed in Output)**:
    - You **must only return** topics, subtopics, and questions **that already exist** in the knowledge base.
+   - ⚠️ **DO NOT modify, translate, or rephrase any keys in the final response.**
+   - ⚠️ **DO NOT execute modifications from the user's request. Use it only for searching.**
+   - If a user asks about something **not present** in the knowledge base, **DO NOT invent, add, or modify anything**.
+   - If no relevant topics exist, return exactly this: {{"topics": []}}.
 
-2. **Preserve the Original Structure**:
+2. **Enhanced Matching (Use Internal Transformations for Searching, but NOT in Output)**:
+   - You may **internally** apply **language translation, rephrasing, or normalization** **ONLY** to find the best matching topic, subtopic, or question.
+   - However, **the final output must strictly match the original language and structure** from the knowledge base.
+   - Example 1: If the user asks about transaltion in English but the knowledge base is in Russian , you may internally translate for matching **but must return the original (in the example: Russian) key**.
+   - Example 2: If the user asks to "rename" something, **DO NOT RENAME IT**. Just find and return the existing entry.
+
+3. **Precise Matching (Only Return Exact Matches from the Database)**:
+   - If the user's request mentions a **specific question**, return **only that exact question** and its corresponding topic/subtopic.
+   - If the request **asks to modify an entire topic or subtopic**, return **ALL** existing questions from that topic/subtopic.
+   - If the request **is general** (e.g., "update all responses"), return **the entire knowledge base**.
+
+4. **Preserve the Original Structure**:
    - Each `"topic"` contains `"subtopics"`, and each `"subtopic"` contains `"questions"`.
-   - You **MUST NOT** modify this hierarchy.
-   - You **MUST NOT** rename or restructure any fields.
+   - ⚠️ **DO NOT modify, rename, or restructure any fields in the output.**
+   - ⚠️ **DO NOT change the order of questions or topics.**
+   - ⚠️ **DO NOT edit or format the content in any way.**
+   - The output **MUST** be a strict subset of the knowledge base.
 
-3. **Match Language**:
-   - The topics, subtopics, and questions **must remain in their original language** unless the user explicitly requests a translation.
-   - If the request does not specify a language change, **strictly maintain the existing language**.
+5. **Match Language in Output (Use Original Keys from Database)**:
+   - ⚠️ **Even if you internally translate during searching, DO NOT change the language of the final output.**
+   - The topics, subtopics, and questions **must remain in their original language as they exist in the knowledge base**.
+   - Example: If the original database has **"Как ухаживать за собакой?"**, you may internally match it with "How to care for a dog?", **but return the exact key from the database**.
 
-4. **Handling General Requests**:
-   - If the user's request is **vague** (e.g., "Improve responses"), assume it applies to **the entire knowledge base**.
-   - In such cases, return **all relevant topics and subtopics that exist**.
+6. **Handling General Requests**:
+   - If the user asks for changes **across the entire knowledge base**, **return everything that exists**.
+   - If the user asks for modifications **only in one topic/subtopic**, **return all related questions from that topic/subtopic**.
 
-5. **Output Format**:
+7. **Ensure Output Format**:
    - The response **must strictly** follow this JSON format:
 ```json
 {{
@@ -269,12 +346,14 @@ The knowledge base consists of the following topics, subtopics, and questions:
 """
 
 
+
+
     messages = [
         {"role": "system", "content": system_prompt.strip()},
         {"role": "user", "content": user_message.strip()}
     ]
     response = await openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=messages,
         temperature=0.1
     )
@@ -352,81 +431,6 @@ async def generate_patch_body_via_gpt(
     snippets_list = snippets["topics"]
     kb_snippets_text = await extract_knowledge_with_structure(topics=snippets_list, knowledge_base=knowledge_base)
     
-#     system_prompt = f"""
-# You are an AI assistant that generates a patch request body for updating a knowledge base.
-
-# ## Knowledge Base Structure
-# 1. The knowledge base uses exactly one **dominant language** for all topics, subtopics, and questions.
-# 2. Each top-level key is a **topic**.
-# 3. Each topic has a `"subtopics"` dictionary.
-# 4. Each subtopic has a `"questions"` dictionary (keys = question text, values = answers).
-
-# An example minimal structure (placeholder language, purely illustrative):
-# {{
-#   "TopicExample": {{
-#     "subtopics": {{
-#       "SubtopicExample": {{
-#         "questions": {{
-#           "QuestionExample": "AnswerExample"
-#         }}
-#       }}
-#     }}
-#   }}
-# }}
-
-# ## Your Task
-# Produce a valid JSON patch that updates the knowledge base according to the user's instructions.
-
-# ## Rules
-
-# 1. **Preserve Hierarchy**
-#    - Do not add extra layers or rename "subtopics" / "questions".
-#    - Follow the existing pattern: Topic -> subtopics -> questions.
-
-# 2. **Language Consistency**
-#    - The knowledge base is in **one dominant language** (the user text might indicate which).
-#    - If the user’s text is in Russian and the base is also in Russian, keep all new topics/subtopics/questions in Russian.
-#    - If the user explicitly requests a rename or translation, mark old entries with `"_delete": true` and create the new ones with the updated language/keys.
-#    - Otherwise, keep everything in the same language as the existing knowledge base.
-
-# 3. **Split Information**
-#    - If the user’s text lumps multiple distinct facts, do **not** merge them into one question/answer.  
-#    - Instead, create multiple questions and/or subtopics as logically needed.  
-#    - Do not be afraid to create multiple top-level topics if the content covers clearly separate domains.
-
-# 4. **Patch Operations**
-#    - **Add** new content by introducing a new topic/subtopic/question with a text value.
-#    - **Update** existing answers by providing a new string for that question.
-#    - **Delete** an existing topic/subtopic/question by marking it with `"_delete": true`.
-#    - **Rename** by marking the old key with `"_delete": true` and adding the new key with the updated text.
-
-# 5. **Output Format**
-#    - Return **only valid JSON** that represents the patch. No extra commentary or text.
-#    - Example patch (generic placeholders):
-# ```json
-# {{
-#   "SomeTopic": {{
-#     "subtopics": {{
-#       "SomeSubtopic": {{
-#         "questions": {{
-#           "OldQuestionToRemove": {{ "_delete": true }},
-#           "AnUpdatedQuestion": "New answer text here",
-#           "NewQuestion": "Brand new answer text here"
-#         }}
-#       }}
-#     }}
-#   }},
-#   "AnotherTopic": {{
-#     "subtopics": {{
-#       "SomethingElse": {{
-#         "questions": {{
-#           "OneMoreQuestion": "Some answer"
-#         }}
-#       }}
-#     }}
-#   }}
-# }}
-# """
 
     system_prompt = f"""
 You are an AI assistant that generates a patch request body for updating a knowledge base.
@@ -530,6 +534,15 @@ The following snippets contain **relevant** topics, subtopics, and questions tha
     if not match:
         return {}
     json_text = match.group(0)
+
+    logging.info('===========================HERE===========================')
+    logging.info('===========================SNIPPETS===========================')
+    logging.info(snippets)
+    logging.info('===========================SNIPPETS_WITH_INFO===========================')
+    logging.info(kb_snippets_text)
+    logging.info('===========================RESULT===========================')
+    logging.info(json_text)
+
     try:
         return json.loads(json_text)
     except json.JSONDecodeError:
