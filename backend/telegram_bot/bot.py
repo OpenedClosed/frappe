@@ -183,7 +183,7 @@ async def main():
     await site.start()
 
     web_app_url = f"{settings.FRONTEND_URL}/telegram-chat"
-    web_app_url = "https://aihubworks.com/telegram-chat"
+    web_app_url = "https://aihubworks.com/chats/telegram-chat"
 
     web_app_info = WebAppInfo(url=web_app_url)
     await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="💬", web_app=web_app_info))
