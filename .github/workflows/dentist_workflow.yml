@@ -60,34 +60,34 @@ jobs:
           file: ./backend/fastapi_web/FastApiWebDockerfile
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
-      # - name: Push bot to Docker Hub
+      - name: Push bot to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/telegram_bot/TelegramBotDockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
+
+      # - name: Push frontend admin to Docker Hub
       #   uses: docker/build-push-action@v3
       #   with:
       #     push: true
-      #     context: ./backend
-      #     file: ./backend/telegram_bot/TelegramBotDockerfile
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
+      #     context: ./frontend_admin
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
 
-      - name: Push frontend admin to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./frontend_admin
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
+      # - name: Push frontend chat to Docker Hub
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./frontend_chat
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
 
-      - name: Push frontend chat to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./frontend_chat
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
-
-      - name: Push nginx proxy to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./nginx
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_nginx:latest
+      # - name: Push nginx proxy to Docker Hub
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./nginx
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_nginx:latest
 
   deploy:
     runs-on: ubuntu-latest
