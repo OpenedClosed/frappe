@@ -6,17 +6,16 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from utils.translations import BOT_TRANSLATIONS
-from utils.decorators import check_private_chat
-from chats.routers import send_message
-from bot_conf.create_bot import bot, dp
-from fastapi_web.infra import settings
-from aiohttp import web
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler
-from aiogram.types import MenuButtonWebApp, Message, WebAppInfo
-from aiogram.filters import Command, CommandObject
 from aiogram.enums import ParseMode
-
+from aiogram.filters import Command, CommandObject
+from aiogram.types import MenuButtonWebApp, Message, WebAppInfo
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler
+from aiohttp import web
+from bot_conf.create_bot import bot, dp
+from chats.routers import send_message
+from fastapi_web.infra import settings
+from utils.decorators import check_private_chat
+from utils.translations import BOT_TRANSLATIONS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -77,7 +76,7 @@ async def main():
     await site.start()
 
     web_app_url = f"{settings.FRONTEND_URL}/telegram-chat"
-    web_app_url = "https://aihubworks.com/chats/telegram-chat"
+    web_app_url = "https://panamed-aihubworks.com/chats/telegram-chat"
 
     web_app_info = WebAppInfo(url=web_app_url)
     await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="💬", web_app=web_app_info))

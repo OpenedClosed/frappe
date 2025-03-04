@@ -3,7 +3,7 @@
       var iframe = document.createElement("iframe");
      
       // Set the iframe attributes
-      iframe.src = `https://aihubworks.com/chat/`;
+      iframe.src = `https://panamed-aihubworks.com/chat/`;
       iframe.style.position = "fixed";
       iframe.style.top = "0";
       iframe.style.left = "0";

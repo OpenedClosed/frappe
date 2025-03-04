@@ -87,7 +87,7 @@ python -m bot
 - **nginx**: маршрутизация запросов.
 
 ### Доступ:
-- **Web**: https://aihubworks.com/
+- **Web**: https://panamed-aihubworks.com/
 - **Telegram-бот**: доступ через Telegram.
 
 ## Структура проекта
