@@ -1,23 +1,26 @@
 """Вспомогательные функции приложения Чаты."""
 import hashlib
+import json
+import locale
 import logging
 import uuid
-from datetime import datetime
-from typing import Optional, Union, Dict, Any
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Union
 
 import httpx
-from fastapi import Request, WebSocket
+from fastapi import HTTPException, Request, WebSocket
 from telegram_bot.infra import settings as bot_settings
 
-from chats.db.mongo.enums import ChatSource, SenderRole
-from chats.db.mongo.schemas import ChatMessage, ChatSession
+from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
+from chats.db.mongo.schemas import ChatMessage, ChatSession, Client
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
-import httpx
-import json
-import locale
-from datetime import timezone
+
+from .knowledge_base import KNOWLEDGE_BASE
+
+# ===== Основные функции для работы с сессией чата =====
+
 
 async def generate_client_id(
     source: Union[Request, WebSocket],
@@ -124,21 +127,120 @@ async def send_message_to_bot(chat_id: str, chat_session: dict) -> None:
             logging.info(f"Сообщение не отправлено! Ошибка: {response.text}")
 
 
+async def handle_chat_creation(
+    mode: Optional[str] = None,
+    chat_source: ChatSource = ChatSource.INTERNAL,
+    chat_external_id: Optional[str] = None,
+    client_external_id: Optional[str] = None,
+    company_name: Optional[str] = None,
+    bot_id: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    request: Optional[Request] = None
+) -> dict:
+    """Создаёт или получает чат-сессию с приоритетом Redis → MongoDB (для внешних чатов)."""
+
+    metadata = metadata or {}
+    chat_data = None
+    client_id = await generate_client_id(
+        request, chat_source=chat_source, external_id=client_external_id
+    ) if request else f"{chat_source.value}_{client_external_id}"
+
+    redis_key = f"chat:{client_id}"
+
+    if mode == "new":
+        if old_chat_id := await redis_db.get(redis_key):
+            old_chat_id = old_chat_id.decode()
+            if chat_data := await mongo_db.chats.find_one({"chat_id": old_chat_id}):
+                await mongo_db.chats.update_one(
+                    {"chat_id": old_chat_id},
+                    {"$set": {"closed_by_request": True,
+                              "last_activity": datetime.utcnow()}}
+                )
+            await redis_db.delete(redis_key)
+
+    if chat_id_from_redis := await redis_db.get(redis_key):
+        chat_id_from_redis = chat_id_from_redis.decode()
+        if chat_data := await mongo_db.chats.find_one({"chat_id": chat_id_from_redis}):
+            remaining_time = max(0, settings.CHAT_TIMEOUT.total_seconds(
+            ) - (datetime.utcnow() - chat_data["last_activity"]).total_seconds())
+            return {
+                "message": "Chat session active.",
+                "chat_id": chat_data["chat_id"],
+                "client_id": client_id,
+                "created_at": chat_data["created_at"],
+                "last_activity": chat_data["last_activity"],
+                "remaining_time": remaining_time,
+                "status": ChatSession(**chat_data).compute_status(remaining_time).value,
+            }
+
+    if chat_source != ChatSource.INTERNAL and chat_data:
+        chat_session = ChatSession(**chat_data)
+
+        await redis_db.set(redis_key, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+
+        return {
+            "message": "Chat session restored from MongoDB.",
+            "chat_id": chat_session.chat_id,
+            "client_id": client_id,
+            "status": chat_session.compute_status(settings.CHAT_TIMEOUT.total_seconds()).value,
+        }
+
+    client = Client(
+        client_id=client_id,
+        source=chat_source,
+        external_id=client_external_id,
+        metadata=metadata)
+    chat_id = generate_chat_id()
+
+    chat_session = ChatSession(
+        chat_id=chat_id,
+        client=client,
+        bot_id=bot_id,
+        company_name=company_name,
+        last_activity=datetime.utcnow(),
+        external_id=chat_external_id if chat_source != ChatSource.INTERNAL else None
+    )
+
+    await mongo_db.chats.insert_one(chat_session.dict())
+
+    await redis_db.set(redis_key, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+
+    return {
+        "message": "New chat session created.",
+        "chat_id": chat_id,
+        "client_id": client_id,
+        "status": ChatStatus.IN_PROGRESS.value,
+    }
+
+
+async def get_knowledge_base() -> Dict[str, dict]:
+    """Получить документ с базой знаний."""
+    document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
+    if not document:
+        raise HTTPException(404, "База знаний не найдена")
+    document.pop("_id", None)
+    if document["knowledge_base"]:
+        return document["knowledge_base"]
+    else:
+        return KNOWLEDGE_BASE
+
+
+# ===== Контекст для ИИ помощника =====
+
 locale.setlocale(locale.LC_TIME, "C")
 
-def get_current_datetime():
-    """Возвращает текущую дату и время с днем недели в формате: 'Monday, 08-02-2025 14:30:00 UTC+4'"""
+
+def get_current_datetime() -> str:
+    """Возвращает текущую дату и время в формате 'Monday, 08-02-2025 14:30:00 UTC'."""
     now = datetime.now(timezone.utc)
-    formatted_datetime = now.strftime("%A, %d-%m-%Y %H:%M:%S UTC%z")
-    formatted_datetime = formatted_datetime.replace("UTC+0000", "UTC")
+    formatted_datetime = now.strftime(
+        "%A, %d-%m-%Y %H:%M:%S UTC%z").replace("UTC+0000", "UTC")
     return formatted_datetime
 
 
 async def get_weather_for_region(region_name: str) -> Dict[str, Any]:
-    """Асинхронно получает прогноз погоды на 5 дней с кэшированием в Redis."""
-
+    """Получает прогноз погоды на 5 дней с кэшированием в Redis."""
     redis_key = f"weather:{region_name.lower()}"
-
     cached_weather = await redis_db.get(redis_key)
     if cached_weather:
         return json.loads(cached_weather)
@@ -147,44 +249,26 @@ async def get_weather_for_region(region_name: str) -> Dict[str, Any]:
         "q": region_name,
         "appid": settings.WEATHER_API_KEY,
         "units": "metric",
-        "lang": "en",
+        "lang": "ru",
     }
 
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get("http://api.openweathermap.org/data/2.5/forecast", params=params)
+            if response.status_code != 200:
+                return {"error": "Погода недоступна"}
+
             data = response.json()
+            forecast = parse_weather_data(data)
+            await redis_db.set(redis_key, json.dumps(forecast), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
+            return forecast
 
-            if response.status_code == 200:
-                forecast = {}
-
-                for entry in data["list"]:
-                    date = entry["dt_txt"].split(" ")[0]  # Дата без времени
-                    temp = entry["main"]["temp"]
-                    description = entry["weather"][0]["description"].capitalize()
-
-                    if date not in forecast:
-                        forecast[date] = {"temp_min": temp, "temp_max": temp, "description": description}
-                    else:
-                        forecast[date]["temp_min"] = min(forecast[date]["temp_min"], temp)
-                        forecast[date]["temp_max"] = max(forecast[date]["temp_max"], temp)
-
-                weather_data = {"forecast": forecast}
-                await redis_db.set(redis_key, json.dumps(weather_data), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
-                return weather_data
-            else:
-                return {"error": "Weather data unavailable"}
         except Exception as e:
-            print(f"Error fetching weather data: {e}")
-            return {"error": "Weather data unavailable"}
-        
-
-
+            return {"error": f"Ошибка получения погоды: {e}"}
 
 
 async def get_coordinates(address: str) -> Dict[str, float]:
-    """Получает координаты (широта, долгота) для заданного адреса через OpenWeatherMap Geocoding API."""
-    geocode_url = "http://api.openweathermap.org/geo/1.0/direct"
+    """Получает координаты (широта, долгота) для заданного адреса."""
     params = {
         "q": address,
         "limit": 1,
@@ -193,71 +277,71 @@ async def get_coordinates(address: str) -> Dict[str, float]:
 
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(geocode_url, params=params)
-            data = response.json()
-
-            if response.status_code == 200 and data:
-                return {"lat": data[0]["lat"], "lon": data[0]["lon"]}
-            else:
-                print("Ошибка геокодинга:", data)
+            response = await client.get("http://api.openweathermap.org/geo/1.0/direct", params=params)
+            if response.status_code != 200 or not response.json():
                 return {}
+
+            data = response.json()
+            return {"lat": data[0]["lat"], "lon": data[0]["lon"]}
+
         except Exception as e:
-            print(f"Ошибка при получении координат: {e}")
-            return {}
+            return {"error": f"Ошибка получения координат: {e}"}
 
 
 async def get_weather_for_location(lat: float, lon: float) -> Dict[str, Any]:
-    """Получает прогноз погоды по координатам (широта и долгота)."""
-
+    """Получает прогноз погоды по координатам с кэшированием."""
     redis_key = f"weather:{lat},{lon}"
     cached_weather = await redis_db.get(redis_key)
-    
     if cached_weather:
         return json.loads(cached_weather)
 
-    weather_url = "http://api.openweathermap.org/data/2.5/forecast"
     params = {
         "lat": lat,
         "lon": lon,
         "appid": settings.WEATHER_API_KEY,
         "units": "metric",
-        "lang": "ru",  # русский язык
+        "lang": "ru",
     }
 
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(weather_url, params=params)
-            data = response.json()
-
-            if response.status_code == 200:
-                forecast = {}
-
-                for entry in data["list"]:
-                    date = entry["dt_txt"].split(" ")[0]  # Дата без времени
-                    temp = entry["main"]["temp"]
-                    description = entry["weather"][0]["description"].capitalize()
-
-                    if date not in forecast:
-                        forecast[date] = {"temp_min": temp, "temp_max": temp, "description": description}
-                    else:
-                        forecast[date]["temp_min"] = min(forecast[date]["temp_min"], temp)
-                        forecast[date]["temp_max"] = max(forecast[date]["temp_max"], temp)
-
-                weather_data = {"forecast": forecast}
-                await redis_db.set(redis_key, json.dumps(weather_data), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
-                return weather_data
-            else:
+            response = await client.get("http://api.openweathermap.org/data/2.5/forecast", params=params)
+            if response.status_code != 200:
                 return {"error": "Погода недоступна"}
+
+            data = response.json()
+            forecast = parse_weather_data(data)
+            await redis_db.set(redis_key, json.dumps(forecast), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
+            return forecast
+
         except Exception as e:
-            print(f"Ошибка получения погоды: {e}")
-            return {"error": "Погода недоступна"}
+            return {"error": f"Ошибка получения погоды: {e}"}
 
 
-async def get_weather_by_address(address: str) -> str:
-    """Получает прогноз погоды для адреса."""
+async def get_weather_by_address(address: str) -> Dict[str, Any]:
+    """Получает прогноз погоды для заданного адреса."""
     coordinates = await get_coordinates(address)
-
     if not coordinates:
         return {"error": "Не удалось получить координаты"}
-
     return await get_weather_for_location(coordinates["lat"], coordinates["lon"])
+
+
+def parse_weather_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Парсит прогноз погоды и группирует данные по дням."""
+    forecast = {}
+
+    for entry in data["list"]:
+        date = entry["dt_txt"].split(" ")[0]
+        temp = entry["main"]["temp"]
+        description = entry["weather"][0]["description"].capitalize()
+
+        if date not in forecast:
+            forecast[date] = {
+                "temp_min": temp,
+                "temp_max": temp,
+                "description": description}
+        else:
+            forecast[date]["temp_min"] = min(forecast[date]["temp_min"], temp)
+            forecast[date]["temp_max"] = max(forecast[date]["temp_max"], temp)
+
+    return {"forecast": forecast}

@@ -1,13 +1,14 @@
 """Обработчики веб-сокетов приложения Чаты."""
+from typing import Dict, List, Optional
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from pydantic import ValidationError
 
+from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
@@ -16,25 +17,14 @@ from openai_base.openai_init import openai_client
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
-from ..utils.help_functions import find_last_bot_message, get_current_datetime, get_weather_by_address, get_weather_for_region, send_message_to_bot
-from ..utils.knowledge_base import BRIEF_QUESTIONS, KNOWLEDGE_BASE
+from ..utils.help_functions import (find_last_bot_message,
+                                    get_current_datetime, get_knowledge_base,
+                                    get_weather_by_address,
+                                    send_message_to_bot)
+from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
 from .ws_helpers import ConnectionManager, custom_json_dumps
-from fastapi import HTTPException
-
-async def get_knowledge_base() -> Dict[str, dict]:
-    document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-    if not document:
-        raise HTTPException(404, "Knowledge base not found")
-    document.pop("_id", None)
-    if document["knowledge_base"]:
-        return document["knowledge_base"]
-    else:
-        print('7777')
-        return KNOWLEDGE_BASE
-
-
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -170,14 +160,11 @@ async def save_and_broadcast_new_message(
     await redis_db.set(redis_key_session, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
     if chat_session.client.source == ChatSource.INSTAGRAM:
-        print('????')
-        print(chat_session.client.external_id, chat_session.external_id)
         recipient_id = chat_session.client.external_id
         sender_role = new_msg.sender_role
         if sender_role != SenderRole.CLIENT:
             if recipient_id:
                 await send_instagram_message(recipient_id, new_msg.message)
-
 
 
 async def send_instagram_message(recipient_id: str, message: str) -> None:
@@ -190,7 +177,6 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
         "message": {"text": message},
         "metadata": "broadcast"
     }
-    print(settings.INSTAGRAM_ACCESS_TOKEN)
 
     headers = {
         "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
@@ -203,7 +189,6 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
         print(f"Ошибка отправки сообщения в Instagram: {response.text}")
     else:
         print(f"Сообщение успешно отправлено в Instagram (ID: {recipient_id})")
-
 
 
 # ==============================
@@ -236,7 +221,8 @@ async def handle_status_check(
     # Получаем данные чата
     chat_session = await mongo_db.chats.find_one({"chat_id": chat_id}, {"manual_mode": 1})
 
-    manual_mode = chat_session.get("manual_mode", False) if chat_session else False
+    manual_mode = chat_session.get(
+        "manual_mode", False) if chat_session else False
 
     response = custom_json_dumps({
         "type": "status_check",
@@ -246,7 +232,6 @@ async def handle_status_check(
     })
 
     await manager.broadcast(response)
-
 
 
 async def handle_get_messages(
@@ -301,14 +286,14 @@ async def handle_new_message(
 
     if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
         return
-    
+
     new_msg = ChatMessage(
         message=msg_text,
         sender_role=SenderRole.CLIENT,
         reply_to=reply_to,
         external_id=external_id
     )
-    
+
     if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
         return
 
@@ -414,7 +399,7 @@ async def handle_command(
     msg_text = new_msg.message.strip()
     if not msg_text.startswith("/"):
         return False
-    
+
     command_alias = msg_text.split()[0].lower()
     command_data = COMMAND_HANDLERS.get(command_alias)
 
@@ -423,9 +408,10 @@ async def handle_command(
         await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session)
         await handler(manager, chat_session, new_msg, user_language, redis_key_session)
     else:
-        unknown_cmd_msg = get_translation("attention", "unknown_command", user_language)
+        unknown_cmd_msg = get_translation(
+            "attention", "unknown_command", user_language)
         await broadcast_attention(manager, client_id, chat_id, unknown_cmd_msg)
-    
+
     return True
 
 
@@ -575,7 +561,8 @@ async def start_brief(
         )
         await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
     if not question:
-        # await complete_brief(manager, chat_session, redis_key_session, user_language)
+        # await complete_brief(manager, chat_session, redis_key_session,
+        # user_language)
         return
 
     await ask_brief_question(manager, chat_session, question, redis_key_session, user_language)
@@ -638,7 +625,8 @@ async def process_brief_question(
                 #     question.expected_answers_translations.get(user_language, opt)
                 #     for opt in question.expected_answers_translations.get("en", [])
                 # ],
-                choice_options=question.expected_answers_translations.get(user_language, question.expected_answers_translations.get("en")),
+                choice_options=question.expected_answers_translations.get(
+                    user_language, question.expected_answers_translations.get("en")),
                 choice_strict=True
             )
         elif question.question_type == "text" and question.expected_answers:
@@ -650,7 +638,8 @@ async def process_brief_question(
                 #     question.expected_answers_translations.get(user_language, opt)
                 #     for opt in question.expected_answers_translations.get("en", [])
                 # ],
-                choice_options=question.expected_answers_translations.get(user_language, question.expected_answers_translations.get("en")),
+                choice_options=question.expected_answers_translations.get(
+                    user_language, question.expected_answers_translations.get("en")),
                 choice_strict=False
             )
         else:
@@ -725,7 +714,8 @@ async def ask_brief_question(
             #     question.expected_answers_translations.get(user_language, opt)
             #     for opt in question.expected_answers_translations.get("en", [])
             # ],
-            choice_options=question.expected_answers_translations.get(user_language, question.expected_answers_translations.get("en")),
+            choice_options=question.expected_answers_translations.get(
+                user_language, question.expected_answers_translations.get("en")),
             choice_strict=True
         )
     elif question.question_type == "text" and question.expected_answers:
@@ -737,7 +727,8 @@ async def ask_brief_question(
             #     question.expected_answers_translations.get(user_language, opt)
             #     for opt in question.expected_answers_translations.get("en", [])
             # ],
-            choice_options=question.expected_answers_translations.get(user_language, question.expected_answers_translations.get("en")),
+            choice_options=question.expected_answers_translations.get(
+                user_language, question.expected_answers_translations.get("en")),
             choice_strict=False
         )
     else:
@@ -912,7 +903,6 @@ async def process_user_query_after_brief(
     return ai_msg
 
 
-
 async def determine_topics_via_gpt(
     user_message: str,
     user_info: str,
@@ -928,8 +918,10 @@ async def determine_topics_via_gpt(
             subtopic_lines = []
             for subtopic_name, subtopic_data in subtopics.items():
                 questions = subtopic_data.get("questions", [])
-                question_list = ", ".join(questions) if questions else "No specific questions."
-                subtopic_lines.append(f"- Subtopic: {subtopic_name}, Questions: {question_list}")
+                question_list = ", ".join(
+                    questions) if questions else "No specific questions."
+                subtopic_lines.append(
+                    f"- Subtopic: {subtopic_name}, Questions: {question_list}")
 
             topic_line += "\n  " + "\n  ".join(subtopic_lines)
         else:
@@ -959,7 +951,8 @@ async def determine_topics_via_gpt(
 
     match = re.search(r"\{.*\}", raw_content, re.DOTALL)
     if not match:
-        return {"topics": [], "confidence": 0.0, "out_of_scope": False, "consultant_call": False}
+        return {"topics": [], "confidence": 0.0,
+                "out_of_scope": False, "consultant_call": False}
 
     json_text = match.group(0)
     try:
@@ -976,7 +969,8 @@ async def determine_topics_via_gpt(
             "consultant_call": consultant_call
         }
     except json.JSONDecodeError:
-        return {"topics": [], "confidence": 0.0, "out_of_scope": False, "consultant_call": False}
+        return {"topics": [], "confidence": 0.0,
+                "out_of_scope": False, "consultant_call": False}
 
 
 # def extract_knowledge(
@@ -1003,14 +997,10 @@ async def determine_topics_via_gpt(
 #     return snippets if snippets else ["No relevant data found."]
 
 
-from typing import List, Dict, Optional
-
-async def extract_knowledge(topics: List[Dict[str, Optional[str]]], user_message: Optional[str]=None, knowledge_base: Optional[Dict[str, dict]]={}) -> List[str]:
+async def extract_knowledge(topics: List[Dict[str, Optional[str]]], user_message: Optional[str]
+                            = None, knowledge_base: Optional[Dict[str, dict]] = {}) -> List[str]:
     """Извлекает ответы из knowledge_base для списка тем, подтем и вопросов."""
     snippets: List[str] = []
-    print('===========================TOPICS===========================')
-    print(topics)
-    print()
     if not knowledge_base:
         knowledge_base = await get_knowledge_base()
     for item in topics:
@@ -1036,14 +1026,16 @@ async def extract_knowledge(topics: List[Dict[str, Optional[str]]], user_message
                             if q_text in subtopic_data.get("questions", {}):
                                 ans_text = subtopic_data["questions"][q_text]
                                 snippets.append(f"Q: {q_text}\nA: {ans_text}")
-                    
+
                     else:
-                        for q_text, ans_text in subtopic_data.get("questions", {}).items():
+                        for q_text, ans_text in subtopic_data.get(
+                                "questions", {}).items():
                             snippets.append(f"Q: {q_text}\nA: {ans_text}")
 
         else:
             for _, subtopic_data in subs.items():
-                for q_text, ans_text in subtopic_data.get("questions", {}).items():
+                for q_text, ans_text in subtopic_data.get(
+                        "questions", {}).items():
                     snippets.append(f"Q: {q_text}\nA: {ans_text}")
 
     return snippets if snippets else ["No relevant data found."]
@@ -1068,16 +1060,9 @@ async def generate_ai_answer(
 
     current_datetime = get_current_datetime()
     weather_info = {
-        # "Tbilisi": await get_weather_for_region("Tbilisi, Georgia"),
-        # "Batumi": await get_weather_for_region("Batumi, Georgia")
-        # "Nika Hotel & Club": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
-
-        # "Nika Hotel & Club": await get_weather_by_address(address="деревня Чанчхало, Аджария, Грузия"),
+        "New York": await get_weather_by_address(address="New York"),
         # "Moscow": await get_weather_by_address(address="Москва")
     }
-    print('+'*100)
-    print(weather_info)
-    # weather_info = {}
 
     system_prompt = AI_PROMPTS["system_ai_answer"].format(
         current_datetime=current_datetime,
@@ -1163,11 +1148,13 @@ async def set_manual_mode(
         {"$set": {"manual_mode": True}}
     )
 
-    response_text = get_translation("info", "manual_mode_enabled", user_language)
+    response_text = get_translation(
+        "info", "manual_mode_enabled", user_language)
     await fill_remaining_brief_questions(chat_session.chat_id, chat_session)
 
     ai_msg = ChatMessage(message=response_text, sender_role=SenderRole.AI)
     await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+
 
 @command_handler("/auto")
 async def set_auto_mode(
@@ -1189,4 +1176,3 @@ async def set_auto_mode(
 
     ai_msg = ChatMessage(message=response_text, sender_role=SenderRole.AI)
     await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
-

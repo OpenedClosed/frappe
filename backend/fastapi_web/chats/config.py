@@ -5,6 +5,8 @@ verbose_name = {
     "en": "Chats",
     "pl": "Czaty",
     "uk": "Чати",
+    "zh": "聊天",
+    "es": "Chats",
     "ru": "Чаты"
 }
 icon = "pi pi-comment"

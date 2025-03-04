@@ -1,19 +1,16 @@
-from typing import Any, Awaitable, Callable, Dict, Optional
-
-from chats.db.mongo.enums import SenderRole
-from chats.db.mongo.schemas import ChatMessage, ChatSession
-from functools import wraps
-
-from db.mongo.db_init import mongo_db
+"""Регистратор команд для приложения Чаты."""
+from typing import Awaitable, Callable, Dict, Optional
 
 COMMAND_HANDLERS: Dict[str, Dict[str, Callable[..., Awaitable[None]]]] = {}
 
-def command_handler(command: str, help_text: Optional[str] = None):
+
+def command_handler(command: str,
+                    description: Optional[str] = None) -> Callable:
     """Декоратор для регистрации команд с возможностью добавления описания."""
-    def decorator(func: Callable[..., Awaitable[None]]):
+    def decorator(func: Callable[..., Awaitable[None]]) -> Callable:
         COMMAND_HANDLERS[command] = {
             "handler": func,
-            "help_text": help_text or "No description available."
+            "help_text": description or "Описание отсутствует."
         }
         return func
     return decorator

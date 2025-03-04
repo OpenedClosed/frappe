@@ -1,8 +1,10 @@
 """Веб-сокеты приложения Чаты."""
+import logging
 from typing import Optional
 
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
+from starlette.websockets import WebSocketState
 
 from chats.ws.ws_handlers import (broadcast_error, handle_get_messages,
                                   handle_message, start_brief)
@@ -11,8 +13,8 @@ from db.redis.db_init import redis_db
 from main import app
 
 from ..db.mongo.schemas import ChatSession
-from ..utils.help_functions import determine_language, generate_client_id, get_client_id
-
+from ..utils.help_functions import (determine_language, generate_client_id,
+                                    get_client_id)
 from .ws_helpers import get_ws_manager, websocket_jwt_required
 
 # ==============================
@@ -52,11 +54,19 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
 
     try:
         while True:
+            if websocket.client_state != WebSocketState.CONNECTED:
+                logging.warning(
+                    f"Клиент разорвал соединение: chat_id={chat_id}, client_id={client_id}")
+                break
             data = await websocket.receive_json()
             await handle_message(
                 manager, data, chat_id, client_id, redis_session_key, redis_flood_key, is_superuser, user_language
             )
     except WebSocketDisconnect:
+        logging.error(f"Ошибка WebSocketDisconnect")
+        await manager.disconnect(client_id)
+    except Exception as e:
+        logging.error(f"Ошибка WebSocket: {e}")
         await manager.disconnect(client_id)
 
 
@@ -70,8 +80,12 @@ async def validate_session(manager, client_id: str, chat_id: str,
     """Проверяет, соответствует ли текущая сессия чата."""
     stored_chat_id = await redis_db.get(redis_session_key)
     stored_chat_id = stored_chat_id.decode("utf-8") if stored_chat_id else None
+    print(stored_chat_id)
+    print(chat_id)
+    print(is_superuser)
 
     if not (stored_chat_id == chat_id or is_superuser):
+        logging.info("Сессия не прошла валиадцию")
         await manager.disconnect(client_id)
         return False
     return True

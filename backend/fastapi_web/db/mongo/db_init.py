@@ -18,4 +18,5 @@ async def mongo_db_on_startapp():
             "knowledge_base": {},
         }
         kb_doc = KnowledgeBase(**kb).model_dump()
+        print(kb_doc)
         await mongo_db.knowledge_collection.insert_one(kb_doc)

@@ -1,4 +1,5 @@
 """Базовые сущности админ-панели."""
+import logging
 from typing import Any, Dict, List, Optional, Type
 
 from bson import ObjectId
@@ -6,7 +7,8 @@ from fastapi import HTTPException
 from fastapi.exceptions import HTTPException
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 from pydantic import BaseModel, ValidationError, create_model
-import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAdminCore:
@@ -87,49 +89,58 @@ class BaseAdminCore:
 
     async def create(self, data: dict) -> dict:
         """Создать документ."""
+        print('?1')
         valid = await self._process_data(data=data)
+        print('?2')
 
         res = await self.db.insert_one(valid)
+        print('?3')
 
         if not res.inserted_id:
             raise HTTPException(500, "Failed to create object.")
+        print('?4')
 
-        print("Inserted Data:", valid)
-        print("InsertOneResult:", res)
-        print("Inserted ID:", res.inserted_id)  # ObjectId
-
-        # Используем `ObjectId`, а не `str(ObjectId)`
         created_old = await self.get(str(res.inserted_id))
-        created_raw_obj = await self.db.find_one({"_id": res.inserted_id})  # <-- исправлено
-
-        print("Direct DB Fetch:", created_raw_obj)  # Проверяем, действительно ли объект есть в базе
+        print('?5')
+        created_raw_obj = await self.db.find_one({"_id": res.inserted_id})
+        print('?6')
 
         if not created_raw_obj:
             raise HTTPException(500, "Failed to retrieve created object.")
-        
+        print('?7')
+
         created = await self.format_document(created_raw_obj)
+        print('?8')
 
         return created
 
-
     async def update(self, object_id: str, data: dict) -> dict:
         """Обновляет объект по object_id."""
+        print('?1')
         raw_existing_obj = await self.db.find_one({"_id": ObjectId(object_id)})
         if not raw_existing_obj:
             raise HTTPException(404, "Item not found for update.")
         try:
+            print('?2')
             valid = await self._process_data(data=data, existing_obj=raw_existing_obj, partial=True)
+            print('?3')
             for cf in self.computed_fields:
                 if cf in valid:
                     del valid[cf]
+            print('?4')
             id_field_key = self.detect_id_field()
+            print('?5')
             res = await self.db.update_one({id_field_key: ObjectId(object_id)}, {"$set": valid})
+            print('?6')
             if res.matched_count == 0:
                 raise HTTPException(500, "Failed to update object.")
+            print('?7')
             updated_raw = await self.db.find_one({id_field_key: ObjectId(object_id)})
             if not updated_raw:
                 raise HTTPException(500, "Failed to retrieve updated object.")
+            print('?8')
             return await self.format_document(updated_raw)
+            print('?9')
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
@@ -143,12 +154,14 @@ class BaseAdminCore:
             raise HTTPException(500, "Failed to delete object.")
         return {"status": "success"}
 
-    async def process_inlines(self, existing_doc: Optional[dict], update_data: dict, partial: bool = False) -> dict:
+    async def process_inlines(
+            self, existing_doc: Optional[dict], update_data: dict, partial: bool = False) -> dict:
         """Рекурсивный мерж inline-данных с поддержкой вложенности."""
         inline_data = {}
         try:
             for field, inline_cls in self.inlines.items():
-                existing_inlines = existing_doc.get(field, []) if existing_doc else []
+                existing_inlines = existing_doc.get(
+                    field, []) if existing_doc else []
                 if field in update_data:
                     inline_inst = inline_cls(self.db)
                     update_inlines = update_data.pop(field)
@@ -156,7 +169,8 @@ class BaseAdminCore:
                         update_inlines = [update_inlines]
                     merged_inlines = []
                     if existing_doc:
-                        existing_by_id = {item["id"]: item for item in existing_inlines if "id" in item}
+                        existing_by_id = {
+                            item["id"]: item for item in existing_inlines if "id" in item}
                         for item in update_inlines:
                             if not isinstance(item, dict):
                                 continue
@@ -164,7 +178,8 @@ class BaseAdminCore:
                                 if item.get("_delete", False):
                                     existing_by_id.pop(item["id"], None)
                                     continue
-                                existing_item = existing_by_id.get(item["id"], {})
+                                existing_item = existing_by_id.get(
+                                    item["id"], {})
                                 merged = {**existing_item, **item}
                                 validated = await inline_inst.validate_data(merged, partial=False)
                                 final_inline = {**merged, **validated}
@@ -175,7 +190,8 @@ class BaseAdminCore:
                                 existing_by_id.pop(item["id"], None)
                             else:
                                 validated = await inline_inst.validate_data(item, partial=False)
-                                full_validated = inline_inst.model.parse_obj(validated).dict()
+                                full_validated = inline_inst.model.parse_obj(
+                                    validated).dict()
                                 final_inline = full_validated
                                 if inline_inst.inlines:
                                     sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
@@ -189,7 +205,8 @@ class BaseAdminCore:
                             if not isinstance(item, dict):
                                 continue
                             validated = await inline_inst.validate_data(item, partial=False)
-                            full_validated = inline_inst.model.parse_obj(validated).dict()
+                            full_validated = inline_inst.model.parse_obj(
+                                validated).dict()
                             final_inline = full_validated
                             if inline_inst.inlines:
                                 sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
@@ -202,7 +219,134 @@ class BaseAdminCore:
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
+    async def process_inlines(
+            self, existing_doc: Optional[dict], update_data: dict, partial: bool = False) -> dict:
+        """Рекурсивный мерж inline-данных с поддержкой вложенности."""
+        inline_data = {}
+        try:
+            logger.info(
+                "Начало обработки инлайнов. partial=%s, update_data_keys=%s",
+                partial,
+                update_data.keys())
 
+            for field, inline_cls in self.inlines.items():
+                existing_inlines = existing_doc.get(
+                    field, []) if existing_doc else []
+                logger.debug(
+                    "Обработка инлайна для поля: %s. Кол-во существующих: %d",
+                    field,
+                    len(existing_inlines))
+
+                if field in update_data:
+                    inline_inst = inline_cls(self.db)
+                    update_inlines = update_data.pop(field)
+                    logger.debug(
+                        "Обнаружены обновленные инлайны для %s. Кол-во: %d",
+                        field,
+                        len(update_inlines) if isinstance(
+                            update_inlines,
+                            list) else 1)
+
+                    if not isinstance(update_inlines, list):
+                        update_inlines = [update_inlines]
+
+                    merged_inlines = []
+
+                    if existing_doc:
+                        existing_by_id = {
+                            item["id"]: item for item in existing_inlines if "id" in item}
+                        logger.debug(
+                            "Создана карта существующих инлайнов по ID. Размер: %d",
+                            len(existing_by_id))
+
+                        for item in update_inlines:
+                            if not isinstance(item, dict):
+                                logger.warning(
+                                    "Пропущен некорректный элемент в update_inlines: %s", item)
+                                continue
+
+                            if "id" in item:
+                                if item.get("_delete", False):
+                                    existing_by_id.pop(item["id"], None)
+                                    logger.info(
+                                        "Удален инлайн с ID: %s", item["id"])
+                                    continue
+
+                                existing_item = existing_by_id.get(
+                                    item["id"], {})
+                                merged = {**existing_item, **item}
+                                logger.debug(
+                                    "Мерж существующего инлайна ID=%s с новыми данными", item["id"])
+
+                                validated = await inline_inst.validate_data(merged, partial=False)
+                                final_inline = {**merged, **validated}
+                                logger.debug(
+                                    "Валидация успешна для ID=%s", item["id"])
+
+                                if inline_inst.inlines:
+                                    sub_inlines = await inline_inst.process_inlines(existing_item, final_inline, partial=partial)
+                                    final_inline.update(sub_inlines)
+                                    logger.debug(
+                                        "Обработаны вложенные инлайны для ID=%s", item["id"])
+
+                                merged_inlines.append(final_inline)
+                                existing_by_id.pop(item["id"], None)
+                            else:
+                                validated = await inline_inst.validate_data(item, partial=False)
+                                full_validated = inline_inst.model.parse_obj(
+                                    validated).dict()
+                                final_inline = full_validated
+                                logger.debug(
+                                    "Создан новый валидированный инлайн без ID")
+
+                                if inline_inst.inlines:
+                                    sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
+                                    final_inline.update(sub_inlines)
+                                    logger.debug(
+                                        "Обработаны вложенные инлайны для нового объекта")
+
+                                merged_inlines.append(final_inline)
+
+                        merged_inlines.extend(existing_by_id.values())
+                        inline_data[field] = merged_inlines
+                    else:
+                        validated_items = []
+                        for item in update_inlines:
+                            if not isinstance(item, dict):
+                                logger.warning(
+                                    "Пропущен некорректный элемент в update_inlines: %s", item)
+                                continue
+
+                            validated = await inline_inst.validate_data(item, partial=False)
+                            full_validated = inline_inst.model.parse_obj(
+                                validated).dict()
+                            final_inline = full_validated
+                            logger.debug(
+                                "Создан новый валидированный инлайн без существующего документа")
+
+                            if inline_inst.inlines:
+                                sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
+                                final_inline.update(sub_inlines)
+                                logger.debug(
+                                    "Обработаны вложенные инлайны для нового объекта")
+
+                            validated_items.append(final_inline)
+
+                        inline_data[field] = validated_items
+                else:
+                    inline_data[field] = existing_inlines
+
+            logger.info(
+                "Завершена обработка инлайнов. Количество полей: %d",
+                len(inline_data))
+            return inline_data
+
+        except Exception as e:
+            logger.error(
+                "Ошибка при обработке инлайнов: %s",
+                str(e),
+                exc_info=True)
+            raise HTTPException(400, detail=str(e))
 
     async def get_inlines(self, doc: dict) -> dict:
         """Получение инлайнов из документа."""
@@ -250,11 +394,14 @@ class BaseAdminCore:
                             validated[field] = val
                             continue
                         field_type = self.model.__annotations__[field]
-                        temp_model = create_model("TempModel", **{field: (field_type, ...)})
+                        temp_model = create_model(
+                            "TempModel", **{field: (field_type, ...)})
                         validated_field = temp_model(**{field: val})
-                        validated[field] = validated_field.dict(exclude_unset=True)[field]
+                        validated[field] = validated_field.dict(
+                            exclude_unset=True)[field]
             else:
-                filtered_data = {k: v for k, v in data.items() if k not in self.inlines}
+                filtered_data = {k: v for k,
+                                 v in data.items() if k not in self.inlines}
                 obj = self.model(**filtered_data)
                 validated.update(obj.dict(exclude_unset=True))
         except ValidationError as e:
@@ -269,18 +416,22 @@ class BaseAdminCore:
             raise HTTPException(400, detail=errors)
         return validated
 
-
-    async def _process_data(self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False) -> dict:
+    async def _process_data(
+            self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False) -> dict:
         """Обрабатывает данные (валидация и мерж инлайнов)."""
         try:
+            print('?11')
             valid = await self.validate_data(data, partial=partial)
+            print('?12')
             if self.inlines:
+                print('?13')
                 inline_data = await self.process_inlines(existing_obj, data, partial=partial)
+                print('?14')
                 valid.update(inline_data)
+                print('?15')
             return valid
         except Exception as e:
             raise HTTPException(400, detail=str(e))
-
 
     def _nested_find(self, doc: Any, target_id: str) -> bool:
         """Рекурсивный поиск id во вложенных структурах."""
@@ -337,9 +488,6 @@ class BaseAdminCore:
     def __str__(self) -> str:
         """Строковое представление."""
         return self.verbose_name
-    
-
-
 
 
 class InlineAdmin(BaseAdminCore):

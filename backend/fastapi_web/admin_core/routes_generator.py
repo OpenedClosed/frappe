@@ -3,22 +3,21 @@ import importlib
 import os
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union, get_args, get_origin
 
-from admin_core.base_admin import InlineAdmin
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from pydantic import ValidationError
 
 from admin_core.admin_registry import AdminRegistry
+from admin_core.base_admin import InlineAdmin
 from auth.utils.help_functions import (add_token_to_blacklist,
                                        is_token_blacklisted, jwt_required)
 from db.mongo.db_init import mongo_db
 from infra import settings
 from users.db.mongo.schemas import LoginSchema, User
 from utils.help_functions import to_snake_case
-from typing import get_origin, List
 
 
 async def auto_discover_admin_modules():
@@ -322,130 +321,6 @@ def generate_admin_routes(admin_registry: AdminRegistry):
     return admin_router
 
 
-# def _build_model_info(admin_instance) -> dict:
-#     """Получение структуры данных для админ-модели или инлайна."""
-#     list_display = getattr(admin_instance, "list_display", [])
-#     detail_fields = getattr(admin_instance, "detail_fields", [])
-#     computed_fields = getattr(admin_instance, "computed_fields", [])
-#     read_only_fields = getattr(admin_instance, "read_only_fields", [])
-#     inlines_dict = getattr(admin_instance, "inlines", {})
-
-#     field_titles = getattr(admin_instance, "field_titles", {})
-
-#     combined_fields = list(dict.fromkeys(list_display + detail_fields))
-#     schema_props = admin_instance.model.schema().get("properties", {})
-#     model_annotations = getattr(admin_instance.model, "__annotations__", {})
-#     fields_schema = []
-
-#     for field in combined_fields:
-#         field_info = schema_props.get(field, {})
-#         field_type = field_info.get("type", "unknown")
-#         field_title = field_titles.get(
-#             field, field_info.get(
-#                 "title", {}))  # Делаем title словарем
-#         choices = None
-#         py_type = model_annotations.get(field)
-#         if py_type and hasattr(py_type, "__members__"):
-#             choices = [{"value": m.value, "label": m.name} for m in py_type]
-
-#         fields_schema.append({
-#             "name": field,
-#             "type": field_type,
-#             "title": field_title,  # Словарь переводов по языкам
-#             "read_only": (field in read_only_fields or field in computed_fields),
-#             "default": field_info.get("default"),
-#             "required": field in admin_instance.model.schema().get("required", []),
-#             "choices": choices
-#         })
-
-#     inlines_list = []
-#     for inline_field, inline_cls in inlines_dict.items():
-#         inline_instance = inline_cls(admin_instance.db)
-#         inlines_list.append(build_inline_schema(inline_field, inline_instance))
-
-#     return {
-#         "name": admin_instance.model.__name__,
-#         "verbose_name": admin_instance.verbose_name,
-#         "plural_name": admin_instance.plural_name,
-#         "icon": admin_instance.icon,
-#         "list_display": list_display,
-#         "detail_fields": detail_fields,
-#         "computed_fields": computed_fields,
-#         "read_only_fields": read_only_fields,
-#         "fields": fields_schema,
-#         "inlines": inlines_list
-#     }
-
-
-# def build_inline_schema(inline_field: str, inline_instance) -> dict:
-#     """Формирует схему для инлайна с учётом вложений."""
-#     base_schema = _build_model_info(inline_instance)
-#     base_schema["field"] = inline_field
-#     return base_schema
-
-
-# def get_admin_routes_by_apps(admin_registry: AdminRegistry) -> Dict[str, Any]:
-#     """Формирует структуру описания админ-моделей."""
-#     apps = {}
-#     for registered_name, admin_instance in admin_registry.get_registered_admins().items():
-#         module_path = admin_instance.__module__
-#         mod_parts = module_path.split(".")
-#         if "admin" in mod_parts:
-#             idx = mod_parts.index("admin")
-#             app_name = mod_parts[idx - 1] if idx > 0 else "unknown"
-#         else:
-#             app_name = mod_parts[-1]
-#         module_root = ".".join(mod_parts[:-1])
-
-#         try:
-#             config_module = import_module(f"{module_root}.config")
-#             verbose_name = getattr(config_module, "verbose_name", app_name)
-#             icon = getattr(config_module, "icon", "")
-#             color = getattr(config_module, "color", "")
-#         except ModuleNotFoundError:
-#             verbose_name, icon, color = app_name, "", ""
-
-#         if app_name not in apps:
-#             apps[app_name] = {
-#                 "verbose_name": verbose_name,
-#                 "icon": icon,
-#                 "color": color,
-#                 "entities": []}
-
-#         snake_name = to_snake_case(registered_name)
-#         model_info = _build_model_info(admin_instance)
-
-#         model_routes = [
-#             {"method": "GET",
-#              "path": f"/api/admin/{snake_name}/",
-#              "name": f"list_{snake_name}"},
-#             {"method": "GET",
-#              "path": f"/api/admin/{snake_name}/{{item_id}}",
-#              "name": f"get_{snake_name}"},
-#             {"method": "POST",
-#              "path": f"/api/admin/{snake_name}/",
-#              "name": f"create_{snake_name}"},
-#             {"method": "PATCH",
-#              "path": f"/api/admin/{snake_name}/{{item_id}}",
-#              "name": f"patch_{snake_name}"},
-#             {"method": "DELETE",
-#              "path": f"/api/admin/{snake_name}/{{item_id}}",
-#              "name": f"delete_{snake_name}"}
-#         ]
-
-#         apps[app_name]["entities"].append({
-#             "registered_name": registered_name,
-#             "model": model_info,
-#             "routes": model_routes
-#         })
-
-#     return apps
-
-
-
-
-from typing import get_origin, get_args, Union, List
-
 def _build_model_info(admin_instance) -> dict:
     """Получение структуры данных для админ-модели или инлайна."""
     list_display = getattr(admin_instance, "list_display", [])
@@ -483,7 +358,6 @@ def _build_model_info(admin_instance) -> dict:
     for inline_field, inline_cls in inlines_dict.items():
         inline_instance = inline_cls(admin_instance.db)
 
-        # Определяем inline_type: single (объект) или list (список)
         inline_type = "single"
         if inline_field in model_annotations:
             field_annotation = model_annotations[inline_field]
@@ -491,7 +365,6 @@ def _build_model_info(admin_instance) -> dict:
             if origin in {list, List}:
                 inline_type = "list"
             elif origin is Union:
-                # Для Optional[List[...]] origin будет Union
                 args = get_args(field_annotation)
                 for arg in args:
                     arg_origin = get_origin(arg)
@@ -499,7 +372,11 @@ def _build_model_info(admin_instance) -> dict:
                         inline_type = "list"
                         break
 
-        inlines_list.append(build_inline_schema(inline_field, inline_instance, inline_type))
+        inlines_list.append(
+            build_inline_schema(
+                inline_field,
+                inline_instance,
+                inline_type))
 
     return {
         "name": admin_instance.model.__name__,
@@ -516,7 +393,8 @@ def _build_model_info(admin_instance) -> dict:
     }
 
 
-def build_inline_schema(inline_field: str, inline_instance, inline_type: str) -> dict:
+def build_inline_schema(inline_field: str, inline_instance,
+                        inline_type: str) -> dict:
     """Формирует схему для инлайна с учетом вложений и типа (single или list)."""
     base_schema = _build_model_info(inline_instance)
     base_schema["field"] = inline_field

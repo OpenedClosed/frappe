@@ -1,5 +1,6 @@
 """Вспомогательные сущности для работы с веб-сокетом приложения Чаты."""
 import json
+import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, urlparse
@@ -21,8 +22,12 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket, user_id: str) -> None:
         """Принять соединение веб-сокета."""
-        await websocket.accept()
-        self.active_connections[user_id] = websocket
+        try:
+            await websocket.accept()
+            self.active_connections[user_id] = websocket
+            logging.info(f"WebSocket подключён: {user_id}")
+        except Exception as e:
+            logging.error(f"Ошибка при подключении WebSocket {user_id}: {e}")
 
     async def disconnect(self, user_id: str) -> None:
         """Отключить пользователя и закрыть соединение, если оно еще активно."""
@@ -30,13 +35,19 @@ class ConnectionManager:
         if websocket and websocket.client_state == WebSocketState.CONNECTED:
             try:
                 await websocket.close()
+                logging.info(f"WebSocket отключён: {user_id}")
             except Exception as e:
-                print(f"Ошибка при закрытии WebSocket {user_id}: {e}")
+                logging.error(f"Ошибка при закрытии WebSocket {user_id}: {e}")
 
     async def send_personal_message(self, message: str, user_id: str) -> None:
         """Отправить сообщение конкретному пользователю."""
-        if websocket := self.active_connections.get(user_id):
-            await websocket.send_text(message)
+        websocket = self.active_connections.get(user_id)
+        if websocket and websocket.client_state == WebSocketState.CONNECTED:
+            try:
+                await websocket.send_text(message)
+            except Exception as e:
+                logging.error(f"Ошибка при отправке сообщения {user_id}: {e}")
+                await self.disconnect(user_id)
 
     async def broadcast(self, message: str) -> None:
         """Разослать сообщение всем подключенным пользователям."""
@@ -46,12 +57,13 @@ class ConnectionManager:
                 try:
                     await websocket.send_text(message)
                 except Exception as e:
-                    print(f"Ошибка при рассылке {user_id}: {e}")
+                    logging.error(f"Ошибка при рассылке {user_id}: {e}")
                     disconnected_users.append(user_id)
             else:
                 disconnected_users.append(user_id)
 
         for user_id in disconnected_users:
+            logging.info("Отключаем тех, кого нет")
             await self.disconnect(user_id)
 
 
@@ -81,6 +93,7 @@ async def websocket_jwt_required(websocket: WebSocket) -> Optional[str]:
         current_user = authorize.get_jwt_subject()
 
         if await is_token_blacklisted(current_user, "access", jti):
+            logging.info("Токен в черном списке")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return None
 

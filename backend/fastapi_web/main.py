@@ -5,24 +5,25 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from utils.errors import (general_exception_handler,
-                          validation_exception_handler)
-from infra.middlewares import BasicAuthMiddleware
-from infra import settings
-from db.mongo.db_init import mongo_db_on_startapp
-from chats.routers import chat_router
-from knowledge.routers import knowledge_base_router
-from chats.integrations.instagram import instagram_router
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRouter
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+from admin_core.admin_registry import admin_registry
 from admin_core.routes_generator import (auto_discover_admin_modules,
                                          generate_admin_routes,
                                          get_admin_routes_by_apps)
-from admin_core.admin_registry import admin_registry
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.routing import APIRouter
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.exceptions import RequestValidationError
-from fastapi import FastAPI
+from basic.routers import basic_router
+from chats.integrations.instagram.instagram import instagram_router
+from chats.routers import chat_router
+from db.mongo.db_init import mongo_db_on_startapp
+from infra import settings
+from infra.middlewares import BasicAuthMiddleware
+from knowledge.routers import knowledge_base_router
+from utils.errors import (general_exception_handler,
+                          validation_exception_handler)
 
 
 logging.basicConfig(
@@ -71,6 +72,7 @@ async def on_shutdown():
 chat_router.include_router(instagram_router, prefix="/instagram")
 base_api_router.include_router(chat_router, prefix="/chats")
 base_api_router.include_router(knowledge_base_router, prefix="/knowledge")
+# base_api_router.include_router(basic_router, prefix="/basic")
 app.include_router(base_api_router)
 
 app.add_middleware(BasicAuthMiddleware, username="admin", password="admin")

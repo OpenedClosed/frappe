@@ -1,21 +1,25 @@
-"""Схемы приложения База знаний для работы с БД MongoDB."""
+"""Схемы приложения Знания для работы с БД MongoDB."""
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from passlib.context import CryptContext
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
-from infra import settings
 
-Questions = Dict[str, str]
+class Answer(BaseModel):
+    """Модель ответа на вопрос."""
+    text: str
+    files: Optional[List[str]] = []
+
 
 class Subtopic(BaseModel):
-    """Модель подтемы, содержащая словарь вопросов."""
-    questions: Questions
+    """Модель подтемы, содержащая вопросы."""
+    questions: Dict[str, Answer]
+
 
 class Topic(BaseModel):
-    """Модель темы, содержащая словарь подтем."""
+    """Модель темы, содержащая подтемы."""
     subtopics: Dict[str, Subtopic]
+
 
 class KnowledgeBase(BaseModel):
     """Модель базы знаний, содержащая темы, краткие вопросы и дату обновления."""
@@ -30,10 +34,12 @@ class UpdateResponse(BaseModel):
     knowledge: KnowledgeBase
     diff: Dict[str, Any]
 
+
 class PatchKnowledgeRequest(BaseModel):
     """Модель запроса патча для базы знаний с обязательным patch_data и опциональным base_data."""
     patch_data: dict
     base_data: Optional[dict] = None
+
 
 class DetermineChangesRequest(BaseModel):
     """Модель запроса для определения изменений в базе знаний по тексту пользователя с опциональными исходными данными."""

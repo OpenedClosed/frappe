@@ -47,7 +47,6 @@ class ChatMessage(IdModel):
     external_id: Optional[str] = None
 
 
-
 class Client(IdModel):
     """Модель клиента."""
     client_id: str
