@@ -75,12 +75,12 @@ jobs:
       #     context: ./frontend_admin
       #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
 
-      # - name: Push frontend chat to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./frontend_chat
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
+      - name: Push frontend chat to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./frontend_chat
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
 
       - name: Push nginx proxy to Docker Hub
         uses: docker/build-push-action@v3
