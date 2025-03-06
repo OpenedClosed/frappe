@@ -22,7 +22,7 @@
               class="p-button-success bg-green-600 hover:bg-green-500 text-white min-w-[14rem] xl:min-w-[8rem]"
               @click="onExportToExcel"
             />
-            <Button label="Создать" icon="pi pi-plus" class="p-button-success text-white  min-w-[14rem] xl:min-w-[8rem]" @click="onClickCreate" />
+            <Button :disabled="isInline" label="Создать" icon="pi pi-plus" class="p-button-success text-white  min-w-[14rem] xl:min-w-[8rem]" @click="onClickCreate" />
           </div>
         </div>
       </div>
@@ -106,6 +106,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  isInline: {
+    type: Boolean,
+    default: false,
+  },
 
   // Pagination-related props
   paginator: {
@@ -135,7 +139,7 @@ const props = defineProps({
     default: null,
   },
 });
-
+console.log("props", props.fieldOptions);
 
 
 // Add the "createNew" event to the emitted events

@@ -1,48 +1,83 @@
 <template>
   <!-- Full screen container with no overflow -->
-  <div class="flex flex-1 flex-col min-h-0 max-h-[89.8vh] h-full overflow-hidden">
+  <div class="flex flex-1 flex-col min-h-0 xl:max-h-[89.8vh] h-full overflow-hidden">
+    <Toast />
     <!-- Main container -->
     <div class="flex flex-col flex-1 overflow-hidden">
       <!-- Main block: 3 columns -->
       <div class="flex flex-1 flex-row rounded-md overflow-hidden">
-        <div class="flex flex-1 gap-4 justify-between overflow-hidden">
+        <div class="flex flex-col xl:flex-row flex-1 gap-4 justify-between overflow-hidden">
           <!-- LEFT COLUMN -->
           <div
-            class="flex-1 p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
+            class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
-            <label for="promptTextArea" class="font-bold mb-2">Textarea for prompt</label>
-            <!-- Ensure the textarea container can shrink and scroll if needed -->
+            <label for="promptTextArea" class="font-bold mb-2">{{ $t('knowledgeBase.label.promptTextarea') }}</label>
+            <!-- FORM with generatePatch submit handler -->
             <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 overflow-y-auto gap-4">
+              <!-- Info button -->
               <Button
-                label="How to use this instrument?"
+                :label="$t('knowledgeBase.button.howToUse')"
                 icon="pi pi-info-circle"
                 class="p-button-sm p-button-info w-full"
                 @click="showInstructions = true"
               />
+
+              <!-- TEXTAREA -->
               <Textarea id="promptTextArea" rows="15" class="w-full min-h-[150px]" required v-model="promptText" />
+              <!-- NEW FILE UPLOADER -->
+              <FileUpload
+                name="files"
+                multiple
+                :customUpload="true"
+                :auto="false"
+                :showUploadButton="false"
+                :showCancelButton="false"
+                @select="onSelect"
+                @remove="onRemove"
+                class="p-button-outlined"
+              >
+              </FileUpload>
+
+              <!-- {{ selectedFiles }} -->
+
+              <!-- GENERATE SMART CHANGE BUTTON -->
               <Button
                 type="submit"
                 :disabled="isLoading"
-                label="Generate smart change"
+                :label="$t('knowledgeBase.button.generateSmartChange')"
                 icon="pi pi-save"
                 class="p-button-sm p-button-success w-full flex justify-center items-center"
-                ><LoaderSmall v-if="isLoading"
-              /></Button>
+              >
+                <LoaderSmall v-if="isLoading" />
+              </Button>
+
+              <!-- Кнопка для открытия диалога -->
+              <Button :label="$t('knowledgeBase.button.openTestChat')" class="p-button-sm p-button-info w-full" @click="showDialog = true" />
+              <Dialog
+                v-model:visible="showDialog"
+                :modal="true"
+                :header="$t('knowledgeBase.button.openTestChat')"
+                :closable="true"
+                :style="{ width: '80vw', height: '80vh' }"
+                contentStyle="display: flex; flex-direction: column; height: 100%;"
+              >
+                <iframe :src="chatUrl" style="flex: 1; border: none"></iframe>
+              </Dialog>
             </form>
           </div>
 
           <!-- CENTER COLUMN -->
           <div
-            class="flex-1 p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
+            class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
             <div class="mb-2 pb-1 flex flex-row border-b border-gray-400 dark:border-gray-600 justify-between items-center">
-              <h2 class="text-lg font-bold border-gray-400 dark:border-gray-600 pb-1">Workspace playground</h2>
+              <h2 class="text-lg font-bold border-gray-400 dark:border-gray-600 pb-1">{{ $t('knowledgeBase.header.workspacePlayground') }}</h2>
               <!-- <p class="text-sm text-gray-500 dark:text-gray-300">Last update: {{ knowledgeBaseData.update_date }}</p> -->
               <div class="flex flex-row gap-2">
                 <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
                 <Button
                   :disabled="isLoading"
-                  label="Clear Playground"
+                  :label="$t('knowledgeBase.button.clearPlayground')"
                   icon="pi pi-trash"
                   class="p-button-sm p-button-warning"
                   @click="clearPlayground"
@@ -50,7 +85,7 @@
 
                 <Button
                   v-if="isEditMode"
-                  label="Add Topic"
+                  :label="$t('knowledgeBase.button.addTopic')"
                   icon="pi pi-plus"
                   class="p-button-sm p-button-success min-w-[140px]"
                   @click="addTopic"
@@ -59,14 +94,27 @@
             </div>
             <!-- Scrollable content for topics -->
             <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
-              <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6">
+              <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName"  class="mb-6">
                 <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                 <div v-if="topicValue.subtopics">
                   <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
                     <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
                     <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                      <li v-for="(answer, question) in subtopicValue.questions" :key="question">
-                        <span class="font-semibold">{{ question }}:</span> {{ answer }}
+                      <!-- qObj is { text: '', files: [] } -->
+                      <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
+                        <!-- Question & text -->
+                        <div>
+                          <span class="font-semibold">{{ questionKey }}:</span>
+                          <span> {{ qObj.text }}</span>
+                        </div>
+
+                        <!-- Files (links) -->
+                        <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
+                          <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
+                            <!-- If is image, display <img/>; otherwise display link -->
+                            <ImageLink :fileLink="fileLink" />
+                          </div>
+                        </div>
                       </li>
                     </ul>
                   </div>
@@ -75,7 +123,7 @@
             </div>
 
             <div v-else class="flex-1 overflow-y-auto">
-              <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6">
+              <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" :id="`topic-${topicName}`" class="mb-6">
                 <!-- Topic header with input and buttons -->
                 <div class="flex items-center mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">
                   <input
@@ -85,13 +133,14 @@
                     @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
                   />
                   <Button icon="pi pi-minus" class="p-button-danger p-button-sm mr-2" @click="removeTopic(topicName)" />
-                  <Button label="Add Subtopic" icon="pi pi-plus" class="p-button-success p-button-sm" @click="addSubtopic(topicName)" />
+                  <Button :label="$t('knowledgeBase.button.addSubtopic')" icon="pi pi-plus" class="p-button-success p-button-sm" @click="addSubtopic(topicName)" />
                 </div>
                 <!-- Subtopics and questions (similar adjustments can be applied here) -->
                 <div
                   v-if="topicValue.subtopics"
                   v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
                   :key="subtopicName"
+                  :id="`subtopic-${topicName}-${subtopicName}`"
                   class="ml-4 mb-4"
                 >
                   <div class="flex items-center mb-2">
@@ -103,7 +152,7 @@
                     />
                     <Button icon="pi pi-minus" class="p-button-danger p-button-sm mr-2" @click="removeSubtopic(topicName, subtopicName)" />
                     <Button
-                      label="Add Question"
+                      :label="$t('knowledgeBase.button.addQuestion')"
                       icon="pi pi-plus"
                       class="p-button-success p-button-sm"
                       @click="addQuestion(topicName, subtopicName)"
@@ -111,32 +160,64 @@
                   </div>
                   <div v-if="subtopicValue.questions" class="ml-4">
                     <div
-                      v-for="(answer, question) in subtopicValue.questions"
-                      :key="question"
+                      v-for="(questionObj, questionKey) in subtopicValue.questions"
+                      :key="questionKey"
+                      :id="`question-${topicName}-${subtopicName}-${questionKey}`"
                       class="mb-4 p-2 border rounded-md dark:border-gray-600"
                     >
+                      <!-- Row with label + remove button -->
                       <div class="flex items-center justify-between mb-2">
-                        <label class="font-semibold">Question:</label>
+                        <label class="font-semibold">{{ $t('knowledgeBase.label.question') }}:</label>
                         <Button
                           icon="pi pi-trash"
                           class="p-button-rounded p-button-text p-button-danger"
-                          @click="removeQuestion(topicName, subtopicName, question)"
+                          @click="removeQuestion(topicName, subtopicName, questionKey)"
                         />
                       </div>
 
-                      <!-- Updating the question (key) -->
+                      <!-- QUESTION (the key) -->
                       <Textarea
-                        :value="question"
+                        :value="questionKey"
                         class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
-                        @blur="renameQuestion(topicName, subtopicName, question, $event.target.value)"
+                        @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
                       />
 
-                      <label class="font-semibold">Answer:</label>
-
-                      <!-- Updating the answer (value) -->
+                      <!-- ANSWER TEXT -->
+                      <label class="font-semibold">{{ $t('knowledgeBase.label.answerText') }}:</label>
                       <Textarea
-                        v-model="subtopicValue.questions[question]"
-                        class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
+                        v-model="questionObj.text"
+                        class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
+                      />
+
+                      <!-- LINKS / FILES -->
+                      <label class="font-semibold">{{ $t('knowledgeBase.label.linksFiles') }}:</label>
+                      <ul class="mb-2">
+                        <li v-for="(fileLink, fileIndex) in questionObj.files" :key="fileIndex" class="flex items-center gap-2 mb-1">
+                          <!-- Each file link is just a string you can edit -->
+                          <input
+                            v-model="questionObj.files[fileIndex]"
+                            type="text"
+                            class="border p-1 flex-1 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
+                          />
+                          <Button
+                            icon="pi pi-minus"
+                            class="p-button-danger p-button-sm"
+                            @click="removeQuestionFile(topicName, subtopicName, questionKey, fileIndex)"
+                          />
+                        </li>
+                      </ul>
+                      <div v-if="localFiles.length" class="mt-4">
+                        <h3>{{ $t('knowledgeBase.label.selectedFiles') }}:</h3>
+                        <ul>
+                          <li v-for="(file, idx) in localFiles" :key="idx">{{ file.name }} - {{ file.size }} bytes</li>
+                        </ul>
+                      </div>
+
+                      <Button
+                        :label="$t('knowledgeBase.button.addLink')"
+                        icon="pi pi-plus"
+                        class="p-button-success p-button-sm"
+                        @click="addQuestionFile(topicName, subtopicName, questionKey)"
                       />
                     </div>
                   </div>
@@ -146,14 +227,14 @@
             <div v-if="isEditMode" class="flex flex-col gap-2 mt-2">
               <Button
                 :disabled="isLoading"
-                label="Save Playground"
+                :label="$t('knowledgeBase.button.savePlayground')"
                 icon="pi pi-save"
                 class="p-button-sm p-button-success"
                 @click="savePlayground"
               />
               <Button
                 :disabled="isLoading"
-                label="Reject Playground"
+                :label="$t('knowledgeBase.button.rejectPlayground')"
                 icon="pi pi-times"
                 class="p-button-sm p-button-danger"
                 @click="rejectPlayground"
@@ -162,14 +243,14 @@
             <div v-else class="flex flex-col gap-2 mt-2">
               <Button
                 :disabled="isLoading"
-                label="Transfer to database"
+                :label="$t('knowledgeBase.button.transferToDatabase')"
                 icon="pi pi-save"
                 class="p-button-sm p-button-success"
                 @click="saveChanges"
               />
               <Button
                 :disabled="isLoading"
-                label="Reject Playground"
+                :label="$t('knowledgeBase.button.rejectPlayground')"
                 icon="pi pi-times"
                 class="p-button-sm p-button-danger"
                 @click="rejectPlayground"
@@ -179,9 +260,9 @@
 
           <!-- RIGHT COLUMN (Readonly Copy) -->
           <div
-            class="flex-1 p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
+            class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
-            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">Readonly Knowledge Base</h2>
+            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">{{ $t('knowledgeBase.header.readonlyKnowledgeBase') }}</h2>
             <div class="flex-1 overflow-y-auto">
               <div v-for="(topicValue, topicName) in readonlyData.knowledge_base" :key="topicName" class="mb-6">
                 <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
@@ -189,8 +270,21 @@
                   <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
                     <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
                     <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                      <li v-for="(answer, question) in subtopicValue.questions" :key="question">
-                        <span class="font-semibold">{{ question }}:</span> {{ answer }}
+                      <!-- qObj is { text: '', files: [] } -->
+                      <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
+                        <!-- Question & text -->
+                        <div>
+                          <span class="font-semibold">{{ questionKey }}:</span>
+                          <span> {{ qObj.text }}</span>
+                        </div>
+
+                        <!-- Files (links) -->
+                        <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
+                          <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
+                            <!-- If is image, display <img/>; otherwise display link -->
+                            <ImageLink :fileLink="fileLink" />
+                          </div>
+                        </div>
                       </li>
                     </ul>
                   </div>
@@ -199,10 +293,10 @@
             </div>
             <div class="flex gap-2">
               <!-- Export Button -->
-              <Button label="Export JSON" icon="pi pi-download" class="p-button-sm p-button-info" @click="exportData" />
+              <Button :label="$t('knowledgeBase.button.exportJson')" icon="pi pi-download" class="p-button-sm p-button-info" @click="exportData" />
 
               <!-- Import Button -->
-              <Button label="Import JSON" icon="pi pi-upload" class="p-button-sm p-button-primary" @click="triggerFileInput" />
+              <Button :label="$t('knowledgeBase.button.importJson')" icon="pi pi-upload" class="p-button-sm p-button-primary" @click="triggerFileInput" />
 
               <!-- Hidden File Input -->
               <input type="file" class="hidden" ref="fileInput" @change="importData" accept=".json" />
@@ -215,7 +309,7 @@
     <!-- INSTRUCTIONS DIALOG -->
     <Dialog
       v-model:visible="showInstructions"
-      header="Как использовать инструмент"
+      :header="$t('knowledgeBase.button.howToUse')"
       :modal="true"
       :closable="true"
       :style="{ width: '50vw' }"
@@ -307,16 +401,62 @@ import { ref } from "vue";
 // import Textarea from 'primevue/textarea';
 // import Button from 'primevue/button';
 import cloneDeep from "lodash/cloneDeep";
+import ImageLink from "./ImageLink.vue";
+import { useI18n } from "vue-i18n"; // Добавляем i18n
 
+const { t } = useI18n(); // Получаем функцию перевода
+const toast = useToast();
 const readonlyData = ref({});
 const promptText = ref("");
-
+const selectedFiles = ref([]);
 const isEditMode = ref(false);
 const showInstructions = ref(false);
 const isLoading = ref(false);
+// Local array to store *all* selected files
+const localFiles = ref([]);
+
+function showSuccess(message) {
+  toast.add({ severity: "success", summary: "Success", detail: message, life: 3000 });
+}
+
+// Error notification
+function showError(message) {
+  toast.add({ severity: "error", summary: "Error", detail: message, life: 3000 });
+}
+
+
+// This runs whenever user selects new files.
+function onSelect(event) {
+  // event.files => Array of newly selected File objects.
+  selectedFiles.value.push(...event.files);
+}
+
+// This runs whenever user clicks the “remove” icon next to a file.
+function onRemove(event) {
+  // event.file => the single file that was removed.
+  selectedFiles.value = selectedFiles.value.filter((f) => f !== event.file);
+}
 
 function toggleEditMode() {
   isEditMode.value = !isEditMode.value;
+}
+
+const showDialog = ref(false);
+const isLocalhost = window.location.hostname === "localhost";
+const chatUrl = isLocalhost ? "http://localhost:4000/chats/telegram-chat" : "https://hotel-aihub.su/chats/telegram-chat";
+
+async function isImage(url) {
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+
+    if (!response.ok) return false;
+
+    const contentType = response.headers.get("content-type");
+    return contentType && contentType.startsWith("image/");
+  } catch (error) {
+    console.error("Error checking image URL:", error);
+    return false;
+  }
 }
 
 const knowledgeBaseData = ref({
@@ -376,13 +516,13 @@ function renameQuestion(topicName, subtopicName, oldQuestion, newQuestion) {
   const subtopic = topic.subtopics[subtopicName];
   if (!subtopic || !subtopic.questions) return;
 
-  // Check if the new question already exists
+  // Check if the new question key already exists
   if (subtopic.questions[newQuestion]) {
     alert("This question already exists!");
     return;
   }
 
-  // Create a new key-value pair and delete the old one
+  // Move entire object { text, files } to the new key
   subtopic.questions[newQuestion] = subtopic.questions[oldQuestion];
   delete subtopic.questions[oldQuestion];
 }
@@ -440,6 +580,7 @@ function importData(event) {
 }
 
 /** ======================== Методы для добавления/удаления ======================== **/
+const lastAddedElement = ref(null);
 
 // Добавить новую тему (без prompt)
 function addTopic() {
@@ -447,22 +588,34 @@ function addTopic() {
   let index = 1;
   let newName = baseName;
 
-  // Ищем уникальное имя, если уже существует
   while (knowledgeBaseData.value.knowledge_base[newName]) {
     index++;
     newName = `${baseName} ${index}`;
   }
 
-  // Создаём пустую тему
   knowledgeBaseData.value.knowledge_base[newName] = {
     subtopics: {},
   };
+
+  // Set reference to newly added topic
+  nextTick(() => {
+    lastAddedElement.value = document.getElementById(`topic-${newName}`);
+    if (lastAddedElement.value) {
+      lastAddedElement.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+  showSuccess("Topic added successfully");
 }
+
 
 // Удалить тему
 function removeTopic(topicName) {
-  if (confirm(`Remove topic "${topicName}"?`)) {
+  if (confirm(t("knowledgeBase.removeTopic", { topicName }))) { 
     delete knowledgeBaseData.value.knowledge_base[topicName];
+    showSuccess("Topic removed successfully");
+  }
+  else {
+    showError("Topic not removed");
   }
 }
 
@@ -479,54 +632,83 @@ function addSubtopic(topicName) {
     newName = `${baseName} ${index}`;
   }
 
-  // Убедимся, что `questions` создаётся сразу
   topic.subtopics[newName] = {
     questions: {},
   };
+
+  nextTick(() => {
+    lastAddedElement.value = document.getElementById(`subtopic-${topicName}-${newName}`);
+    if (lastAddedElement.value) {
+      lastAddedElement.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+  showSuccess("Subtopic added successfully");
 }
+
 
 // Удалить подтему
 function removeSubtopic(topicName, subtopicName) {
-  if (confirm(`Remove subtopic "${subtopicName}" from "${topicName}"?`)) {
+  if (confirm(t("knowledgeBase.removeSubtopic", { subtopicName, topicName }))) {
     const topic = knowledgeBaseData.value.knowledge_base[topicName];
     if (topic && topic.subtopics[subtopicName]) {
       delete topic.subtopics[subtopicName];
+      showSuccess("Subtopic removed successfully");
+    }
+    else {
+      showError("Subtopic not removed");
     }
   }
 }
 
-// Добавить вопрос (без prompt)
 function addQuestion(topicName, subtopicName) {
   const topic = knowledgeBaseData.value.knowledge_base[topicName];
   if (!topic) return;
   const subtopic = topic.subtopics[subtopicName];
   if (!subtopic) return;
 
-  // Убедимся, что объект `questions` существует
   if (!subtopic.questions) {
     subtopic.questions = {};
   }
-
+  
   let baseName = "New Question";
   let index = 1;
   let newName = baseName;
 
-  // Проверяем уникальность имени вопроса
   while (subtopic.questions.hasOwnProperty(newName)) {
     index++;
     newName = `${baseName} ${index}`;
   }
 
-  console.log("newName=", newName);
-
-  // Обновляем объект `questions`, чтобы Vue мог отследить изменения
-  subtopic.questions = {
-    ...subtopic.questions,
-    [newName]: "", // Добавляем новый вопрос
+  subtopic.questions[newName] = {
+    text: "",
+    files: [],
   };
 
-  // Полностью обновляем `knowledge_base`, чтобы Nuxt/Vue отследил изменение
-  knowledgeBaseData.value.knowledge_base = { ...knowledgeBaseData.value.knowledge_base };
+  nextTick(() => {
+    lastAddedElement.value = document.getElementById(`question-${topicName}-${subtopicName}-${newName}`);
+    if (lastAddedElement.value) {
+      lastAddedElement.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+  showSuccess("Question added successfully");
+}
+
+function addQuestionFile(topicName, subtopicName, question) {
+  const questionObj = knowledgeBaseData.value.knowledge_base[topicName].subtopics[subtopicName].questions[question];
+  if (!questionObj.files) {
+    questionObj.files = [];
+  }
+  // For a new empty link, push an empty string "" or some default text
+  questionObj.files.push("");
+  showSuccess("File added successfully");
+}
+
+function removeQuestionFile(topicName, subtopicName, question, fileIndex) {
+  const questionObj = knowledgeBaseData.value.knowledge_base[topicName].subtopics[subtopicName].questions[question];
+  if (questionObj?.files) {
+    questionObj.files.splice(fileIndex, 1);
+  }
+  showSuccess("File removed successfully");
 }
 
 // Method to update the `questions` object reactively
@@ -550,17 +732,22 @@ function updateQuestion(topicName, subtopicName, index, newValue, field) {
     // Update answer text
     subtopic.questions[questionKey] = newValue;
   }
+  showSuccess("Question updated successfully");
 }
 
 // Удалить вопрос
 function removeQuestion(topicName, subtopicName, questionKey) {
-  if (confirm(`Remove question "${questionKey}"?`)) {
+  if (confirm(t("knowledgeBase.removeQuestion", { questionKey }))) {
     const topic = knowledgeBaseData.value.knowledge_base[topicName];
     if (!topic) return;
     const subtopic = topic.subtopics[subtopicName];
     if (!subtopic) return;
 
     delete subtopic.questions[questionKey];
+    showSuccess("Question removed successfully");
+  }
+  else {
+    showError("Question not removed");
   }
 }
 
@@ -568,12 +755,11 @@ function getChanges() {
   const oldData = readonlyData.value.knowledge_base;
   const newData = knowledgeBaseData.value.knowledge_base;
   const patchData = {};
-  console.log("newData=", newData);
-  console.log("oldData=", oldData);
 
   if (!oldData) {
     return newData;
   }
+
   for (const topic in newData) {
     if (!oldData[topic]) {
       // Новая тема полностью
@@ -605,7 +791,7 @@ function getChanges() {
           // Удаленные вопросы
           for (const question in oldQuestions) {
             if (!newQuestions.hasOwnProperty(question)) {
-              subtopicDiff[question] = null; // Помечаем как удаленный
+              subtopicDiff[question] = { _delete: true }; // Указываем, что вопрос удален
             }
           }
 
@@ -618,7 +804,7 @@ function getChanges() {
       // Удаленные подтемы
       for (const subtopic in oldData[topic].subtopics) {
         if (!newData[topic].subtopics.hasOwnProperty(subtopic)) {
-          topicDiff[subtopic] = null; // Помечаем как удаленный
+          topicDiff[subtopic] = { _delete: true }; // Указываем, что подтема удалена
         }
       }
 
@@ -631,7 +817,7 @@ function getChanges() {
   // Удаленные темы
   for (const topic in oldData) {
     if (!newData.hasOwnProperty(topic)) {
-      patchData[topic] = null; // Помечаем как удаленный
+      patchData[topic] = { _delete: true }; // Указываем, что тема удалена
     }
   }
 
@@ -666,8 +852,10 @@ async function updatePlayground(data) {
 
     console.log("Успешное обновление базы знаний:", response.data);
     isEditMode.value = false;
+    showSuccess("Knowledge base updated successfully");
   } catch (error) {
     console.error("Ошибка при обновлении базы знаний:", error);
+    showError("Knowledge base not updated");
   }
 }
 // Метод для обновления базы знаний
@@ -682,15 +870,21 @@ async function saveDatabase() {
       console.log("baseData data= ", data);
       knowledgeBaseData.value.knowledge_base = data.knowledge_base;
       readonlyData.value = cloneDeep(knowledgeBaseData.value);
+      setTimeout(() => {
+        isDirty.value = false; // Mark as saved
+      }, 300);
+      showSuccess("Knowledge base saved successfully");
     }
   } catch (error) {
     console.error("Ошибка при обновлении базы знаний:", error);
+    showError("Knowledge base not saved");
   }
 }
 
 function clearPlayground() {
-  if (confirm("Are you sure you want to clear the Playground? This action cannot be undone.")) {
+  if (confirm(t("knowledgeBase.clearPlayground"))) {
     knowledgeBaseData.value.knowledge_base = {};
+    showSuccess("Playground cleared successfully");
   }
 }
 
@@ -702,33 +896,71 @@ function rejectPlayground() {
   // clear data to readonlyData
   let temp = readonlyData.value.knowledge_base;
   knowledgeBaseData.value.knowledge_base = temp;
+  showSuccess("Playground rejected successfully");
 }
+let isDirty = ref(false);
+
+watch(
+  knowledgeBaseData,
+  () => {
+    isDirty.value = true;
+  },
+  { deep: true }
+);
+
+function beforeUnloadHandler(event) {
+  if (isDirty.value) {
+    event.preventDefault();
+    event.returnValue = t("knowledgeBase.unsavedChanges");
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("beforeunload", beforeUnloadHandler);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", beforeUnloadHandler);
+});
+
+// Reset `isDirty` after saving
 function saveChanges() {
   saveDatabase();
 }
-
 async function generatePatch() {
-  console.log("promptText.value=", promptText.value);
+  // 1. Prepare FormData
+  const formData = new FormData();
 
-  isLoading.value = true;
+  // 2. Append any other fields if needed:
+  formData.append("user_message", promptText.value);
+  formData.append("base_data_json", JSON.stringify(knowledgeBaseData.value.knowledge_base));
+  console.log("selectedFiles.value=", selectedFiles.value);
+  // 3. Append files
+  selectedFiles.value.forEach((file) => {
+    formData.append("files", file, file.name);
+  });
+
+  // 4. Send via API
   try {
-    console.log("Отправка изменений:", knowledgeBaseData.value.knowledge_base);
-    const response = await useNuxtApp().$api.post("/api/knowledge/generate_patch", {
-      user_message: promptText.value,
-      // user_info: "user_info",
-      base_data: knowledgeBaseData.value.knowledge_base,
+    isLoading.value = true;
+    const response = await useNuxtApp().$api.post("/api/knowledge/generate_patch", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
-    console.log("response.data=", response.data);
+    // handle success
     updatePlayground(response.data);
-    isLoading.value = false;
+    showSuccess("Patch generated successfully");
   } catch (error) {
-    console.error("Ошибка при обновлении базы знаний:", error);
+    // handle error
+    showError("Patch not generated");
+  } finally {
     isLoading.value = false;
   }
 }
 
 /** ======================== Методы для ПЕРЕИМЕНОВАНИЯ ======================== **/
-
+ 
 // Переименовать тему
 function renameTopic(oldName, newName) {
   if (!newName || newName === oldName) return;

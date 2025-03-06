@@ -15,6 +15,7 @@
       <div v-else-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between">
         <DynamicDataTable
           :title="currentEntityName"
+          :isInline="isEntityInline"
           :displayedColumns="displayedColumns"
           :tableData="filteredTableData"
           :isLoading="isLoading"
@@ -87,6 +88,7 @@ const displayedColumns = ref([]);
 const tableDataOriginal = ref([]);
 const isLoading = ref(false);
 const currentEntityName = ref("");
+const isEntityInline = ref(false);
 
 // Routing
 const route = useRoute();
@@ -200,6 +202,7 @@ function processAdminData(data) {
 
   Object.keys(data).forEach((groupKey) => {
     const group = data[groupKey];
+    console.log("group =", group);
     const header = group.verbose_name || groupKey;
     const iconClass = group.icon || "pi pi-folder";
 
@@ -215,6 +218,7 @@ function processAdminData(data) {
         name: itemName,
         route: routePath,
         iconClass: entity.model.icon || "pi pi-file",
+        isInline: entity.model.is_inline,
       };
     });
 
@@ -287,6 +291,7 @@ function validateRoute(data, validCombos) {
 
   // If we are here, the route is valid => set the "currentEntityName"
   currentEntityName.value = foundEntity.model?.verbose_name || foundEntity.model?.name || currentEntity.value;
+  isEntityInline.value = foundEntity.model.is_inline;
 }
 
 /**

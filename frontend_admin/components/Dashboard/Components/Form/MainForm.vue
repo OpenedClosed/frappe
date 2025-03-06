@@ -23,8 +23,11 @@
         />
 
         <!-- 2) Inlines rendering -->
+         <!-- {{ inlines }} -->
         <div  v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
-          <div v-if="itemData[inlineDef.field].length > 0">
+
+          
+          <div>
             <h3 class="text-lg font-bold mb-2">
               {{ inlineDef.plural_name.en || inlineDef.name }}
             </h3>
@@ -233,8 +236,10 @@ async function fetchItemData(id) {
 // Returns only fields that have been changed
 function getChangedFields() {
   const changed = {};
+  const inlineFields = inlines.value.map((inline) => inline.field); // Get inline field names
+
   for (const key in itemData.value) {
-    if (itemData.value[key] !== originalData.value[key]) {
+    if (!inlineFields.includes(key) && itemData.value[key] !== originalData.value[key]) {
       changed[key] = itemData.value[key];
     }
   }
@@ -245,27 +250,26 @@ async function saveItem() {
   errorMessage.value = "";
   fieldErrors.value = {};
 
-  // Compute only the changed fields
-  const changedFields = getChangedFields();
+  const changedFields = getChangedFields(); // Uses the updated function
 
-  // If there are no changes, do not proceed
   if (Object.keys(changedFields).length === 0) {
     isReadOnly.value = true;
     console.log("Нет изменений для сохранения.");
     return;
   }
+
   console.log("changedFields", changedFields);
   try {
     await nuxtApp.$api.patch(`api/admin/${currentEntity.value}/${currentId.value}`, changedFields);
     console.log("Изменения сохранены");
-    // Update originalData to the new saved state
-    originalData.value = JSON.parse(JSON.stringify(itemData.value));
+    originalData.value = JSON.parse(JSON.stringify(itemData.value)); // Update original data
     isReadOnly.value = true;
   } catch (error) {
     console.error("Ошибка при сохранении:", error);
     errorMessage.value = parseError(error);
   }
 }
+
 
 async function createItem() {
   errorMessage.value = "";

@@ -17,6 +17,7 @@
         :readOnly="readOnly"
         @update:modelValue="(updated) => updateLocalItem(index, updated)"
       />
+      <!-- {{ inlineDef }} -->
 
       <!-- Actions: Save / Delete (only if not readOnly) -->
       <div class="flex gap-2 mt-2" v-if="!readOnly">
@@ -36,23 +37,25 @@
     </div>
 
     <!-- Create new inline item -->
-    <div v-if="!readOnly" class="mt-4 p-4 border rounded">
-      <h4 class="font-semibold mb-2">Add New</h4>
+   <!-- Create new inline item (Only show if inline_type is "list" or no existing single item) -->
+<div v-if="!readOnly && (props.inlineDef.inline_type === 'list' || localItems.length === 0)" class="mt-4 p-4 border rounded">
+  <h4 class="font-semibold mb-2">Add New</h4>
 
-      <!-- DynamicForm for new item -->
-      <DynamicForm
-        :fields="inlineDef.fields"
-        :modelValue="newItem"
-        @update:modelValue="(updated) => (newItem = updated)"
-      />
+  <!-- DynamicForm for new item -->
+  <DynamicForm
+    :fields="props.inlineDef.fields"
+    :modelValue="newItem"
+    @update:modelValue="(updated) => (newItem = updated)"
+  />
 
-      <button
-        class="mt-2 p-2 bg-green-500 text-white rounded"
-        @click="addNewInline"
-      >
-        Create
-      </button>
-    </div>
+  <button
+    class="mt-2 p-2 bg-green-500 text-white rounded"
+    @click="addNewInline"
+  >
+    Create
+  </button>
+</div>
+
   </div>
 </template>
 
@@ -77,6 +80,9 @@ const props = defineProps({
   readOnly: { type: Boolean, default: false },
 });
 
+
+console.log("inlineDef", props.inlineDef);
+console.log("items", props.items);
 const emit = defineEmits(["reloadParent"]);
 
 const nuxtApp = useNuxtApp();
@@ -131,7 +137,7 @@ function updateLocalItem(index, updated) {
  *  - We already have `localItems` with the user changes.
  *  - Typically we patch the *parent* item with the updated array.
  */
-async function saveOneInline(index) {
+ async function saveOneInline(index) {
   try {
     const updatedItem = localItems.value[index];
     const originalItem = props.items[index] || {};
@@ -139,32 +145,31 @@ async function saveOneInline(index) {
     // Build an object of only the changed fields
     const changes = getChangedFields(originalItem, updatedItem);
 
-    // If changes only has { id } and nothing else, nothing actually changed
-    // (optional safety check, but can be helpful)
     if (Object.keys(changes).length === 1 && changes.id) {
       alert("No changes detected.");
       return;
     }
 
-    // Build the PATCH data with only the changed fields for this one item
+    // Prepare data format based on inline_type
     const patchData = {
-      [props.inlineDef.field]: [changes],
+      [props.inlineDef.field]: props.inlineDef.inline_type === "single"
+        ? changes // Send single object
+        : [changes], // Send array
     };
-    console.log("patchData", patchData);
 
-    // Send the PATCH to the parent
     await nuxtApp.$api.patch(
       `api/admin/${props.parentEntity}/${props.parentId}`,
       patchData
     );
 
-    alert("Inline item updated (via parent PATCH)!");
+    alert("Inline item updated!");
     emit("reloadParent");
   } catch (error) {
     console.error("Error saving inline item:", error);
     alert("Error updating inline item.");
   }
 }
+
 
 
 /**
@@ -204,18 +209,22 @@ async function deleteOneInline(index) {
  *  - Push the new item into localItems
  *  - Patch the parent with the updated array
  */
-async function addNewInline() {
+ async function addNewInline() {
   try {
-    // Add any needed foreign key to link to the parent,
-    // e.g. if your backend requires it:
-    // newItem.value.chat_session_id = props.parentId;
+    // Prevent adding more than 1 element if inline_type is "single"
+    if (props.inlineDef.inline_type === "single" && localItems.value.length >= 1) {
+      alert("Only one item is allowed.");
+      return;
+    }
 
     // Push to the local array
     localItems.value.push({ ...newItem.value });
 
-    // Patch the parent
+    // Prepare the correct data format based on inline_type
     const patchData = {
-      [props.inlineDef.field]: [...localItems.value],
+      [props.inlineDef.field]: props.inlineDef.inline_type === "single"
+        ? localItems.value[0] // Send single object
+        : [...localItems.value], // Send array
     };
 
     await nuxtApp.$api.patch(
@@ -225,11 +234,12 @@ async function addNewInline() {
 
     // Clear the create form
     newItem.value = {};
-    alert("Inline item created (via parent PATCH)!");
+    alert("Inline item created!");
     emit("reloadParent");
   } catch (error) {
     console.error("Error creating inline item:", error);
     alert("Error creating inline item.");
   }
 }
+
 </script>
