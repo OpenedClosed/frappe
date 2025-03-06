@@ -1,6 +1,6 @@
 <template>
   <div
-    class="py-4 flex flex-row w-full justify-around items-center flex-wrap gap-4 max-h-[20vh] overflow-y-auto"
+    class="buttons-background py-4 flex flex-row w-full justify-around items-center flex-wrap gap-4 max-h-[20vh] overflow-y-auto"
   >
     <Button
       v-for="(option, index) in choiceOptions"
@@ -34,3 +34,18 @@ watch(
   }
 );
 </script>
+
+<style>
+.buttons-background {
+  font-family: "Quicksand", sans-serif;
+  overflow: hidden;
+  background-color: #f8f9fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  .buttons-background {
+    background-color: #131415 !important;
+  }
+}
+
+</style>

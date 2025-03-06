@@ -3,16 +3,19 @@
     class="flex flex-col dark:bg-gray-800 bg-[#f8f9fa]"
     :class="{
       '': isTelegram,
-      ' max-h-full h-svh': !isTelegram
+      ' max-h-full h-svh': !isTelegram,
     }"
     :style="isTelegram ? 'height: var(--tg-viewport-stable-height)' : ''"
   >
     <!-- Toast для уведомлений -->
     <Toast class="max-w-[18rem] md:max-w-full" />
-
     <!-- Сам чат -->
     <vue-advanced-chat
       :class="[{ 'iphone-margin': isIphone }]"
+      auto-scroll='{
+    "send": { "new": true, "newAfterScrollUp": true },
+    "receive": { "new": true, "newAfterScrollUp": true }
+  }'
       :height="isMobile ? '' : '100%'"
       class="flex-1 flex shadow-none overflow-auto w-full"
       :current-user-id="currentUserId"
@@ -29,20 +32,17 @@
       :text-messages="textMessagesJson"
       @send-message="sendMessage($event.detail[0])"
       @fetch-messages="fetchMessages($event.detail[0])"
+      :theme="colorMode.preference"
+      
     >
       <div slot="room-header-info" class="w-full">
-        <ChatHeader
-        :isTelegram="isTelegram"
-        :refreshChat="refreshChat"
-        :closeChat="closeChat"
-        @toggle-chat-mode="toggleChatMode($event)"
-      />
+        <ChatHeader :isTelegram="isTelegram" :refreshChat="refreshChat" :closeChat="closeChat" @toggle-chat-mode="toggleChatMode($event)" />
       </div>
     </vue-advanced-chat>
 
     <!-- Кнопки выбора (если есть варианты и таймер не истёк) -->
     <ChoiceButtons v-if="choiceOptions.length && !timerExpired" :choiceOptions="choiceOptions" :handleChoiceClick="handleChoiceClick" />
-    <CommandsSection/>
+    <CommandsSection />
 
     <!-- Кнопка "Начать заново" (если таймер истёк) -->
     <ReloadButton v-if="timerExpired" :reloadLabel="t('chatAgain')" :reloadPage="reloadPage" />
@@ -52,9 +52,8 @@
 <script setup>
 import { defineEmits } from "vue";
 import { register } from "vue-advanced-chat";
+const colorMode = useColorMode();
 register();
-
-
 
 // PrimeVue
 import Toast from "primevue/toast";
@@ -67,7 +66,6 @@ import ReloadButton from "~/components/Chat/ReloadButton.vue";
 
 // Подключаем наш composable
 import { useChatLogic } from "~/composables/useChatLogic";
-
 
 const props = defineProps({
   isTelegram: {
@@ -89,6 +87,19 @@ $listen("command-clicked", async (command) => {
   handleChoiceClick(command);
 });
 
+$listen("new_message_arrived", async (message) => {
+  console.log("new_message:", message);
+  if (message) {
+    updateMessages(message);
+  }
+});
+$listen("choice_options_arrived", async (options) => {
+  console.log("choice_options:", options);
+  if (options) {
+    choiceOptions.value = options;
+  }
+});
+
 // Получаем из composable все нужные refs и методы
 // (кроме closeChat - его оставляем здесь локально)
 const {
@@ -104,14 +115,14 @@ const {
   isChoiceStrict,
   timerExpired,
   textMessagesJson,
-
+  updateMessages,
   fetchMessages,
   sendMessage,
   toggleChatMode,
   handleChoiceClick,
   reloadPage,
   refreshChat,
-} = useChatLogic({ isTelegram: props.isTelegram })
+} = useChatLogic({ isTelegram: props.isTelegram });
 </script>
 
 <style scoped>
@@ -120,15 +131,21 @@ const {
   margin-bottom: 20px;
   padding-bottom: env(safe-area-inset-bottom);
 }
-
 </style>
-
 
 <style>
 body {
   font-family: "Quicksand", sans-serif;
   overflow: hidden;
   background-color: #f8f9fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    font-family: "Quicksand", sans-serif;
+    overflow: hidden;
+    background-color: #121212 !important;
+  }
 }
 
 /* Hide the rooms container if you only want a single chat */
@@ -147,7 +164,6 @@ body {
   flex: 1;
   overflow-y: auto;
 }
-
 
 .vue-advanced-chat {
   box-shadow: none !important;

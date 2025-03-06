@@ -55,7 +55,7 @@
               <Button :label="$t('knowledgeBase.button.openTestChat')" class="p-button-sm p-button-info w-full" @click="showDialog = true" />
               <Dialog
                 v-model:visible="showDialog"
-                :modal="true"
+                :modal="false"
                 :header="$t('knowledgeBase.button.openTestChat')"
                 :closable="true"
                 :style="{ width: '80vw', height: '80vh' }"

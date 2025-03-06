@@ -207,12 +207,19 @@ export function useChatLogic(options = {}) {
     sendMessage({ content: option });
   }
 
+  function updateMessages(newMessage) {
+    messages.value = [...messages.value, newMessage]; // Ensure reactivity
+  }
+  
+
   /**
    * Перезагрузка страницы (кнопка "Начать заново", если таймер истёк).
    */
   function reloadPage() {
     window.location.reload();
   }
+
+  const { $event, $listen } = useNuxtApp();
 
   /**
    * Инициализация WebSocket.
@@ -276,7 +283,10 @@ export function useChatLogic(options = {}) {
 
         case "new_message": {
           const [transformed] = await transformChatMessages([data]);
-          messages.value.push(transformed);
+          // updateMessages(transformed);
+          $event("new_message_arrived", transformed);
+          console.log("messages.value:", messages.value);
+          console.log("transformed:", transformed);
           websocket.value?.send(JSON.stringify({ type: "status_check" }));
           if (data.choice_options?.length) {
             choiceOptions.value = data.choice_options;
@@ -285,6 +295,7 @@ export function useChatLogic(options = {}) {
             choiceOptions.value = [];
             isChoiceStrict.value = false;
           }
+          $event("choice_options_arrived", choiceOptions.value);
           break;
         }
 
@@ -323,6 +334,7 @@ export function useChatLogic(options = {}) {
           life: 3000,
         });
         messages.value = [];
+        currenChatId.value = response.data.chat_id;
         initializeWebSocket(response.data.chat_id);
       }
     } catch (error) {
@@ -352,7 +364,8 @@ export function useChatLogic(options = {}) {
    * Событие фокуса окна — если соединение потеряно, переподключаемся.
    */
   function handleFocus() {
-    if (websocket.value?.readyState !== 1 && currenChatId.value) {
+    console.log("handleFocus", websocket.value, currenChatId.value);
+    if (websocket.value && currenChatId.value) {
       websocket.value.close();
       initializeWebSocket(currenChatId.value);
     }
@@ -401,6 +414,12 @@ export function useChatLogic(options = {}) {
     window.removeEventListener("resize", checkScreenSize);
   });
 
+  function updateMessages(newMessage) {
+    // Можно просто использовать push,
+    // или, чтобы гарантировать обновление реактивности, делаем копию массива:
+    messages.value = [...messages.value, newMessage];
+  }
+
   // Возвращаем наружу все необходимые refs и методы для использования в компонентах
   return {
     // reactive-свойства
@@ -416,6 +435,8 @@ export function useChatLogic(options = {}) {
     isChoiceStrict,
     timerExpired,
     textMessagesJson,
+
+    updateMessages,
 
     // методы
     fetchMessages: messagesFetcher,
