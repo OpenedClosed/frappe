@@ -5,7 +5,7 @@ import ChatComponent from "~/components/Chat/ChatComponent.vue";
 </script>
 <template>
     <div class="Main">
-        <ChatComponent :is-telegram="true"/>/>
+        <ChatComponent :is-telegram="true"/>
         
     </div>
 </template>

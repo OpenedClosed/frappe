@@ -56,9 +56,9 @@ export default defineNuxtConfig({
   modules: ["@nuxtjs/tailwindcss", "nuxt-primevue", "@nuxtjs/i18n", "@nuxtjs/color-mode"],
   colorMode: {
     classSuffix: "",
-    preference: "light",
+    preference: "system",
+    fallback: "system",
   },
-
   i18n: {
     vueI18n: "./i18n.config.ts", // if you are using custom path, default
   },

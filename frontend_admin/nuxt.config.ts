@@ -44,44 +44,45 @@ export default defineNuxtConfig({
   //   },
   // },
 
-    spaLoadingTemplate: "spa-loading-template.html",
-    app: {
-      buildAssetsDir: "/admin/_nuxt/",
-      head: {
-        meta: [
-          { charset: "UTF-8" },
-          { "http-equiv": "Content-Security-Policy", content: "upgrade-insecure-requests" },
-          { "http-equiv": "X-UA-Compatible", content: "IE=edge" },
-        ],
-        script: [
-          { src: "https://telegram.org/js/telegram-web-app.js" },
-        ],
-        link: [
-          {
-            rel: "preconnect",
-            href: "https://fonts.gstatic.com",
-            crossorigin: "anonymous",
-          },
-          {
-            href: "https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap",
-            rel: "stylesheet",
-          },
-          {
-            href: "https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css",
-            rel: "stylesheet",
-            crossorigin: "anonymous",
-          },
-          {
-            id: "theme-link",
-            rel: "stylesheet",
-            href: "/aura-light-cyan/theme.css",
-        },
+  spaLoadingTemplate: "spa-loading-template.html",
+
+  app: {
+    buildAssetsDir: "/admin/_nuxt/",
+    head: {
+      meta: [
+        { charset: "UTF-8" },
+        { "http-equiv": "Content-Security-Policy", content: "upgrade-insecure-requests" },
+        { "http-equiv": "X-UA-Compatible", content: "IE=edge" },
       ],
-    },
+      script: [
+        { src: "https://telegram.org/js/telegram-web-app.js" },
+      ],
+      link: [
+        {
+          rel: "preconnect",
+          href: "https://fonts.gstatic.com",
+          crossorigin: "anonymous",
+        },
+        {
+          href: "https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap",
+          rel: "stylesheet",
+        },
+        {
+          href: "https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css",
+          rel: "stylesheet",
+          crossorigin: "anonymous",
+        },
+        {
+          id: "theme-link",
+          rel: "stylesheet",
+          href: "/aura-light-cyan/theme.css",
+      },
+    ],
   },
-  
+},
 
   ssr: false,
+
   // alias: {
   //   "@": resolve(__dirname, "/"),
   // },
@@ -92,6 +93,7 @@ export default defineNuxtConfig({
   ],
 
   modules: ["@nuxtjs/tailwindcss", "nuxt-primevue", "@nuxtjs/i18n", "@nuxtjs/color-mode"],
+
   colorMode: {
     classSuffix: "",
     preference: "light",
@@ -104,6 +106,7 @@ export default defineNuxtConfig({
   pinia: {
     storesDirs: ["./stores/**", "./custom-folder/stores/**"],
   },
+
   postcss: {
     plugins: {
       tailwindcss: {
@@ -112,6 +115,7 @@ export default defineNuxtConfig({
       autoprefixer: {},
     },
   },
+
   // extends: ['nuxt-umami'],
   vue: {
     compilerOptions: {
@@ -125,14 +129,17 @@ export default defineNuxtConfig({
     //   exclude: ["Editor", "Chart"]
     // }
   },
+
   nitro: {
     routeRules: {
       '/chat': { headers: { 'X-Frame-Options': 'ALLOWALL' } },
     },
   },
+
   routeRules: {
     '/scripts/**': { headers: { 'Cache-Control': 'no-store, max-age=0' } }
   },
 
   devtools: { enabled: true },
+  compatibilityDate: "2025-02-27",
 });

@@ -20,7 +20,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
   });
 
-  const token = useCookie("access_token");
+  
   const csrfTokenCookie = useCookie("csrftoken");
   // console.log("token.value", token.value);
   // Reset Authorization header function
@@ -30,6 +30,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Initial setup of Authorization and CSRF headers
   const setupHeaders = () => {
+    const token = useCookie("access_token");
     const myString = token.value;
     if (myString) {
       api.defaults.headers.common["Authorization"] = `Bearer ${myString}`;
@@ -66,6 +67,22 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   );
 
+  // ----- Request Interceptor #2 (for refresh) -----
+  // This will remove Authorization ONLY when requesting api/auth/refresh.
+  api.interceptors.request.use(
+    (config) => {
+      if (config.url && config.url.includes("api/admin/refresh")) {
+        console.log("Removing Authorization header for refresh request.");
+        delete config.headers.Authorization;
+      }
+      return config;
+    },
+    (error) => {
+      console.error("Request Interceptor #2 Error:", error);
+      return Promise.reject(error);
+    }
+  );
+
   api.interceptors.response.use(
     (response) => {
       return response;
@@ -85,10 +102,13 @@ export default defineNuxtPlugin((nuxtApp) => {
         resetAuthorizationHeader();
 
         try {
+          const token = useCookie("access_token");
+
+        if(token.value){
           const response = await api.post("api/admin/refresh").catch((err) => {
             reloadNuxtApp({ path: "/admin/login/", ttl: 1000 });
           });
-          const myString = response.data.access_token;
+          const myString = token.value;
 
           if (myString) {
             
@@ -99,6 +119,7 @@ export default defineNuxtPlugin((nuxtApp) => {
             // Retry the original request
             return api(originalRequest);
           }
+        }
         } catch (err) {
           console.log(err.response ? err.response.data : err.message);
           reloadNuxtApp({ path: "/admin/login/", ttl: 1000 });

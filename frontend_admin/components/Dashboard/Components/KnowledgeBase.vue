@@ -55,7 +55,7 @@
               <Button :label="$t('knowledgeBase.button.openTestChat')" class="p-button-sm p-button-info w-full" @click="showDialog = true" />
               <Dialog
                 v-model:visible="showDialog"
-                :modal="false"
+                :modal="true"
                 :header="$t('knowledgeBase.button.openTestChat')"
                 :closable="true"
                 :style="{ width: '80vw', height: '80vh' }"
@@ -443,7 +443,7 @@ function toggleEditMode() {
 
 const showDialog = ref(false);
 const isLocalhost = window.location.hostname === "localhost";
-const chatUrl = isLocalhost ? "http://localhost:4000/chats/telegram-chat" : `${window.location.protocol}//${window.location.hostname}/chats/telegram-chat`;
+const chatUrl = isLocalhost ? "http://localhost:4000/chats/telegram-chat" : "https://hotel-aihub.su/chats/telegram-chat";
 
 async function isImage(url) {
   try {
