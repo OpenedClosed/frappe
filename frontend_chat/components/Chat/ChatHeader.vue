@@ -19,12 +19,14 @@
         </div>
     </div>
     <!-- Right Section: Toggle + Menu Button -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2">
       <!-- Button to open the menu (TieredMenu) -->
-      <Button icon="pi pi-bars" class="p-button-rounded p-button-text" @click="$refs.menu.toggle($event)" />
-
+      <div class="flex items-center justify-center">
+        <Button icon="pi pi-bars" class="p-button-rounded p-button-text" @click="$refs.menu.toggle($event)" />
+      <Button v-if="!isTelegram" icon="pi pi-times" class="p-button-rounded p-button-text" @click="closeChat"></Button>
+      </div>
       <!-- TieredMenu as a popover with Refresh/Close actions -->
-      <TieredMenu :model="menuItems" popup ref="menu" />
+      <TieredMenu :model="menuItems" popup ref="menu" style="z-index: 9999;"/>
     </div>
   </div>
 </template>
