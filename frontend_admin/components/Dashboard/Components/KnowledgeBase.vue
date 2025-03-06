@@ -70,11 +70,11 @@
           <div
             class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
-            <div class="mb-2 pb-1 flex flex-row border-b border-gray-400 dark:border-gray-600 justify-between items-center">
+            <div class="mb-2 pb-1 flex flex-col md:flex-row border-b border-gray-400 dark:border-gray-600 justify-between items-center">
               <h2 class="text-lg font-bold border-gray-400 dark:border-gray-600 pb-1">{{ $t('knowledgeBase.header.workspacePlayground') }}</h2>
               <!-- <p class="text-sm text-gray-500 dark:text-gray-300">Last update: {{ knowledgeBaseData.update_date }}</p> -->
-              <div class="flex flex-row gap-2">
-                <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
+              <div class="flex flex-col md:flex-row gap-2">
+                <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm  w-full md:w-[32px]" @click="toggleEditMode" />
                 <Button
                   :disabled="isLoading"
                   :label="$t('knowledgeBase.button.clearPlayground')"
@@ -291,7 +291,7 @@
                 </div>
               </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-col xl:flex-row gap-2">
               <!-- Export Button -->
               <Button :label="$t('knowledgeBase.button.exportJson')" icon="pi pi-download" class="p-button-sm p-button-info" @click="exportData" />
 
@@ -312,7 +312,7 @@
       :header="$t('knowledgeBase.button.howToUse')"
       :modal="true"
       :closable="true"
-      :style="{ width: '50vw' }"
+      class="w-full xl:w-[50vw] m-4"
     >
       <div class="wysiwyg">
         <p>Добро пожаловать в руководство по использованию инструмента для работы с базой знаний. Вот несколько рекомендаций:</p>
