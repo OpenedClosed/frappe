@@ -12,22 +12,23 @@
       </div>
       <!-- Toggle Container -->
       <div class="flex items-center gap-2 bg-light dark:bg-gray-700 px-4 py-[2px] md:py-[2px] rounded-lg shadow ml-4">
-        <span class="text-2xl font-medium">👩‍💼</span>
+        <span class="text-2xl font-medium">🧑‍💻</span>
 
         <!-- PrimeVue InputSwitch with Tailwind classes -->
         <InputSwitch v-model="isAutoMode" :class="inputSwitchClasses" @change="changeMode" />
 
-        <span class="text-2xl font-medium">👩‍⚕️</span>
+        <span class="text-2xl font-medium">🚀</span>
       </div>
     </div>
-    <!-- Right Section: Toggle + Menu Button -->
-    <div class="flex items-center gap-4">
-      <!-- Button to open the menu (TieredMenu) -->
-      <Button icon="pi pi-bars" class="p-button-rounded p-button-text" @click="$refs.menu.toggle($event)" />
+  </div>
+  <!-- Right Section: Toggle + Menu Button -->
+  <div class="flex items-center gap-4">
+    <!-- Button to open the menu (TieredMenu) -->
+    <Button icon="pi pi-bars" class="p-button-rounded p-button-text" @click="$refs.menu.toggle($event)" />
 
-      <!-- TieredMenu as a popover with Refresh/Close actions -->
-      <TieredMenu :model="menuItems" popup ref="menu" style="z-index: 10000" />
-    </div>
+    <!-- TieredMenu as a popover with Refresh/Close actions -->
+    <TieredMenu :model="menuItems" popup ref="menu" style="z-index: 10000" />
+  </div>
   </div>
 </template>
 
