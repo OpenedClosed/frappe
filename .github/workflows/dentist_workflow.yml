@@ -11,6 +11,7 @@ env:
   MONGO_URL: ${{ secrets.MONGO_URL }}
   MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   REDIS_STORAGE_URL: ${{ secrets.REDIS_STORAGE_URL }}
   CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
   SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
@@ -52,21 +53,21 @@ jobs:
       #     context: ./mongo
       #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
 
-      # - name: Push backend to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./backend
-      #     file: ./backend/fastapi_web/FastApiWebDockerfile
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
+      - name: Push backend to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/fastapi_web/FastApiWebDockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
-      # - name: Push bot to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./backend
-      #     file: ./backend/telegram_bot/TelegramBotDockerfile
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
+      - name: Push bot to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/telegram_bot/TelegramBotDockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
 
       - name: Push frontend admin to Docker Hub
         uses: docker/build-push-action@v3
