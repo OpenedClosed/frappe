@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional, Union
 
 import httpx
 from fastapi import HTTPException, Request, WebSocket
+from pymongo import DESCENDING
 from telegram_bot.infra import settings as bot_settings
 
 from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
@@ -16,6 +17,14 @@ from chats.db.mongo.schemas import ChatMessage, ChatSession, Client
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
+from knowledge.admin import BotSettingsAdmin
+from knowledge.db.mongo.enums import (AIModelEnum, BotColorEnum,
+                                      CommunicationStyleEnum,
+                                      PersonalityTraitsEnum)
+from knowledge.db.mongo.mapping import (COMMUNICATION_STYLE_DETAILS,
+                                        FUNCTIONALITY_DETAILS,
+                                        PERSONALITY_TRAITS_DETAILS)
+from knowledge.db.mongo.schemas import BotSettings
 
 from .knowledge_base import KNOWLEDGE_BASE
 
@@ -27,42 +36,44 @@ async def generate_client_id(
     chat_source: ChatSource = ChatSource.INTERNAL,
     external_id: Optional[str] = None
 ) -> str:
-    """Создает `client_id` в зависимости от источника клиента."""
+    """Создаёт `client_id`, обрабатывая возможный JSON в `chat_source.value` и `external_id`."""
+    chat_source_value = chat_source.value
+    try:
+        chat_source_dict = json.loads(chat_source_value)
+        chat_source_value = chat_source_dict.get("en", chat_source_value)
+    except (json.JSONDecodeError, TypeError):
+        pass
+
     if external_id:
-        return f"{chat_source.value}_{external_id}"
+        return f"{chat_source_value}_{external_id}"
 
     if not isinstance(source, (Request, WebSocket)):
         raise ValueError("Invalid source type. Must be Request or WebSocket.")
 
     headers = source.headers
-    forwarded_for = headers.get("x-forwarded-for")
-    client_ip = forwarded_for.split(",")[0].strip(
-    ) if forwarded_for else source.client.host
+    client_ip = headers.get("x-forwarded-for",
+                            "").split(",")[0].strip() or source.client.host
     user_agent = headers.get("user-agent", "unknown")
 
     if "PostmanRuntime" in user_agent:
         user_agent = "unknown"
 
-    return f"{chat_source.value}_{hashlib.sha256(f'{client_ip}-{user_agent}'.encode()).hexdigest()}"
+    return f"{chat_source_value}_{hashlib.sha256(f'{client_ip}-{user_agent}'.encode()).hexdigest()}"
 
 
 async def get_client_id(websocket: WebSocket, chat_id: str,
                         is_superuser: bool) -> str:
-    """Определяет client_id с которым связан чат в зависимости от типа пользователя."""
+    """Определяет `client_id`, связанный с чатом, в зависимости от типа пользователя."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
         raise ValueError(f"Chat session with ID {chat_id} not found.")
 
     chat_session = ChatSession(**chat_data)
-
-    if is_superuser:
-        return chat_session.get_client_id()
-
-    return await generate_client_id(websocket)
+    return chat_session.get_client_id() if is_superuser else await generate_client_id(websocket)
 
 
 def generate_chat_id() -> str:
-    """Создать уникальный идентификатор чата."""
+    """Создаёт уникальный идентификатор чата."""
     return f"chat-{uuid.uuid4()}-{int(datetime.utcnow().timestamp())}"
 
 
@@ -82,25 +93,25 @@ def find_last_bot_message(chat_session: ChatSession) -> Optional[ChatMessage]:
 
 
 async def send_message_to_bot(chat_id: str, chat_session: dict) -> None:
-    """Отправка информации о чате в админский бот."""
+    """Отправляет информацию о чате в админский бот."""
     if settings.HOST == "localhost":
         return
 
-    bot_webhook_url: str = "http://bot:9999/webhook/send_message"
-    admin_chat_url: str = f"https://{settings.HOST}/admin/chats/chat_sessions/{chat_id}?isForm=false"
+    bot_webhook_url = "http://bot:9999/webhook/send_message"
+    admin_chat_url = f"https://{settings.HOST}/admin/chats/chat_sessions/{chat_id}?isForm=false"
 
-    created_at: str = (
+    created_at = (
         chat_session['created_at'].isoformat()
         if isinstance(chat_session['created_at'], datetime)
         else chat_session['created_at']
     )
-    last_activity: str = (
+    last_activity = (
         chat_session['last_activity'].isoformat()
         if isinstance(chat_session['last_activity'], datetime)
         else chat_session['last_activity']
     )
 
-    message_text: str = f"""
+    message_text = f"""
 🚨 <b>Chat Alert</b> 🚨
 
 <b>Chat ID</b>: {chat_session["chat_id"]}
@@ -115,7 +126,7 @@ async def send_message_to_bot(chat_id: str, chat_session: dict) -> None:
 """
 
     async with httpx.AsyncClient() as client:
-        response: httpx.Response = await client.post(
+        response = await client.post(
             bot_webhook_url,
             json={
                 "chat_id": bot_settings.ADMIN_CHAT_ID,
@@ -124,7 +135,7 @@ async def send_message_to_bot(chat_id: str, chat_session: dict) -> None:
             },
         )
         if response.status_code != 200:
-            logging.info(f"Сообщение не отправлено! Ошибка: {response.text}")
+            logging.info(f"Message not sent! Error: {response.text}")
 
 
 async def handle_chat_creation(
@@ -137,34 +148,30 @@ async def handle_chat_creation(
     metadata: Optional[Dict[str, Any]] = None,
     request: Optional[Request] = None
 ) -> dict:
-    """Создаёт или получает чат-сессию с приоритетом Redis → MongoDB (для внешних чатов)."""
-
+    """Создаёт или получает чат-сессию, используя Redis и MongoDB."""
     metadata = metadata or {}
-    chat_data = None
     client_id = await generate_client_id(
         request, chat_source=chat_source, external_id=client_external_id
     ) if request else f"{chat_source.value}_{client_external_id}"
 
     redis_key = f"chat:{client_id}"
 
-    if mode == "new":
-        if old_chat_id := await redis_db.get(redis_key):
-            old_chat_id = old_chat_id.decode()
-            if chat_data := await mongo_db.chats.find_one({"chat_id": old_chat_id}):
-                await mongo_db.chats.update_one(
-                    {"chat_id": old_chat_id},
-                    {"$set": {"closed_by_request": True,
-                              "last_activity": datetime.utcnow()}}
-                )
-            await redis_db.delete(redis_key)
+    if mode == "new" and (old_chat_id := await redis_db.get(redis_key)):
+        old_chat_id = old_chat_id.decode()
+        if chat_data := await mongo_db.chats.find_one({"chat_id": old_chat_id}):
+            await mongo_db.chats.update_one(
+                {"chat_id": old_chat_id},
+                {"$set": {"closed_by_request": True, "last_activity": datetime.utcnow()}}
+            )
+        await redis_db.delete(redis_key)
 
     if chat_id_from_redis := await redis_db.get(redis_key):
         chat_id_from_redis = chat_id_from_redis.decode()
         if chat_data := await mongo_db.chats.find_one({"chat_id": chat_id_from_redis}):
-            remaining_time = max(0, settings.CHAT_TIMEOUT.total_seconds(
-            ) - (datetime.utcnow() - chat_data["last_activity"]).total_seconds())
+            remaining_time = max(0, settings.CHAT_TIMEOUT.total_seconds() -
+                                 (datetime.utcnow() - chat_data["last_activity"]).total_seconds())
             return {
-                "message": "Chat session active.",
+                "message": "Chat session is active.",
                 "chat_id": chat_data["chat_id"],
                 "client_id": client_id,
                 "created_at": chat_data["created_at"],
@@ -173,9 +180,8 @@ async def handle_chat_creation(
                 "status": ChatSession(**chat_data).compute_status(remaining_time).value,
             }
 
-    if chat_source != ChatSource.INTERNAL and chat_data:
+    if chat_source != ChatSource.INTERNAL and (chat_data := await mongo_db.chats.find_one({"client.client_id": client_id})):
         chat_session = ChatSession(**chat_data)
-
         await redis_db.set(redis_key, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
         return {
@@ -189,7 +195,8 @@ async def handle_chat_creation(
         client_id=client_id,
         source=chat_source,
         external_id=client_external_id,
-        metadata=metadata)
+        metadata=metadata
+    )
     chat_id = generate_chat_id()
 
     chat_session = ChatSession(
@@ -202,7 +209,6 @@ async def handle_chat_creation(
     )
 
     await mongo_db.chats.insert_one(chat_session.dict())
-
     await redis_db.set(redis_key, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
     return {
@@ -214,15 +220,12 @@ async def handle_chat_creation(
 
 
 async def get_knowledge_base() -> Dict[str, dict]:
-    """Получить документ с базой знаний."""
+    """Получает базу знаний."""
     document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
     if not document:
-        raise HTTPException(404, "База знаний не найдена")
+        raise HTTPException(404, "Knowledge base not found.")
     document.pop("_id", None)
-    if document["knowledge_base"]:
-        return document["knowledge_base"]
-    else:
-        return KNOWLEDGE_BASE
+    return document["knowledge_base"] if document["knowledge_base"] else KNOWLEDGE_BASE
 
 
 # ===== Контекст для ИИ помощника =====
@@ -231,19 +234,18 @@ locale.setlocale(locale.LC_TIME, "C")
 
 
 def get_current_datetime() -> str:
-    """Возвращает текущую дату и время в формате 'Monday, 08-02-2025 14:30:00 UTC'."""
+    """Возвращает текущее время в формате 'Monday, 08-02-2025 14:30:00 UTC'."""
     now = datetime.now(timezone.utc)
-    formatted_datetime = now.strftime(
+    return now.strftime(
         "%A, %d-%m-%Y %H:%M:%S UTC%z").replace("UTC+0000", "UTC")
-    return formatted_datetime
 
 
 async def get_weather_for_region(region_name: str) -> Dict[str, Any]:
-    """Получает прогноз погоды на 5 дней с кэшированием в Redis."""
+    """Получает прогноз погоды на 5 дней с кэшированием в Redis (английские сообщения)."""
     redis_key = f"weather:{region_name.lower()}"
-    cached_weather = await redis_db.get(redis_key)
-    if cached_weather:
-        return json.loads(cached_weather)
+    cached = await redis_db.get(redis_key)
+    if cached:
+        return json.loads(cached)
 
     params = {
         "q": region_name,
@@ -256,19 +258,21 @@ async def get_weather_for_region(region_name: str) -> Dict[str, Any]:
         try:
             response = await client.get("http://api.openweathermap.org/data/2.5/forecast", params=params)
             if response.status_code != 200:
-                return {"error": "Погода недоступна"}
-
+                return {"error": "Weather is not available"}
             data = response.json()
             forecast = parse_weather_data(data)
-            await redis_db.set(redis_key, json.dumps(forecast), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
+            await redis_db.set(
+                redis_key,
+                json.dumps(forecast),
+                ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds())
+            )
             return forecast
-
         except Exception as e:
-            return {"error": f"Ошибка получения погоды: {e}"}
+            return {"error": f"Weather fetching error: {e}"}
 
 
 async def get_coordinates(address: str) -> Dict[str, float]:
-    """Получает координаты (широта, долгота) для заданного адреса."""
+    """Возвращает координаты (широта и долгота) для заданного адреса."""
     params = {
         "q": address,
         "limit": 1,
@@ -280,20 +284,18 @@ async def get_coordinates(address: str) -> Dict[str, float]:
             response = await client.get("http://api.openweathermap.org/geo/1.0/direct", params=params)
             if response.status_code != 200 or not response.json():
                 return {}
-
             data = response.json()
             return {"lat": data[0]["lat"], "lon": data[0]["lon"]}
-
         except Exception as e:
-            return {"error": f"Ошибка получения координат: {e}"}
+            return {"error": f"Coordinates error: {e}"}
 
 
 async def get_weather_for_location(lat: float, lon: float) -> Dict[str, Any]:
-    """Получает прогноз погоды по координатам с кэшированием."""
+    """Получает прогноз погоды по координатам с кэшированием (английские сообщения)."""
     redis_key = f"weather:{lat},{lon}"
-    cached_weather = await redis_db.get(redis_key)
-    if cached_weather:
-        return json.loads(cached_weather)
+    cached = await redis_db.get(redis_key)
+    if cached:
+        return json.loads(cached)
 
     params = {
         "lat": lat,
@@ -307,41 +309,168 @@ async def get_weather_for_location(lat: float, lon: float) -> Dict[str, Any]:
         try:
             response = await client.get("http://api.openweathermap.org/data/2.5/forecast", params=params)
             if response.status_code != 200:
-                return {"error": "Погода недоступна"}
-
+                return {"error": "Weather is not available"}
             data = response.json()
             forecast = parse_weather_data(data)
-            await redis_db.set(redis_key, json.dumps(forecast), ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds()))
+            await redis_db.set(
+                redis_key,
+                json.dumps(forecast),
+                ex=int(settings.WEATHER_CACHE_LIFETIME.total_seconds())
+            )
             return forecast
-
         except Exception as e:
-            return {"error": f"Ошибка получения погоды: {e}"}
+            return {"error": f"Weather fetching error: {e}"}
 
 
 async def get_weather_by_address(address: str) -> Dict[str, Any]:
-    """Получает прогноз погоды для заданного адреса."""
-    coordinates = await get_coordinates(address)
-    if not coordinates:
-        return {"error": "Не удалось получить координаты"}
-    return await get_weather_for_location(coordinates["lat"], coordinates["lon"])
+    """Получает прогноз погоды для адреса (английские сообщения об ошибке)."""
+    coords = await get_coordinates(address)
+    if not coords:
+        return {"error": "Failed to get coordinates"}
+    return await get_weather_for_location(coords["lat"], coords["lon"])
 
 
 def parse_weather_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Парсит прогноз погоды и группирует данные по дням."""
+    """Парсит прогноз погоды и группирует данные по датам."""
     forecast = {}
-
     for entry in data["list"]:
-        date = entry["dt_txt"].split(" ")[0]
+        date_str = entry["dt_txt"].split(" ")[0]
         temp = entry["main"]["temp"]
-        description = entry["weather"][0]["description"].capitalize()
-
-        if date not in forecast:
-            forecast[date] = {
+        desc = entry["weather"][0]["description"].capitalize()
+        if date_str not in forecast:
+            forecast[date_str] = {
                 "temp_min": temp,
                 "temp_max": temp,
-                "description": description}
+                "description": desc}
         else:
-            forecast[date]["temp_min"] = min(forecast[date]["temp_min"], temp)
-            forecast[date]["temp_max"] = max(forecast[date]["temp_max"], temp)
-
+            forecast[date_str]["temp_min"] = min(
+                forecast[date_str]["temp_min"], temp)
+            forecast[date_str]["temp_max"] = max(
+                forecast[date_str]["temp_max"], temp)
     return {"forecast": forecast}
+
+
+async def get_bot_context() -> Dict[str, Any]:
+    """Загружает настройки бота из БД или использует значения по умолчанию."""
+    data = await mongo_db.bot_settings.find_one({}, sort=[("_id", DESCENDING)])
+    if data:
+        bot_settings = BotSettings(**data)
+    else:
+        bot_settings = BotSettings(
+            project_name="Default Project",
+            employee_name="Default Employee",
+            mention_name=False,
+            avatar=None,
+            bot_color=BotColorEnum.RED,
+            communication_tone=CommunicationStyleEnum.CASUAL,
+            personality_traits=PersonalityTraitsEnum.BALANCED,
+            additional_instructions="",
+            role="Default Role",
+            target_action=[],
+            core_principles=None,
+            special_instructions=[],
+            forbidden_topics=[],
+            greeting={
+                "en": "Hello! How can I assist you?",
+                "ru": "Здравствуйте! Чем могу помочь?"},
+            error_message={
+                "en": "Please wait for a consultant.",
+                "ru": "Пожалуйста, подождите, консультант скоро ответит."},
+            farewell_message={
+                "en": "Goodbye! Feel free to ask anything else.",
+                "ru": "До свидания! Если вам что-то понадобится, обращайтесь."},
+            ai_model=AIModelEnum.GPT_4_O,
+            created_at=datetime.utcnow()
+        )
+    return build_bot_settings_context(bot_settings, BotSettingsAdmin(mongo_db))
+
+
+def build_bot_settings_context(
+        settings: BotSettings, admin_model: BotSettingsAdmin) -> Dict[str, Any]:
+    """Формирует словарь контекста бота из настроек и админ-модели."""
+    chosen_model = settings.ai_model.value if settings.ai_model else "gpt-4o"
+    chosen_temp = PERSONALITY_TRAITS_DETAILS.get(
+        settings.personality_traits, 0.1)
+
+    welcome_message = settings.greeting or {
+        "en": "Hello!", "ru": "Здравствуйте!"}
+    redirect_message = settings.error_message or {
+        "en": "Please wait...", "ru": "Ожидайте..."}
+    farewell_message = settings.farewell_message or {
+        "en": "Goodbye!", "ru": "До свидания!"}
+
+    lines = []
+    excluded = {
+        "greeting",
+        "error_message",
+        "farewell_message",
+        "ai_model",
+        "personality_traits",
+        "created_at",
+        "avatar"}
+    all_fields = set(admin_model.detail_fields) | set(admin_model.list_display)
+
+    def extract_value(value):
+        """Преобразует значение: сначала пытается взять `value`, затем `en` из JSON, затем сам объект."""
+        if isinstance(value, str):
+            if value in COMMUNICATION_STYLE_DETAILS:
+                # Маппинг без парсинга
+                return COMMUNICATION_STYLE_DETAILS[value]
+            try:
+                parsed_value = json.loads(value)
+                return parsed_value.get("en", value)
+            except (json.JSONDecodeError, TypeError):
+                return value
+        elif isinstance(value, dict):
+            return value.get("en", str(value))
+        elif isinstance(value, list):
+            return [extract_value(item) for item in value]
+        return value
+
+    for field_name in all_fields:
+        if field_name in excluded:
+            continue
+        field_title = admin_model.field_titles.get(
+            field_name, {}).get("en", field_name)
+        raw_value = getattr(settings, field_name, None)
+        if not raw_value:
+            continue
+
+        processed_value = extract_value(raw_value)
+
+        if field_name == "special_instructions":
+            val_str = "\n".join(
+                [FUNCTIONALITY_DETAILS.get(f, f) for f in processed_value]
+            )
+        elif field_name == "target_action":
+            val_str = ", ".join(
+                [f.value if hasattr(f, "value") else str(f) for f in processed_value])
+        elif field_name == "forbidden_topics":
+            val_str = ", ".join(
+                [f.value if hasattr(f, "value") else str(f) for f in processed_value])
+        elif isinstance(processed_value, list):
+            val_str = ", ".join([str(f.value) if hasattr(
+                f, "value") else str(f) for f in processed_value])
+        elif hasattr(processed_value, "value"):
+            val_str = processed_value.value
+        else:
+            val_str = str(processed_value)
+
+        lines.append(f"{field_title.upper()}: {val_str}")
+
+    lines.append("IMPORTANT: FOLLOW ALL RULES STRICTLY!")
+    prompt_text = "\n".join(lines)
+
+    return {
+        "prompt_text": prompt_text,
+        "ai_model": chosen_model,
+        "temperature": chosen_temp,
+        "welcome_message": welcome_message,
+        "redirect_message": redirect_message,
+        "farewell_message": farewell_message,
+        "app_name": settings.project_name,
+        "app_description": settings.additional_instructions,
+        "forbidden_topics": settings.forbidden_topics,
+        "avatar": settings.avatar.url if settings.avatar else None,
+        "bot_color": settings.bot_color.value
+    }

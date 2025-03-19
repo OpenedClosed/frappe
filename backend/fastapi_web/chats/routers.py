@@ -31,10 +31,6 @@ async def create_or_get_chat(
             "client_external_id",
             "company_name",
             "bot_id"}}
-    print('Получили id чата:')
-    print(await handle_chat_creation(
-        mode, source, chat_external_id, client_external_id, company_name, bot_id, metadata, request
-    ))
     return await handle_chat_creation(
         mode, source, chat_external_id, client_external_id, company_name, bot_id, metadata, request
     )

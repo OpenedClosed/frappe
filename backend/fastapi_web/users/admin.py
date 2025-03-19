@@ -4,8 +4,8 @@ from typing import Optional
 from bson import ObjectId
 from fastapi import HTTPException
 
-from admin_core.admin_registry import admin_registry
 from admin_core.base_admin import BaseAdmin
+from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 
 from .db.mongo.schemas import User

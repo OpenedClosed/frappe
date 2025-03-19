@@ -1,6 +1,8 @@
 """Обработчики веб-сокетов приложения Чаты."""
-from typing import Dict, List, Optional
+import asyncio
 import json
+import logging
+import random
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
@@ -11,20 +13,23 @@ from pydantic import ValidationError
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
+from gemini_base.gemini_init import gemini_client
 from infra import settings
+from knowledge.utils.help_functions import (build_messages_for_model,
+                                            pick_model_and_client)
 from openai_base.openai_init import openai_client
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
-from ..utils.help_functions import (find_last_bot_message,
-                                    get_current_datetime, get_knowledge_base,
+from ..utils.help_functions import (find_last_bot_message, get_bot_context,
+                                    get_knowledge_base,
                                     get_weather_by_address,
                                     send_message_to_bot)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
-from .ws_helpers import ConnectionManager, custom_json_dumps
+from .ws_helpers import ConnectionManager, TypingManager, custom_json_dumps
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -33,6 +38,7 @@ from .ws_helpers import ConnectionManager, custom_json_dumps
 
 async def handle_message(
     manager: Any,
+    typing_manager: TypingManager,
     data: Dict[str, Any],
     chat_id: str,
     client_id: str,
@@ -46,50 +52,33 @@ async def handle_message(
     handlers = {
         "status_check": handle_status_check,
         "get_messages": handle_get_messages,
-        "new_message": handle_new_message_wrapper,
+        "new_message": handle_new_message,
+        "start_typing": handle_start_typing,
+        "stop_typing": handle_stop_typing,
+        "get_typing_users": handle_get_typing_users,
+        "get_my_id": handle_get_my_id,
     }
 
     handler = handlers.get(data.get("type"), handle_unknown_type)
 
-    if handler == handle_new_message_wrapper:
+    if handler == handle_new_message:
         async with await mongo_client.start_session() as session:
             await handler(
-                manager, chat_id, client_id, redis_session_key, redis_flood_key, data, is_superuser, user_language
+                manager, chat_id, client_id, redis_session_key, redis_flood_key, data, is_superuser, user_language, typing_manager
             )
+    elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
+        await handler(typing_manager, chat_id, client_id, manager)
     else:
         await handler(manager, chat_id, redis_session_key)
-
-
-async def handle_new_message_wrapper(
-    manager: Any,
-    chat_id: str,
-    client_id: str,
-    redis_session_key: str,
-    redis_flood_key: str,
-    data: Dict[str, Any],
-    is_superuser: bool,
-    user_language: str
-) -> None:
-    """Обертка для обработки нового сообщения с сессией."""
-    await handle_new_message(
-        manager=manager,
-        chat_id=chat_id,
-        client_id=client_id,
-        redis_key_session=redis_session_key,
-        redis_key_flood=redis_flood_key,
-        data=data,
-        is_superuser=is_superuser,
-        user_language=user_language,
-    )
 
 
 # ==============================
 # БЛОК: Общие функции отправки системных сообщений (error, attention)
 # ==============================
 
-
 async def broadcast_system_message(
-        manager: Any, client_id: str, chat_id: str, message: str, msg_type: str) -> None:
+    manager: Any, client_id: str, chat_id: str, message: str, msg_type: str
+) -> None:
     """Отправляет системное сообщение (ошибка или предупреждение), не сохраняя в БД."""
     system_message = custom_json_dumps({
         "type": msg_type,
@@ -108,14 +97,13 @@ async def broadcast_error(manager: Any, client_id: str,
 
 async def broadcast_attention(
         manager: Any, client_id: str, chat_id: str, message: str) -> None:
-    """Отправляет сообщение-предупреждение."""
+    """Отправляет предупреждающее сообщение."""
     await broadcast_system_message(manager, client_id, chat_id, message, "attention")
 
 
 # ==============================
 # БЛОК: Сохранение/загрузка сообщений
 # ==============================
-
 
 async def save_message_to_db(
         chat_session: ChatSession, new_msg: ChatMessage) -> None:
@@ -131,7 +119,7 @@ async def save_message_to_db(
 
 async def broadcast_message(
         manager: Any, chat_session: ChatSession, new_msg: ChatMessage) -> None:
-    """Формирует и отправляет новое сообщение в чат."""
+    """Отправляет новое сообщение в чат."""
     message_payload = custom_json_dumps({
         "type": "new_message",
         "id": new_msg.id,
@@ -142,35 +130,31 @@ async def broadcast_message(
         "choice_options": new_msg.choice_options,
         "choice_strict": new_msg.choice_strict,
         "timestamp": new_msg.timestamp.isoformat(),
-        "external_id": new_msg.external_id
+        "external_id": new_msg.external_id,
+        "files": new_msg.files or []  # Передаем файлы (если есть)
     })
     await manager.broadcast(message_payload)
 
 
 async def save_and_broadcast_new_message(
-    manager: Any,
-    chat_session: ChatSession,
-    new_msg: ChatMessage,
-    redis_key_session: str
+    manager: Any, chat_session: ChatSession, new_msg: ChatMessage, redis_key_session: str
 ) -> None:
-    """Сохраняет новое сообщение, отправляет в чат и обновляет TTL в Redis."""
-
+    """Сохраняет сообщение, отправляет в чат и обновляет TTL в Redis."""
     await save_message_to_db(chat_session, new_msg)
     await broadcast_message(manager, chat_session, new_msg)
     await redis_db.set(redis_key_session, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
-    if chat_session.client.source == ChatSource.INSTAGRAM:
-        recipient_id = chat_session.client.external_id
-        sender_role = new_msg.sender_role
-        if sender_role != SenderRole.CLIENT:
-            if recipient_id:
-                await send_instagram_message(recipient_id, new_msg.message)
+    if chat_session.client.source == ChatSource.INSTAGRAM and chat_session.client.external_id:
+        await send_instagram_message(chat_session.client.external_id, new_msg.message)
 
+
+# ==============================
+# БЛОК: Интеграция с Instagram Direct
+# ==============================
 
 async def send_instagram_message(recipient_id: str, message: str) -> None:
     """Отправляет сообщение пользователю в Instagram Direct через API."""
-
-    url = f"https://graph.instagram.com/v21.0/me/messages"
+    url = "https://graph.instagram.com/v21.0/me/messages"
 
     payload = {
         "recipient": {"id": recipient_id},
@@ -185,70 +169,57 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
 
     response = requests.post(url, json=payload, headers=headers)
 
-    if response.status_code != 200:
-        print(f"Ошибка отправки сообщения в Instagram: {response.text}")
+    if response.status_code == 200:
+        logging.info(f"Сообщение отправлено в Instagram (ID: {recipient_id})")
     else:
-        print(f"Сообщение успешно отправлено в Instagram (ID: {recipient_id})")
+        logging.error(
+            f"Ошибка отправки сообщения в Instagram: {response.text}")
 
 
 # ==============================
-# БЛОК: Основные хэндлеры (get_messages, new_message, status_check)
+# БЛОК: Основные хэндлеры (статус, идентификация)
 # ==============================
-
-
-# async def handle_status_check(
-#         manager: ConnectionManager, chat_id: str, redis_key_session: str) -> None:
-#     """
-#     Проверка статуса чата.
-#     """
-#     remaining_time = max(await redis_db.ttl(redis_key_session), 0)
-
-#     response = custom_json_dumps({
-#         "type": "status_check",
-#         "message": "Session is active." if remaining_time > 0 else "Session is expired.",
-#         "remaining_time": remaining_time
-#     })
-#     await manager.broadcast(response)
 
 async def handle_status_check(
-    manager: ConnectionManager, chat_id: str, redis_key_session: str
-) -> None:
-    """
-    Проверка статуса чата и отправка информации о текущем режиме (авто/ручной).
-    """
+        manager: ConnectionManager, chat_id: str, redis_key_session: str) -> None:
+    """Проверяет статус чата и отправляет информацию о текущем режиме (авто/ручной)."""
     remaining_time = max(await redis_db.ttl(redis_key_session), 0)
-
-    # Получаем данные чата
     chat_session = await mongo_db.chats.find_one({"chat_id": chat_id}, {"manual_mode": 1})
-
-    manual_mode = chat_session.get(
-        "manual_mode", False) if chat_session else False
 
     response = custom_json_dumps({
         "type": "status_check",
         "message": "Session is active." if remaining_time > 0 else "Session is expired.",
         "remaining_time": remaining_time,
-        "manual_mode": manual_mode  # 🔥 Теперь фронтенд будет получать состояние чата
+        "manual_mode": chat_session.get("manual_mode", False) if chat_session else False
     })
-
     await manager.broadcast(response)
 
 
+async def handle_get_my_id(manager: ConnectionManager,
+                           chat_id: str, client_id: str) -> None:
+    """Отправляет клиенту его идентификатор."""
+    response = custom_json_dumps({"type": "my_id_info", "user_id": client_id})
+    await manager.broadcast(response)
+
+
+# ==============================
+# БЛОК: Хэндлеры сообщений
+# ==============================
+
 async def handle_get_messages(
         manager: ConnectionManager, chat_id: str, redis_key_session: str) -> None:
-    """
-    Получение истории сообщений чата.
-    """
+    """Получает историю сообщений чата."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
-        await manager.broadcast(generate_empty_chat_response())
+        response = custom_json_dumps({"type": "get_messages", "messages": [
+        ], "remaining_time": 0, "message": "No chat found."})
+        await manager.broadcast(response)
         return
 
     chat_session = ChatSession(**chat_data)
-
     remaining_time = max(await redis_db.ttl(redis_key_session), 0)
-    messages = [msg.model_dump() for msg in chat_session.messages]
-    messages.sort(key=lambda x: x["timestamp"])
+    messages = sorted([msg.model_dump()
+                      for msg in chat_session.messages], key=lambda x: x["timestamp"])
 
     response = custom_json_dumps({
         "type": "get_messages",
@@ -256,7 +227,6 @@ async def handle_get_messages(
         "remaining_time": remaining_time
     })
     await manager.broadcast(response)
-    return messages
 
 
 async def handle_new_message(
@@ -268,10 +238,9 @@ async def handle_new_message(
     data: dict,
     is_superuser: bool,
     user_language: str,
+    typing_manager: TypingManager
 ) -> None:
-    """
-    Обработка нового сообщения от пользователя.
-    """
+    """Обрабатывает новое сообщение от пользователя."""
     msg_text = data.get("message", "")
     reply_to = data.get("reply_to")
     external_id = data.get("external_id")
@@ -297,9 +266,7 @@ async def handle_new_message(
     if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
         return
 
-    mode = chat_session.calculate_mode(BRIEF_QUESTIONS)
-
-    if not await check_flood_control(manager, client_id, chat_id, redis_key_flood, mode, user_language):
+    if not await check_flood_control(manager, client_id, chat_id, redis_key_flood, chat_session.calculate_mode(BRIEF_QUESTIONS), user_language):
         return
 
     if not await validate_choice(manager, client_id, chat_session, chat_id, msg_text, user_language):
@@ -310,34 +277,48 @@ async def handle_new_message(
     if await handle_brief_mode(manager, client_id, chat_session, msg_text, chat_id, redis_key_session, user_language):
         return
 
-    if chat_session.manual_mode:
-        return
-
-    await process_user_query_after_brief(manager, new_msg, chat_session, redis_key_session, user_language)
+    if not chat_session.manual_mode:
+        await process_user_query_after_brief(manager, chat_id, new_msg, chat_session, redis_key_session, user_language, typing_manager)
 
 
-def generate_empty_chat_response() -> str:
-    """
-    Генерирует ответ, если чат отсутствует в БД.
-    """
-    return custom_json_dumps({
-        "type": "get_messages",
-        "messages": [],
-        "remaining_time": 0,
-        "message": "No chat found."
-    })
+# ==============================
+# БЛОК: Хэндлеры печати (start/stop typing, get_typing_users)
+# ==============================
+
+async def handle_start_typing(typing_manager: TypingManager,
+                              chat_id: str, client_id: str, manager: ConnectionManager) -> None:
+    """Обрабатывает начало печати пользователя."""
+    await typing_manager.add_typing(chat_id, client_id, manager)
+
+
+async def handle_stop_typing(typing_manager: TypingManager,
+                             chat_id: str, client_id: str, manager: ConnectionManager) -> None:
+    """Обрабатывает окончание печати пользователя."""
+    await typing_manager.remove_typing(chat_id, client_id, manager)
+    await send_typing_update(typing_manager, chat_id, manager)
+
+
+async def handle_get_typing_users(
+        typing_manager: TypingManager, chat_id: str, client_id: str, manager: ConnectionManager) -> None:
+    """Отправляет текущий список печатающих пользователей в чат."""
+    await send_typing_update(typing_manager, chat_id, manager)
+
+
+async def send_typing_update(
+        typing_manager: TypingManager, chat_id: str, manager: ConnectionManager) -> None:
+    """Отправляет обновленный список печатающих пользователей в чат."""
+    response = custom_json_dumps(
+        {"type": "typing_update", "typing_users": typing_manager.get_typing_users(chat_id)})
+    await manager.broadcast(response)
 
 
 # ==============================
 # БЛОК: Логика загрузки/валидации чата
 # ==============================
 
-
 async def load_chat_data(manager: ConnectionManager, client_id: str,
                          chat_id: str, user_language: str) -> Optional[ChatSession]:
-    """
-    Загрузка данных чата из базы.
-    """
+    """Загружает данные чата из базы."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
 
     if not chat_data:
@@ -351,91 +332,67 @@ async def load_chat_data(manager: ConnectionManager, client_id: str,
         return None
 
 
-async def validate_chat_status(
-    manager: ConnectionManager,
-    client_id: str,
-    chat_session: ChatSession,
-    redis_key_session: str,
-    chat_id: str,
-    user_language: str
-) -> bool:
-    """
-    Проверка статуса чата.
-    """
+async def validate_chat_status(manager: ConnectionManager, client_id: str, chat_session: ChatSession,
+                               redis_key_session: str, chat_id: str, user_language: str) -> bool:
+    """Проверяет статус чата перед обработкой сообщений."""
     ttl_value = await redis_db.ttl(redis_key_session)
     dynamic_status = chat_session.compute_status(ttl_value)
 
     if dynamic_status != ChatStatus.IN_PROGRESS:
-        await broadcast_error(
-            manager,
-            client_id,
-            chat_id,
-            get_translation(
-                "errors",
-                "chat_status_invalid",
-                user_language,
-                status=dynamic_status.value)
-        )
+        await broadcast_error(manager, client_id, chat_id, get_translation("errors", "chat_status_invalid", user_language, status=dynamic_status.value))
         return False
 
-    if ttl_value < 0 and not chat_session.messages:
+    # Если TTL истек, но есть сообщения — продлеваем сессию
+    if ttl_value < 0 and chat_session.messages:
         await redis_db.set(redis_key_session, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
     return True
 
 
-async def handle_command(
-    manager: Any,
-    redis_key_session: str,
-    client_id: str,
-    chat_id: str,
-    chat_session: ChatSession,
-    new_msg: ChatMessage,
-    user_language: str
-) -> bool:
-    """
-    Обработка команды от пользователей.
-    """
-    msg_text = new_msg.message.strip()
-    if not msg_text.startswith("/"):
+# ==============================
+# БЛОК: Обработка команд
+# ==============================
+
+async def handle_command(manager: ConnectionManager, redis_key_session: str, client_id: str,
+                         chat_id: str, chat_session: ChatSession, new_msg: ChatMessage, user_language: str) -> bool:
+    """Обрабатывает команду пользователя (начинается с `/`)."""
+    command_alias = new_msg.message.strip().split()[0].lower()
+
+    if not command_alias.startswith("/"):
         return False
 
-    command_alias = msg_text.split()[0].lower()
     command_data = COMMAND_HANDLERS.get(command_alias)
 
     if command_data:
-        handler = command_data["handler"]
         await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session)
-        await handler(manager, chat_session, new_msg, user_language, redis_key_session)
+        await command_data["handler"](manager, chat_session, new_msg, user_language, redis_key_session)
     else:
-        unknown_cmd_msg = get_translation(
-            "attention", "unknown_command", user_language)
-        await broadcast_attention(manager, client_id, chat_id, unknown_cmd_msg)
+        await broadcast_attention(manager, client_id, chat_id, get_translation("attention", "unknown_command", user_language))
 
     return True
 
 
+# ==============================
+# БЛОК: Функция перевода сообщений
+# ==============================
+
 def get_translation(category: str, key: str, language: str, **kwargs) -> str:
-    """
-    Получает перевод из `TRANSLATIONS`, подставляя переменные.
-    """
-    category_data = TRANSLATIONS.get(category, {})
+    """Возвращает перевод из `TRANSLATIONS`, подставляя переменные."""
+    template = TRANSLATIONS.get(
+        category,
+        {}).get(
+        key,
+        {}).get(
+            language,
+            TRANSLATIONS.get(
+                category,
+                {}).get(
+                    key,
+                    {}).get(
+                        "en",
+                ""))
+    return template.format(**kwargs) if isinstance(template, str) else template
 
-    if isinstance(category_data, dict):
-        if key is not None:
-            translation_data = category_data.get(key, {})
-            if isinstance(translation_data, str):
-                template = translation_data
-            else:
-                template = translation_data.get(
-                    language, translation_data.get("en", ""))
-        else:
-            template = category_data.get(language, category_data.get("en", ""))
-    else:
-        template = category_data
-
-    return template.format(**kwargs) if isinstance(template,
-                                                   str) and kwargs else template
 
 # ==============================
 # БЛОК: Flood control и проверка выбора
@@ -501,7 +458,6 @@ def safe_float(value: Optional[Union[str, bytes]]) -> float:
 # БЛОК: Работа с брифами (Brief)
 # ==============================
 
-
 async def handle_brief_mode(
     manager: ConnectionManager,
     client_id: str,
@@ -511,10 +467,8 @@ async def handle_brief_mode(
     redis_key_session: str,
     user_language: str
 ) -> bool:
-    """
-    Обрабатывает логику брифа: если чат в режиме 'brief',
-    проверяет релевантность сообщения и задаёт/завершает вопросы.
-    """
+    """Обрабатывает логику брифа, если чат в режиме 'brief'."""
+
     if chat_session.calculate_mode(BRIEF_QUESTIONS) != "brief":
         return False
 
@@ -527,7 +481,11 @@ async def handle_brief_mode(
         await fill_remaining_brief_questions(chat_id, chat_session)
         return False
 
-    await process_brief_question(client_id, chat_session, msg_text, manager, redis_key_session, user_language)
+    await process_brief_question(
+        client_id, chat_session, msg_text,
+        manager, redis_key_session, user_language
+    )
+
     updated_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     updated_session = ChatSession(**updated_data)
 
@@ -546,26 +504,25 @@ async def start_brief(
     redis_key_session: str,
     user_language: str
 ) -> None:
-    """Инициализирует бриф: если вопрос есть — задаём, если нет — завершаем."""
-    question = chat_session.get_current_question(BRIEF_QUESTIONS)
-    hello_text = get_translation(
-        "brief",
-        "hello_text",
-        user_language,
-        default_key="en"
-    )
-    if hello_text:
-        msg = ChatMessage(
-            message=f"{hello_text}",
-            sender_role=SenderRole.AI,
-        )
-        await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
-    if not question:
-        # await complete_brief(manager, chat_session, redis_key_session,
-        # user_language)
-        return
+    """
+    Инициализирует бриф:
+    - При первом сообщении от бота отправляется приветствие.
+    - Если есть вопросы брифа, задаём первый вопрос.
+    """
+    if len(chat_session.messages) == 0:
+        bot_context = await get_bot_context()
+        hello_text = bot_context.get(
+            "welcome_message", "Hello!").get(
+            user_language, None)
+        if isinstance(hello_text, str):
+            msg = ChatMessage(message=hello_text, sender_role=SenderRole.AI)
+            await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
 
-    await ask_brief_question(manager, chat_session, question, redis_key_session, user_language)
+        question = chat_session.get_current_question(BRIEF_QUESTIONS)
+        if not question:
+            return
+
+        await ask_brief_question(manager, chat_session, question, redis_key_session, user_language)
 
 
 async def process_brief_question(
@@ -577,7 +534,7 @@ async def process_brief_question(
     user_language: str
 ) -> None:
     """
-    Обрабатывает текущий вопрос брифа и втоматически задаём следующий вопрос, если он есть.
+    Обрабатывает текущий вопрос брифа и, при необходимости, задаёт следующий.
     """
     question = chat_session.get_current_question(BRIEF_QUESTIONS)
     if not question:
@@ -592,7 +549,8 @@ async def process_brief_question(
                 "errors",
                 "invalid_answer",
                 user_language,
-                choices=', '.join(translated_answers))
+                choices=', '.join(translated_answers)
+            )
             await broadcast_error(manager, client_id, chat_session.chat_id, error_msg)
             return
 
@@ -606,55 +564,22 @@ async def process_brief_question(
         {"$push": {"brief_answers": ans.model_dump()}}
     )
 
+    # Обновляем локальный объект чата
     updated_data = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
     chat_session.__dict__.update(ChatSession(**updated_data).__dict__)
 
     next_question = chat_session.get_current_question(BRIEF_QUESTIONS)
     if next_question:
-        question = next_question
-
-        translated_q = question.question_translations.get(
-            user_language, question.question)
-
-        if question.question_type == "choice" and question.expected_answers:
-            msg = ChatMessage(
-                # message=f"{please_choose} {translated_q}",
-                message=f"{translated_q}",
-                sender_role=SenderRole.AI,
-                # choice_options=[
-                #     question.expected_answers_translations.get(user_language, opt)
-                #     for opt in question.expected_answers_translations.get("en", [])
-                # ],
-                choice_options=question.expected_answers_translations.get(
-                    user_language, question.expected_answers_translations.get("en")),
-                choice_strict=True
-            )
-        elif question.question_type == "text" and question.expected_answers:
-            msg = ChatMessage(
-                # message=f"{please_choose} {translated_q}",
-                message=f"{translated_q}",
-                sender_role=SenderRole.AI,
-                # choice_options=[
-                #     question.expected_answers_translations.get(user_language, opt)
-                #     for opt in question.expected_answers_translations.get("en", [])
-                # ],
-                choice_options=question.expected_answers_translations.get(
-                    user_language, question.expected_answers_translations.get("en")),
-                choice_strict=False
-            )
-        else:
-            msg = ChatMessage(
-                message=translated_q,
-                sender_role=SenderRole.AI,
-                choice_strict=False)
-
+        msg = _build_brief_question_message(next_question, user_language)
         await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
 
 
 def extract_brief_info(chat_session: ChatSession) -> str:
     """Возвращает строку с ответами брифа для контекста GPT."""
     return "; ".join(
-        f"{a.question}: {a.user_answer if a.user_answer else '(Without answer)'}" for a in chat_session.brief_answers)
+        f"{a.question}: {a.user_answer if a.user_answer else '(Without answer)'}"
+        for a in chat_session.brief_answers
+    )
 
 
 async def complete_brief(
@@ -675,14 +600,15 @@ async def complete_brief(
 
 async def fill_remaining_brief_questions(
         chat_id: str, chat_session: ChatSession) -> None:
-    """Если ответ нерелевантен, помечаем оставшиеся вопросы пустыми ответами."""
+    """Заполняет оставшиеся вопросы брифа пустыми ответами, если ответ нерелевантен."""
     answered = {a.question for a in chat_session.brief_answers}
     unanswered = [q for q in BRIEF_QUESTIONS if q.question not in answered]
     for question in unanswered:
         empty = BriefAnswer(
             question=question.question,
             expected_answers=question.expected_answers,
-            user_answer='')
+            user_answer=''
+        )
         await mongo_db.chats.update_one(
             {"chat_id": chat_id},
             {"$push": {"brief_answers": empty.model_dump()}}
@@ -696,47 +622,10 @@ async def ask_brief_question(
     redis_key_session: str,
     user_language: str
 ) -> None:
-    """Задаёт вопрос брифа: если question_type='choice' — выставляем choice_options."""
-    # please_choose = get_translation(
-    #     "brief",
-    #     "please_choose",
-    #     user_language,
-    #     default_key="en")
-    translated_q = question.question_translations.get(
-        user_language, question.question)
-
-    if question.question_type == "choice" and question.expected_answers:
-        msg = ChatMessage(
-            # message=f"{please_choose} {translated_q}",
-            message=f"{translated_q}",
-            sender_role=SenderRole.AI,
-            # choice_options=[
-            #     question.expected_answers_translations.get(user_language, opt)
-            #     for opt in question.expected_answers_translations.get("en", [])
-            # ],
-            choice_options=question.expected_answers_translations.get(
-                user_language, question.expected_answers_translations.get("en")),
-            choice_strict=True
-        )
-    elif question.question_type == "text" and question.expected_answers:
-        msg = ChatMessage(
-            # message=f"{please_choose} {translated_q}",
-            message=f"{translated_q}",
-            sender_role=SenderRole.AI,
-            # choice_options=[
-            #     question.expected_answers_translations.get(user_language, opt)
-            #     for opt in question.expected_answers_translations.get("en", [])
-            # ],
-            choice_options=question.expected_answers_translations.get(
-                user_language, question.expected_answers_translations.get("en")),
-            choice_strict=False
-        )
-    else:
-        msg = ChatMessage(
-            message=translated_q,
-            sender_role=SenderRole.AI,
-            choice_strict=False)
-
+    """
+    Задаёт первый вопрос брифа при инициализации чата.
+    """
+    msg = _build_brief_question_message(question, user_language)
     await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
 
 
@@ -745,17 +634,53 @@ async def broadcast_brief_question(
     question: BriefQuestion,
     user_language: str
 ) -> None:
-    """Отправляет клиенту JSON о новом вопросе брифа (без сохранения в БД)."""
+    """
+    Отправляет клиенту JSON с новым вопросом брифа
+    (без сохранения этого сообщения в БД).
+    """
     translated_q = question.question_translations.get(
         user_language, question.question)
-    translated_a = question.expected_answers_translations.get(
-        user_language, question.expected_answers) if question.expected_answers_translations else None
+    translated_a = None
+    if question.expected_answers_translations:
+        translated_a = question.expected_answers_translations.get(
+            user_language, question.expected_answers
+        )
+
     payload = {
         "type": "brief_question",
         "question": translated_q,
         "expected_answers": translated_a
     }
     await manager.broadcast(custom_json_dumps(payload))
+
+
+def _build_brief_question_message(
+        question: BriefQuestion, user_language: str) -> ChatMessage:
+    """
+    Формирует ChatMessage с учётом типа вопроса (choice/text) и ожидаемых ответов.
+    """
+    translated_q = question.question_translations.get(
+        user_language, question.question)
+    if question.question_type == "choice" and question.expected_answers:
+        return ChatMessage(
+            message=translated_q,
+            sender_role=SenderRole.AI,
+            choice_options=question.expected_answers_translations.get(
+                user_language, question.expected_answers_translations.get("en")
+            ),
+            choice_strict=True
+        )
+    elif question.question_type == "text" and question.expected_answers:
+        return ChatMessage(
+            message=translated_q,
+            sender_role=SenderRole.AI,
+            choice_options=question.expected_answers_translations.get(
+                user_language, question.expected_answers_translations.get("en")
+            ),
+            choice_strict=False
+        )
+    return ChatMessage(message=translated_q,
+                       sender_role=SenderRole.AI, choice_strict=False)
 
 
 # ==============================
@@ -802,100 +727,40 @@ async def handle_superuser_message(
 # БЛОК: AI-логика (GPT)
 # ==============================
 
-
 async def process_user_query_after_brief(
     manager: Any,
+    chat_id: str,
     user_msg: ChatMessage,
     chat_session: ChatSession,
     redis_key_session: str,
-    user_language: str
+    user_language: str,
+    typing_manager: TypingManager
 ) -> ChatMessage:
-    """Обрабатывает пользовательский запрос после брифа с учётом GPT и языка пользователя."""
-
+    """Обрабатывает пользовательский запрос после брифа, используя GPT-логику."""
     user_info = extract_brief_info(chat_session)
     chat_history = chat_session.messages[-25:]
     knowledge_base = await get_knowledge_base()
     gpt_data = await determine_topics_via_gpt(user_msg.message, user_info, knowledge_base)
 
-    topics = gpt_data.get("topics", [])
-    confidence = gpt_data.get("confidence", 0.0)
-    out_of_scope = gpt_data.get("out_of_scope", False)
-    consultant_call = gpt_data.get("consultant_call", False)
-
     user_msg.gpt_evaluation = GptEvaluation(
-        topics=topics,
-        confidence=confidence,
-        out_of_scope=out_of_scope,
-        consultant_call=consultant_call
+        topics=gpt_data.get("topics", []),
+        confidence=gpt_data.get("confidence", 0.0),
+        out_of_scope=gpt_data.get("out_of_scope", False),
+        consultant_call=gpt_data.get("consultant_call", False)
     )
 
-    await mongo_db.chats.update_one(
-        {"chat_id": chat_session.chat_id, "messages.id": user_msg.id},
-        {"$set": {"messages.$.gpt_evaluation": user_msg.gpt_evaluation.dict()}}
+    await _update_gpt_evaluation_in_db(chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation)
+
+    ai_msg = await _build_ai_response(
+        manager=manager,
+        chat_session=chat_session,
+        user_msg=user_msg,
+        chat_history=chat_history,
+        redis_key_session=redis_key_session,
+        user_language=user_language,
+        typing_manager=typing_manager,
+        chat_id=chat_id
     )
-
-    ai_msg: Optional[ChatMessage] = None
-
-    if out_of_scope or consultant_call or confidence < 0.3:
-        chat_session.manual_mode = True
-        await mongo_db.chats.update_one({"chat_id": chat_session.chat_id}, {"$set": {"manual_mode": True}})
-
-        failure_message = get_translation(
-            "errors",
-            "complex_question",
-            user_language,
-            phone="+48 733 949 041"
-        )
-
-        session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
-        session_id = str(session_doc["_id"]) if session_doc else ""
-        await send_message_to_bot(session_id, chat_session.model_dump())
-
-        ai_msg = ChatMessage(
-            message=failure_message,
-            sender_role=SenderRole.AI,
-            choice_options=[
-                (get_translation("choices", "get_auto_mode", user_language), "/auto"),
-            ],
-            choice_strict=False
-        )
-
-    else:
-        snippet_list: List[str] = await extract_knowledge(topics, user_msg.message)
-
-        if 0.3 <= confidence < 0.7:
-            partial_text = await generate_ai_answer(
-                user_message=user_msg.message,
-                snippets=snippet_list,
-                user_info=user_info,
-                chat_history=chat_history,
-                style="partial",
-                user_language=user_language
-            )
-
-            ai_msg = ChatMessage(
-                message=partial_text,
-                sender_role=SenderRole.AI,
-                choice_options=[
-                    get_translation(
-                        "choices",
-                        "consultant",
-                        user_language)
-                ],
-                choice_strict=False
-            )
-
-        else:
-            final_text = await generate_ai_answer(
-                user_message=user_msg.message,
-                snippets=snippet_list,
-                user_info=user_info,
-                chat_history=chat_history,
-                style="confident",
-                user_language=user_language
-            )
-
-            ai_msg = ChatMessage(message=final_text, sender_role=SenderRole.AI)
 
     if ai_msg:
         await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
@@ -908,138 +773,275 @@ async def determine_topics_via_gpt(
     user_info: str,
     knowledge_base: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Запрос к GPT для определения тем, подтем, вопросов и вычисления confidence/out_of_scope/consultant_call."""
-    topic_lines = []
-    for topic_name, topic_data in knowledge_base.items():
-        topic_line = f"Topic: {topic_name}"
-        subtopics = topic_data.get("subtopics", {})
-
-        if subtopics:
-            subtopic_lines = []
-            for subtopic_name, subtopic_data in subtopics.items():
-                questions = subtopic_data.get("questions", [])
-                question_list = ", ".join(
-                    questions) if questions else "No specific questions."
-                subtopic_lines.append(
-                    f"- Subtopic: {subtopic_name}, Questions: {question_list}")
-
-            topic_line += "\n  " + "\n  ".join(subtopic_lines)
-        else:
-            topic_line += " (No subtopics.)"
-
-        topic_lines.append(topic_line)
-
-    kb_description = "\n".join(topic_lines)
+    """
+    Обращается к GPT для определения тематики,
+    вычисления confidence, out_of_scope и consultant_call.
+    """
+    kb_description = _build_kb_description(knowledge_base)
+    bot_context = await get_bot_context()
+    app_description = bot_context["app_description"]
+    forbidden_topics = bot_context["forbidden_topics"]
 
     system_prompt = AI_PROMPTS["system_topics_prompt"].format(
         user_info=user_info,
-        kb_description=kb_description
+        kb_description=kb_description,
+        app_description=app_description,
+        forbidden_topics=forbidden_topics,
     )
 
     messages = [
-        {"role": "system", "content": system_prompt.strip()},
+        {"role": "model", "content": system_prompt.strip()},
         {"role": "user", "content": user_message.strip()}
     ]
-
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+    response = await gemini_client.chat_generate(
+        model="gemini-2.0-flash",
         messages=messages,
         temperature=0.1
     )
-
-    raw_content = response.choices[0].message.content.strip()
-
+    raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
+    )
     match = re.search(r"\{.*\}", raw_content, re.DOTALL)
+
     if not match:
         return {"topics": [], "confidence": 0.0,
                 "out_of_scope": False, "consultant_call": False}
 
-    json_text = match.group(0)
+    json_text = match.group(0).replace("None", "null")
+
     try:
         result = json.loads(json_text)
-        topics = result.get("topics", [])
-        confidence = result.get("confidence", 0.0)
-        out_of_scope = result.get("out_of_scope", False)
-        consultant_call = result.get("consultant_call", False)
-
         return {
-            "topics": topics if isinstance(topics, list) else [],
-            "confidence": confidence,
-            "out_of_scope": out_of_scope,
-            "consultant_call": consultant_call
+            "topics": result.get("topics", []),
+            "confidence": result.get("confidence", 0.0),
+            "out_of_scope": result.get("out_of_scope", False),
+            "consultant_call": result.get("consultant_call", False)
         }
     except json.JSONDecodeError:
         return {"topics": [], "confidence": 0.0,
                 "out_of_scope": False, "consultant_call": False}
 
 
-# def extract_knowledge(
-#         topics: List[Dict[str, Optional[str]]], user_message: str) -> List[str]:
-#     """Извлекает ответы из knowledge_base для списка тем/подтем."""
-#     snippets: List[str] = []
-#     for item in topics:
-#         topic = item.get("topic", "")
-#         subtopic = item.get("subtopic", "")
-#         if topic not in knowledge_base:
-#             continue
-#         topic_data = knowledge_base[topic]
-#         subs = topic_data.get("subtopics", {})
+# ==============================
+# Вспомогательные функции
+# ==============================
 
-#         if subtopic and subtopic in subs:
-#             for q_text, ans_text in subs[subtopic].get(
-#                     "questions", {}).items():
-#                 snippets.append(f"Q: {q_text}\nA: {ans_text}")
-#         elif not subtopic:
-#             for _, st_data in subs.items():
-#                 for q_text, ans_text in st_data.get("questions", {}).items():
-#                     snippets.append(f"Q: {q_text}\nA: {ans_text}")
-
-#     return snippets if snippets else ["No relevant data found."]
+async def _update_gpt_evaluation_in_db(
+        chat_id: str, message_id: str, gpt_eval: GptEvaluation) -> None:
+    """Обновляет поля GPT-оценки в документе сообщения."""
+    await mongo_db.chats.update_one(
+        {"chat_id": chat_id, "messages.id": message_id},
+        {"$set": {"messages.$.gpt_evaluation": gpt_eval.dict()}}
+    )
 
 
-async def extract_knowledge(topics: List[Dict[str, Optional[str]]], user_message: Optional[str]
-                            = None, knowledge_base: Optional[Dict[str, dict]] = {}) -> List[str]:
-    """Извлекает ответы из knowledge_base для списка тем, подтем и вопросов."""
-    snippets: List[str] = []
+def _build_kb_description(knowledge_base: Dict[str, Any]) -> str:
+    """Формирует текстовое описание базы знаний для GPT."""
+    lines = []
+    for topic_name, topic_data in knowledge_base.items():
+        line = f"Topic: {topic_name}"
+        subtopics = topic_data.get("subtopics", {})
+        if subtopics:
+            sub_lines = []
+            for subtopic_name, subtopic_data in subtopics.items():
+                questions = subtopic_data.get("questions", [])
+                question_list = ", ".join(
+                    questions) if questions else "No specific questions."
+                sub_lines.append(
+                    f"- Subtopic: {subtopic_name}, Questions: {question_list}")
+            line += "\n  " + "\n  ".join(sub_lines)
+        else:
+            line += " (No subtopics.)"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+async def _build_ai_response(
+    manager: Any,
+    chat_session: ChatSession,
+    user_msg: ChatMessage,
+    chat_history: List[ChatMessage],
+    redis_key_session: str,
+    user_language: str,
+    typing_manager: TypingManager,
+    chat_id: str
+) -> Optional[ChatMessage]:
+    """
+    На основе результатов GPT (out_of_scope, confidence, consultant_call) формирует итоговое сообщение бота.
+    """
+    confidence = user_msg.gpt_evaluation.confidence
+    out_of_scope = user_msg.gpt_evaluation.out_of_scope
+    consultant_call = user_msg.gpt_evaluation.consultant_call
+
+    if out_of_scope or consultant_call or confidence < 0.3:
+        chat_session.manual_mode = True
+        await mongo_db.chats.update_one({"chat_id": chat_session.chat_id}, {"$set": {"manual_mode": True}})
+
+        bot_context = await get_bot_context()
+        redirect_msg = bot_context.get(
+            "redirect_message", "Bye!").get(
+            user_language, None)
+        session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
+        if session_doc:
+            await send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump())
+
+        return ChatMessage(
+            message=redirect_msg,
+            sender_role=SenderRole.AI,
+            choice_options=[
+                (get_translation(
+                    "choices",
+                    "get_auto_mode",
+                    user_language),
+                    "/auto")],
+            choice_strict=False
+        )
+
+    # Сбор информации из фрагментов базы знаний
+    snippet_data: Dict[str, Any] = await extract_knowledge(
+        user_msg.gpt_evaluation.topics, user_msg.message
+    )
+
+    files: List[str] = []
+    _remove_files_from_snippets(snippet_data, files)
+
+    final_text = await generate_ai_answer(
+        user_message=user_msg.message,
+        snippets=snippet_data,
+        user_info=extract_brief_info(chat_session),
+        chat_history=chat_history,
+        style="",
+        user_language=user_language,
+        typing_manager=typing_manager,
+        manager=manager,
+        chat_id=chat_id
+    )
+
+    # Если confidence средний — предлагаем опцию консультанта
+    if 0.3 <= confidence < 0.7:
+        return ChatMessage(
+            message=final_text,
+            sender_role=SenderRole.AI,
+            files=list(set(files)),
+            choice_options=[
+                get_translation(
+                    "choices",
+                    "consultant",
+                    user_language)],
+            choice_strict=False
+        )
+
+    return ChatMessage(
+        message=final_text,
+        sender_role=SenderRole.AI,
+        files=list(set(files))
+    )
+
+
+def _remove_files_from_snippets(data: Any, files: List[str]) -> None:
+    """Рекурсивно извлекает файлы из структуры snippet_data, удаляя их из исходных данных."""
+    if isinstance(data, dict):
+        if "files" in data:
+            files.extend(data["files"])
+            del data["files"]
+        for key, value in data.items():
+            _remove_files_from_snippets(value, files)
+    elif isinstance(data, list):
+        for item in data:
+            _remove_files_from_snippets(item, files)
+
+
+# ==============================
+# БЛОК: Извлечение знаний из knowledge_base
+# ==============================
+
+async def extract_knowledge(
+    topics: List[Dict[str, Optional[str]]],
+    user_message: Optional[str] = None,
+    knowledge_base: Optional[Dict[str, dict]] = None
+) -> Dict[str, Any]:
+    """
+    Извлекает релевантную информацию из `knowledge_base` для списка тем, подтем и вопросов.
+    Возвращает структуру вида:
+    {
+      "topics": [
+        {
+          "topic": ...,
+          "subtopics": [
+            {
+              "subtopic": ...,
+              "questions": {
+                "Q1": "Answer1",
+                "Q2": "Answer2"
+              }
+            }
+          ]
+        }
+      ]
+    }
+    Если ничего нет, возвращается {"topics": []}.
+    """
     if not knowledge_base:
         knowledge_base = await get_knowledge_base()
+
+    extracted_data = {"topics": []}
     for item in topics:
         topic_name = item.get("topic", "")
         subtopics = item.get("subtopics", [])
-
         if topic_name not in knowledge_base:
             continue
 
-        topic_data = knowledge_base[topic_name]
-        subs = topic_data.get("subtopics", {})
+        topic_entry = _extract_topic_data(
+            topic_name, subtopics, knowledge_base[topic_name])
+        if topic_entry["subtopics"]:
+            extracted_data["topics"].append(topic_entry)
 
-        if subtopics:
-            for subtopic_item in subtopics:
-                subtopic_name = subtopic_item.get("subtopic", None)
-                questions = subtopic_item.get("questions", [])
+    return extracted_data if extracted_data["topics"] else {"topics": []}
 
-                if subtopic_name and subtopic_name in subs:
-                    subtopic_data = subs[subtopic_name]
 
-                    if questions:
-                        for q_text in questions:
-                            if q_text in subtopic_data.get("questions", {}):
-                                ans_text = subtopic_data["questions"][q_text]
-                                snippets.append(f"Q: {q_text}\nA: {ans_text}")
+def _extract_topic_data(
+        topic_name: str, subtopics: List[Dict[str, Any]], topic_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Формирует структуру данных по конкретной теме, включая подтемы и вопросы."""
+    result = {"topic": topic_name, "subtopics": []}
+    subs = topic_data.get("subtopics", {})
 
-                    else:
-                        for q_text, ans_text in subtopic_data.get(
-                                "questions", {}).items():
-                            snippets.append(f"Q: {q_text}\nA: {ans_text}")
+    if subtopics:
+        for subtopic_item in subtopics:
+            subtopic_name = subtopic_item.get("subtopic")
+            questions = subtopic_item.get("questions", [])
+            if subtopic_name and subtopic_name in subs:
+                extracted_sub = _extract_subtopic_data(
+                    subtopic_name, questions, subs[subtopic_name])
+                if extracted_sub["questions"]:
+                    result["subtopics"].append(extracted_sub)
+    else:
+        for sub_name, sub_data in subs.items():
+            extracted_sub = _extract_subtopic_data(sub_name, [], sub_data)
+            if extracted_sub["questions"]:
+                result["subtopics"].append(extracted_sub)
 
-        else:
-            for _, subtopic_data in subs.items():
-                for q_text, ans_text in subtopic_data.get(
-                        "questions", {}).items():
-                    snippets.append(f"Q: {q_text}\nA: {ans_text}")
+    return result
 
-    return snippets if snippets else ["No relevant data found."]
 
+def _extract_subtopic_data(
+        subtopic_name: str, questions: List[str], subtopic_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Формирует структуру данных по конкретной подтеме."""
+    result = {"subtopic": subtopic_name, "questions": {}}
+    sub_q = subtopic_data.get("questions", {})
+
+    if questions:
+        for q_text in questions:
+            if q_text in sub_q:
+                result["questions"][q_text] = sub_q[q_text]
+    else:
+        for q_text, ans_text in sub_q.items():
+            result["questions"][q_text] = ans_text
+
+    return result
+
+
+# ==============================
+# БЛОК: Генерация ответа AI
+# ==============================
 
 async def generate_ai_answer(
     user_message: str,
@@ -1047,55 +1049,117 @@ async def generate_ai_answer(
     user_info: str,
     chat_history: List[ChatMessage],
     user_language: str,
+    typing_manager: TypingManager,
+    chat_id: str,
+    manager: ConnectionManager,
     style: str = "confident",
-    return_json: bool = False
+    return_json: bool = False,
 ) -> Union[str, Dict[str, Any]]:
-    """Генерирует ответ через GPT с учётом истории чата и языка."""
-    joined_snippets = "\n- " + "\n- ".join(snippets) if snippets else ""
-    style_description = "Please provide a short partial answer." if style == "partial" else "Please provide a thorough, confident answer."
-    if return_json:
-        style_description += "\nReturn valid JSON only. Do not include extra text."
+    """
+    Генерирует ответ от AI, учитывая историю чата, язык пользователя,
+    сниппеты знаний и настройки бота из MongoDB.
+    """
+    bot_context = await get_bot_context()
+    chosen_model = bot_context["ai_model"]
+    chosen_temp = bot_context["temperature"]
 
-    system_language_instruction = f"Language settings:\n- The interface language for the user is '{user_language}'.\n- You should prioritize responding in the language of the user's message.\n"
-
-    current_datetime = get_current_datetime()
     weather_info = {
-        "New York": await get_weather_by_address(address="New York"),
-        # "Moscow": await get_weather_by_address(address="Москва")
+        "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
     }
 
-    system_prompt = AI_PROMPTS["system_ai_answer"].format(
+    system_prompt = _assemble_system_prompt(
+        bot_context, snippets, user_info, user_language, weather_info)
+    messages = build_messages_for_model(
+        system_prompt=system_prompt,
+        messages_data=chat_history,
+        user_message=user_message,
+        model=chosen_model
+    )
+
+    # Показываем, что AI "печатает"
+    await typing_manager.add_typing(chat_id, "ai_bot", manager)
+    await _simulate_delay()
+
+    client, real_model = pick_model_and_client(chosen_model)
+    try:
+        ai_text = await _generate_model_response(client, real_model, messages, chosen_temp)
+    except Exception as e:
+        logging.error(f"AI generation failed: {e}")
+        ai_text = "Error: AI model failed to generate a response."
+
+    # Убираем AI из "печатающих"
+    await typing_manager.remove_typing(chat_id, "ai_bot", manager)
+
+    if return_json:
+        return _try_parse_json(ai_text)
+
+    return ai_text
+
+
+def _assemble_system_prompt(
+    bot_context: Dict[str, Any],
+    snippets: List[str],
+    user_info: str,
+    user_language: str,
+    weather_info: Dict[str, Any]
+) -> str:
+    """Формирует system-промпт, включая дату, погоду и инструкции для AI."""
+    current_datetime = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    system_language_instruction = (
+        f"Language settings:\n- The interface language for the user is '{user_language}'.\n"
+        f"- You should prioritize responding in the language of the user's message.\n"
+    )
+
+    return AI_PROMPTS["system_ai_answer"].format(
+        settings_context=bot_context["prompt_text"],
         current_datetime=current_datetime,
         weather_info=weather_info,
         user_info=user_info,
-        joined_snippets=joined_snippets,
-        style_description=style_description,
+        joined_snippets=snippets,
         system_language_instruction=system_language_instruction
-    ).strip()
-
-    messages: List[Dict[str, str]] = [
-        {"role": "system", "content": system_prompt}]
-    for msg in chat_history:
-        if msg.sender_role == SenderRole.CLIENT:
-            messages.append({"role": "user", "content": msg.message})
-        elif msg.sender_role == SenderRole.AI:
-            messages.append({"role": "assistant", "content": msg.message})
-    messages.append({"role": "user", "content": user_message})
-
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        temperature=0.7
     )
-    gpt_text = response.choices[0].message.content.strip()
 
-    if not return_json:
-        return gpt_text
 
+async def _simulate_delay() -> None:
+    """Имитирует задержку от 5 до 15 секунд перед вызовом AI."""
+    delay = random.uniform(5, 15)
+    logging.info(f"⏳ Artificial delay {delay:.2f}s before AI generation...")
+    await asyncio.sleep(delay)
+
+
+async def _generate_model_response(
+        client: Any, real_model: str, messages: List[Dict[str, str]], temperature: float) -> str:
+    """
+    Вызывает нужную AI-модель (OpenAI, gemini и т.д.) и
+    возвращает сгенерированный ответ в виде текста.
+    """
+    if real_model.startswith("gpt"):
+        response = await client.chat.completions.create(
+            model=real_model, messages=messages, temperature=temperature
+        )
+        return response.choices[0].message.content.strip()
+
+    if real_model.startswith("gemini"):
+        response = await client.chat_generate(
+            model=real_model, messages=messages, temperature=temperature
+        )
+        return response["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+    # По умолчанию используем gpt-4o
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+        temperature=0.1
+    )
+    return response.choices[0].message.content.strip()
+
+
+def _try_parse_json(ai_text: str) -> Union[Dict[str, Any], str]:
+    """Пытается парсить JSON из ai_text. Если неуспешно — возвращает текст как есть."""
     try:
-        return json.loads(gpt_text)
+        return json.loads(ai_text)
     except json.JSONDecodeError:
-        return {"error": "GPT returned invalid JSON", "original": gpt_text}
+        return {"error": "Invalid JSON", "original": ai_text}
 
 
 async def check_relevance_to_brief(question: str, user_message: str) -> bool:
@@ -1104,7 +1168,6 @@ async def check_relevance_to_brief(question: str, user_message: str) -> bool:
         question=question,
         user_message=user_message
     )
-
     response = await openai_client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "system", "content": system_prompt.strip()}],
@@ -1114,65 +1177,53 @@ async def check_relevance_to_brief(question: str, user_message: str) -> bool:
 
 
 # ==============================
-# БЛОК: Неизвестный тип сообщения
+# БЛОК: Обработка неизвестного типа сообщения
 # ==============================
 
-
 async def handle_unknown_type(
-    manager: Any,
-    chat_id: str,
-    redis_session_key: str,
-) -> None:
-    """Обрабатывает неизвестный тип сообщения."""
+        manager: Any, chat_id: str, redis_session_key: str) -> None:
+    """Обрабатывает неизвестный тип сообщения, отправляя ошибку в чат и лог."""
+    logging.warning(f"Received unknown message type in chat {chat_id}.")
     response = custom_json_dumps(
         {"type": "error", "message": "Unknown type of message."})
     await manager.broadcast(response)
 
-# ==============================
-# БЛОК: Команды
-# ==============================
 
+# ==============================
+# БЛОК: Команды переключения режима чата
+# ==============================
 
 @command_handler("/manual")
-async def set_manual_mode(
-    manager: Any,
-    chat_session: ChatSession,
-    new_msg: ChatMessage,
-    user_language: str,
-    redis_key_session: str,
-):
+async def set_manual_mode(manager: Any, chat_session: ChatSession, new_msg: ChatMessage,
+                          user_language: str, redis_key_session: str):
     """Переключает чат в ручной режим."""
-    chat_session.manual_mode = True
-    await mongo_db.chats.update_one(
-        {"chat_id": chat_session.chat_id},
-        {"$set": {"manual_mode": True}}
-    )
-
-    response_text = get_translation(
-        "info", "manual_mode_enabled", user_language)
-    await fill_remaining_brief_questions(chat_session.chat_id, chat_session)
-
-    ai_msg = ChatMessage(message=response_text, sender_role=SenderRole.AI)
-    await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+    await _toggle_chat_mode(manager, chat_session, redis_key_session, manual_mode=True)
+    await _send_mode_change_message(manager, chat_session, user_language, redis_key_session, "manual_mode_enabled")
 
 
 @command_handler("/auto")
-async def set_auto_mode(
-    manager: Any,
-    chat_session: ChatSession,
-    new_msg: ChatMessage,
-    user_language: str,
-    redis_key_session: str,
-):
+async def set_auto_mode(manager: Any, chat_session: ChatSession, new_msg: ChatMessage,
+                        user_language: str, redis_key_session: str):
     """Переключает чат в автоматический режим."""
-    chat_session.manual_mode = False
-    await mongo_db.chats.update_one(
-        {"chat_id": chat_session.chat_id},
-        {"$set": {"manual_mode": False}}
-    )
+    await _toggle_chat_mode(manager, chat_session, redis_key_session, manual_mode=False)
+    await _send_mode_change_message(manager, chat_session, user_language, redis_key_session, "auto_mode_enabled")
 
-    response_text = get_translation("info", "auto_mode_enabled", user_language)
+
+# ==============================
+# Вспомогательные функции для смены режима
+# ==============================
+
+async def _toggle_chat_mode(manager: Any, chat_session: ChatSession,
+                            redis_key_session: str, manual_mode: bool) -> None:
+    """Переключает чат в указанный режим (ручной/автоматический)."""
+    chat_session.manual_mode = manual_mode
+    await mongo_db.chats.update_one({"chat_id": chat_session.chat_id}, {"$set": {"manual_mode": manual_mode}})
     await fill_remaining_brief_questions(chat_session.chat_id, chat_session)
 
+
+async def _send_mode_change_message(manager: Any, chat_session: ChatSession,
+                                    user_language: str, redis_key_session: str, message_key: str) -> None:
+    """Отправляет пользователю сообщение о смене режима."""
+    response_text = get_translation("info", message_key, user_language)
     ai_msg = ChatMessage(message=response_text, sender_role=SenderRole.AI)
     await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)

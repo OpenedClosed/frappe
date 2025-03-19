@@ -30,8 +30,9 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "mydatabase")
 
-# OpenAI
+# ИИ API
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "change_me")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "change_me")
 
 # CORS
 ALLOWED_ORIGINS = [
@@ -54,8 +55,7 @@ FLOOD_TIMEOUTS = {
     "manual": timedelta(seconds=3),
     "automatic": timedelta(seconds=10),
 }
-SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru", "ka", "ar", "zh", "es"}
-
+SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru"}
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "change_me")
 WEATHER_API_URL = "http://api.openweathermap.org/data/2.5/weather"
 WEATHER_CACHE_LIFETIME = timedelta(hours=1)

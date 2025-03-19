@@ -1,9 +1,10 @@
 """Админ-панель приложения Чаты."""
+import json
 from datetime import datetime
 from typing import List, Optional
 
-from admin_core.admin_registry import admin_registry
 from admin_core.base_admin import BaseAdmin, InlineAdmin
+from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 from infra import settings
 
@@ -49,14 +50,17 @@ class ChatMessageInline(InlineAdmin):
         self,
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
-        order: int = 1
+        order: int = 1,
+        current_user_id: Optional[str] = None
     ) -> List[dict]:
         """Список сообщений."""
         filters = filters or {}
-        results = await super().get_queryset(filters=filters, sort_by=sort_by, order=order)
+        sort_by = self.detect_id_field()
+        results = await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user_id=current_user_id)
         filtered = [
             msg for msg in results
-            if msg.get("sender_role") == SenderRole.CLIENT and msg.get("gpt_evaluation")
+            # if msg.get("sender_role") == SenderRole.CLIENT and
+            # msg.get("gpt_evaluation")
         ]
         if sort_by:
             reverse_sort = (order == -1)
@@ -64,20 +68,31 @@ class ChatMessageInline(InlineAdmin):
         return [await self.format_document(m) for m in filtered]
 
     async def get_confidence_status(self, obj: dict) -> str:
-        """Статус уверенности."""
+        """Возвращает статус уверенности в JSON-формате с переводом на русский и английский."""
         evaluation = obj.get("gpt_evaluation", {})
+
+        status = {
+            "en": "Unknown",
+            "ru": "Неизвестно"
+        }
+
         if evaluation:
             confidence = evaluation.get("confidence", 0)
+
             if evaluation.get("out_of_scope"):
-                return "Out of Scope"
-            if evaluation.get("consultant_call"):
-                return "Consultant Call"
-            if confidence >= 0.7:
-                return "Confident"
-            if 0.3 <= confidence < 0.7:
-                return "Uncertain"
-            return "Low Confidence"
-        return "Unknown"
+                status = {"en": "Out of Scope", "ru": "Вне компетенции"}
+            elif evaluation.get("consultant_call"):
+                status = {
+                    "en": "Consultant Call",
+                    "ru": "Требуется консультация"}
+            elif confidence >= 0.7:
+                status = {"en": "Confident", "ru": "Уверенный"}
+            elif 0.3 <= confidence < 0.7:
+                status = {"en": "Uncertain", "ru": "Неуверенный"}
+            else:
+                status = {"en": "Low Confidence", "ru": "Низкая уверенность"}
+
+        return json.dumps(status, ensure_ascii=False)
 
 
 class ClientInline(InlineAdmin):
@@ -117,11 +132,12 @@ class ClientInline(InlineAdmin):
         self,
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
-        order: int = 1
+        order: int = 1,
+        current_user_id: Optional[str] = None
     ) -> List[dict]:
         """Возвращает список уникальных клиентов."""
         filters = filters or {}
-        results = await super().get_queryset(filters=filters, sort_by=sort_by, order=order)
+        results = await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user_id=current_user_id)
 
         unique_clients = {
             client["client_id"]: client for client in results if "client_id" in client}
@@ -223,12 +239,13 @@ class ChatSessionAdmin(BaseAdmin):
         self,
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
-        order: int = 1
+        order: int = 1,
+        current_user_id: Optional[str] = None
     ) -> List[dict]:
         """Список чатов, у которых есть сообщения."""
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
-        return await super().get_queryset(filters=filters, sort_by=sort_by, order=order)
+        return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user_id=current_user_id)
 
     async def get_status_display(self, obj: dict) -> str:
         """Статус чата."""
@@ -252,17 +269,22 @@ class ChatSessionAdmin(BaseAdmin):
         return f"{int(hours)}h {int(minutes)}m"
 
     async def get_client_id_display(self, obj: dict) -> str:
-        """Возвращает ID клиента (external_id если есть, иначе client_id)."""
-        if "client" in obj and isinstance(obj["client"], dict):
-            return obj["client"].get(
-                "external_id", obj["client"].get("client_id", "N/A"))
+        """Возвращает корректный client_id, включая external_id, если есть."""
+        client_data = obj.get("client")
+        if isinstance(client_data, dict):
+            client = Client(**client_data)
+            return client.external_id or client.client_id
         return "N/A"
 
     async def get_client_source_display(self, obj: dict) -> str:
-        """Возвращает источник клиента."""
-        if "client" in obj and isinstance(obj["client"], dict):
-            return obj["client"].get("source", "Unknown").replace(
-                "_", " ").capitalize()
+        """Возвращает источник клиента с форматированием."""
+        client_data = obj.get("client")
+        if isinstance(client_data, dict):
+            client = Client(**client_data)
+            if isinstance(client.source, str):
+                return client.source.replace("_", " ").capitalize()
+            # if client.source:
+            #     return client.source.value.replace("_", " ").capitalize()
         return "Unknown"
 
 

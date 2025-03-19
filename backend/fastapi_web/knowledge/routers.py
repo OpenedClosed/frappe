@@ -6,9 +6,12 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
+
+from chats.utils.help_functions import get_bot_context
 from db.mongo.db_init import mongo_db
 
-from .db.mongo.schemas import KnowledgeBase, PatchKnowledgeRequest, UpdateResponse
+from .db.mongo.schemas import (KnowledgeBase, PatchKnowledgeRequest,
+                               UpdateResponse)
 from .utils.help_functions import (build_gpt_message_blocks, deep_merge,
                                    diff_with_tags, generate_patch_body_via_gpt,
                                    get_knowledge_full_document)
@@ -27,25 +30,21 @@ async def patch_knowledge_base(req: PatchKnowledgeRequest):
     """Частично обновляет базу знаний, обрабатывая _delete и валидируя структуру."""
     now = datetime.now()
 
-    if req.base_data is not None:
-        old_doc = req.base_data
-    else:
-        old_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-        if not old_doc:
-            raise HTTPException(404, "Knowledge base not found")
-        old_doc.pop("_id", None)
+    old_doc = {"knowledge_base": req.base_data} if req.base_data else await mongo_db.knowledge_collection.find_one({"app_name": "main"})
+    if not old_doc:
+        raise HTTPException(404, "Knowledge base not found")
 
+    old_doc.pop("_id", None)
     old_knowledge = old_doc.get("knowledge_base", old_doc)
     patch_knowledge = req.patch_data.get("knowledge_base", req.patch_data)
-    merged_data = deep_merge(old_knowledge, patch_knowledge)
 
+    merged_data = deep_merge(old_knowledge, patch_knowledge)
     merged_doc = {
         "app_name": "main",
         "knowledge_base": merged_data if isinstance(merged_data, dict) else {},
         "brief_questions": old_doc.get("brief_questions", {}),
         "update_date": now
     }
-    logging.info(merged_doc)
 
     try:
         validated = KnowledgeBase(**merged_doc)
@@ -54,11 +53,6 @@ async def patch_knowledge_base(req: PatchKnowledgeRequest):
 
     new_doc = validated.dict()
     diff = diff_with_tags(old_doc, new_doc)
-
-    # Можно сохранить в БД, например:
-    # result = await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, new_doc, upsert=True)
-    # if result.modified_count == 0 and not result.upserted_id:
-    #     raise HTTPException(500, "Failed to update knowledge base")
 
     return UpdateResponse(knowledge=validated, diff=diff)
 
@@ -72,13 +66,9 @@ async def apply_knowledge_base(new_data: KnowledgeBase):
     new_data.app_name = "main"
 
     new_doc = new_data.model_dump()
+    old_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"}) or {}
 
-    old_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-    if old_doc:
-        old_doc.pop("_id", None)
-    else:
-        old_doc = {}
-
+    old_doc.pop("_id", None)
     diff = diff_with_tags(old_doc, new_doc)
 
     result = await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, new_doc, upsert=True)
@@ -94,6 +84,7 @@ async def generate_patch(
     user_info: str = Form(""),
     base_data_json: Optional[str] = Form(None),
     files: List[UploadFile] = File([]),
+    ai_model: str = Form("gpt-4o")
 ):
     """Генерирует тело патча для базы знаний, анализируя текст пользователя и файлы."""
     if base_data_json:
@@ -102,9 +93,7 @@ async def generate_patch(
         except json.JSONDecodeError:
             raise HTTPException(400, "Invalid JSON in 'base_data_json'")
     else:
-        kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-        if not kb_doc:
-            raise HTTPException(404, "Knowledge base not found")
+        kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"}) or {}
         kb_doc.pop("_id", None)
         kb_data = kb_doc.get("knowledge_base", {})
 
@@ -112,6 +101,16 @@ async def generate_patch(
     patch_body = await generate_patch_body_via_gpt(
         user_blocks=user_blocks,
         user_info=user_info,
-        knowledge_base=kb_data
+        knowledge_base=kb_data,
+        ai_model=ai_model
     )
     return patch_body
+
+
+@knowledge_base_router.get("/bot_info", response_model=Dict[str, Any])
+async def get_bot_info() -> Dict[str, Any]:
+    """Возвращает безопасную информацию о боте, включая его основные настройки и используемую модель AI."""
+    bot_context = await get_bot_context()
+    safe_fields = {"app_name", "bot_name", "avatar", "ai_model"}
+    return {key: value for key, value in bot_context.items()
+            if key in safe_fields}

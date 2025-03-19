@@ -1,4 +1,4 @@
-"""Инициализация клиента ИИ."""
+"""Инициализация клиента ИИ OpenAI."""
 from openai import AsyncOpenAI
 
 from infra import settings

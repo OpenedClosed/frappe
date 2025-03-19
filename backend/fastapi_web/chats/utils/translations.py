@@ -2,15 +2,6 @@
 
 TRANSLATIONS = {
     "brief": {
-        "hello_text": {
-            "en": "Hello! 😊 Welcome! How can we assist you today?",
-            "ru": "Здравствуйте! 😊 Добро пожаловать! Как мы можем вам помочь?",
-            "ar": "مرحبًا! 😊 أهلاً وسهلاً! كيف يمكننا مساعدتك اليوم؟",
-            "pl": "Cześć! 😊 Witamy! Jak możemy Ci pomóc?",
-            "uk": "Вітаємо! 😊 Ласкаво просимо! Чим можемо допомогти?",
-            "zh": "你好！😊 欢迎！今天我们如何帮助您？",
-            "es": "¡Hola! 😊 ¡Bienvenido! ¿Cómo podemos ayudarte hoy?"
-        },
         "please_choose": {
             "en": "Please choose:",
             "ru": "Пожалуйста, выберите:",
@@ -71,57 +62,6 @@ TRANSLATIONS = {
         }
     },
     "errors": {
-        "complex_question": {
-            "en": (
-                "Hello! 😊 Thank you for your question!\n\n"
-                "At the moment, I don’t have the exact information, but our manager will join the chat shortly to assist you. 🚀\n\n"
-                "If your request is urgent, you can also contact us via:\n"
-                "📞 WhatsApp: +995 555 497 992\n\n"
-                "We appreciate your patience and will get back to you as soon as possible! 🙌"
-            ),
-            "ru": (
-                "Здравствуйте! 😊 Спасибо за ваш вопрос!\n\n"
-                "В данный момент у меня нет точной информации, но менеджер скоро подключится к чату и поможет вам. 🚀\n\n"
-                "Если ваш запрос срочный, вы можете связаться с нами через:\n"
-                "📞 WhatsApp: +995 555 497 992\n\n"
-                "Благодарим вас за терпение, скоро ответим! 🙌"
-            ),
-            "ar": (
-                "مرحبًا! 😊 شكرًا لك على سؤالك!\n\n"
-                "في الوقت الحالي، ليس لدي المعلومات الدقيقة، ولكن سينضم مديرنا إلى الدردشة قريبًا لمساعدتك. 🚀\n\n"
-                "إذا كان طلبك عاجلاً، يمكنك أيضًا الاتصال بنا عبر:\n"
-                "📞 واتساب: +995 555 497 992\n\n"
-                "نحن نقدر صبرك وسنرد عليك في أقرب وقت ممكن! 🙌"
-            ),
-            "pl": (
-                "Cześć! 😊 Dziękujemy za Twoje pytanie!\n\n"
-                "W tej chwili nie mam dokładnych informacji, ale nasz menedżer wkrótce dołączy do czatu, aby Ci pomóc. 🚀\n\n"
-                "Jeśli Twoje zapytanie jest pilne, możesz skontaktować się z nami przez:\n"
-                "📞 WhatsApp: +995 555 497 992\n\n"
-                "Dziękujemy za cierpliwość, skontaktujemy się z Tobą tak szybko, jak to możliwe! 🙌"
-            ),
-            "uk": (
-                "Вітаємо! 😊 Дякуємо за ваше запитання!\n\n"
-                "На даний момент у мене немає точної інформації, але наш менеджер скоро приєднається до чату і допоможе вам. 🚀\n\n"
-                "Якщо ваш запит терміновий, ви можете зв’язатися з нами через:\n"
-                "📞 WhatsApp: +995 555 497 992\n\n"
-                "Дякуємо за терпіння, ми відповімо якнайшвидше! 🙌"
-            ),
-            "zh": (
-                "你好！😊 感谢您的问题！\n\n"
-                "目前，我没有确切的信息，但我们的经理很快会加入聊天以帮助您。🚀\n\n"
-                "如果您的请求很紧急，您还可以通过以下方式联系我们：\n"
-                "📞 WhatsApp: +995 555 497 992\n\n"
-                "感谢您的耐心等待，我们会尽快回复！🙌"
-            ),
-            "es": (
-                "¡Hola! 😊 ¡Gracias por tu pregunta!\n\n"
-                "Por el momento, no tengo la información exacta, pero nuestro gerente se unirá al chat pronto para ayudarte. 🚀\n\n"
-                "Si tu solicitud es urgente, también puedes contactarnos a través de:\n"
-                "📞 WhatsApp: +995 555 497 992\n\n"
-                "¡Apreciamos tu paciencia y te responderemos lo antes posible! 🙌"
-            )
-        },
         "chat_not_exist": {
             "en": "Chat does not exist.",
             "ru": "Чат не существует.",

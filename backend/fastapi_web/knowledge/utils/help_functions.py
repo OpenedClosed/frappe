@@ -4,84 +4,83 @@ import io
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import docx
 import openpyxl
 import pdfplumber
 from fastapi import HTTPException, UploadFile
 
+from chats.db.mongo.schemas import ChatMessage
 from db.mongo.db_init import mongo_db
+from gemini_base.gemini_init import gemini_client
 from knowledge.utils.prompts import AI_PROMPTS
 from openai_base.openai_init import openai_client
 
-# ===== Функции сравнения и слияния =====
+# ==============================
+# БЛОК: Функции сравнения и слияния
+# ==============================
 
 
 def mark_created_diff(val):
-    """Рекурсивно помечает созданные значения с тегом 'created'."""
+    """Рекурсивно помечает созданные значения тегом 'created'."""
     if isinstance(val, dict):
-        result = {"tag": "created"}
-        for k, v in val.items():
-            result[k] = mark_created_diff(v) if isinstance(v, dict) else v
-        return result
+        return {"tag": "created", **
+                {k: mark_created_diff(v) for k, v in val.items()}}
     return val
 
 
 def diff_with_tags(old: dict, new: dict) -> dict:
-    """Сравнивает два словаря и возвращает различия с CRUD-тегами (created, updated, deleted)."""
+    """Сравнивает два словаря и возвращает различия с CRUD-тегами ('created', 'updated', 'deleted')."""
     diff = {}
-    for key in set(old.keys()) | set(new.keys()):
+
+    for key in old.keys() | new.keys():
         if key not in old:
             diff[key] = mark_created_diff(new[key])
         elif key not in new:
             diff[key] = {"tag": "deleted", "old": old[key]}
         else:
-            if isinstance(old[key], dict) and isinstance(new[key], dict):
-                nested = diff_with_tags(old[key], new[key])
-                if nested:
-                    diff[key] = {"tag": "updated", **nested}
-            elif old[key] != new[key]:
-                diff[key] = {
-                    "tag": "updated",
-                    "old": old[key],
-                    "new": new[key]}
-    return diff
+            nested_diff = _compare_values(old[key], new[key])
+            if nested_diff:
+                diff[key] = nested_diff
+
+    return diff if diff else None
+
+
+def _compare_values(old_value: Any, new_value: Any) -> Any:
+    """Определяет разницу между значениями и добавляет тег 'updated', если изменилось."""
+    if isinstance(old_value, dict) and isinstance(new_value, dict):
+        nested_diff = diff_with_tags(old_value, new_value)
+        return {"tag": "updated", **nested_diff} if nested_diff else None
+
+    return {"tag": "updated", "old": old_value,
+            "new": new_value} if old_value != new_value else None
 
 
 def deep_merge(original: dict, patch: dict) -> dict:
-    """Рекурсивно сливает patch в original, корректно обрабатывая удаление (_delete)."""
+    """Рекурсивно объединяет `patch` в `original`, корректно обрабатывая удаление (`_delete`)."""
     if not isinstance(original, dict) or not isinstance(patch, dict):
         return patch
 
     result = original.copy()
 
     for key, value in patch.items():
-        if isinstance(value, dict) and value.get("_delete") is True:
+        if isinstance(value, dict) and value.get("_delete"):
             result.pop(key, None)
-            continue
-
-        if isinstance(value, dict):
-            orig_val = result.get(key, {})
-            if isinstance(orig_val, dict):
-                result[key] = deep_merge(orig_val, value)
-            else:
-                result[key] = value
-        elif isinstance(value, list):
-            if isinstance(result.get(key), list):
-                result[key] = value
-            else:
-                result[key] = value
+        elif isinstance(value, dict):
+            result[key] = deep_merge(result.get(key, {}), value)
         else:
             result[key] = value
 
     return result
 
 
-# ===== Генерация патч запроса =====
+# ==============================
+# БЛОК: Генерация патч-запроса
+# ==============================
 
 def _extract_json_from_gpt(raw_content: str) -> dict:
-    """Извлекает JSON из текста, возвращая пустой словарь при ошибках."""
+    """Извлекает JSON из ответа GPT, возвращая пустой словарь при ошибке."""
     match = re.search(r"\{.*\}", raw_content, re.DOTALL)
     if not match:
         return {}
@@ -90,43 +89,52 @@ def _extract_json_from_gpt(raw_content: str) -> dict:
     except json.JSONDecodeError:
         return {}
 
+
 async def analyze_update_snippets_via_gpt(
     user_blocks: List[Dict[str, Any]],
     user_info: str,
-    knowledge_base: Dict[str, Any]
+    knowledge_base: Dict[str, Any],
+    ai_model: str = "gpt-4o",
 ) -> Dict[str, Any]:
-    """Ищет релевантные топики, подтемы и вопросы в базе знаний по сообщению пользователя."""
-    snippet_lines = []
+    """Определяет релевантные топики, подтемы и вопросы в базе знаний по запросу пользователя."""
+    kb_structure = {}
     for topic_name, topic_data in knowledge_base.items():
-        line = f"Topic: {topic_name}"
-        subtopics = topic_data.get("subtopics", {})
-        if subtopics:
-            sub_lines = []
-            for subtopic_name, subtopic_data in subtopics.items():
-                questions = subtopic_data.get("questions", {})
-                q_keys = ", ".join(
-                    questions.keys()) if questions else "No questions"
-                sub_lines.append(
-                    f"Subtopic: {subtopic_name} (Questions: {q_keys})")
-            line += " | " + " || ".join(sub_lines)
-        snippet_lines.append(line)
-    kb_full_structure = "\n".join(snippet_lines)
+        kb_structure[topic_name] = {
+            "subtopics": {
+                sub_name: {
+                    "questions": list(
+                        sub_data.get(
+                            "questions",
+                            {}).keys())}
+                for sub_name, sub_data in topic_data.get("subtopics", {}).items()
+            }
+        }
 
     system_prompt = AI_PROMPTS["analyze_update_snippets_prompt"].format(
-        kb_full_structure=kb_full_structure)
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_blocks}
-    ]
-
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        temperature=0.1
+        kb_full_structure=json.dumps(kb_structure, ensure_ascii=False)
     )
-    raw_content = response.choices[0].message.content.strip()
-    print("=== RAW RESULT SNIPPETS ===\n", raw_content)
 
+    messages = build_messages_for_model(
+        system_prompt=system_prompt,
+        messages_data=user_blocks,
+        user_message="",
+        model=ai_model
+    )
+
+    client, real_model = pick_model_and_client(ai_model)
+
+    if real_model.startswith("gpt"):
+        response = await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
+        raw_content = response.choices[0].message.content.strip()
+    elif real_model.startswith("gemini"):
+        response = await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
+        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
+        )
+    else:
+        response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
+        raw_content = response.choices[0].message.content.strip()
+
+    # print("=== RAW RESULT SNIPPETS ===\n", raw_content)
     result = _extract_json_from_gpt(raw_content)
     return {"topics": result.get("topics", [])}
 
@@ -145,7 +153,7 @@ async def extract_knowledge_with_structure(
     user_message: Optional[str] = None,
     knowledge_base: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-    """Возвращает из базы знаний структуру по списку тем, подтем и вопросам."""
+    """Возвращает из базы знаний структуру по списку (topic/subtopic/questions)."""
     if knowledge_base is None:
         knowledge_base = await get_knowledge_full_document()
 
@@ -153,24 +161,24 @@ async def extract_knowledge_with_structure(
     for item in topics:
         topic_name = item.get("topic", "")
         subtopics = item.get("subtopics", [])
-
         if topic_name not in knowledge_base:
             continue
-        topic_data = knowledge_base[topic_name]
-        subs = topic_data.get("subtopics", {})
 
         if topic_name not in extracted_data:
             extracted_data[topic_name] = {"subtopics": {}}
 
+        topic_data = knowledge_base[topic_name]
+        subs = topic_data.get("subtopics", {})
+
         if subtopics:
             for subtopic_item in subtopics:
-                subtopic_name = subtopic_item.get("subtopic", None)
+                subtopic_name = subtopic_item.get("subtopic")
                 questions = subtopic_item.get("questions", [])
                 if subtopic_name and subtopic_name in subs:
-                    sub_data = subs[subtopic_name]
                     if subtopic_name not in extracted_data[topic_name]["subtopics"]:
                         extracted_data[topic_name]["subtopics"][subtopic_name] = {
                             "questions": {}}
+                    sub_data = subs[subtopic_name]
                     if questions:
                         for q_text in questions:
                             if q_text in sub_data.get("questions", {}):
@@ -180,119 +188,189 @@ async def extract_knowledge_with_structure(
                         extracted_data[topic_name]["subtopics"][subtopic_name]["questions"] = sub_data.get(
                             "questions", {}).copy()
         else:
-            for subtopic_name, sub_data in subs.items():
-                if subtopic_name not in extracted_data[topic_name]["subtopics"]:
-                    extracted_data[topic_name]["subtopics"][subtopic_name] = {
+            for sub_name, sub_data in subs.items():
+                if sub_name not in extracted_data[topic_name]["subtopics"]:
+                    extracted_data[topic_name]["subtopics"][sub_name] = {
                         "questions": {}}
-                extracted_data[topic_name]["subtopics"][subtopic_name]["questions"] = sub_data.get(
+                extracted_data[topic_name]["subtopics"][sub_name]["questions"] = sub_data.get(
                     "questions", {}).copy()
 
     return extracted_data if extracted_data else {}
 
 
+def pick_model_and_client(model: str):
+    """Определяет, какой клиент (OpenAI/Gemini) использовать, и возвращает (client, real_model)."""
+    if model.startswith("gpt"):
+        return openai_client, model
+    elif model.startswith("gemini"):
+        return gemini_client, model
+    return openai_client, "gpt-4o"
+
+
+def build_messages_for_model(
+    system_prompt: Optional[str],
+    messages_data: Union[List[ChatMessage], List[Dict[str, Any]]],
+    user_message: str,
+    model: str
+) -> List[Dict[str, Any]]:
+    """Генерирует список `messages` в правильном формате для OpenAI (GPT) и Gemini."""
+    messages = []
+
+    if system_prompt:
+        messages.append({
+            "role": "system" if model.startswith("gpt") else "user",
+            "content": system_prompt
+        })
+
+    for msg in messages_data:
+        if isinstance(msg, ChatMessage):
+            sender_role = extract_english_value(msg.sender_role.value)
+            content = msg.message
+        elif isinstance(msg, dict):
+            sender_role = extract_english_value(msg.get("sender_role", "user"))
+            content = msg
+        else:
+            continue
+
+        role = "assistant" if sender_role.lower() in [
+            "ai assistant", "assistant", "consultant"] else "user"
+
+        structured_content = []
+
+        if isinstance(content, str):
+            structured_content.append({"type": "text", "text": content})
+        elif isinstance(content, dict):
+            if "text" in content:
+                structured_content.append(
+                    {"type": "text", "text": content["text"]})
+            elif "image_url" in content:
+                structured_content.append(
+                    {"type": "image_url", "image_url": content["image_url"]})
+        if structured_content:
+            if model.startswith("gpt"):
+                messages.append({"role": role, "content": structured_content})
+
+            elif model.startswith("gemini"):
+                gemini_parts = []
+                for block in structured_content:
+                    if block["type"] == "text":
+                        gemini_parts.append({"text": block["text"]})
+                    elif block["type"] == "image_url":
+                        gemini_parts.append({
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                # Base64-кодирование
+                                "data": block["image_url"]["url"].split(",")[1]
+                            }
+                        })
+                if gemini_parts:
+                    messages.append({"role": role, "parts": gemini_parts})
+
+    if user_message.strip() and not structured_content:
+        messages.append({"role": "user", "content": user_message})
+
+    return messages
+
+
+def extract_english_value(value: Any) -> Any:
+    """Пытается извлечь английскую версию строк из JSON. Возвращает исходное значение при ошибках."""
+    if isinstance(value, str):
+        try:
+            parsed_value = json.loads(value)
+            return parsed_value.get("en", value)
+        except (json.JSONDecodeError, TypeError):
+            return value
+    if isinstance(value, dict):
+        return value.get("en", value)
+    if isinstance(value, list):
+        return [extract_english_value(item) for item in value]
+    return value
+
+
 async def generate_patch_body_via_gpt(
     user_blocks: List[Dict[str, Any]],
     user_info: str,
-    knowledge_base: Dict[str, Any]
+    knowledge_base: Dict[str, Any],
+    ai_model: str = "gpt-4o",
 ) -> Dict[str, Any]:
-    """Формирует патч для базы знаний через GPT, извлекая релевантные сниппеты и создавая финальный JSON."""
-
-    # print("=== KNOWLEDGE ===\n", snippets_list)
-    print(knowledge_base)
-
-    snippets = await analyze_update_snippets_via_gpt(
-        user_blocks=user_blocks,
-        user_info=user_info,
-        knowledge_base=knowledge_base
-    )
+    """Формирует патч-JSON для обновления базы знаний, извлекая релевантные сниппеты."""
+    snippets = await analyze_update_snippets_via_gpt(user_blocks, user_info, knowledge_base, ai_model)
     snippets_list = snippets.get("topics", [])
-    # print("=== SNIPPETS ===\n", snippets_list)
-
     kb_snippets_text = await extract_knowledge_with_structure(topics=snippets_list, knowledge_base=knowledge_base)
+
     system_prompt = AI_PROMPTS["patch_body_prompt"].format(
         kb_snippets_text=kb_snippets_text)
+    messages = build_messages_for_model(
+        system_prompt, user_blocks, "", ai_model)
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_blocks}
-    ]
+    client, real_model = pick_model_and_client(ai_model)
 
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        temperature=0.1
-    )
-    raw_content = response.choices[0].message.content.strip()
-    print("=== RAW PATCH RESULT ===\n", raw_content)
+    if real_model.startswith("gpt"):
+        response = await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
+        raw_content = response.choices[0].message.content.strip()
+    elif real_model.startswith("gemini"):
+        response = await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
+        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
+        )
+    else:
+        response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
+        raw_content = response.choices[0].message.content.strip()
 
+    # print("=== RAW PATCH RESULT ===\n", raw_content)
     patch_result = _extract_json_from_gpt(raw_content)
-    # print("=== PARSED PATCH RESULT ===\n", patch_result)
     return patch_result
 
 
-# ===== Функции парсинга PDF, DOCX, XLSX =====
-
+# ==============================
+# БЛОК: Функции парсинга PDF, DOCX, XLSX =====
+# ==============================
 
 async def parse_pdf(file: UploadFile) -> str:
-    """Читает PDF в байтовом виде и извлекает текст при помощи pdfplumber."""
+    """Извлекает текст из PDF-файла."""
     file_bytes = await file.read()
-    text_content = ""
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text() or ""
-            text_content += page_text + "\n"
-    return text_content.strip()
+        return "\n".join(
+            [page.extract_text() or "" for page in pdf.pages]).strip()
 
 
 async def parse_docx(file: UploadFile) -> str:
-    """Читает DOCX и извлекает параграфы при помощи python-docx."""
+    """Извлекает текст из DOCX-файла."""
     file_bytes = await file.read()
     document = docx.Document(io.BytesIO(file_bytes))
-    paragraphs = [p.text for p in document.paragraphs]
-    return "\n".join(paragraphs).strip()
+    return "\n".join([p.text for p in document.paragraphs]).strip()
 
 
 async def parse_excel(file: UploadFile) -> str:
-    """Читает XLS/XLSX и извлекает данные построчно."""
+    """Извлекает текст из XLS/XLSX-файла."""
     file_bytes = await file.read()
-    wb = openpyxl.load_workbook(io.BytesIO(file_bytes))
-    text_content = []
-    for sheet in wb.worksheets:
-        for row in sheet.iter_rows(values_only=True):
-            row_text = " ".join([str(cell) if cell else "" for cell in row])
-            text_content.append(row_text)
-    return "\n".join(text_content).strip()
+    workbook = openpyxl.load_workbook(io.BytesIO(file_bytes))
+    return "\n".join([
+        " ".join([str(cell) if cell else "" for cell in row])
+        for sheet in workbook.worksheets
+        for row in sheet.iter_rows(values_only=True)
+    ]).strip()
 
 
 async def parse_file(upload_file: UploadFile) -> Optional[str]:
-    """
-    Определяет по расширению файла, как его парсить.
-    Возвращает текст (str) или None, если это изображение (только base64)
-    или неизвестный формат.
-    """
-    filename = upload_file.filename.lower()
+    """Определяет обработчик для файла по расширению и возвращает текстовое содержимое."""
+    ext = os.path.splitext(upload_file.filename.lower())[1]
 
-    if filename.endswith(".pdf"):
-        return await parse_pdf(upload_file)
+    parsers = {
+        ".pdf": parse_pdf,
+        ".docx": parse_docx,
+        ".xlsx": parse_excel,
+        ".xls": parse_excel
+    }
 
-    elif filename.endswith(".docx"):
-        return await parse_docx(upload_file)
+    if ext in parsers:
+        return await parsers[ext](upload_file)
 
-    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
-        return await parse_excel(upload_file)
-
-    elif filename.endswith(".png") or filename.endswith(".jpg") or filename.endswith(".jpeg"):
-        # Возвращаем None, если хотим передавать изображения сразу в
-        # base64-блок (без OCR)
-        return None
-
-    # Любые иные форматы — возвращаем None или обрабатываем по желанию
-    return None
+    return None if ext in (".png", ".jpg", ".jpeg") else None
 
 
-# -------------------------------------------------------------------
-# 3. Формируем контент-блоки для GPT ("type": "text" / "type": "image_url")
-# -------------------------------------------------------------------
+# ==============================
+# БЛОК: Формирования блоков сообщений =====
+# ==============================
 
 async def build_gpt_message_blocks(
     user_message: str,
@@ -311,17 +389,14 @@ async def build_gpt_message_blocks(
     """
     blocks: List[Dict[str, Any]] = []
 
-    # (1) Добавляем текст пользователя (если он не пуст)
     user_message = user_message.strip()
     if user_message:
         blocks.append({"type": "text", "text": user_message})
 
-    # (2) Перебираем файлы
     for file in files:
         filename = file.filename
         extension = os.path.splitext(filename)[1].lower()
 
-        # Парсим текстовые форматы
         if extension in (".pdf", ".docx", ".xlsx", ".xls"):
             parsed_text = await parse_file(file)
             if parsed_text:
@@ -330,7 +405,6 @@ async def build_gpt_message_blocks(
                     "text": f"[Файл: {filename}]\n{parsed_text}"
                 })
 
-        # Для изображений — оборачиваем в base64
         elif extension in (".png", ".jpg", ".jpeg"):
             file_bytes = await file.read()
             base64_data = base64.b64encode(file_bytes).decode("utf-8")
@@ -343,7 +417,6 @@ async def build_gpt_message_blocks(
             })
 
         else:
-            # Неизвестный формат
             blocks.append({
                 "type": "text",
                 "text": f"[Файл: {filename}] Unknown format, skipped."

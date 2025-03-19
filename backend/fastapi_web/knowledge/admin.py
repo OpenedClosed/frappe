@@ -1,0 +1,91 @@
+"""Админ-панель приложения Знания."""
+from admin_core.base_admin import BaseAdmin
+from crud_core.registry import admin_registry
+from db.mongo.db_init import mongo_db
+
+from .db.mongo.schemas import BotSettings
+
+
+class BotSettingsAdmin(BaseAdmin):
+    """Админ для настройки бота."""
+    model = BotSettings
+    collection_name = "bot_settings"
+
+    verbose_name = {"en": "Bot Settings", "ru": "Настройки Бота"}
+    plural_name = {"en": "Bot Settings", "ru": "Настройки Бота"}
+    icon: str = "pi pi-cog"
+
+    list_display = [
+        "project_name",
+        "created_at",
+    ]
+
+    detail_fields = [
+        "project_name", "employee_name", "mention_name", "avatar", "bot_color",
+        "communication_tone", "personality_traits", "additional_instructions", "role", "target_action",
+        "core_principles", "special_instructions", "forbidden_topics",
+        "greeting", "error_message", "farewell_message",
+        "ai_model", "created_at"
+    ]
+
+    computed_fields = []
+    read_only_fields = ["created_at"]
+
+    field_titles = {
+        "project_name": {"en": "Project Name", "ru": "Название проекта"},
+        "employee_name": {"en": "Employee Name", "ru": "Имя сотрудника"},
+        "mention_name": {"en": "Mention Name in Conversation", "ru": "Упоминать имя в общении"},
+        "avatar": {"en": "Avatar", "ru": "Аватар"},
+        "bot_color": {"en": "Bot Color", "ru": "Цвет бота"},
+        "communication_tone": {"en": "Choose Communication Tone", "ru": "Выберите тон общения"},
+        "personality_traits": {"en": "Personality Traits", "ru": "Особенности характера"},
+        "additional_instructions": {"en": "Additional Instructions", "ru": "Дополнительные инструкции"},
+        "role": {"en": "Role", "ru": "Роль"},
+        "target_action": {"en": "Target Action", "ru": "Целевое действие"},
+        "core_principles": {"en": "Core Principles", "ru": "Ключевые принципы"},
+        "special_instructions": {"en": "Special Instructions", "ru": "Специальные инструкции"},
+        "forbidden_topics": {"en": "Forbidden Topics", "ru": "Запретные темы"},
+        "greeting": {"en": "Greeting", "ru": "Приветствие"},
+        "error_message": {"en": "Error Message", "ru": "Ошибка"},
+        "farewell_message": {"en": "Farewell Message", "ru": "Прощание"},
+        "ai_model": {"en": "AI Model", "ru": "Выбор модели"},
+        "created_at": {"en": "Created At", "ru": "Дата создания"}
+    }
+
+    help_texts = {
+        "bot_color": {
+            "en": "If you don’t have time to customize the bot, we can do it for you.",
+            "ru": "Если у вас нет времени на кастомизацию бота, мы можем сделать это для вас."
+        }
+    }
+
+    field_groups = [
+        {
+            "title": {"en": "Basic Settings", "ru": "Основные настройки"},
+            "fields": ["project_name", "employee_name", "mention_name", "avatar", "bot_color"],
+            "help_text": {"en": "Define basic bot information", "ru": "Определите основные настройки бота"}
+        },
+        {
+            "title": {"en": "Character and Behavior", "ru": "Характер и поведение"},
+            "fields": ["communication_tone", "personality_traits", "additional_instructions", "role", "target_action"],
+            "help_text": {"en": "Set how the bot interacts with users", "ru": "Настройте поведение бота в общении"}
+        },
+        {
+            "title": {"en": "Topics and Restrictions", "ru": "Темы и ограничения"},
+            "fields": ["core_principles", "special_instructions", "forbidden_topics"],
+            "help_text": {"en": "Define allowed and restricted topics", "ru": "Настройте темы, которые бот может обсуждать"}
+        },
+        {
+            "title": {"en": "Interaction Guidelines", "ru": "Правила взаимодействия"},
+            "fields": ["greeting", "error_message", "farewell_message"],
+            "help_text": {"en": "Set the bot's predefined messages", "ru": "Определите автоматические сообщения бота"}
+        },
+        {
+            "title": {"en": "Artificial Intelligence", "ru": "Искусственный интеллект"},
+            "fields": ["ai_model"],
+            "help_text": {"en": "Choose the AI model for your bot", "ru": "Выберите модель ИИ для вашего бота"}
+        }
+    ]
+
+
+admin_registry.register("bot_settings", BotSettingsAdmin(mongo_db))

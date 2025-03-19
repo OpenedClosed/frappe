@@ -4,15 +4,15 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from db.mongo.base.schemas import IdModel
+from db.mongo.base.schemas import (BaseValidatedIdModel, BaseValidatedModel,
+                                   IdModel)
 
 from .enums import ChatSource, ChatStatus, SenderRole
 
 
 class GptEvaluation(BaseModel):
-    """Модель для хранения результатов анализа GPT."""
-    topic: str = ""
-    subtopic: str = ""
+    """Результаты анализа GPT."""
+    topics: Optional[List[Any]] = Field(default_factory=list)
     confidence: float = 0.0
     out_of_scope: bool = False
     consultant_call: bool = False
@@ -35,8 +35,8 @@ class BriefAnswer(IdModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
-class ChatMessage(IdModel):
-    """Модель сообщения в чате."""
+class ChatMessage(BaseValidatedIdModel):
+    """Сообщение в чате."""
     message: str
     sender_role: SenderRole
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -45,23 +45,25 @@ class ChatMessage(IdModel):
     gpt_evaluation: Optional[GptEvaluation] = None
     reply_to: Optional[str] = None
     external_id: Optional[str] = None
+    files: Optional[List[str]] = None
 
 
 class Client(IdModel):
-    """Модель клиента."""
+    """Клиент."""
     client_id: str
     source: ChatSource
     external_id: Optional[str] = None
     metadata: Dict[str, Any] = {}
 
 
-class ChatSession(BaseModel):
-    """Модель чата."""
+class ChatSession(BaseValidatedModel):
+    """Чат-сессия."""
+
     chat_id: str
     client: Optional[Client] = None
     bot_id: Optional[str] = None
     company_name: Optional[str] = None
-    external_id: Optional[str] = None  # ID Instagram-бота
+    external_id: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_activity: datetime = Field(default_factory=datetime.utcnow)
     manual_mode: bool = False
@@ -71,37 +73,42 @@ class ChatSession(BaseModel):
     admin_marker: bool = False
 
     def get_client_id(self) -> str:
-        """Быстрый доступ к `client_id` клиента."""
-        return self.client.external_id if self.client.external_id else self.client.client_id
+        """Возвращает `client_id` или `external_id`, если он указан."""
+        return self.client.external_id or self.client.client_id if self.client else ""
 
     def calculate_mode(self, brief_questions: List[BriefQuestion]) -> str:
-        """Определение режима брифа."""
-        answered = {a.question for a in self.brief_answers}
-        all_q = {q.question for q in brief_questions}
-        if not answered.issuperset(all_q):
-            return "brief"
-        return "manual" if self.manual_mode else "automatic"
+        """Определяет текущий режим работы чата."""
+        return "brief" if not self._is_brief_completed(brief_questions) else (
+            "manual" if self.manual_mode else "automatic"
+        )
 
     def compute_status(self, ttl_value: int) -> ChatStatus:
-        """Вычисление статуса чата."""
+        """Определяет статус чата на основе его активности и закрытия."""
         if self.closed_by_request:
             return ChatStatus.FORCED_CLOSED
-
         if ttl_value > 0:
             return ChatStatus.IN_PROGRESS
-
         if not self.messages:
             return ChatStatus.CLOSED_WITHOUT_RESPONSE
+        return self._determine_final_status()
 
+    def get_current_question(
+            self, brief_questions: List[BriefQuestion]) -> Optional[BriefQuestion]:
+        """Возвращает следующий вопрос брифа, на который ещё не был дан ответ."""
+        answered_questions = {a.question for a in self.brief_answers}
+        return next(
+            (q for q in brief_questions if q.question not in answered_questions), None)
+
+    def _is_brief_completed(
+            self, brief_questions: List[BriefQuestion]) -> bool:
+        """Проверяет, все ли вопросы брифа получили ответы."""
+        return {a.question for a in self.brief_answers}.issuperset(
+            q.question for q in brief_questions)
+
+    def _determine_final_status(self) -> ChatStatus:
+        """Возвращает финальный статус чата в зависимости от последнего сообщения."""
         return (
             ChatStatus.SUCCESSFULLY_CLOSED
             if self.messages[-1].sender_role == SenderRole.CONSULTANT
             else ChatStatus.CLOSED_WITHOUT_RESPONSE
         )
-
-    def get_current_question(
-            self, brief_questions: List[BriefQuestion]) -> Optional[BriefQuestion]:
-        """Определение текущего вопроса брифа."""
-        answered_questions = {a.question for a in self.brief_answers}
-        return next(
-            (q for q in brief_questions if q.question not in answered_questions), None)

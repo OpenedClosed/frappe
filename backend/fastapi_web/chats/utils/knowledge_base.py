@@ -3,37 +3,27 @@
 from chats.db.mongo.schemas import BriefQuestion
 
 BRIEF_QUESTIONS = [
-
-    # BriefQuestion(
-    #     question="Hello! Welcome to Friendly Assistant. 😊\n\nHow can we assist you today?",
-    #     question_translations={
-    #         "en": "Hello! Welcome to Friendly Assistant. 😊\n\nHow can we assist you today?",
-    #         "ru": "Здравствуйте! Добро пожаловать в Friendly Assistant. 😊\n\nКак мы можем вам помочь?",
-    #         "ar": "مرحبًا! أهلاً بك في Friendly Assistant. 😊\n\nكيف يمكننا مساعدتك اليوم؟"
-    #     },
-    #     question_type="text",
-    #     expected_answers=[],
-    #     expected_answers_translations={
-    #         "en": [],
-    #         "ru": [],
-    #         "ar": []
-    #     }
-    # ),
+    BriefQuestion(
+        question="Favorite season?",
+        question_translations={
+            "en": "Favorite season?",
+            "ru": "Любимое время года?"
+        }
+    ),
+    BriefQuestion(
+        question="Choice?",
+        question_translations={
+            "en": "Choice?",
+            "ru": "Выбор?"
+        },
+        question_type="choice",
+        expected_answers=["Var1", "Var2"],
+        expected_answers_translations={
+            "en": ["Var1", "Var2"],
+            "ru": ["Вар1", "Вар2"]
+        }
+    )
 ]
 
-
-
 KNOWLEDGE_BASE = {
-    "Topic": {
-        "subtopics": {
-            "subtopic": {
-                "questions": {
-                    "question?": {
-                        "text": "text",
-                        "images": []
-                    }
-                }
-            }
-        }
-    }
 }

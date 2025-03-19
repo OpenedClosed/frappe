@@ -16,19 +16,22 @@ Your task is to extract **only the relevant existing topics, subtopics, and ques
    - If the request is **ambiguous** but could **potentially refer to the entire knowledge base**, **assume it includes everything** and return the full database.
    - If the request **contains vague wording** such as "update responses", "modify knowledge", or "apply changes" **without specifying a particular topic/subtopic**, **you MUST return the entire knowledge base**.
    - ⚠️ **DO NOT attempt to infer a specific subset of data in such cases – always return everything.**
-   - Example 1:  
-     **User Request:** *"Update all answers."*  
+   - Example 1:
+     **User Request:** *"Update all answers."*
      **Output:** The entire knowledge base.
-   - Example 2:  
-     **User Request:** *"Modify the knowledge base."*  
+   - Example 2:
+     **User Request:** *"Modify the knowledge base."*
      **Output:** The entire knowledge base.
-   - Example 3:  
-     **User Request:** *"Apply changes to responses."*  
+   - Example 3:
+     **User Request:** *"Apply changes to responses."*
      **Output:** The entire knowledge base.
 
 ### **Actual Knowledge Base Structure**
 The knowledge base consists of the following topics, subtopics, and questions:
-{kb_full_structure} (if empty: return {{"topics": []}})
+```json
+{kb_full_structure}
+```json
+(if empty: return {{"topics": []}})
 
 ### **Rules**:
 1. **Strictly Use Existing Data (NO Modifications Allowed in Output)**:
@@ -67,19 +70,38 @@ The knowledge base consists of the following topics, subtopics, and questions:
    - If the request is **too general or ambiguous** (например, "изменить базу знаний" без конкретики) или **потенциально затрагивает всю базу**, **возвращайте все доступные темы, подтемы и вопросы**.
    - Если запрос **упоминает несколько широких областей**, но **не содержит чётких ограничений**, включайте **все** подходящие темы.
 
-7. **Handling Information from Files and Base64 Images**:
+7. **Handling User Requests for Removing Questions or Topics**:
+   - ⚠️ **Do NOT execute deletions. Instead, return the matching topics, subtopics, and questions exactly as they exist in the knowledge base.**
+   - If the user asks to remove a question, **return the topic and subtopic that contain it, along with all questions inside.**
+   - ⚠️ **NEVER return an empty response just because the request is about deletion.**
+   - Example 1:
+     **User Request:** *"Remove 'How to train a parrot?'"*
+     **Output:** The entire `"Parrots"` subtopic with all questions.
+   - Example 2:
+     **User Request:** *"Delete information about parrots."*
+     **Output:** The entire `"Parrots"` topic with all subtopics and questions.
+   - Example 3:
+     **User Request:** *"Remove some fact about feeding parrots."*
+     **Output:** The `"Parrots"` topic, `"Care"` subtopic, and all related questions about feeding.
+
+8. **Handling Information from Files and Base64 Images**:
    - If the user request includes **files (PDF, DOCX, XLSX) or images (base64)**, you **MUST** extract **only text-based content** from these sources.
    - The extracted text **must be treated the same way as user input**, and its content **must be used to find relevant topics, subtopics, and questions**.
    - If the extracted content **matches existing topics/subtopics/questions**, include them in the response.
    - **DO NOT add new topics/subtopics/questions** based on extracted text from files/images.
    - If no relevant topics are found, return exactly: {{"topics": []}}.
 
-8. **Never Reject an Input**:
+9. **Handling User Requests for Adding Images, Media, or Links**:
+   - ⚠️ **Do NOT add any new media, images, or links. Instead, find the most relevant (EXISTING!!!) topic, subtopic, and question where this content could potentially be added.**
+   - If the user asks to attach an image, video, or external link, **return the correct snippet (topic/subtopic/question) where it would be placed, but do NOT modify the existing data and do not create any one.**
+   - ⚠️ **NEVER return an empty response just because the request is about adding media. Always locate the best match within the knowledge base.**
+
+10. **Never Reject an Input**:
    - (DO NOT ANSWER LIKE: "I'm unable to assist with that request." or "I'm unable to modify or create new content." - Just find relevant info)
    - If the user provides **confusing, strange, or seemingly unrelated** input, do **not** reject the request.
-   - Instead, **attempt to extract meaning and structure it logically** according to the knowledge base.  
+   - Instead, **attempt to extract meaning and structure it logically** according to the knowledge base.
 
-9. **Ensure Output Format**:
+11. **Ensure Output Format**:
    - IMPORTANT! But in any case, do not deduce the example itself, it is only for you to understand the structure.
    - The response **must strictly** follow this JSON format:
 ```json

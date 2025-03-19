@@ -7,7 +7,7 @@ from fastapi import HTTPException, Request
 from chats.db.mongo.enums import ChatSource, SenderRole
 from chats.db.mongo.schemas import ChatSession
 from chats.routers import handle_chat_creation
-from chats.ws.ws_handlers import handle_new_message_wrapper
+from chats.ws.ws_handlers import handle_message
 from chats.ws.ws_helpers import get_ws_manager
 from db.mongo.db_init import mongo_db
 from infra import settings
@@ -74,7 +74,7 @@ async def process_instagram_message(
     redis_session_key = f"chat:{client_id}"
     redis_flood_key = f"flood:{client_id}"
 
-    await handle_new_message_wrapper(
+    await handle_message(
         manager=manager,
         chat_id=chat_id,
         client_id=client_id,

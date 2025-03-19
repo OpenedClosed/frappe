@@ -29,4 +29,4 @@ async def upload_file(file: UploadFile = File(...)):
     with open(save_path, "wb") as f:
         f.write(contents)
 
-    return {"file_path": f"/{save_dir}/{new_filename}"}
+    return {"file_path": f"/media/{new_filename}"}

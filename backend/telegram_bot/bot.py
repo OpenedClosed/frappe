@@ -37,7 +37,7 @@ async def on_shutdown(*args, **kwargs):
 @check_private_chat
 async def start(message: Message, command: CommandObject):
     """
-    Обработчик команды '/start' для PaNa Medica AI Assistant.
+    Обработчик команды '/start'.
     """
     user_lang = message.from_user.language_code
     start_text = BOT_TRANSLATIONS["start_info_text"].get(
@@ -49,7 +49,7 @@ async def start(message: Message, command: CommandObject):
 @check_private_chat
 async def help(message: Message, command: CommandObject):
     """
-    Обработчик команды '/help' для PaNa Medica AI Assistant.
+    Обработчик команды '/help'.
     """
     user_lang = message.from_user.language_code
     help_text = BOT_TRANSLATIONS["help_info_text"].get(
