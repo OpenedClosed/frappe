@@ -22,7 +22,7 @@
       <div slot="room-header-info" class="w-full">
         <div class="flex flex-row items-center justify-between">
           <div class="flex flex-row items-center">
-            <h2 class="font-bold">PaNa Medica</h2>
+            <h2 class="font-bold">Nika Hotel & Club</h2>
             <Button class="w-full p-2 ml-4 flex justify-center items-center gap-2" @click="refreshChat">
               <p>{{ t("newChat") }}</p>
               <i class="pi pi-replay"> </i>

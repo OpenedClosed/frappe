@@ -23,14 +23,18 @@
     "mitt": "^3.0.1",
     "nanoid": "^5.0.7",
     "nuxt": "^3.11.2",
+    "nuxt-jsoneditor": "^1.8.4",
+    "nuxt-maplibre": "1.0.1",
     "nuxt-umami": "^2.6.2",
     "postcss": "^8.4.38",
     "primeicons": "^7.0.0",
     "primevue": "^3.52.0",
+    "v-jsoneditor": "^1.4.5",
     "vue": "^3.4.27",
     "vue-advanced-chat": "^2.1.0",
     "vue-flow": "^0.3.0",
     "vue-router": "^4.3.2",
+    "vuedraggable": "^2.24.3",
     "xlsx": "^0.18.5",
     "yup": "^1.4.0"
   },
@@ -39,5 +43,6 @@
     "@nuxtjs/color-mode": "^3.5.0",
     "@nuxtjs/tailwindcss": "^6.12.0",
     "nuxt-primevue": "^0.3.1"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

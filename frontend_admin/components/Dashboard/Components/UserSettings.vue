@@ -38,9 +38,11 @@ const formatRequestDate = (isoDateString) => {
 };
 const { $listen } = useNuxtApp();
 const { $event } = useNuxtApp();
+
+const { currentPageName } = usePageState()
 function reloadTable() {
 	useNuxtApp().$api
-        .post(`api/admin/refresh/`)
+        .post(`api/${currentPageName.value}/refresh/`)
         .then((response) => {
             let responseData = response.data;
             console.log("Profile responseData= ", responseData);

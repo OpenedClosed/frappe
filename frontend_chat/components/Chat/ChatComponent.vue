@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col dark:bg-gray-800 bg-[#f8f9fa]"
+    class="flex flex-col dark:bg-[#131415] bg-[#f8f9fa]"
     :class="{
       '': isTelegram,
       ' max-h-full h-svh': !isTelegram,
@@ -36,7 +36,7 @@
       
     >
       <div slot="room-header-info" class="w-full">
-        <ChatHeader :isTelegram="isTelegram" :refreshChat="refreshChat" :closeChat="closeChat" @toggle-chat-mode="toggleChatMode($event)" />
+        <ChatHeader :isTelegram="isTelegram" :refreshChat="refreshChat" :closeChat="closeChat" :rooms="rooms" :currentUserId="currentUserId" @toggle-chat-mode="toggleChatMode($event)" />
       </div>
     </vue-advanced-chat>
 
@@ -54,7 +54,7 @@ import { defineEmits } from "vue";
 import { register } from "vue-advanced-chat";
 const colorMode = useColorMode();
 register();
-
+const { rooms } = useHeaderState();
 // PrimeVue
 import Toast from "primevue/toast";
 
@@ -108,7 +108,6 @@ const {
   isIphone,
   currentUserId,
   activeRoomId,
-  rooms,
   messages,
   messagesLoaded,
   choiceOptions,
@@ -142,8 +141,6 @@ body {
 
 @media (prefers-color-scheme: dark) {
   body {
-    font-family: "Quicksand", sans-serif;
-    overflow: hidden;
     background-color: #121212 !important;
   }
 }

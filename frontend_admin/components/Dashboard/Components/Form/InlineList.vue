@@ -7,7 +7,8 @@
       class="mb-4 border p-4 rounded"
     >
       <h4 class="font-semibold mb-2">
-        {{ inlineDef.title?.en || inlineDef.name }} #{{ index + 1 }}
+        <!-- {{ inlineDef.verbose_name }} -->
+        {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }} #{{ index + 1 }}
       </h4>
 
       <!-- Use DynamicForm to render each inline item -->
@@ -25,13 +26,13 @@
           class="p-2 bg-blue-500 text-white rounded"
           @click="saveOneInline(index)"
         >
-          Save
+          {{ $t("buttons.save") }}
         </button>
         <button
           class="p-2 bg-red-500 text-white rounded"
           @click="deleteOneInline(index)"
         >
-          Delete
+        {{ $t("buttons.delete") }}
         </button>
       </div>
     </div>
@@ -52,7 +53,7 @@
     class="mt-2 p-2 bg-green-500 text-white rounded"
     @click="addNewInline"
   >
-    Create
+  {{ $t("buttons.create") }}
   </button>
 </div>
 
@@ -63,7 +64,7 @@
 import { ref, watch } from "vue";
 import { useNuxtApp, useRoute } from "#imports";
 import DynamicForm from "~/components/Dashboard/Components/Form/DynamicForm.vue";
-
+const { currentLanguage } = useLanguageState();
 /**
  * Props:
  * - `inlineDef` includes info about how to render these inline items
@@ -132,6 +133,7 @@ function updateLocalItem(index, updated) {
   localItems.value[index] = { ...updated };
 }
 
+const { currentPageName } = usePageState()
 /**
  * For "Save" of one inline item:
  *  - We already have `localItems` with the user changes.
@@ -158,7 +160,7 @@ function updateLocalItem(index, updated) {
     };
 
     await nuxtApp.$api.patch(
-      `api/admin/${props.parentEntity}/${props.parentId}`,
+      `api/${currentPageName.value}/${props.parentEntity}/${props.parentId}`,
       patchData
     );
 
@@ -192,7 +194,7 @@ async function deleteOneInline(index) {
     };
 
     await nuxtApp.$api.patch(
-      `api/admin/${props.parentEntity}/${props.parentId}`,
+      `api/${currentPageName.value}/${props.parentEntity}/${props.parentId}`,
       patchData
     );
 
@@ -228,7 +230,7 @@ async function deleteOneInline(index) {
     };
 
     await nuxtApp.$api.patch(
-      `api/admin/${props.parentEntity}/${props.parentId}`,
+      `api/${currentPageName.value}/${props.parentEntity}/${props.parentId}`,
       patchData
     );
 

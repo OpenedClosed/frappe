@@ -2,12 +2,13 @@
   <div>
     <!-- If we are in "form" view -->
     <div v-if="isForm" class="p-4">
-      <h2 class="text-xl font-bold mb-4">{{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle }}</h2>
+      <!-- {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }} -->
+      <h2 class="text-xl font-bold mb-4">{{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle[currentLanguage] || entityTitle?.en || " "  }}</h2>
 
       <!-- Global error -->
-      <div v-if="errorMessage" class="my-2 p-2 bg-red-100 text-red-700 rounded">
+      <!-- <div v-if="errorMessage" class="my-2 p-2 bg-red-100 text-red-700 rounded">
         {{ errorMessage }}
-      </div>
+      </div> -->
 
       <p v-if="isLoading">Загрузка данных...</p>
 
@@ -15,6 +16,7 @@
         <!-- DynamicForm component -->
         <DynamicForm
           :fields="filteredFields"
+          :fieldGroups="fieldGroups"
           :modelValue="itemData"
           :read-only="isReadOnly"
           :isNewItem="isNewItem"
@@ -23,13 +25,11 @@
         />
 
         <!-- 2) Inlines rendering -->
-         <!-- {{ inlines }} -->
-        <div  v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
-
-          
+        <!-- {{ inlines }} -->
+        <div v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
           <div>
             <h3 class="text-lg font-bold mb-2">
-              {{ inlineDef.plural_name.en || inlineDef.name }}
+              {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }}
             </h3>
 
             <InlineList
@@ -56,7 +56,7 @@
           <Button v-else label="Создать запись" icon="pi pi-check" @click="createItem" />
 
           <!-- Special button for chat_sessions entity -->
-          <Button  v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
+          <Button v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
 
           <!-- Navigation: go back to list -->
           <Button label="Назад к списку" icon="pi pi-arrow-left" class="p-button-text" @click="goBack" />
@@ -80,6 +80,7 @@ import EmbeddedChat from "~/components/AdminChat/EmbeddedChat.vue";
 import InlineList from "~/components/Dashboard/Components/Form/InlineList.vue";
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter, useAsyncData } from "#imports";
+import _ from "lodash";
 
 // ------------------ State & Refs ------------------
 const route = useRoute();
@@ -100,19 +101,21 @@ const currentGroup = computed(() => route.params.group);
 const currentEntity = computed(() => route.params.entity);
 const currentId = computed(() => route.params.id);
 const isNewItem = computed(() => currentId.value === "new");
-const entityTitle = computed(() => currentEntity.value);
-
+const entityTitle = ref({});
+const fieldGroups = ref([]);
+const { currentLanguage } = useLanguageState();
 // Fields for the form
 const fields = ref([]);
 
 // Reference to store original data for diffing changes
 const originalData = ref({});
+const { currentPageName } = usePageState()
 
 // ------------------ Lifecycle & Data Loading ------------------
 async function getAdminData() {
   let responseData;
   try {
-    const response = await nuxtApp.$api.get("api/admin/info");
+    const response = await nuxtApp.$api.get(`api/${currentPageName.value}/info`);
     responseData = response.data;
     console.log("AdminData = ", responseData);
   } catch (err) {
@@ -135,6 +138,7 @@ const filteredFields = computed(() => {
   // Otherwise, use all fields (for edit mode, for example)
   return fields.value;
 });
+
 onMounted(() => {
   initPage();
   const queryFormState = route.query.isForm;
@@ -151,34 +155,36 @@ async function initPage() {
       return;
     }
 
-    // Find entity configuration
     const entityConfig = findEntityConfig();
     if (!entityConfig) {
       console.error("Entity configuration not found in adminData");
       return;
     }
+    console.log("entityConfig:", entityConfig?.model?.plural_name);
+    entityTitle.value = entityConfig.model.plural_name;
 
     // Get fields and filter only detail fields
     const allFields = entityConfig.model.fields || [];
     const detailFields = entityConfig.model.detail_fields || [];
 
-    // Filter fields based on detail_fields
     fields.value = allFields.filter((field) => detailFields.includes(field.name));
 
-    // *** Get any inlines ***
+    // Store field groups
+    console.log("entityConfig.model.field_groups", entityConfig.model.field_groups);
+    fieldGroups.value = entityConfig.model.field_groups || [];  // Store field groups
+
     inlines.value = entityConfig.model.inlines || [];
 
     if (!isNewItem.value) {
-      // Edit mode: fetch existing data and store its original snapshot
       await fetchItemData(currentId.value);
       isReadOnly.value = true;
     } else {
-      // New item: set default values and clone as original data
       itemData.value = fields.value.reduce((acc, field) => {
         acc[field.name] = field.default || null;
         return acc;
       }, {});
-      originalData.value = JSON.parse(JSON.stringify(itemData.value));
+      console.log("itemData:", itemData.value);
+      originalData.value = itemData.value;
       isReadOnly.value = false;
     }
   } catch (error) {
@@ -186,6 +192,7 @@ async function initPage() {
     errorMessage.value = parseError(error);
   }
 }
+
 
 function findEntityConfig() {
   const group = adminData.value[currentGroup.value];
@@ -220,10 +227,10 @@ async function fetchItemData(id) {
   errorMessage.value = "";
   fieldErrors.value = {};
   try {
-    const res = await nuxtApp.$api.get(`api/admin/${currentEntity.value}/${id}`);
+    const res = await nuxtApp.$api.get(`api/${currentPageName.value}/${currentEntity.value}/${id}`);
     itemData.value = res.data;
     // Save a deep copy of the fetched data for later diffing
-    originalData.value = JSON.parse(JSON.stringify(res.data));
+    originalData.value = res.data;
     console.log("Данные загружены:", res.data);
   } catch (error) {
     console.error("Ошибка при загрузке:", error);
@@ -233,14 +240,21 @@ async function fetchItemData(id) {
   }
 }
 
-// Returns only fields that have been changed
 function getChangedFields() {
   const changed = {};
-  const inlineFields = inlines.value.map((inline) => inline.field); // Get inline field names
+  // Gather inline field names (so we can skip them)
+  const inlineFields = inlines.value.map((inline) => inline.field);
 
   for (const key in itemData.value) {
-    if (!inlineFields.includes(key) && itemData.value[key] !== originalData.value[key]) {
+    // Skip inline fields
+    if (inlineFields.includes(key)) continue;
+
+    // Compare deeply using Lodash
+    console.log("itemData.value[key]", itemData.value[key]);
+    console.log(" originalData.value[key]", originalData.value[key]);
+    if (!_.isEqual(itemData.value[key], originalData.value[key])) {
       changed[key] = itemData.value[key];
+      console.log("itemData.value[key]", itemData.value[key]);
     }
   }
   return changed;
@@ -250,7 +264,8 @@ async function saveItem() {
   errorMessage.value = "";
   fieldErrors.value = {};
 
-  const changedFields = getChangedFields(); // Uses the updated function
+  // Gather only the fields that actually changed
+  const changedFields = getChangedFields();
 
   if (Object.keys(changedFields).length === 0) {
     isReadOnly.value = true;
@@ -258,11 +273,15 @@ async function saveItem() {
     return;
   }
 
-  console.log("changedFields", changedFields);
+  // Filter out null or undefined values from the changedFields
+  const sanitizedFields = Object.fromEntries(Object.entries(changedFields).filter(([_, val]) => val != null));
+
+  console.log("changedFields (sanitized):", sanitizedFields);
+
   try {
-    await nuxtApp.$api.patch(`api/admin/${currentEntity.value}/${currentId.value}`, changedFields);
+    await nuxtApp.$api.patch(`api/${currentPageName.value}/${currentEntity.value}/${currentId.value}`, sanitizedFields);
     console.log("Изменения сохранены");
-    originalData.value = JSON.parse(JSON.stringify(itemData.value)); // Update original data
+    originalData.value = itemData.value; // Update original data
     isReadOnly.value = true;
   } catch (error) {
     console.error("Ошибка при сохранении:", error);
@@ -271,25 +290,28 @@ async function saveItem() {
 }
 
 
+
 async function createItem() {
   errorMessage.value = "";
   fieldErrors.value = {};
 
-  // Формируем объект, исключая поля с readOnly: true
-  const dataToSend = {};
-  console.log("fields", fields.value);
+  // Build the data object from fields, excluding readOnly for new items
+  let dataToSend = {};
   fields.value.forEach((field) => {
-    // Если мы создаём новую запись и поле помечено как readOnly – пропускаем его
     if (!(isNewItem.value && field.read_only)) {
       dataToSend[field.name] = itemData.value[field.name];
     }
   });
+
+  // Filter out any fields that are `null` or `undefined`
+  dataToSend = Object.fromEntries(Object.entries(dataToSend).filter(([_, val]) => val != null));
+
   console.log("Data to send:", dataToSend);
 
   try {
-    const res = await nuxtApp.$api.post(`api/admin/${currentEntity.value}/`, dataToSend);
+    const res = await nuxtApp.$api.post(`api/${currentPageName.value}/${currentEntity.value}/`, dataToSend);
     console.log("Запись создана:", res.data);
-    router.push(`/admin/${currentGroup.value}/${currentEntity.value}/${res.data.id}`);
+    router.push(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/${res.data.id}`);
   } catch (error) {
     console.error("Ошибка при создании:", error);
     errorMessage.value = parseError(error);
@@ -303,7 +325,7 @@ async function deleteItem() {
   errorMessage.value = "";
   fieldErrors.value = {};
   try {
-    await nuxtApp.$api.delete(`api/admin/${currentEntity.value}/${currentId.value}`);
+    await nuxtApp.$api.delete(`api/${currentPageName.value}/${currentEntity.value}/${currentId.value}`);
     console.log("Запись удалена");
     goBack();
   } catch (error) {
@@ -314,7 +336,7 @@ async function deleteItem() {
 
 // ------------------ Navigation ------------------
 function goBack() {
-  router.push(`/admin/${currentGroup.value}/${currentEntity.value}`);
+  router.push(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}`);
 }
 
 function setFormState(state) {

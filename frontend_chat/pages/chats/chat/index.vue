@@ -5,7 +5,7 @@
 </script>
 <template>
     <div class="Main">
-        <ChatMainChat :is-telegram="false"/>
+        <ChatMainChat/>
         
     </div>
 </template>

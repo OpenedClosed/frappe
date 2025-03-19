@@ -18,6 +18,11 @@ export const useLanguageState = () => {
   const currentLanguage = useState("currentLanguage", () => "en");
   return { currentLanguage };
 };
+export const useHeaderState = () => {
+  const botHeaderData = useState("botHeaderData", () => {});
+  const rooms = useState("rooms", () => []);
+  return { botHeaderData, rooms };
+};
 
 export function useChatState() {
   const isAutoMode = useState("isAutoMode", () => true);

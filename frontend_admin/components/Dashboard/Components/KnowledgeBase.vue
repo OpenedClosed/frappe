@@ -41,6 +41,7 @@
               <!-- {{ selectedFiles }} -->
 
               <!-- GENERATE SMART CHANGE BUTTON -->
+              <Dropdown v-model="selectedModel" :options="aiModels" optionLabel="label" optionValue="value" class="w-full" placeholder="Select AI Model" />
               <Button
                 type="submit"
                 :disabled="isLoading"
@@ -70,11 +71,11 @@
           <div
             class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
-            <div class="mb-2 pb-1 flex flex-col md:flex-row border-b border-gray-400 dark:border-gray-600 justify-between items-center">
+            <div class="mb-2 pb-1 flex flex-row border-b border-gray-400 dark:border-gray-600 justify-between items-center">
               <h2 class="text-lg font-bold border-gray-400 dark:border-gray-600 pb-1">{{ $t('knowledgeBase.header.workspacePlayground') }}</h2>
               <!-- <p class="text-sm text-gray-500 dark:text-gray-300">Last update: {{ knowledgeBaseData.update_date }}</p> -->
-              <div class="flex flex-col md:flex-row gap-2">
-                <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm  w-full md:w-[32px]" @click="toggleEditMode" />
+              <div class="flex flex-row gap-2">
+                <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
                 <Button
                   :disabled="isLoading"
                   :label="$t('knowledgeBase.button.clearPlayground')"
@@ -291,7 +292,7 @@
                 </div>
               </div>
             </div>
-            <div class="flex flex-col xl:flex-row gap-2">
+            <div class="flex gap-2">
               <!-- Export Button -->
               <Button :label="$t('knowledgeBase.button.exportJson')" icon="pi pi-download" class="p-button-sm p-button-info" @click="exportData" />
 
@@ -312,7 +313,7 @@
       :header="$t('knowledgeBase.button.howToUse')"
       :modal="true"
       :closable="true"
-      class="w-full xl:w-[50vw] m-4"
+      :style="{ width: '50vw' }"
     >
       <div class="wysiwyg">
         <p>Добро пожаловать в руководство по использованию инструмента для работы с базой знаний. Вот несколько рекомендаций:</p>
@@ -414,6 +415,13 @@ const showInstructions = ref(false);
 const isLoading = ref(false);
 // Local array to store *all* selected files
 const localFiles = ref([]);
+const selectedModel = ref("gpt-4o-mini");
+
+const aiModels = ref([
+  { label: "GPT-4o", value: "gpt-4o" },
+  { label: "GPT-4o Mini", value: "gpt-4o-mini" },
+  { label: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
+]);
 
 function showSuccess(message) {
   toast.add({ severity: "success", summary: "Success", detail: message, life: 3000 });
@@ -443,7 +451,8 @@ function toggleEditMode() {
 
 const showDialog = ref(false);
 const isLocalhost = window.location.hostname === "localhost";
-const chatUrl = isLocalhost ? "http://localhost:4000/chats/telegram-chat" : `${window.location.protocol}//${window.location.hostname}/chats/telegram-chat`;
+const { currentFrontendUrl } = useURLState();
+const chatUrl = isLocalhost ? `${currentFrontendUrl.value}/chats/telegram-chat` : `${currentFrontendUrl.value}/chats/telegram-chat`;
 
 async function isImage(url) {
   try {
@@ -933,6 +942,7 @@ async function generatePatch() {
 
   // 2. Append any other fields if needed:
   formData.append("user_message", promptText.value);
+  formData.append("ai_model", selectedModel.value);
   formData.append("base_data_json", JSON.stringify(knowledgeBaseData.value.knowledge_base));
   console.log("selectedFiles.value=", selectedFiles.value);
   // 3. Append files

@@ -1,9 +1,11 @@
 (function () {
     function injectIframe() {
       var iframe = document.createElement("iframe");
-     
+      const isLocalhost = window.location.hostname === "localhost";
+      const chatUrl = isLocalhost ? "http://localhost:4000/chats/chat" : "https://hotel-aihub.su/chats/chat";
+      
       // Set the iframe attributes
-      iframe.src = `https://panamed-aihubworks.com/chat/`;
+      iframe.src = chatUrl;
       iframe.style.position = "fixed";
       iframe.style.top = "0";
       iframe.style.left = "0";

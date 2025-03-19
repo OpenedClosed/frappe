@@ -66,12 +66,12 @@ export default defineNuxtPlugin((nuxtApp) => {
       return Promise.reject(error);
     }
   );
-
+  const { currentPageName } = usePageState()
   // ----- Request Interceptor #2 (for refresh) -----
   // This will remove Authorization ONLY when requesting api/auth/refresh.
   api.interceptors.request.use(
     (config) => {
-      if (config.url && config.url.includes("api/admin/refresh")) {
+      if (config.url && config.url.includes(`api/${currentPageName.value}/refresh`)) {
         console.log("Removing Authorization header for refresh request.");
         delete config.headers.Authorization;
       }
@@ -105,8 +105,9 @@ export default defineNuxtPlugin((nuxtApp) => {
           const token = useCookie("access_token");
 
         if(token.value){
-          const response = await api.post("api/admin/refresh").catch((err) => {
-            reloadNuxtApp({ path: "/admin/login/", ttl: 1000 });
+          const response = await api.post(`api/${currentPageName.value}/refresh`).catch((err) => {
+            console.log("Axioserror 1")
+            reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
           });
           const myString = token.value;
 
@@ -122,7 +123,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         }
         } catch (err) {
           console.log(err.response ? err.response.data : err.message);
-          reloadNuxtApp({ path: "/admin/login/", ttl: 1000 });
+          console.log("Axioserror 2")
+          reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
           resetAuthorizationHeader();
         }
       }

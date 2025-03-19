@@ -7,8 +7,9 @@ export const useAuthState = () => {
 };
 export const useURLState = () => {
   const currentUrl = useState("current-url", () => "");
+  const currentFrontendUrl = useState("currentFrontendUrl", () => "");
   const showComponentImage = useState("showComponentImage", () => true);
-  return { currentUrl, showComponentImage };
+  return { currentUrl, showComponentImage, currentFrontendUrl };
 };
 export const useSidebarState = () => {
   const isSidebarOpen = useState("isSidebarOpen", () => false);
@@ -24,5 +25,12 @@ export function useChatState() {
 
   return {
     isAutoMode,
+  };
+}
+export function usePageState() {
+  const currentPageName = useState("currentPageName", () => "admin");
+
+  return {
+    currentPageName,
   };
 }

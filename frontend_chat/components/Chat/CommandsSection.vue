@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="commands-background">
       <!-- Кнопка, при нажатии на которую идёт запрос на сервер -->
       <!-- <Button label="Получить команды" class="p-button-outlined" @click="toggleCommands" /> -->
   
@@ -66,6 +66,17 @@
   }
   </script>
   
-  <style scoped>
-  /* При необходимости стили для этого компонента */
+  <style>
+  .commands-background {
+    font-family: "Quicksand", sans-serif;
+    overflow: hidden;
+    background-color: #f8f9fa;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .commands-background {
+      background-color: #131415 !important;
+    }
+  }
+  
   </style>

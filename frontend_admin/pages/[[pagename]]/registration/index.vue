@@ -5,7 +5,6 @@
 </script>
 <template>
     <div class="Main">
-        <DashboardPage/>
-        <!-- <ChatMainChat/> -->
+        <AuthRegistrationMainRegistration/>
     </div>
 </template>

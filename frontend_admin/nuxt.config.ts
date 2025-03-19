@@ -92,8 +92,26 @@ export default defineNuxtConfig({
     "~/node_modules/primeicons/primeicons.css",
   ],
 
-  modules: ["@nuxtjs/tailwindcss", "nuxt-primevue", "@nuxtjs/i18n", "@nuxtjs/color-mode"],
+  modules: [
+    "@nuxtjs/tailwindcss",
+    "nuxt-primevue",
+    "@nuxtjs/i18n",
+    "@nuxtjs/color-mode",
+    'nuxt-jsoneditor',
+    "nuxt-maplibre",
+  ],
 
+  jsoneditor: {
+    componentName: 'JsonEditor',
+    includeCss: true,
+    options: {
+        /**
+        *
+        * SET GLOBAL OPTIONS
+        * 
+        * */
+    }
+  },
   colorMode: {
     classSuffix: "",
     preference: "light",
@@ -119,7 +137,7 @@ export default defineNuxtConfig({
   // extends: ['nuxt-umami'],
   vue: {
     compilerOptions: {
-      isCustomElement: (tag) => ["vue-advanced-chat"].includes(tag),
+      isCustomElement: (tag) => ["vue-advanced-chat","draggable"].includes(tag),
     },
   },
 

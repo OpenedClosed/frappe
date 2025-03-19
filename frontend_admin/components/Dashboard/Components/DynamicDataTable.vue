@@ -17,12 +17,13 @@
           <Button class="min-w-[14rem] xl:min-w-[8rem]" label="Filter" icon="pi pi-filter" @click="emitShowFilter" /> -->
           <div class="flex flex-col xl:flex-row items-center gap-4">
             <Button
+            v-if="currentPageName === 'admin'"
               label="Экспорт в Excel"
               icon="pi pi-file-excel"
               class="p-button-success bg-green-600 hover:bg-green-500 text-white min-w-[14rem] xl:min-w-[8rem]"
               @click="onExportToExcel"
             />
-            <Button :disabled="isInline" label="Создать" icon="pi pi-plus" class="p-button-success text-white  min-w-[14rem] xl:min-w-[8rem]" @click="onClickCreate" />
+            <Button :disabled="isInline" :label="createLabel" icon="pi pi-plus" class="p-button-success text-white  min-w-[14rem] xl:min-w-[8rem]" @click="onClickCreate" />
           </div>
         </div>
       </div>
@@ -85,7 +86,12 @@ import { debounce } from "lodash";
 import { navigateTo } from "#app";
 const router = useRouter();
 
+const { currentPageName } = usePageState()
 const { currentLanguage } = useLanguageState();
+
+const createLabel = computed(() => {
+  return currentPageName.value === "admin" ? "Создать" : "Добавить";
+});
 const props = defineProps({
   title: {
     required: true,
@@ -154,8 +160,8 @@ const onClickCreate = () => {
   // Чтобы узнать currentGroup, currentEntity, можем взять их из $route.params:
   const { group, entity } = router.currentRoute.value.params;
 
-  // Переходим на: /admin/..../..../id
-  router.push(`/admin/${group}/${entity}/new`);
+  // Переходим на: /${currentPageName.value}/..../..../id
+  router.push(`/${currentPageName.value}/${group}/${entity}/new`);
 };
 const onPageHandler = (event) => {
   // event.page is 0-based index
@@ -201,8 +207,8 @@ function onClickEdit(rowData) {
   // Чтобы узнать currentGroup, currentEntity, можем взять их из $route.params:
   const { group, entity } = router.currentRoute.value.params;
 
-  // Переходим на: /admin/..../..../id
-  router.push(`/admin/${group}/${entity}/${id}`);
+  // Переходим на: /${currentPageName.value}/..../..../id
+  router.push(`/${currentPageName.value}/${group}/${entity}/${id}`);
 }
 // Эмитирование события для открытия диалога фильтрации
 const emitShowFilter = () => {

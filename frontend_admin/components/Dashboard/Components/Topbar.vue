@@ -4,8 +4,11 @@
       <template #start>
         <div class="flex flex-row items-center justify-between">
           <Button text icon="pi pi-bars" class="xl:hidden" @click="isSidebarOpen = true" aria-label="Menu" />
-          <div class="flex items-center justify-center md:justify-start ml-2">
+          <div v-if="currentPageName === 'admin'" class="flex items-center justify-center md:justify-start ml-2">
             <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto" />
+          </div>
+          <div v-else class="flex items-center justify-center md:justify-start ml-2">
+            <h3 class="text-white text-lg font-bold">Личный кабинет</h3>
           </div>
         </div>
       </template>
@@ -15,7 +18,7 @@
             text
             :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
             type="button"
-            label="Администратор"
+            :label="userName"
             class="text-white"
             @click="toggle"
             aria-haspopup="true"
@@ -34,11 +37,11 @@ import Theme from "~/components/Dashboard/Components/Theme.vue";
 
 
 const { isSidebarOpen } = useSidebarState();
-
+const { currentPageName } = usePageState()
 // Initialize the color mode
 const colorMode = useColorMode();
 
-
+const userName = ref("Администратор");
 
 function toggleTheme() {
   colorMode.preference = colorMode.preference === "dark" ? "light" : "dark";
@@ -59,9 +62,9 @@ function updateTheme() {
 // Logout function with API request
 async function onLogout() {
   try {
-    await useNuxtApp().$api.post("/api/admin/logout", {}, { withCredentials: true });
+    await useNuxtApp().$api.post(`/api/${currentPageName.value}/logout`, {}, { withCredentials: true });
 
-    reloadNuxtApp({ path: "/admin/login/", ttl: 1000 });
+    reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
   } catch (error) {
     console.error("Logout failed:", error);
   }
@@ -85,9 +88,54 @@ const items = computed(() => [
   },
 ]);
 
+if (currentPageName.value === "admin") {
+  items.value.unshift({
+    label: "В личный кабинет",
+    icon: "pi pi-user",
+    command: () => {
+      window.location.href = "/personal_account";
+    },
+  });
+}
+
 // Toggle the TieredMenu popup
 const toggle = (event) => {
   menuOpen.value = !menuOpen.value;
   menu.value.toggle(event);
 };
+
+
+const userData = await useAsyncData("userData", getUserData);
+
+if (userData.data) {
+  if (userData.data.value) {
+    setData(userData.data.value);
+  }
+}
+function setData(data) {
+  if (data) {
+    console.log("userData data= ", data);
+    if (data[0]){
+      userName.value = data[0]?.email;
+    }
+    
+  }
+}
+
+async function getUserData() {
+  let responseData;
+  await useNuxtApp()
+    .$api.get(`api/${currentPageName.value}/user_profiles/`)
+    .then((response) => {
+      responseData = response.data;
+      console.log("Profile responseData= ", responseData);
+    })
+    .catch((err) => {
+      if (err.response) {
+        console.log(err.response.data);
+      }
+    });
+  return responseData;
+}
+
 </script>

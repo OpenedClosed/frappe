@@ -3,6 +3,7 @@ import { defineNuxtConfig } from "nuxt/config";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   spaLoadingTemplate: "spa-loading-template.html",
+
   app: {
     head: {
       // title: "",
@@ -43,7 +44,9 @@ export default defineNuxtConfig({
       ],
     },
   },
+
   ssr: false,
+
   // alias: {
   //   "@": resolve(__dirname, "/"),
   // },
@@ -54,11 +57,13 @@ export default defineNuxtConfig({
   ],
 
   modules: ["@nuxtjs/tailwindcss", "nuxt-primevue", "@nuxtjs/i18n", "@nuxtjs/color-mode"],
+
   colorMode: {
     classSuffix: "",
     preference: "system",
     fallback: "system",
   },
+
   i18n: {
     vueI18n: "./i18n.config.ts", // if you are using custom path, default
   },
@@ -66,6 +71,7 @@ export default defineNuxtConfig({
   pinia: {
     storesDirs: ["./stores/**", "./custom-folder/stores/**"],
   },
+
   postcss: {
     plugins: {
       tailwindcss: {
@@ -74,6 +80,7 @@ export default defineNuxtConfig({
       autoprefixer: {},
     },
   },
+
   // extends: ['nuxt-umami'],
   vue: {
     compilerOptions: {
@@ -87,14 +94,17 @@ export default defineNuxtConfig({
     //   exclude: ["Editor", "Chart"]
     // }
   },
+
   nitro: {
     routeRules: {
       '/chat': { headers: { 'X-Frame-Options': 'ALLOWALL' } },
     },
   },
+
   routeRules: {
     '/scripts/**': { headers: { 'Cache-Control': 'no-store, max-age=0' } }
   },
 
   devtools: { enabled: true },
+  compatibilityDate: "2025-03-11",
 });

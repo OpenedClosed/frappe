@@ -4,33 +4,34 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "primevue/usetoast";
 
 export function useChatLogic(options = {}) {
-  const { isTelegram = false } = options; // если нужно переключение под Telegram
-  const { t } = useI18n();
+  const { isTelegram = false } = options; // Переключение под Telegram при необходимости
+  const { t, locale } = useI18n();
   const toast = useToast();
-  const { isAutoMode } =  useChatState()
+  const { isAutoMode } = useChatState();
 
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
   const isIphone = ref(false);
 
+  const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
   const currentUserId = ref("1234");
   const activeRoomId = ref("1");
-  const rooms = ref([
+  rooms.value = [
     {
       roomId: "1",
-      avatar: "/main/avatar.jpg",
       users: [
         { _id: "1234", username: "User" },
-        { _id: "4321", username: "AI" },
+        { _id: "4321", username: "Consultant" },
       ],
       roomActions: [
         { name: "inviteUser", title: "Invite User" },
         { name: "removeUser", title: "Remove User" },
         { name: "deleteRoom", title: "Delete Room" },
       ],
+      typingUsers: [],
     },
-  ]);
+  ];
 
   // Список сообщений и статус загрузки
   const messages = ref([]);
@@ -45,7 +46,7 @@ export function useChatLogic(options = {}) {
   const countdown = ref(0);
   let countdownInterval = null;
 
-  // Храним WebSocket-соединение
+  // WebSocket-соединение и chatId
   const websocket = ref(null);
   const currenChatId = ref("");
 
@@ -67,7 +68,7 @@ export function useChatLogic(options = {}) {
   const textMessagesJson = computed(() => JSON.stringify(textMessagesObject.value));
 
   /**
-   * Проверка, содержит ли текст какую-либо ссылку (URL).
+   * Проверка, содержит ли текст ссылку (URL).
    */
   function detectUrl(text) {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -94,15 +95,17 @@ export function useChatLogic(options = {}) {
   }
 
   /**
-   * Трансформация массива сообщений, полученных от API.
+   * Преобразовать сообщения API в формат для компонента чата (vue-advanced-chat).
    */
   async function transformChatMessages(apiMessages) {
+    const currentLocale = locale.value; // например, "ru-RU" или "en-US"
     const results = [];
+
     for (let [index, msg] of apiMessages.entries()) {
       const contentString = typeof msg.message === "string" ? msg.message : "";
-      let files = null;
 
-      // Проверяем, есть ли в сообщении URL и получаем превью
+      // Прикреплённые файлы (если есть превью по ссылке)
+      let files = null;
       if (detectUrl(contentString)) {
         const previewData = await fetchLinkPreview(contentString);
         if (previewData?.data?.image) {
@@ -117,38 +120,82 @@ export function useChatLogic(options = {}) {
         }
       }
 
-      const dateObj = msg.timestamp ? new Date(msg.timestamp) : new Date();
-      const isSent = ["ai", "consultant"].includes(msg.sender_role);
+      // Парсим дату из UTC-строки
+      const utcString = msg.timestamp ? msg.timestamp.replace(/\.\d+$/, "") + "Z" : null;
+      const dateObj = utcString ? new Date(utcString) : new Date();
+
+      const formattedDate = dateObj.toLocaleDateString(currentLocale, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const formattedTime = dateObj.toLocaleTimeString(currentLocale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Парсим роль (sender_role может быть JSON)
+      let role = msg.sender_role;
+      try {
+        role = JSON.parse(role);
+      } catch (e) {
+        // Если не JSON, оставим строку, как есть
+      }
+
+      let roleEn;
+      if (typeof role === "object" && role?.en) {
+        roleEn = role.en;
+      } else if (typeof role === "string") {
+        roleEn = role;
+      } else {
+        roleEn = "unknown";
+      }
+
+      // Определяем senderId и username
+      let senderId;
+      let username;
+      if (roleEn === "Client") {
+        senderId = "1234";
+        username = "Client";
+      } else if (roleEn === "ai" || roleEn === "AI Assistant") {
+        senderId = "4321";
+        username = "AI Bot";
+      } else if (roleEn === "consultant" || roleEn === "Consultant") {
+        senderId = "4321";
+        username = "Consultant";
+      } else {
+        senderId = "4321";
+        username = "Unknown";
+      }
+
+      // Определяем, отображать сообщение справа (sent) или слева
+      const isSent = ["ai", "AI Assistant", "consultant", "Consultant"].includes(roleEn);
 
       results.push({
         _id: msg._id ?? index,
         content: contentString,
-        senderId: msg.sender_role === "client" ? "1234" : "4321",
-        username:
-          msg.sender_role === "ai"
-            ? "AI Bot"
-            : msg.sender_role === "consultant"
-            ? "Consultant"
-            : "Client",
-        date: dateObj.toDateString(),
-        timestamp: dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        senderId,
+        username,
+        date: formattedDate,
+        timestamp: formattedTime,
         sent: isSent,
         disableActions: true,
         disableReactions: true,
         files,
       });
     }
+
     return results;
   }
 
   /**
-   * Функция-пустышка для fetchMessages, если нужна пагинация или другая логика.
+   * Пустышка для загрузки сообщений (пагинация и т.д. по необходимости).
    */
   function messagesFetcher({ options = {} }) {
     if (options.reset) {
-      // Пример: обновить массив сообщений заново
+      // Здесь можно обнулить messages
     } else {
-      // Пример: добавить новые сообщения в начало/конец
+      // Или догрузить новые
       messagesLoaded.value = true;
     }
   }
@@ -167,9 +214,13 @@ export function useChatLogic(options = {}) {
       if (countdown.value > 0) {
         countdown.value--;
       } else {
-        if (websocket.value) {
+        // Когда таймер истёк, делаем дополнительный status_check,
+        // если сокет ещё активен и мы не в состоянии ожидания.
+        if (websocket.value && websocket.value.readyState === WebSocket.OPEN && !statusCheckExpected) {
+          statusCheckExpected = true;
           websocket.value.send(JSON.stringify({ type: "status_check" }));
         }
+
         clearInterval(countdownInterval);
         countdownInterval = null;
         timerExpired.value = true;
@@ -178,7 +229,7 @@ export function useChatLogic(options = {}) {
   }
 
   /**
-   * Отправка сообщения в WebSocket.
+   * Отправить новое сообщение через WebSocket.
    */
   function sendMessage(message) {
     if (!message || !message.content) return;
@@ -190,30 +241,32 @@ export function useChatLogic(options = {}) {
     );
   }
 
-  const toggleChatMode = (isAutoMode) => {
-    console.log("toggleChatMode", isAutoMode);
-    const command = isAutoMode ?  "/auto" : "/manual";
-  
-    console.log("Переключение режима чата. Отправка команды:", command);
-  
-    // Отправляем команду как сообщение
+  /**
+   * Переключение режима (авто/вручную).
+   */
+  function toggleChatMode(isAuto) {
+    console.log("toggleChatMode:", isAuto);
+    const command = isAuto ? "/auto" : "/manual";
+    console.log("Отправляем команду:", command);
     sendMessage({ content: command });
-  };
+  }
 
   /**
-   * Обработка клика по одной из вариативных кнопок (choiceOptions).
+   * Клик по одной из опций (вариативные кнопки).
    */
   function handleChoiceClick(option) {
     sendMessage({ content: option });
   }
 
+  /**
+   * Добавление нового сообщения в локальный массив (прихват по событию).
+   */
   function updateMessages(newMessage) {
-    messages.value = [...messages.value, newMessage]; // Ensure reactivity
+    messages.value = [...messages.value, newMessage];
   }
-  
 
   /**
-   * Перезагрузка страницы (кнопка "Начать заново", если таймер истёк).
+   * Перезагрузка страницы (например, если таймер истёк, кнопка «Начать заново»).
    */
   function reloadPage() {
     window.location.reload();
@@ -222,23 +275,31 @@ export function useChatLogic(options = {}) {
   const { $event, $listen } = useNuxtApp();
 
   /**
-   * Инициализация WebSocket.
+   * Инициализация WebSocket-соединения.
    */
   function initializeWebSocket(chatId) {
+    // Определяем схему (ws для localhost, wss для prod)
     const scheme = window.location.hostname === "localhost" ? "ws" : "wss";
     const host = window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname;
     const wsUrl = `${scheme}://${host}/ws/${chatId}/`;
+
+    console.log("Инициализация WebSocket по адресу:", wsUrl);
     websocket.value = new WebSocket(wsUrl);
 
     websocket.value.onopen = () => {
-      websocket.value?.send(JSON.stringify({ type: "status_check" }));
-      websocket.value?.send(JSON.stringify({ type: "get_messages" }));
+      console.log("WebSocket открыт.");
+      // Запрашиваем начальное состояние
+      if (websocket.value && websocket.value.readyState === WebSocket.OPEN) {
+        websocket.value?.send(JSON.stringify({ type: "status_check" }));
+        websocket.value?.send(JSON.stringify({ type: "get_messages" }));
+      }
+      
     };
 
     websocket.value.onmessage = async (event) => {
       const data = JSON.parse(event.data);
 
-      // Показываем toast при определённых типах сообщений
+      // Показываем toast при определённых типах
       if (data.type === "attention") {
         toast.add({
           severity: "warn",
@@ -255,73 +316,118 @@ export function useChatLogic(options = {}) {
         });
       }
 
+      // Основная обработка типов сообщений
       switch (data.type) {
         case "status_check":
           if (data.remaining_time) {
             startCountdown(data.remaining_time);
           }
-          isAutoMode.value = !data.manual_mode; 
+          // Синхронизируем режим
+          isAutoMode.value = !data.manual_mode;
           break;
 
-        case "get_messages": {
-          const transformed = await transformChatMessages(data.messages);
-          messages.value = transformed;
-          messagesLoaded.value = true;
-          if (data.remaining_time) {
-            startCountdown(data.remaining_time);
-          }
-          const lastMsg = data.messages?.[data.messages.length - 1];
-          if (lastMsg?.choice_options?.length) {
-            choiceOptions.value = lastMsg.choice_options;
-            isChoiceStrict.value = !!lastMsg.choice_strict;
-          } else {
-            choiceOptions.value = [];
-            isChoiceStrict.value = false;
+        case "get_messages":
+          {
+            const transformed = await transformChatMessages(data.messages);
+            messages.value = transformed;
+            messagesLoaded.value = true;
+            if (data.remaining_time) {
+              startCountdown(data.remaining_time);
+            }
+            // Вытащим choiceOptions из последнего сообщения, если есть
+            const lastMsg = data.messages?.[data.messages.length - 1];
+            if (lastMsg?.choice_options?.length) {
+              choiceOptions.value = lastMsg.choice_options;
+              isChoiceStrict.value = !!lastMsg.choice_strict;
+            } else {
+              choiceOptions.value = [];
+              isChoiceStrict.value = false;
+            }
           }
           break;
-        }
 
-        case "new_message": {
-          const [transformed] = await transformChatMessages([data]);
-          // updateMessages(transformed);
-          $event("new_message_arrived", transformed);
-          console.log("messages.value:", messages.value);
-          console.log("transformed:", transformed);
-          websocket.value?.send(JSON.stringify({ type: "status_check" }));
-          if (data.choice_options?.length) {
-            choiceOptions.value = data.choice_options;
-            isChoiceStrict.value = !!data.choice_strict;
-          } else {
-            choiceOptions.value = [];
-            isChoiceStrict.value = false;
+        case "new_message":
+          {
+            const [transformed] = await transformChatMessages([data]);
+            $event("new_message_arrived", transformed);
+
+            // Запрашиваем актуальный статус/таймер
+            websocket.value?.send(JSON.stringify({ type: "status_check" }));
+
+            // Обновляем choiceOptions, если пришли
+            if (data.choice_options?.length) {
+              choiceOptions.value = data.choice_options;
+              isChoiceStrict.value = !!data.choice_strict;
+            } else {
+              choiceOptions.value = [];
+              isChoiceStrict.value = false;
+            }
+            $event("choice_options_arrived", choiceOptions.value);
           }
-          $event("choice_options_arrived", choiceOptions.value);
           break;
-        }
+
+        case "typing_users":
+          {
+            // Пример: показываем "консультант печатает"
+            if (data?.users.includes("ai_bot")) {
+              rooms.value[0].typingUsers = [{ id: "4321", username: "Consultant" }];
+            } else {
+              rooms.value[0].typingUsers = [];
+            }
+          }
+          break;
 
         default:
-          console.warn("Unknown message type:", data);
+          console.warn("Неизвестный тип сообщения:", data);
+      }
+
+      // Если получили ответ на status_check, сбрасываем ожидание и попытки
+      if (data.type === "status_check") {
+        statusCheckExpected = false;
+        reconnectionAttempts = 0;
+        if (statusCheckTimeout) {
+          clearTimeout(statusCheckTimeout);
+        }
       }
     };
 
+    // При закрытии соединения пробуем переподключиться через таймаут
     websocket.value.onclose = () => {
-      console.log("WebSocket connection closed.");
+      console.log("WebSocket соединение закрыто. Пытаемся переподключиться...");
+      websocket.value = null; // Обнуляем текущий объект
+      // Запускаем переподключение через 3 секунды (настройте время по необходимости)
+      if (reconnectionAttempts < 5) {
+        reconnectionAttempts++;
+        setTimeout(() => {
+          if (currenChatId.value) {
+            initializeWebSocket(currenChatId.value);
+          }
+        }, 3000);
+      } else { 
+        // Выводим тост с ошибкой, если превышено количество попыток
+        toast.add({
+          severity: "error",
+          summary: t("additionalMessages.error"),
+          detail: "Превышено максимальное количество попыток переподключения.",
+          life: 3000,
+        });
+      }
     };
 
     websocket.value.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      console.error("WebSocket ошибка:", error);
     };
   }
 
   /**
-   * Проверка размера экрана (для мобильных).
+   * Проверка мобильного экрана.
    */
   function checkScreenSize() {
     isMobile.value = window.innerWidth < 768;
   }
 
   /**
-   * Обновление чата (получить новый chat_id, очистить сообщения).
+   * Обновление чата (просим новый chat_id, очищаем сообщения).
    */
   async function refreshChat() {
     try {
@@ -348,32 +454,90 @@ export function useChatLogic(options = {}) {
   }
 
   /**
-   * Запрос chatId при первом рендере.
+   * Первичная загрузка chatId с бэкенда.
    */
   async function getChatData() {
     try {
       const response = await useNuxtApp().$api.post("api/chats/get_chat");
       return response.data;
     } catch (error) {
-      console.error("Error fetching chat data:", error);
+      console.error("Ошибка при получении chat_data:", error);
       return null;
     }
   }
 
   /**
-   * Событие фокуса окна — если соединение потеряно, переподключаемся.
+   * Если вкладка вернулась в фокус, а соединение мёртвое — переподключаемся.
    */
   function handleFocus() {
-    console.log("handleFocus", websocket.value, currenChatId.value);
-    if (websocket.value && currenChatId.value) {
+    if (websocket.value) {
+      websocket.value.onclose = () => {
+        console.log("Socket fully closed. Reconnecting...");
+        initializeWebSocket(currenChatId.value);
+      };
       websocket.value.close();
+    } else {
       initializeWebSocket(currenChatId.value);
     }
   }
+  
+
+  // --- Контроль периодического status_check и переподключения
+  let reconnectionAttempts = 0; // Сколько раз подряд пытались переподключиться
+  let statusCheckExpected = false; // Ждём ли сейчас ответ на status_check
+  let statusCheckInterval = null; // setInterval каждые 10 секунд
+  let statusCheckTimeout = null; // Таймер ожидания ответа (5 секунд, например)
 
   /**
-   * Жизненный цикл onMounted.
+   * Запустить периодическую проверку статуса (status_check).
    */
+  function startStatusCheckInterval() {
+    statusCheckInterval = setInterval(() => {
+      if (
+        websocket.value &&
+        websocket.value.readyState === WebSocket.OPEN &&
+        !statusCheckExpected
+      ) {
+        statusCheckExpected = true;
+        websocket.value.send(JSON.stringify({ type: "status_check" }));
+  
+        statusCheckTimeout = setTimeout(() => {
+          if (statusCheckExpected) {
+            reconnectionAttempts++;
+            console.warn(
+              `Нет ответа на status_check. Попытка переподключения #${reconnectionAttempts}`
+            );
+  
+            if (reconnectionAttempts >= 5) {
+              // Выводим тост с ошибкой и останавливаем цикл
+              toast.add({
+                severity: "error",
+                summary: t("additionalMessages.error"),
+                detail: "Превышено максимальное количество попыток переподключения.",
+                life: 3000,
+              });
+              clearInterval(statusCheckInterval);
+              // При необходимости закрываем существующий сокет
+              if (websocket.value) {
+                websocket.value.close();
+              }
+              return; // Выходим из timeout callback
+            }
+  
+            if (websocket.value) {
+              websocket.value.close();
+            }
+            if (currenChatId.value) {
+              initializeWebSocket(currenChatId.value);
+            }
+          }
+        }, 5000);
+      }
+    }, 10000);
+  }
+  
+  // ---------------- Жизненный цикл ----------------
+
   onMounted(async () => {
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
@@ -381,7 +545,7 @@ export function useChatLogic(options = {}) {
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     isIphone.value = /iPhone/i.test(ua);
 
-    // Получаем начальный chat_id
+    // Получаем начальный chat_id с бэкенда
     const chatData = await useAsyncData("chatData", getChatData);
     if (chatData.data && chatData.data.value) {
       const { chat_id } = chatData.data.value;
@@ -389,7 +553,7 @@ export function useChatLogic(options = {}) {
       initializeWebSocket(chat_id);
     }
 
-    // Пример для Telegram
+    // Настройки для Telegram (если нужно)
     if (window.Telegram && isTelegram) {
       let tg = window.Telegram.WebApp;
       tg.expand();
@@ -397,38 +561,43 @@ export function useChatLogic(options = {}) {
       tg.enableClosingConfirmation();
     }
 
+    // Следим за фокусом окна, чтобы при «просыпании» восстанавливать соединение
     window.addEventListener("focus", handleFocus);
+
+    // Запускаем периодическую проверку статуса
+    startStatusCheckInterval();
   });
 
-  /**
-   * Жизненный цикл onBeforeUnmount.
-   */
   onBeforeUnmount(() => {
+    // Закрываем сокет, очищаем обработчики
     if (websocket.value) {
+      websocket.value.onclose = null;
       websocket.value.close();
+      websocket.value = null;
     }
+
+    // Останавливаем countdown
     if (countdownInterval) {
       clearInterval(countdownInterval);
     }
+    // Снятие слушателей
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
+
+    // Очищаем интервалы и таймауты
+    if (statusCheckInterval) clearInterval(statusCheckInterval);
+    if (statusCheckTimeout) clearTimeout(statusCheckTimeout);
   });
 
-  function updateMessages(newMessage) {
-    // Можно просто использовать push,
-    // или, чтобы гарантировать обновление реактивности, делаем копию массива:
-    messages.value = [...messages.value, newMessage];
-  }
+  // ---------------- Возвращаемые переменные и методы ----------------
 
-  // Возвращаем наружу все необходимые refs и методы для использования в компонентах
   return {
-    // reactive-свойства
+    // Состояния
     t,
     isMobile,
     isIphone,
     currentUserId,
     activeRoomId,
-    rooms,
     messages,
     messagesLoaded,
     choiceOptions,
@@ -436,14 +605,13 @@ export function useChatLogic(options = {}) {
     timerExpired,
     textMessagesJson,
 
-    updateMessages,
-
-    // методы
+    // Методы
     fetchMessages: messagesFetcher,
     sendMessage,
     toggleChatMode,
     handleChoiceClick,
     reloadPage,
     refreshChat,
+    updateMessages,
   };
 }

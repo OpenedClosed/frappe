@@ -27,6 +27,26 @@ export default defineI18nConfig(() => {
             title: "Archive Room",
           },
         ],
+        buttons: {
+          save: "Save",
+          cancel: "Cancel",
+          close: "Close",
+          delete: "Delete",
+          edit: "Edit",
+          add: "Add",
+          remove: "Remove",
+          create: "Create",
+          send: "Send",
+          back: "Back",
+          next: "Next",
+          finish: "Finish",
+          confirm: "Confirm",
+          search: "Search",
+          clear: "Clear",
+          select: "Select",
+          copy: "Copy",
+          openTestChat: "Open test chat",
+        },
         menuActions: [
           {
             name: "inviteUser",
@@ -169,6 +189,29 @@ export default defineI18nConfig(() => {
         sendMessage: "Отправить сообщение...",
         chatAgain: "Начать заново",
         language: "Язык",
+        // Russian (ru)
+        buttons: {
+          save: "Сохранить",
+          cancel: "Отмена",
+          close: "Закрыть",
+          delete: "Удалить",
+          edit: "Редактировать",
+          add: "Добавить",
+          remove: "Удалить",
+          create: "Создать",
+          send: "Отправить",
+          back: "Назад",
+          next: "Далее",
+          finish: "Завершить",
+          confirm: "Подтвердить",
+          search: "Поиск",
+          clear: "Очистить",
+          select: "Выбрать",
+          copy: "Копировать",
+          // Russian (ru)
+          openTestChat: "Открыть тестовый чат",
+        },
+
         roomActions: [
           {
             name: "archiveRoom",
@@ -318,6 +361,28 @@ export default defineI18nConfig(() => {
         sendMessage: "Надіслати повідомлення...",
         chatAgain: "Почати знову",
         language: "Мова",
+        // Ukrainian (uk)
+        buttons: {
+          save: "Зберегти",
+          cancel: "Скасувати",
+          close: "Закрити",
+          delete: "Видалити",
+          edit: "Редагувати",
+          add: "Додати",
+          remove: "Видалити",
+          create: "Створити",
+          send: "Надіслати",
+          back: "Назад",
+          next: "Далі",
+          finish: "Завершити",
+          confirm: "Підтвердити",
+          search: "Пошук",
+          clear: "Очистити",
+          select: "Вибрати",
+          copy: "Копіювати",
+          // Ukrainian (uk)
+          openTestChat: "Відкрити тестовий чат",
+        },
         roomActions: [
           {
             name: "archiveRoom",
@@ -467,6 +532,29 @@ export default defineI18nConfig(() => {
         sendMessage: "Wyślij wiadomość...",
         chatAgain: "Rozpocznij ponownie",
         language: "Język",
+        // Polish (pl)
+        buttons: {
+          save: "Zapisz",
+          cancel: "Anuluj",
+          close: "Zamknij",
+          delete: "Usuń",
+          edit: "Edytuj",
+          add: "Dodaj",
+          remove: "Usuń",
+          create: "Utwórz",
+          send: "Wyślij",
+          back: "Wstecz",
+          next: "Dalej",
+          finish: "Zakończ",
+          confirm: "Potwierdź",
+          search: "Szukaj",
+          clear: "Wyczyść",
+          select: "Wybierz",
+          copy: "Kopiuj",
+          // Polish (pl)
+          openTestChat: "Otwórz czat testowy",
+        },
+
         roomActions: [
           {
             name: "archiveRoom",

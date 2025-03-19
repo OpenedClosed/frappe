@@ -1,4 +1,4 @@
-<!-- pages/admin/[group]/[entity]/index.vue -->
+<!-- pages/${currentPageName.value}/[group]/[entity]/index.vue -->
 <template>
   <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto">
     <!-- Main Layout with Sidebar and DataTable -->
@@ -49,20 +49,20 @@
 
 <script setup>
 /**
- * pages/admin/[group]/[entity]/index.vue
+ * pages/${currentPageName.value}/[group]/[entity]/index.vue
  *
  * This component uses a two-level route scheme:
- *   /admin/:group/:entity
+ *   /${currentPageName.value}/:group/:entity
  *
  * - :group   => e.g. "users", "chats"
  * - :entity  => e.g. "users", "chat_sessions"
  *
- * It fetches adminData from /admin/info, renders a sidebar (NavigationSidebar),
+ * It fetches adminData from /${currentPageName.value}/info, renders a sidebar (NavigationSidebar),
  * and displays data in a DynamicDataTable with optional filtering and export.
  */
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAsyncData, useNuxtApp } from "#app"; // Nuxt 3 usage
+import { navigateTo, useAsyncData, useNuxtApp } from "#app"; // Nuxt 3 usage
 import { debounce } from "lodash";
 
 // Components
@@ -75,6 +75,7 @@ import KnowledgeBase from "~/components/Dashboard/Components/KnowledgeBase.vue";
 const showFilter = ref(false);
 const searchQuery = ref("");
 const dateRange = ref({ start: null, end: null });
+const { currentPageName } = usePageState()
 
 const selectedField = ref(null);
 const fieldOptions = ref([
@@ -102,13 +103,16 @@ const toast = ref(null);
 
 // ------------------ Data Fetching ------------------
 /**
- * Fetch adminData from /admin/info
+ * Fetch adminData from /${currentPageName.value}/info
  * This is where your entire config is loaded (groups, entities, etc.).
  */
+
+
+
 async function getAdminData() {
   let responseData;
   try {
-    const response = await useNuxtApp().$api.get("api/admin/info");
+    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/info`);
     responseData = response.data;
     console.log("AdminData = ", responseData);
   } catch (err) {
@@ -122,13 +126,12 @@ async function getAdminData() {
 }
 
 import * as XLSX from "xlsx";
-
 const onExportToExcel = async () => {
   try {
     isLoading.value = true;
 
     // Fetch all data without pagination
-    const response = await useNuxtApp().$api.get(`api/admin/${currentEntity.value}/`);
+    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/`);
     const fullData = response.data;
 
     console.log("Exporting data to Excel:", fullData);
@@ -208,8 +211,9 @@ function processAdminData(data) {
 
     // Each group can have multiple entities
     const items = group.entities.map((entity) => {
-      // The route for each entity = /admin/groupKey/entity.registered_name
-      const routePath = `/admin/${groupKey}/${entity.registered_name}`;
+      // The route for each entity = /${currentPageName.value}/groupKey/entity.registered_name
+      console.log("entity =", entity);
+      const routePath = `/${currentPageName.value}/${groupKey}/${entity.registered_name}`;
       validCombos.push({ group: groupKey, entity: entity.registered_name });
 
       const itemName = entity.model.verbose_name;
@@ -259,10 +263,10 @@ function validateRoute(data, validCombos) {
       toast.value?.add({
         severity: "warn",
         summary: "Invalid Group",
-        detail: `Redirecting to: /admin/${firstGroup}/${firstEntity}`,
+        detail: `Redirecting to: /${currentPageName.value}/${firstGroup}/${firstEntity}`,
         life: 3000,
       });
-      router.replace(`/admin/${firstGroup}/${firstEntity}`);
+      router.replace(`/${currentPageName.value}/${firstGroup}/${firstEntity}`);
     }
     return;
   }
@@ -281,12 +285,23 @@ function validateRoute(data, validCombos) {
       toast.value?.add({
         severity: "warn",
         summary: "Invalid Entity",
-        detail: `Redirecting to: /admin/${currentGroup.value}/${firstEntity}`,
+        detail: `Redirecting to: /${currentPageName.value}/${currentGroup.value}/${firstEntity}`,
         life: 3000,
       });
-      router.replace(`/admin/${currentGroup.value}/${firstEntity}`);
+      router.replace(`/${currentPageName.value}/${currentGroup.value}/${firstEntity}`);
     }
     return;
+  }
+
+  console.log("foundEntity =", foundEntity.model.max_instances_per_user);
+  if (foundEntity.model.max_instances_per_user === 1) {
+    if (tableDataOriginal.value.length > 0) {
+      navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/${tableDataOriginal.value[0].id}`);
+      return;
+    } else {
+      navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
+      return;
+    }
   }
 
   // If we are here, the route is valid => set the "currentEntityName"
@@ -310,7 +325,7 @@ const totalRecords = ref(0);
 
 // ------------------ Table Data Fetching & Display ------------------
 /**
- * Query the actual table data from /admin/:entity/
+ * Query the actual table data from /${currentPageName.value}/:entity/
  */
 const fetchTableData = async () => {
   if (!currentEntity.value) {
@@ -322,7 +337,7 @@ const fetchTableData = async () => {
   try {
     // Use query parameters for pagination
     const response = await useNuxtApp().$api.get(
-      `api/admin/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`,
+      `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`,
       {
         params: {
           page: currentPage.value,
