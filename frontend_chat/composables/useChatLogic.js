@@ -2,8 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "primevue/usetoast";
-import { throttle } from "lodash";
-
+// УБРАЛ import { throttle } from "lodash";
 
 export function useChatLogic(options = {}) {
   const { isTelegram = false } = options; // Переключение под Telegram при необходимости
@@ -204,6 +203,7 @@ export function useChatLogic(options = {}) {
 
   /**
    * Запуск или перезапуск обратного отсчёта.
+   * (УБРАНА автоматическая отправка повторных status_check при обнулении таймера)
    */
   function startCountdown(seconds) {
     if (countdownInterval) {
@@ -216,13 +216,6 @@ export function useChatLogic(options = {}) {
       if (countdown.value > 0) {
         countdown.value--;
       } else {
-        // Когда таймер истёк, делаем дополнительный status_check,
-        // если сокет ещё активен и мы не в состоянии ожидания.
-        if (websocket.value && websocket.value.readyState === WebSocket.OPEN && !statusCheckExpected) {
-          statusCheckExpected = true;
-          websocket.value.send(JSON.stringify({ type: "status_check" }));
-        }
-
         clearInterval(countdownInterval);
         countdownInterval = null;
         timerExpired.value = true;
@@ -273,15 +266,9 @@ export function useChatLogic(options = {}) {
   function reloadPage() {
     window.location.reload();
   }
-
   const { $event, $listen } = useNuxtApp();
-
-  const initializeWebSocket = throttle(initializeWebSocketBase, 10000);
-
-  /**
-   * Инициализация WebSocket-соединения.
-   */
-  function initializeWebSocketBase(chatId) {
+  // УБРАНА throttle и прочие повторные вызовы, оставляем простую функцию
+  function initializeWebSocket(chatId) {
     // Определяем схему (ws для localhost, wss для prod)
     const scheme = window.location.hostname === "localhost" ? "ws" : "wss";
     const host = window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname;
@@ -292,12 +279,11 @@ export function useChatLogic(options = {}) {
 
     websocket.value.onopen = () => {
       console.log("WebSocket открыт.");
-      // Запрашиваем начальное состояние
+      // Запрашиваем начальное состояние (однократно)
       if (websocket.value && websocket.value.readyState === WebSocket.OPEN) {
         websocket.value?.send(JSON.stringify({ type: "status_check" }));
         websocket.value?.send(JSON.stringify({ type: "get_messages" }));
       }
-      
     };
 
     websocket.value.onmessage = async (event) => {
@@ -355,8 +341,7 @@ export function useChatLogic(options = {}) {
             const [transformed] = await transformChatMessages([data]);
             $event("new_message_arrived", transformed);
 
-            // Запрашиваем актуальный статус/таймер
-            websocket.value?.send(JSON.stringify({ type: "status_check" }));
+            // УБРАНО повторное status_check после каждого сообщения
 
             // Обновляем choiceOptions, если пришли
             if (data.choice_options?.length) {
@@ -384,38 +369,12 @@ export function useChatLogic(options = {}) {
         default:
           console.warn("Неизвестный тип сообщения:", data);
       }
-
-      // Если получили ответ на status_check, сбрасываем ожидание и попытки
-      if (data.type === "status_check") {
-        statusCheckExpected = false;
-        reconnectionAttempts = 0;
-        if (statusCheckTimeout) {
-          clearTimeout(statusCheckTimeout);
-        }
-      }
     };
 
-    // При закрытии соединения пробуем переподключиться через таймаут
+    // УБРАНА логика повторных переподключений
     websocket.value.onclose = () => {
-      console.log("WebSocket соединение закрыто. Пытаемся переподключиться...");
-      websocket.value = null; // Обнуляем текущий объект
-      // Запускаем переподключение через 3 секунды (настройте время по необходимости)
-      if (reconnectionAttempts < 5) {
-        reconnectionAttempts++;
-        setTimeout(() => {
-          if (currenChatId.value) {
-            initializeWebSocket(currenChatId.value);
-          }
-        }, 3000);
-      } else { 
-        // Выводим тост с ошибкой, если превышено количество попыток
-        toast.add({
-          severity: "error",
-          summary: t("additionalMessages.error"),
-          detail: "Превышено максимальное количество попыток переподключения.",
-          life: 3000,
-        });
-      }
+      console.log("WebSocket соединение закрыто.");
+      websocket.value = null;
     };
 
     websocket.value.onerror = (error) => {
@@ -471,70 +430,13 @@ export function useChatLogic(options = {}) {
   }
 
   /**
-   * Если вкладка вернулась в фокус, а соединение мёртвое — переподключаемся.
+   * Если вкладка вернулась в фокус, при необходимости можно проверить состояние.
+   * (УБРАНО повторное переподключение тут же)
    */
   function handleFocus() {
-    if (websocket.value) {
-    } else {
-      initializeWebSocket(currenChatId.value);
-    }
+    // Можно оставить пустым, чтобы не было автопереподключений или повторных запросов
   }
-  
 
-  // --- Контроль периодического status_check и переподключения
-  let reconnectionAttempts = 0; // Сколько раз подряд пытались переподключиться
-  let statusCheckExpected = false; // Ждём ли сейчас ответ на status_check
-  let statusCheckInterval = null; // setInterval каждые 10 секунд
-  let statusCheckTimeout = null; // Таймер ожидания ответа (5 секунд, например)
-
-  /**
-   * Запустить периодическую проверку статуса (status_check).
-   */
-  function startStatusCheckInterval() {
-    statusCheckInterval = setInterval(() => {
-      if (
-        websocket.value &&
-        websocket.value.readyState === WebSocket.OPEN &&
-        !statusCheckExpected
-      ) {
-        statusCheckExpected = true;
-        websocket.value.send(JSON.stringify({ type: "status_check" }));
-  
-        statusCheckTimeout = setTimeout(() => {
-          if (statusCheckExpected) {
-            reconnectionAttempts++;
-            console.warn(
-              `Нет ответа на status_check. Попытка переподключения #${reconnectionAttempts}`
-            );
-  
-            if (reconnectionAttempts >= 5) {
-              // Выводим тост с ошибкой и останавливаем цикл
-              toast.add({
-                severity: "error",
-                summary: t("additionalMessages.error"),
-                detail: "Превышено максимальное количество попыток переподключения.",
-                life: 3000,
-              });
-              clearInterval(statusCheckInterval);
-              // При необходимости закрываем существующий сокет
-              if (websocket.value) {
-                websocket.value.close();
-              }
-              return; // Выходим из timeout callback
-            }
-  
-            if (websocket.value) {
-              websocket.value.close();
-            }
-            if (currenChatId.value) {
-              initializeWebSocket(currenChatId.value);
-            }
-          }
-        }, 5000);
-      }
-    }, 10000);
-  }
-  
   // ---------------- Жизненный цикл ----------------
 
   onMounted(async () => {
@@ -560,11 +462,8 @@ export function useChatLogic(options = {}) {
       tg.enableClosingConfirmation();
     }
 
-    // Следим за фокусом окна, чтобы при «просыпании» восстанавливать соединение
+    // Следим за фокусом окна (без автоповторов)
     window.addEventListener("focus", handleFocus);
-
-    // Запускаем периодическую проверку статуса
-    startStatusCheckInterval();
   });
 
   onBeforeUnmount(() => {
@@ -579,13 +478,9 @@ export function useChatLogic(options = {}) {
     if (countdownInterval) {
       clearInterval(countdownInterval);
     }
-    // Снятие слушателей
+
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
-
-    // Очищаем интервалы и таймауты
-    if (statusCheckInterval) clearInterval(statusCheckInterval);
-    if (statusCheckTimeout) clearTimeout(statusCheckTimeout);
   });
 
   // ---------------- Возвращаемые переменные и методы ----------------
