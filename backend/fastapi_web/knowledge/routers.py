@@ -1,12 +1,13 @@
 """Обработчики маршрутов приложения Знания."""
 import json
-import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Request, Response, File, Form, HTTPException, UploadFile
+from fastapi_jwt_auth import AuthJWT
 from pydantic import ValidationError
 
+from auth.utils.help_functions import jwt_required
 from chats.utils.help_functions import get_bot_context
 from db.mongo.db_init import mongo_db
 
@@ -20,13 +21,24 @@ knowledge_base_router = APIRouter()
 
 
 @knowledge_base_router.get("/knowledge_base", response_model=KnowledgeBase)
-async def find_knowledge_full_document():
+@jwt_required()
+async def find_knowledge_full_document(
+    request: Request,
+    response: Response,
+    Authorize: AuthJWT = Depends()
+):
     """Возвращает текущую базу знаний для приложения 'main'."""
     return await get_knowledge_full_document()
 
 
 @knowledge_base_router.patch("/knowledge_base", response_model=UpdateResponse)
-async def patch_knowledge_base(req: PatchKnowledgeRequest):
+@jwt_required()
+async def patch_knowledge_base(
+    request: Request,
+    response: Response,
+    req: PatchKnowledgeRequest,
+    Authorize: AuthJWT = Depends()
+):
     """Частично обновляет базу знаний, обрабатывая _delete и валидируя структуру."""
     now = datetime.now()
 
@@ -59,7 +71,13 @@ async def patch_knowledge_base(req: PatchKnowledgeRequest):
 
 @knowledge_base_router.put("/knowledge_base/apply",
                            response_model=UpdateResponse)
-async def apply_knowledge_base(new_data: KnowledgeBase):
+@jwt_required()
+async def apply_knowledge_base(
+    request: Request,
+    response: Response,
+    new_data: KnowledgeBase,
+    Authorize: AuthJWT = Depends()    
+):
     """Полностью заменяет базу знаний валидированными данными."""
     now = datetime.now()
     new_data.update_date = now
@@ -79,12 +97,16 @@ async def apply_knowledge_base(new_data: KnowledgeBase):
 
 
 @knowledge_base_router.post("/generate_patch", response_model=Dict[str, Any])
+@jwt_required()
 async def generate_patch(
+    request: Request,
+    response: Response,
     user_message: str = Form(...),
     user_info: str = Form(""),
     base_data_json: Optional[str] = Form(None),
     files: List[UploadFile] = File([]),
-    ai_model: str = Form("gpt-4o")
+    ai_model: str = Form("gpt-4o"),
+    Authorize: AuthJWT = Depends()
 ):
     """Генерирует тело патча для базы знаний, анализируя текст пользователя и файлы."""
     if base_data_json:
@@ -108,7 +130,12 @@ async def generate_patch(
 
 
 @knowledge_base_router.get("/bot_info", response_model=Dict[str, Any])
-async def get_bot_info() -> Dict[str, Any]:
+@jwt_required()
+async def get_bot_info(
+    request: Request,
+    response: Response,
+    Authorize: AuthJWT = Depends()
+) -> Dict[str, Any]:
     """Возвращает безопасную информацию о боте, включая его основные настройки и используемую модель AI."""
     bot_context = await get_bot_context()
     safe_fields = {"app_name", "bot_name", "avatar", "ai_model"}
