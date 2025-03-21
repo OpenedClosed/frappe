@@ -78,7 +78,7 @@ jobs:
 
       - name: Push frontend chat to Docker Hub
         uses: docker/build-push-action@v3
-        with:
+        with: 
           push: true
           context: ./frontend_chat
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
