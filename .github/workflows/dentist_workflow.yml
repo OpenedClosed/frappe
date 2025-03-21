@@ -164,8 +164,9 @@ jobs:
             MONGO_URL=${{ env.MONGO_URL }}
             MONGO_DB_NAME=${{ env.MONGO_DB_NAME }}
 
-            # OpenAI API
+            # AI API
             OPENAI_API_KEY=${{ env.OPENAI_API_KEY }}
+            GEMINI_API_KEY=${{ env.GEMINI_API_KEY }}
 
             # Настройки Redis
             REDIS_STORAGE_URL=${{ env.REDIS_STORAGE_URL }}
