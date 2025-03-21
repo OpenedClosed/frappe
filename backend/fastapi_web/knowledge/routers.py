@@ -130,11 +130,11 @@ async def generate_patch(
 
 
 @knowledge_base_router.get("/bot_info", response_model=Dict[str, Any])
-@jwt_required()
+# @jwt_required()
 async def get_bot_info(
     request: Request,
     response: Response,
-    Authorize: AuthJWT = Depends()
+    # Authorize: AuthJWT = Depends()
 ) -> Dict[str, Any]:
     """Возвращает безопасную информацию о боте, включая его основные настройки и используемую модель AI."""
     bot_context = await get_bot_context()
