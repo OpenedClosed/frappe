@@ -31,8 +31,7 @@ services:
     image: 89639339335/dentist_backend:latest
     restart: always
     volumes:
-      - static_value:/app/static
-      - media_value:/app/media
+      - media_value:/app/fastapi_web/media/images
     depends_on:
       - redis
       - mongo
@@ -46,7 +45,7 @@ services:
       - "9999:9999"
     restart: always
     volumes:
-      - media_value:/app/fastapi_web/media/images
+      - media_value:/app/media
     depends_on:
       - backend
     env_file:
