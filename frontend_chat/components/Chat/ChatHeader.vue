@@ -20,15 +20,14 @@
         <span class="text-2xl font-medium">🚀</span>
       </div>
     </div>
-  </div>
-  <!-- Right Section: Toggle + Menu Button -->
-  <div class="flex items-center gap-4">
-    <!-- Button to open the menu (TieredMenu) -->
-    <Button icon="pi pi-bars" class="p-button-rounded p-button-text" @click="$refs.menu.toggle($event)" />
+    <!-- Right Section: Toggle + Menu Button -->
+    <div class="flex items-center gap-4">
+      <!-- Button to open the menu (TieredMenu) -->
+      <Button icon="pi pi-bars" class="p-button-rounded p-button-text" @click="$refs.menu.toggle($event)" />
 
-    <!-- TieredMenu as a popover with Refresh/Close actions -->
-    <TieredMenu :model="menuItems" popup ref="menu" style="z-index: 10000" />
-  </div>
+      <!-- TieredMenu as a popover with Refresh/Close actions -->
+      <TieredMenu :model="menuItems" popup ref="menu" style="z-index: 10000" />
+    </div>
   </div>
 </template>
 

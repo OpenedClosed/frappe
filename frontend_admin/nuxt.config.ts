@@ -99,6 +99,7 @@ export default defineNuxtConfig({
     "@nuxtjs/color-mode",
     'nuxt-jsoneditor',
     "nuxt-maplibre",
+    "dragon-editor",
   ],
 
   jsoneditor: {

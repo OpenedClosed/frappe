@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "primevue/usetoast";
+import { throttle } from "lodash";
+
 
 export function useChatLogic(options = {}) {
   const { isTelegram = false } = options; // Переключение под Telegram при необходимости
@@ -274,10 +276,12 @@ export function useChatLogic(options = {}) {
 
   const { $event, $listen } = useNuxtApp();
 
+  const initializeWebSocket = throttle(initializeWebSocketBase, 10000);
+
   /**
    * Инициализация WebSocket-соединения.
    */
-  function initializeWebSocket(chatId) {
+  function initializeWebSocketBase(chatId) {
     // Определяем схему (ws для localhost, wss для prod)
     const scheme = window.location.hostname === "localhost" ? "ws" : "wss";
     const host = window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname;
@@ -471,11 +475,6 @@ export function useChatLogic(options = {}) {
    */
   function handleFocus() {
     if (websocket.value) {
-      websocket.value.onclose = () => {
-        console.log("Socket fully closed. Reconnecting...");
-        initializeWebSocket(currenChatId.value);
-      };
-      websocket.value.close();
     } else {
       initializeWebSocket(currenChatId.value);
     }
