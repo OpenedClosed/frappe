@@ -53,20 +53,24 @@ class ConnectionManager:
 
     async def broadcast(self, message: str) -> None:
         """Разослать сообщение всем подключенным пользователям."""
+        active_connections_copy = list(self.active_connections.items())
+
         disconnected_users = [
-            user_id for user_id, ws in self.active_connections.items()
+            user_id
+            for user_id, ws in active_connections_copy
             if ws.client_state != WebSocketState.CONNECTED
         ]
-
         for user_id in disconnected_users:
             await self.disconnect(user_id)
 
-        for user_id, websocket in self.active_connections.items():
-            try:
-                await websocket.send_text(message)
-            except Exception as e:
-                logging.error(f"Ошибка при рассылке {user_id}: {e}")
-                await self.disconnect(user_id)
+        active_connections_copy = list(self.active_connections.items())
+        for user_id, websocket in active_connections_copy:
+            if websocket.client_state == WebSocketState.CONNECTED:
+                try:
+                    await websocket.send_text(message)
+                except Exception as e:
+                    logging.error(f"Ошибка при рассылке {user_id}: {e}")
+                    await self.disconnect(user_id)
 
 
 class TypingManager:

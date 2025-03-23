@@ -386,91 +386,97 @@ async def get_bot_context() -> Dict[str, Any]:
 
 
 def build_bot_settings_context(
-        settings: BotSettings, admin_model: BotSettingsAdmin) -> Dict[str, Any]:
+        settings: BotSettings,
+        admin_model: BotSettingsAdmin
+) -> Dict[str, Any]:
     """Формирует словарь контекста бота из настроек и админ-модели."""
-    chosen_model = settings.ai_model.value if settings.ai_model else "gpt-4o"
-    chosen_temp = PERSONALITY_TRAITS_DETAILS.get(
-        settings.personality_traits, 0.1)
-
-    welcome_message = settings.greeting or {
-        "en": "Hello!", "ru": "Здравствуйте!"}
-    redirect_message = settings.error_message or {
-        "en": "Please wait...", "ru": "Ожидайте..."}
-    farewell_message = settings.farewell_message or {
-        "en": "Goodbye!", "ru": "До свидания!"}
-
-    lines = []
-    excluded = {
-        "greeting",
-        "error_message",
-        "farewell_message",
-        "ai_model",
-        "personality_traits",
-        "created_at",
-        "avatar"}
-    all_fields = set(admin_model.detail_fields) | set(admin_model.list_display)
-
-    def extract_value(value):
-        """Преобразует значение: сначала пытается взять `value`, затем `en` из JSON, затем сам объект."""
-        if isinstance(value, str):
-            if value in COMMUNICATION_STYLE_DETAILS:
-                # Маппинг без парсинга
-                return COMMUNICATION_STYLE_DETAILS[value]
-            try:
-                parsed_value = json.loads(value)
-                return parsed_value.get("en", value)
-            except (json.JSONDecodeError, TypeError):
-                return value
-        elif isinstance(value, dict):
-            return value.get("en", str(value))
-        elif isinstance(value, list):
-            return [extract_value(item) for item in value]
-        return value
-
-    for field_name in all_fields:
-        if field_name in excluded:
-            continue
-        field_title = admin_model.field_titles.get(
-            field_name, {}).get("en", field_name)
-        raw_value = getattr(settings, field_name, None)
-        if not raw_value:
-            continue
-
-        processed_value = extract_value(raw_value)
-
-        if field_name == "special_instructions":
-            val_str = "\n".join(
-                [FUNCTIONALITY_DETAILS.get(f, f) for f in processed_value]
-            )
-        elif field_name == "target_action":
-            val_str = ", ".join(
-                [f.value if hasattr(f, "value") else str(f) for f in processed_value])
-        elif field_name == "forbidden_topics":
-            val_str = ", ".join(
-                [f.value if hasattr(f, "value") else str(f) for f in processed_value])
-        elif isinstance(processed_value, list):
-            val_str = ", ".join([str(f.value) if hasattr(
-                f, "value") else str(f) for f in processed_value])
-        elif hasattr(processed_value, "value"):
-            val_str = processed_value.value
-        else:
-            val_str = str(processed_value)
-
-        lines.append(f"{field_title.upper()}: {val_str}")
-
-    lines.append("IMPORTANT: FOLLOW ALL RULES STRICTLY!")
-    prompt_text = "\n".join(lines)
-
-    return {
-        "prompt_text": prompt_text,
-        "ai_model": chosen_model,
-        "temperature": chosen_temp,
-        "welcome_message": welcome_message,
-        "redirect_message": redirect_message,
-        "farewell_message": farewell_message,
+    
+    bot_config = {
+        "ai_model": settings.ai_model.value if settings.ai_model else "gpt-4o",
+        "temperature": PERSONALITY_TRAITS_DETAILS.get(settings.personality_traits, 0.1),
+        "welcome_message": settings.greeting or {"en": "Hello!", "ru": "Здравствуйте!"},
+        "redirect_message": settings.error_message or {"en": "Please wait...", "ru": "Ожидайте..."},
+        "farewell_message": settings.farewell_message or {"en": "Goodbye!", "ru": "До свидания!"},
         "app_name": settings.project_name,
         "app_description": settings.additional_instructions,
         "forbidden_topics": settings.forbidden_topics,
         "avatar": settings.avatar.url if settings.avatar else None,
         "bot_color": settings.bot_color.value
     }
+
+    prompt_text = generate_prompt_text(settings, admin_model)
+    bot_config["prompt_text"] = prompt_text
+
+    return bot_config
+
+
+def generate_prompt_text(settings: BotSettings, admin_model: BotSettingsAdmin) -> str:
+    """Создаёт текст промпта на основе настроек бота."""
+    
+    excluded_fields = {"greeting", "error_message", "farewell_message", "ai_model", 
+                       "personality_traits", "created_at", "avatar"}
+    
+    all_fields = set(admin_model.detail_fields) | set(admin_model.list_display)
+    lines = ["You are AI Assistant. REMEMBER!:"]
+    lines += ["SYSTEM PROMPT:"]
+    devider = "="*50
+    lines.append(devider)
+
+    for field_name in all_fields:
+        if field_name in excluded_fields:
+            continue
+
+        field_title = admin_model.field_titles.get(field_name, {}).get("en", field_name)
+        raw_value = getattr(settings, field_name, None)
+        if not raw_value:
+            continue
+
+        processed_value = extract_value(raw_value)
+        formatted_value = format_value(field_name, processed_value)
+        if field_name == "employee_name":
+            field_title = "Your (Bot) name (Not user name!!! Don`t to be confused with the username of the user being conversating)"
+        lines += [f"{field_title.upper()}: {formatted_value}", "-"*10]
+
+
+    lines += ["IMPORTANT: FOLLOW ALL RULES STRICTLY!", devider]
+    return "\n".join(lines)
+
+
+def extract_value(value):
+    """Преобразует значение: парсит JSON, берёт 'en' из словаря или возвращает объект как строку."""
+    
+    if isinstance(value, str):
+        parsed_value = None
+        try:
+            parsed_value = json.loads(value)
+            parsed_value = parsed_value.get("en", value)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        if value in COMMUNICATION_STYLE_DETAILS:
+            value = f"\n{parsed_value}:\n{COMMUNICATION_STYLE_DETAILS[value]}"
+            return value
+        elif value in FUNCTIONALITY_DETAILS:
+            value = f"\n{parsed_value}:\n{FUNCTIONALITY_DETAILS[value]}"
+            return value
+        return parsed_value if parsed_value else value
+
+
+    if isinstance(value, dict):
+        return value.get("en", str(value))
+
+    if isinstance(value, list):
+        return [extract_value(item) for item in value]
+
+    return value
+
+
+def format_value(field_name: str, value: Any) -> str:
+    """Форматирует значение для вывода в промпт."""
+
+    if isinstance(value, list):
+        return ", ".join(str(f.value) if hasattr(f, "value") else str(f) for f in value)
+
+    if hasattr(value, "value"):
+        return value.value
+
+    return str(value)
