@@ -71,6 +71,6 @@ class CalendarIntegrationAccount(BaseAccount):
     ]
 
 
-account_registry.register(
-    "calendar_integrations",
-    CalendarIntegrationAccount(mongo_db))
+# account_registry.register(
+#     "calendar_integrations",
+#     CalendarIntegrationAccount(mongo_db))
