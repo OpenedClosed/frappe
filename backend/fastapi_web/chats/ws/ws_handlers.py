@@ -872,7 +872,7 @@ async def _build_ai_response(
     out_of_scope = user_msg.gpt_evaluation.out_of_scope
     consultant_call = user_msg.gpt_evaluation.consultant_call
 
-    if out_of_scope or consultant_call or confidence < 0.3:
+    if out_of_scope or consultant_call or confidence < 0.2:
         chat_session.manual_mode = True
         await mongo_db.chats.update_one({"chat_id": chat_session.chat_id}, {"$set": {"manual_mode": True}})
 
@@ -895,8 +895,6 @@ async def _build_ai_response(
                     "/auto")],
             choice_strict=False
         )
-
-    # Сбор информации из фрагментов базы знаний
     snippet_data: Dict[str, Any] = await extract_knowledge(
         user_msg.gpt_evaluation.topics, user_msg.message
     )
@@ -970,28 +968,31 @@ async def extract_knowledge(
             {
               "subtopic": ...,
               "questions": {
-                "Q1": "Answer1",
-                "Q2": "Answer2"
+                "Q1 Q2": { ... },  # склеенные дубликаты через пробел
+                "Q3": { ... }
               }
             }
           ]
         }
       ]
     }
-    Если ничего нет, возвращается {"topics": []}.
+    Если ничего не найдено, возвращается {"topics": []}.
     """
     if not knowledge_base:
         knowledge_base = await get_knowledge_base()
 
     extracted_data = {"topics": []}
+
     for item in topics:
         topic_name = item.get("topic", "")
         subtopics = item.get("subtopics", [])
+
         if topic_name not in knowledge_base:
             continue
 
-        topic_entry = _extract_topic_data(
-            topic_name, subtopics, knowledge_base[topic_name])
+        topic_data = knowledge_base[topic_name]
+        topic_entry = _extract_topic_data(topic_name, subtopics, topic_data)
+
         if topic_entry["subtopics"]:
             extracted_data["topics"].append(topic_entry)
 
@@ -999,18 +1000,25 @@ async def extract_knowledge(
 
 
 def _extract_topic_data(
-        topic_name: str, subtopics: List[Dict[str, Any]], topic_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Формирует структуру данных по конкретной теме, включая подтемы и вопросы."""
+    topic_name: str,
+    subtopics: List[Dict[str, Any]],
+    topic_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Формирует структуру данных по конкретной теме, включая подтемы и вопросы.
+    """
     result = {"topic": topic_name, "subtopics": []}
     subs = topic_data.get("subtopics", {})
 
     if subtopics:
         for subtopic_item in subtopics:
-            subtopic_name = subtopic_item.get("subtopic")
+            subtopic_name = subtopic_item.get("subtopic", "")
             questions = subtopic_item.get("questions", [])
+
             if subtopic_name and subtopic_name in subs:
                 extracted_sub = _extract_subtopic_data(
-                    subtopic_name, questions, subs[subtopic_name])
+                    subtopic_name, questions, subs[subtopic_name]
+                )
                 if extracted_sub["questions"]:
                     result["subtopics"].append(extracted_sub)
     else:
@@ -1023,18 +1031,48 @@ def _extract_topic_data(
 
 
 def _extract_subtopic_data(
-        subtopic_name: str, questions: List[str], subtopic_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Формирует структуру данных по конкретной подтеме."""
+    subtopic_name: str,
+    questions: List[str],
+    subtopic_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    - Ищет частичное совпадение вопроса (lower/strip) в ключе базы знаний (или наоборот).
+    - Если ответ уже есть, добавляет новый вопрос в ключ (склеивает через пробел).
+    - Если questions=[] (нет уточнённых вопросов), возвращает все имеющиеся в подтеме.
+    """
     result = {"subtopic": subtopic_name, "questions": {}}
     sub_q = subtopic_data.get("questions", {})
 
+    answer_to_questions = {}
+
     if questions:
-        for q_text in questions:
-            if q_text in sub_q:
-                result["questions"][q_text] = sub_q[q_text]
+        for user_q_raw in questions:
+            user_q_clean = user_q_raw.lower().strip()
+
+            for kb_key, kb_value in sub_q.items():
+                kb_key_clean = kb_key.lower().strip()
+
+                if user_q_clean in kb_key_clean or kb_key_clean in user_q_clean:
+                    answer_text = kb_value.get("text", "").strip()
+
+                    if answer_text in answer_to_questions:
+                        answer_to_questions[answer_text].append(user_q_raw)
+                    else:
+                        answer_to_questions[answer_text] = [user_q_raw]
+
+                    break
     else:
-        for q_text, ans_text in sub_q.items():
-            result["questions"][q_text] = ans_text
+        for kb_key, kb_value in sub_q.items():
+            answer_text = kb_value.get("text", "").strip()
+            if answer_text not in answer_to_questions:
+                answer_to_questions[answer_text] = [kb_key]
+
+    for answer_text, question_list in answer_to_questions.items():
+        combined_question_key = " ".join(sorted(set(question_list)))
+        result["questions"][combined_question_key] = {
+            "text": answer_text,
+            "files": sub_q.get(combined_question_key, {}).get("files", [])
+        }
 
     return result
 
@@ -1106,9 +1144,14 @@ def _assemble_system_prompt(
     """Формирует system-промпт, включая дату, погоду и инструкции для AI."""
     current_datetime = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     system_language_instruction = (
-        f"Language settings:\n- The interface language for the user is '{user_language}'.\n"
-        f"- You should prioritize responding in the language of the user's message.\n"
+        f"Language settings:\n"
+        f"IMPORTANT!!!:\n"
+        f"- use THE SAME LANGUAGE the user used in their message (NOT EQUAL interface language)**.\n"
+        f"- Always respond in the last user's (NOT BOT) message language. PLEASE!!!\n"
+        # f"- Use the interface language '{user_language}', but the best option is to use the language of the message from the user.**.\n"
     )
+
+
 
     return AI_PROMPTS["system_ai_answer"].format(
         settings_context=bot_context["prompt_text"],

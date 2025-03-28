@@ -134,7 +134,6 @@ async def analyze_update_snippets_via_gpt(
         response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
         raw_content = response.choices[0].message.content.strip()
 
-    # print("=== RAW RESULT SNIPPETS ===\n", raw_content)
     result = _extract_json_from_gpt(raw_content)
     return {"topics": result.get("topics", [])}
 
@@ -316,7 +315,6 @@ async def generate_patch_body_via_gpt(
         response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
         raw_content = response.choices[0].message.content.strip()
 
-    # print("=== RAW PATCH RESULT ===\n", raw_content)
     patch_result = _extract_json_from_gpt(raw_content)
     return patch_result
 

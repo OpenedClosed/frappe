@@ -53,11 +53,80 @@ class BotSettingsAdmin(BaseAdmin):
     }
 
     help_texts = {
+        "project_name": {
+            "en": "Short name of the project using the bot.",
+            "ru": "Короткое название проекта, в котором используется бот."
+        },
+        "employee_name": {
+            "en": "The name of the employee that the bot represents.",
+            "ru": "Имя сотрудника, которого представляет бот."
+        },
+        "mention_name": {
+            "en": "Should the bot mention users by name?",
+            "ru": "Должен ли бот упоминать пользователей по имени?"
+        },
+        "avatar": {
+            "en": "Upload an image for the bot's avatar.",
+            "ru": "Загрузите изображение для аватара бота."
+        },
         "bot_color": {
             "en": "If you don’t have time to customize the bot, we can do it for you.",
             "ru": "Если у вас нет времени на кастомизацию бота, мы можем сделать это для вас."
+        },
+        "communication_tone": {
+            "en": "Choose the bot's communication style.",
+            "ru": "Выберите стиль общения бота."
+        },
+        "personality_traits": {
+            "en": "Define key personality traits for the bot.",
+            "ru": "Определите ключевые черты характера бота."
+        },
+        "additional_instructions": {
+            "en": "Provide any additional guidelines for bot behavior.",
+            "ru": "Укажите любые дополнительные инструкции для поведения бота."
+        },
+        "role": {
+            "en": "Specify the bot's role in the project.",
+            "ru": "Укажите роль бота в проекте."
+        },
+        "target_action": {
+            "en": "List of actions the bot is designed to perform.",
+            "ru": "Список действий, которые должен выполнять бот."
+        },
+        "core_principles": {
+            "en": "Fundamental principles guiding the bot's responses.",
+            "ru": "Основные принципы, определяющие ответы бота."
+        },
+        "special_instructions": {
+            "en": "Additional functionality settings.",
+            "ru": "Дополнительные настройки функциональности."
+        },
+        "forbidden_topics": {
+            "en": "Topics the bot should avoid.",
+            "ru": "Темы, которых бот должен избегать."
+        },
+        "greeting": {
+            "en": "Default greeting messages in different languages.",
+            "ru": "Стандартные приветственные сообщения на разных языках."
+        },
+        "error_message": {
+            "en": "Message displayed when the bot cannot answer a question.",
+            "ru": "Сообщение, отображаемое, когда бот не может ответить на вопрос."
+        },
+        "farewell_message": {
+            "en": "Bot's goodbye message.",
+            "ru": "Прощальное сообщение бота."
+        },
+        "ai_model": {
+            "en": "AI model the bot is using.",
+            "ru": "Модель ИИ, которую использует бот."
+        },
+        "created_at": {
+            "en": "Timestamp when the bot settings were created.",
+            "ru": "Дата и время создания настроек бота."
         }
     }
+
 
     field_groups = [
         {
