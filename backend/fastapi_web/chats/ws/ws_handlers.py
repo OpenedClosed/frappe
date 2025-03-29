@@ -23,8 +23,7 @@ from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
 from ..utils.help_functions import (find_last_bot_message, get_bot_context,
-                                    get_knowledge_base,
-                                    get_weather_by_address,
+                                    get_knowledge_base, get_weather_by_address,
                                     send_message_to_bot)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
@@ -131,7 +130,7 @@ async def broadcast_message(
         "choice_strict": new_msg.choice_strict,
         "timestamp": new_msg.timestamp.isoformat(),
         "external_id": new_msg.external_id,
-        "files": new_msg.files or []  # Передаем файлы (если есть)
+        "files": new_msg.files or []
     })
     await manager.broadcast(message_payload)
 
@@ -144,7 +143,7 @@ async def save_and_broadcast_new_message(
     await broadcast_message(manager, chat_session, new_msg)
     await redis_db.set(redis_key_session, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
-    if chat_session.client.source == ChatSource.INSTAGRAM and chat_session.client.external_id:
+    if chat_session.client.source == ChatSource.INSTAGRAM and chat_session.client.external_id and new_msg.sender_role != SenderRole.CLIENT:
         await send_instagram_message(chat_session.client.external_id, new_msg.message)
 
 
@@ -342,7 +341,6 @@ async def validate_chat_status(manager: ConnectionManager, client_id: str, chat_
         await broadcast_error(manager, client_id, chat_id, get_translation("errors", "chat_status_invalid", user_language, status=dynamic_status.value))
         return False
 
-    # Если TTL истек, но есть сообщения — продлеваем сессию
     if ttl_value < 0 and chat_session.messages:
         await redis_db.set(redis_key_session, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
@@ -914,7 +912,6 @@ async def _build_ai_response(
         chat_id=chat_id
     )
 
-    # Если confidence средний — предлагаем опцию консультанта
     if 0.3 <= confidence < 0.7:
         return ChatMessage(
             message=final_text,
@@ -1114,7 +1111,6 @@ async def generate_ai_answer(
         model=chosen_model
     )
 
-    # Показываем, что AI "печатает"
     await typing_manager.add_typing(chat_id, "ai_bot", manager)
     await _simulate_delay()
 
@@ -1125,7 +1121,6 @@ async def generate_ai_answer(
         logging.error(f"AI generation failed: {e}")
         ai_text = "Error: AI model failed to generate a response."
 
-    # Убираем AI из "печатающих"
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
 
     if return_json:
@@ -1148,10 +1143,7 @@ def _assemble_system_prompt(
         f"IMPORTANT!!!:\n"
         f"- use THE SAME LANGUAGE the user used in their message (NOT EQUAL interface language)**.\n"
         f"- Always respond in the last user's (NOT BOT) message language. PLEASE!!!\n"
-        # f"- Use the interface language '{user_language}', but the best option is to use the language of the message from the user.**.\n"
     )
-
-
 
     return AI_PROMPTS["system_ai_answer"].format(
         settings_context=bot_context["prompt_text"],
@@ -1165,7 +1157,7 @@ def _assemble_system_prompt(
 
 async def _simulate_delay() -> None:
     """Имитирует задержку от 5 до 15 секунд перед вызовом AI."""
-    delay = random.uniform(5, 15)
+    delay = random.uniform(3, 7)
     logging.info(f"⏳ Artificial delay {delay:.2f}s before AI generation...")
     await asyncio.sleep(delay)
 
@@ -1188,7 +1180,6 @@ async def _generate_model_response(
         )
         return response["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-    # По умолчанию используем gpt-4o
     response = await openai_client.chat.completions.create(
         model="gpt-4o",
         messages=messages,

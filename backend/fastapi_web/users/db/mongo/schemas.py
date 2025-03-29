@@ -1,11 +1,16 @@
 """Схемы приложения Пользователи для работы с БД MongoDB."""
 from datetime import datetime
+from token import OP
 from typing import Optional
 
 from passlib.context import CryptContext
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from db.mongo.base.schemas import BaseValidatedModel
+from db.mongo.db_init import mongo_db
 from infra import settings
+
+from .enums import RoleEnum
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -17,18 +22,15 @@ class Settings(BaseModel):
     authjwt_refresh_token_expires: int = 604800
 
 
-class User(BaseModel):
-    """
-    Базовая схема пользователя.
-    """
-    username: str = Field(..., min_length=3, max_length=50)
-    password: Optional[str] = Field(None, min_length=5)
-    is_superuser: bool = False
+class User(BaseValidatedModel):
+    username: Optional[str] = Field(None)
+    password: str = Field("", min_length=5)
+    role: RoleEnum = RoleEnum.CLIENT
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     @field_validator("username")
     def validate_username(cls, v):
-        if len(v) < 3:
+        if v and len(v) < 3:
             raise ValueError("Username must be at least 3 characters long")
         return v
 
@@ -44,7 +46,7 @@ class User(BaseModel):
         Хеширует пароль.
         """
         if not self.password:
-            return None
+            return
         self.password = pwd_context.hash(self.password)
 
     def check_password(self, raw_password: str) -> bool:
@@ -60,3 +62,21 @@ class LoginSchema(BaseModel):
     """Схема входа."""
     username: str
     password: str
+
+
+class UserWithData(User):
+    data: Optional[dict] = {}
+
+    async def get_email(self) -> Optional[str]:
+        contact = None
+        if self.data and self.data.get("user_id"):
+            user_id = self.data.get("user_id")
+            contact = await mongo_db["patients_contact_info"].find_one({"user_id": user_id})
+        return contact.get("email") if contact else None
+
+    async def get_phone(self) -> Optional[str]:
+        main = None
+        if self.data and self.data.get("user_id"):
+            user_id = self.data.get("user_id")
+            main = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
+        return main.get("phone") if main else None

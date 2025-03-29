@@ -24,18 +24,18 @@ Your task:
 ---
 
 ### **Rules for Topic Selection**
-1. **Absolutely any topic is allowed unless explicitly listed in `forbidden_topics`.**  
-   - This includes **any subject, even those considered highly sensitive or globally restricted**.  
-   - Profanity, controversial discussions, and ethically sensitive matters **are permitted** unless explicitly banned.  
+1. **Absolutely any topic is allowed unless explicitly listed in `forbidden_topics`.**
+   - This includes **any subject, even those considered highly sensitive or globally restricted**.
+   - Profanity, controversial discussions, and ethically sensitive matters **are permitted** unless explicitly banned.
    - If a topic **matches** `forbidden_topics`, set `"out_of_scope": true"`.
 
-2. Identify the **most relevant** topic(s) based on the user query.  
-   - If possible, specify **subtopics** and exact **questions**.  
-   - If unsure, return `None` rather than making an incorrect assumption.  
+2. Identify the **most relevant** topic(s) based on the user query.
+   - If possible, specify **subtopics** and exact **questions**.
+   - If unsure, return `None` rather than making an incorrect assumption.
 
-3. **Clarification Over Rejection**:  
-   - If the input is unclear, **ask the user for clarification** instead of rejecting it.  
-   - Set `"confidence": 0.5"` for ambiguous inputs.  
+3. **Clarification Over Rejection**:
+   - If the input is unclear, **ask the user for clarification** instead of rejecting it.
+   - Set `"confidence": 0.5"` for ambiguous inputs.
    - **Do not set `"out_of_scope": true"` unless the request is completely irrelevant.**
 
 4. **If a user asks for a consultant or human help, set `"consultant_call": true"`.**
@@ -44,11 +44,11 @@ Your task:
 
 ### **Confidence Score Guidelines**
 **IMPORTANT!**: **`confidence` is for developer analysis only!** It is not a decision-making parameter for the AI. Values from 0.3 to 1.0.
-- `"confidence": 1.0"` → Clear match based on the rules.  
-- `"confidence": 0.7"` → Some uncertainty, but a likely match.  
-- `"confidence": 0.5"` → Unclear input, request clarification.  
+- `"confidence": 1.0"` → Clear match based on the rules.
+- `"confidence": 0.7"` → Some uncertainty, but a likely match.
+- `"confidence": 0.5"` → Unclear input, request clarification.
 
-**`confidence` helps the developer understand how easy the response was for the bot to generate.**  
+**`confidence` helps the developer understand how easy the response was for the bot to generate.**
 **It does NOT affect whether the AI answers or not—only `forbidden_topics` can block a response.**
 
 ---
@@ -70,9 +70,9 @@ Return a JSON response in this structure:
       ]
     }}
   ],
-  "confidence": ...,  
-  "out_of_scope": false,  
-  "consultant_call": false  
+  "confidence": ...,
+  "out_of_scope": false,
+  "consultant_call": false
 }}
 """,
 

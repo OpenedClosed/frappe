@@ -390,7 +390,7 @@ def build_bot_settings_context(
         admin_model: BotSettingsAdmin
 ) -> Dict[str, Any]:
     """Формирует словарь контекста бота из настроек и админ-модели."""
-    
+
     bot_config = {
         "ai_model": settings.ai_model.value if settings.ai_model else "gpt-4o",
         "temperature": PERSONALITY_TRAITS_DETAILS.get(settings.personality_traits, 0.1),
@@ -410,23 +410,25 @@ def build_bot_settings_context(
     return bot_config
 
 
-def generate_prompt_text(settings: BotSettings, admin_model: BotSettingsAdmin) -> str:
+def generate_prompt_text(settings: BotSettings,
+                         admin_model: BotSettingsAdmin) -> str:
     """Создаёт текст промпта на основе настроек бота."""
-    
-    excluded_fields = {"greeting", "error_message", "farewell_message", "ai_model", 
+
+    excluded_fields = {"greeting", "error_message", "farewell_message", "ai_model",
                        "personality_traits", "created_at", "avatar"}
-    
+
     all_fields = set(admin_model.detail_fields) | set(admin_model.list_display)
     lines = ["You are AI Assistant. REMEMBER!:"]
     lines += ["SYSTEM PROMPT:"]
-    devider = "="*50
+    devider = "=" * 50
     lines.append(devider)
 
     for field_name in all_fields:
         if field_name in excluded_fields:
             continue
 
-        field_title = admin_model.field_titles.get(field_name, {}).get("en", field_name)
+        field_title = admin_model.field_titles.get(
+            field_name, {}).get("en", field_name)
         raw_value = getattr(settings, field_name, None)
         if not raw_value:
             continue
@@ -435,8 +437,7 @@ def generate_prompt_text(settings: BotSettings, admin_model: BotSettingsAdmin) -
         formatted_value = format_value(field_name, processed_value)
         if field_name == "employee_name":
             field_title = "Your (Bot) name (Not user name!!! Don`t to be confused with the username of the user being conversating)"
-        lines += [f"{field_title.upper()}: {formatted_value}", "-"*10]
-
+        lines += [f"{field_title.upper()}: {formatted_value}", "-" * 10]
 
     lines += ["IMPORTANT: FOLLOW ALL RULES STRICTLY!", devider]
     return "\n".join(lines)
@@ -444,7 +445,7 @@ def generate_prompt_text(settings: BotSettings, admin_model: BotSettingsAdmin) -
 
 def extract_value(value):
     """Преобразует значение: парсит JSON, берёт 'en' из словаря или возвращает объект как строку."""
-    
+
     if isinstance(value, str):
         parsed_value = None
         try:
@@ -460,7 +461,6 @@ def extract_value(value):
             return value
         return parsed_value if parsed_value else value
 
-
     if isinstance(value, dict):
         return value.get("en", str(value))
 
@@ -474,7 +474,8 @@ def format_value(field_name: str, value: Any) -> str:
     """Форматирует значение для вывода в промпт."""
 
     if isinstance(value, list):
-        return ", ".join(str(f.value) if hasattr(f, "value") else str(f) for f in value)
+        return ", ".join(str(f.value) if hasattr(
+            f, "value") else str(f) for f in value)
 
     if hasattr(value, "value"):
         return value.value

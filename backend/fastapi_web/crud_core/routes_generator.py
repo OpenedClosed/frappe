@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Union, get_args, get_origin
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
+from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 from pydantic import ValidationError
 
 from auth.utils.help_functions import (add_token_to_blacklist,
@@ -16,6 +17,7 @@ from auth.utils.help_functions import (add_token_to_blacklist,
 from db.mongo.db_init import mongo_db
 from infra import settings
 from users.db.mongo.schemas import LoginSchema, User
+from users.utils.help_functions import get_current_user
 from utils.help_functions import to_snake_case
 
 from .models import InlineCrud
@@ -47,6 +49,9 @@ async def auto_discover_modules(module_name: str):
 
 
 def generate_base_routes(registry: BaseRegistry):
+    """
+    Генерация базовых маршрутов для админских моделей и авторизации.
+    """
     router = APIRouter()
     print("Генерируем маршруты...")
 
@@ -58,7 +63,7 @@ def generate_base_routes(registry: BaseRegistry):
         Authorize: AuthJWT = Depends()
     ):
         """
-        Вход.
+        Вход в систему.
         """
         user_doc = await mongo_db["users"].find_one({"username": login_data.username})
         if not user_doc:
@@ -123,7 +128,8 @@ def generate_base_routes(registry: BaseRegistry):
         if not old_refresh:
             raise HTTPException(
                 status_code=401,
-                detail="Refresh token is missing")
+                detail="Refresh token is missing"
+            )
 
         Authorize._token = old_refresh
         try:
@@ -181,7 +187,7 @@ def generate_base_routes(registry: BaseRegistry):
         Authorize: AuthJWT = Depends()
     ):
         """
-        Выход.
+        Выход из системы.
         """
         current_user = Authorize.get_jwt_subject()
 
@@ -196,6 +202,7 @@ def generate_base_routes(registry: BaseRegistry):
                 await add_token_to_blacklist(current_user, "access", old_access_jti)
             except Exception:
                 pass
+
         if refresh_token:
             try:
                 Authorize._token = refresh_token
@@ -210,114 +217,164 @@ def generate_base_routes(registry: BaseRegistry):
 
         return {"message": "Logged out"}
 
-    def create_routes(name, instance):
-        """Создание CRUD-маршрутов админки."""
+    def create_routes(
+        name: str,
+        instance,
+    ):
+        """
+        Генерация CRUD-маршрутов для каждой модели (instance) на базе FastAPI,
+        с учётом прав (jwt) и загрузки пользователя из Mongo.
+        """
         snake_name = to_snake_case(name)
 
-        @router.get(f"/{snake_name}/", name=f"list_{snake_name}")
-        @jwt_required()
-        async def list_items(
-            request: Request,
-            response: Response,
-            page: int = 1,
-            page_size: int = 10,
-            sort_by: Optional[str] = None,
-            order: int = 1,
-            Authorize: AuthJWT = Depends()
-        ):
-            """Получение списка объектов, фильтрация по `user_id`, если модель поддерживает."""
-            current_user_id = Authorize.get_jwt_subject()
+        # --- READ ---
+        if instance.allow_crud_actions.get("read", False):
 
-            has_page_in_query = ('page' in request.query_params)
-            has_page_size_in_query = ('page_size' in request.query_params)
+            @router.get(f"/{snake_name}/", name=f"list_{snake_name}")
+            @jwt_required()
+            async def list_items(
+                request: Request,
+                response: Response,
+                page: int = 1,
+                page_size: int = 10,
+                sort_by: Optional[str] = None,
+                order: int = 1,
+                Authorize: AuthJWT = Depends()
+            ):
+                """
+                Возвращает список объектов (учитывая max_instances_per_user, права доступа и т.д.).
+                """
+                user_doc = await get_current_user(Authorize)
 
-            if has_page_in_query and has_page_size_in_query:
-                return await instance.list_with_meta(
-                    page=page,
-                    page_size=page_size,
-                    sort_by=sort_by,
-                    order=order,
-                    current_user_id=current_user_id  # Передаём user_id
-                )
-            else:
-                return await instance.list(
-                    sort_by=sort_by,
-                    order=order,
-                    current_user_id=current_user_id  # Передаём user_id
-                )
+                has_page_in_query = ('page' in request.query_params)
+                has_page_size_in_query = ('page_size' in request.query_params)
 
-        @router.get(f"/{snake_name}/{{item_id}}", name=f"get_{snake_name}")
-        @jwt_required()
-        async def get_item(
-            request: Request,
-            response: Response,
-            item_id: str,
-            Authorize: AuthJWT = Depends()
-        ):
-            """Получение конкретного объекта с проверкой user_id."""
-            current_user_id = Authorize.get_jwt_subject()
-            # Передаём user_id
-            item = await instance.get(item_id, current_user_id=current_user_id)
-            if not item:
-                raise HTTPException(status_code=404, detail="Item not found")
-            return item
+                if instance.max_instances_per_user == 1:
+                    items = await instance.get_queryset(current_user=user_doc)
+                    item = None
+                    if items:
+                        first_obj = items[0]
+                        item_id = first_obj.get("_id") or first_obj.get("id")
+                        if not item_id:
+                            raise HTTPException(
+                                status_code=404, detail="Invalid document: missing _id")
 
-        @router.post(f"/{snake_name}/", name=f"create_{snake_name}")
-        @jwt_required()
-        async def create_item(
-            request: Request,
-            response: Response,
-            data: dict,
-            Authorize: AuthJWT = Depends()
-        ):
-            """Создание объекта с проверкой max_instances_per_user."""
-            current_user_id = Authorize.get_jwt_subject()
-            try:
-                # Передаём user_id
-                return await instance.create(data, current_user_id=current_user_id)
-            except ValidationError as e:
-                errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
-                raise HTTPException(status_code=400, detail=errors)
+                        item = await instance.get(object_id=item_id, current_user=user_doc)
+                    if not item:
+                        raise HTTPException(
+                            status_code=404, detail="Item not found")
+                    return item
 
-        @router.patch(f"/{snake_name}/{{item_id}}", name=f"patch_{snake_name}")
-        @jwt_required()
-        async def patch_item(
-            request: Request,
-            response: Response,
-            item_id: str,
-            data: dict,
-            Authorize: AuthJWT = Depends()
-        ):
-            """Обновление объекта с проверкой user_id."""
-            current_user_id = Authorize.get_jwt_subject()
-            try:
-                updated = await instance.update(
-                    object_id=item_id, data=data, current_user_id=current_user_id  # Передаём user_id
-                )
-                if not updated:
+                if has_page_in_query and has_page_size_in_query:
+                    return await instance.list_with_meta(
+                        page=page,
+                        page_size=page_size,
+                        sort_by=sort_by,
+                        order=order,
+                        current_user=user_doc
+                    )
+                else:
+                    return await instance.list(
+                        sort_by=sort_by,
+                        order=order,
+                        current_user=user_doc
+                    )
+
+            @router.get(f"/{snake_name}/{{item_id}}", name=f"get_{snake_name}")
+            @jwt_required()
+            async def get_item(
+                request: Request,
+                response: Response,
+                item_id: str,
+                Authorize: AuthJWT = Depends()
+            ):
+                """
+                Получение конкретного объекта (учитывая права).
+                """
+                user_doc = await get_current_user(Authorize)
+
+                item = await instance.get(object_id=item_id, current_user=user_doc)
+                if not item:
                     raise HTTPException(
-                        status_code=404, detail="Item not updated")
-                return updated
-            except ValidationError as e:
-                errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
-                raise HTTPException(status_code=400, detail=errors)
+                        status_code=404, detail="Item not found")
+                return item
 
-        @router.delete(f"/{snake_name}/{{item_id}}",
-                       name=f"delete_{snake_name}")
-        @jwt_required()
-        async def delete_item(
-            request: Request,
-            response: Response,
-            item_id: str,
-            Authorize: AuthJWT = Depends()
-        ):
-            """Удаление объекта с проверкой user_id."""
-            current_user_id = Authorize.get_jwt_subject()
-            # Передаём user_id
-            deleted = await instance.delete(object_id=item_id, current_user_id=current_user_id)
-            if not deleted:
-                raise HTTPException(status_code=404, detail="Item not deleted")
-            return {"status": "success"}
+        # --- CREATE ---
+        if instance.allow_crud_actions.get("create", False):
+
+            @router.post(f"/{snake_name}/", name=f"create_{snake_name}")
+            @jwt_required()
+            async def create_item(
+                request: Request,
+                response: Response,
+                data: dict,
+                Authorize: AuthJWT = Depends()
+            ):
+                """
+                Создание нового объекта (учёт max_instances_per_user, прав и т.д.).
+                """
+                user_doc = await get_current_user(Authorize)
+
+                try:
+                    return await instance.create(data, current_user=user_doc)
+                except ValidationError as e:
+                    errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
+                    raise HTTPException(status_code=400, detail=errors)
+
+        # --- UPDATE ---
+        if instance.allow_crud_actions.get("update", False):
+
+            @router.patch(f"/{snake_name}/{{item_id}}",
+                          name=f"patch_{snake_name}")
+            @jwt_required()
+            async def patch_item(
+                request: Request,
+                response: Response,
+                item_id: str,
+                data: dict,
+                Authorize: AuthJWT = Depends()
+            ):
+                """
+                Обновление конкретного объекта (учитывая права).
+                """
+                user_doc = await get_current_user(Authorize)
+
+                try:
+                    updated = await instance.update(
+                        object_id=item_id,
+                        data=data,
+                        current_user=user_doc
+                    )
+                    if not updated:
+                        raise HTTPException(
+                            status_code=404, detail="Item not updated")
+                    return updated
+                except ValidationError as e:
+                    errors = {err["loc"][-1]: err["msg"] for err in e.errors()}
+                    raise HTTPException(status_code=400, detail=errors)
+
+        # --- DELETE ---
+        if instance.allow_crud_actions.get("delete", False):
+
+            @router.delete(f"/{snake_name}/{{item_id}}",
+                           name=f"delete_{snake_name}")
+            @jwt_required()
+            async def delete_item(
+                request: Request,
+                response: Response,
+                item_id: str,
+                Authorize: AuthJWT = Depends()
+            ):
+                """
+                Удаление конкретного объекта (учитывая права).
+                """
+                user_doc = await get_current_user(Authorize)
+
+                deleted = await instance.delete(object_id=item_id, current_user=user_doc)
+                if not deleted:
+                    raise HTTPException(
+                        status_code=404, detail="Item not deleted")
+                return {"status": "success"}
 
     for name, instance in registry.get_registered().items():
         create_routes(name, instance)
@@ -330,7 +387,7 @@ def generate_base_routes(registry: BaseRegistry):
         Authorize: AuthJWT = Depends()
     ):
         """
-        Информация для админа.
+        Информация для админа (список зарегистрированных моделей и т.д.).
         """
         return get_routes_by_apps(registry)
 
@@ -434,7 +491,7 @@ def _determine_field_type_and_choices(py_type, field, read_only_fields):
         return "calendar", None
 
     auto_ui = map_python_type_to_ui(py_type)
-    return auto_ui if auto_ui != "unknown" else "unknown", None
+    return auto_ui if auto_ui != "unknown" else py_type, None
 
 
 def _get_schema_data(instance):
@@ -446,11 +503,13 @@ def _get_schema_data(instance):
         return {}, []
 
 
-def _extract_default_value_and_settings(instance, field, default_value):
+def _extract_default_value_and_settings(instance, field_name, default_value):
     """
-    Определяет окончательное значение default_value и settings (если есть).
+    Определяет значение по умолчанию и settings для поля:
+    - из обычного словаря (default={'settings': {...}})
+    - из json_schema_extra внутри Field(...)
     """
-    field_def = getattr(instance.model, "model_fields", {}).get(field)
+    field_def = getattr(instance.model, "model_fields", {}).get(field_name)
 
     if default_value is None and field_def and hasattr(
             field_def, "default_factory"):
@@ -464,9 +523,11 @@ def _extract_default_value_and_settings(instance, field, default_value):
             pass
 
     if isinstance(default_value, dict) and "settings" in default_value:
-        settings = default_value.get("settings", {})
-        explicit_default = default_value.get("default", None)
-        return explicit_default, settings
+        return default_value.get("default"), default_value["settings"]
+
+    json_schema_extra = getattr(field_def, "json_schema_extra", None)
+    if isinstance(json_schema_extra, dict):
+        return None, json_schema_extra.get("settings", {})
 
     return default_value, {}
 
@@ -480,7 +541,8 @@ def _build_field_schema(instance, field, schema_props, model_annotations,
     field_title = field_titles.get(field, field_info.get("title", {}))
 
     field_default, field_settings = _extract_default_value_and_settings(
-        instance, field, field_info.get("default"))
+        instance, field, field_info.get("default")
+    )
 
     py_type = model_annotations.get(field)
     is_optional = False
@@ -492,31 +554,40 @@ def _build_field_schema(instance, field, schema_props, model_annotations,
         py_type = unwrap_optional(py_type)
         is_list = get_origin(py_type) in (list, List)
         inner_type = extract_list_inner_type(py_type) if is_list else py_type
+    else:
+        inner_type = None
 
     field_type, choices = _determine_field_type_and_choices(
-        py_type, field, read_only_fields)
-    choices = choices if choices is not None else []
+        py_type, field, read_only_fields
+    )
 
+    # Если в settings указаны choices — они имеют приоритет
+    if "choices" in field_settings:
+        choices = field_settings["choices"]
+
+    # Если в settings указан type — он имеет приоритет
     if "type" in field_settings:
         field_type = field_settings["type"]
 
-    has_explicit_default = field_default is not None  # Явное указание default
+    # Отдельно вытаскиваем placeholder из settings
+    placeholder = field_settings.pop("placeholder", None)
+
+    # Определяем required
+    has_explicit_default = field_default is not None
     has_factory = callable(
         getattr(
             instance.model.model_fields.get(
                 field,
                 {}),
             "default_factory",
-            None))  # default_factory
-    is_empty_dict = isinstance(
-        field_default,
-        dict) and not field_default  # Проверка на пустой dict
-    has_only_settings = isinstance(field_info, dict) and "settings" in field_info and len(
-        field_info) == 1  # Только настройки без значения
-
+            None))
+    is_empty_dict = isinstance(field_default, dict) and not field_default
+    has_only_settings = isinstance(
+        field_info, dict) and "settings" in field_info and len(field_info) == 1
     required_flag = not is_optional or (
         not has_explicit_default and not has_factory and (
-            is_empty_dict or has_only_settings))
+            is_empty_dict or has_only_settings)
+    )
 
     return {
         "name": field,
@@ -527,7 +598,8 @@ def _build_field_schema(instance, field, schema_props, model_annotations,
         "default": field_default if has_explicit_default else None,
         "required": required_flag,
         "choices": choices,
-        "settings": field_settings
+        "placeholder": placeholder,
+        "settings": field_settings,
     }
 
 
@@ -605,6 +677,7 @@ def _build_model_info(instance) -> dict:
         "read_only_fields": attrs["read_only_fields"],
         "fields": fields_schema,
         "field_groups": groups_schema,
+        "field_styles": instance.field_styles,
         "inlines": inlines_list,
         "is_inline": isinstance(instance, InlineCrud),
         "max_instances_per_user": attrs["max_instances"],
@@ -644,26 +717,48 @@ def _get_app_info(module_path: str, registry_name: str) -> tuple:
         return app_name, app_name, "", ""
 
 
-def _get_model_routes(api_prefix: str, registered_name: str) -> list:
-    """Создаёт список маршрутов для модели, используя snake_case."""
+def _get_model_routes(api_prefix: str, registered_name: str, instance) -> list:
+    """
+    Создаёт список маршрутов для модели, используя snake_case.
+    Учитывает разрешённые действия из allow_crud_actions.
+    """
     snake_name = to_snake_case(registered_name)
-    return [
-        {"method": "GET",
-         "path": f"{api_prefix}/{snake_name}/",
-         "name": f"list_{snake_name}"},
-        {"method": "GET",
-         "path": f"{api_prefix}/{snake_name}/{{item_id}}",
-         "name": f"get_{snake_name}"},
-        {"method": "POST",
-         "path": f"{api_prefix}/{snake_name}/",
-         "name": f"create_{snake_name}"},
-        {"method": "PATCH",
-         "path": f"{api_prefix}/{snake_name}/{{item_id}}",
-         "name": f"patch_{snake_name}"},
-        {"method": "DELETE",
-         "path": f"{api_prefix}/{snake_name}/{{item_id}}",
-         "name": f"delete_{snake_name}"}
-    ]
+    routes = []
+
+    if instance.allow_crud_actions.get("read", False):
+        routes.append({
+            "method": "GET",
+            "path": f"{api_prefix}/{snake_name}/",
+            "name": f"list_{snake_name}"
+        })
+        routes.append({
+            "method": "GET",
+            "path": f"{api_prefix}/{snake_name}/{{item_id}}",
+            "name": f"get_{snake_name}"
+        })
+
+    if instance.allow_crud_actions.get("create", False):
+        routes.append({
+            "method": "POST",
+            "path": f"{api_prefix}/{snake_name}/",
+            "name": f"create_{snake_name}"
+        })
+
+    if instance.allow_crud_actions.get("update", False):
+        routes.append({
+            "method": "PATCH",
+            "path": f"{api_prefix}/{snake_name}/{{item_id}}",
+            "name": f"patch_{snake_name}"
+        })
+
+    if instance.allow_crud_actions.get("delete", False):
+        routes.append({
+            "method": "DELETE",
+            "path": f"{api_prefix}/{snake_name}/{{item_id}}",
+            "name": f"delete_{snake_name}"
+        })
+
+    return routes
 
 
 def _build_model_entry(instance, api_prefix,
@@ -672,7 +767,7 @@ def _build_model_entry(instance, api_prefix,
     return {
         "registered_name": registered_name,
         "model": _build_model_info(instance),
-        "routes": _get_model_routes(api_prefix, registered_name)
+        "routes": _get_model_routes(api_prefix, registered_name, instance)
     }
 
 

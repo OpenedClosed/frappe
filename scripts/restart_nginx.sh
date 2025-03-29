@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# Папка для логов Nginx
+# Папка для логов
 LOG_DIR="./logs_nginx"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/$(date +'%Y-%m-%d_%H-%M-%S').log"
 
 echo "Starting Nginx container monitoring..." | tee -a "$LOG_FILE"
 
-# Имя сервиса Nginx в `docker-compose.yml`
+# Имя сервиса Nginx в docker-compose
 NGINX_SERVICE_NAME="nginx"
 
-# Проверяем статус контейнера Nginx
+# Проверяем статус Nginx-контейнера
 STOPPED_NGINX=$(docker ps -a \
   --filter "name=${NGINX_SERVICE_NAME}" \
   --filter "status=exited" \
@@ -29,11 +29,14 @@ if [ -n "$STOPPED_NGINX" ]; then
         echo -e "\n==============================\n" >> "$LOG_FILE"
     done <<< "$STOPPED_NGINX"
 
-    echo "Restarting Nginx container..." | tee -a "$LOG_FILE"
-    docker-compose up -d --force-recreate "${NGINX_SERVICE_NAME}"
-    echo "Nginx restart completed." | tee -a "$LOG_FILE"
+    echo "Restarting all containers..." | tee -a "$LOG_FILE"
+    docker-compose down
+    docker system prune -af
+    docker-compose up -d --force-recreate
+
+    echo "All containers restarted." | tee -a "$LOG_FILE"
 else
-    echo "Nginx container is running fine!" | tee -a "$LOG_FILE"
+    echo "Nginx container is running fine." | tee -a "$LOG_FILE"
 fi
 
 # Очистка логов старше 14 дней

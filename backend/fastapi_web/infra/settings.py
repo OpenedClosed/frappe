@@ -6,7 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Загрузка переменных окружения
-load_dotenv(dotenv_path=Path("./infra/.env"))
+load_dotenv(dotenv_path=Path("../infra/.env"))
 
 # Базовые настройки
 BASE_DIR = Path(__file__).resolve().parent.parent

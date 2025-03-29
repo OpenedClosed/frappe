@@ -11,13 +11,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
-
+from users.routers import user_router
 from basic.routers import basic_router
 from chats.integrations.instagram.instagram import instagram_router
 from chats.routers import chat_router
 from crud_core.registry import account_registry, admin_registry
 from crud_core.routes_generator import (auto_discover_modules,
-                                        generate_base_routes, get_routes_by_apps)
+                                        generate_base_routes,
+                                        get_routes_by_apps)
 from db.mongo.db_init import mongo_db_on_startapp
 from infra import settings
 from infra.middlewares import BasicAuthMiddleware
@@ -49,7 +50,6 @@ async def on_startup():
     """Действия при запуске приложения."""
     from chats.ws import websockets as _
 
-    # await auto_discover_admin_modules()
     await auto_discover_modules("admin")
     await auto_discover_modules("account")
     await mongo_db_on_startapp()
@@ -77,6 +77,7 @@ async def on_shutdown():
 
 chat_router.include_router(instagram_router, prefix="/instagram")
 base_api_router.include_router(chat_router, prefix="/chats")
+base_api_router.include_router(user_router, prefix="/users")
 base_api_router.include_router(knowledge_base_router, prefix="/knowledge")
 base_api_router.include_router(basic_router, prefix="/basic")
 app.include_router(base_api_router)

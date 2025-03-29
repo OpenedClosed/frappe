@@ -41,17 +41,14 @@ async def handle_instagram_messages(request: Request):
             message_id = message_data.get("mid")
             metadata = messaging_event.get("metadata", "")
 
-            # Игнорируем сообщения broadcast
             if metadata == "broadcast" or sender_id == settings.INSTAGRAM_BOT_ID:
                 continue
 
-            # Определяем роль отправителя
             if recipient_id == settings.INSTAGRAM_BOT_ID:
                 bot_id, client_id, sender_role = recipient_id, sender_id, SenderRole.CLIENT
             else:
                 bot_id, client_id, sender_role = sender_id, recipient_id, SenderRole.CONSULTANT
 
-            # Проверяем, не дублируется ли сообщение в MongoDB
             existing_message = await mongo_db.chats.find_one(
                 {"external_id": bot_id, "messages.external_id": message_id}
             )

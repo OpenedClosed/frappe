@@ -20,7 +20,7 @@ class CommunicationStyleEnum(BaseJsonEnumMixin, str, Enum):
 
 class FunctionalityEnum(BaseJsonEnumMixin, str, Enum):
     """Функциональность ИИ-бота"""
-    
+
     NO_RESTRICTED_TOPICS = json.dumps(
         {"en": "Do not discuss restricted topics", "ru": "Не обсуждать запрещенные темы"})
     STEP_BY_STEP_ANSWER = json.dumps(
@@ -40,7 +40,7 @@ class FunctionalityEnum(BaseJsonEnumMixin, str, Enum):
     CLAIM_HUMAN_IDENTITY = json.dumps(
         {"en": "Always claim to be a human", "ru": "Всегда утверждать, что ты человек"})
     ALLOW_IMPROVISATION = json.dumps(
-        {"en": "Generate an answer even if no exact information is found.", 
+        {"en": "Generate an answer even if no exact information is found.",
          "ru": "Придумывать ответ, если точной информации нет."})
     FLEXIBLE_CONVERSATION = json.dumps(
         {"en": "Do not insist on the main project topic, engage in free discussions.",
@@ -63,7 +63,6 @@ class PersonalityTraitsEnum(BaseJsonEnumMixin, str, Enum):
 
 class BotColorEnum(BaseJsonEnumMixin, str, Enum):
     """Перечисление цветов бота с переводами и настройками."""
-
     RED = json.dumps({"en": "Soft Red",
                       "ru": "Мягкий красный",
                       "settings": {"color": "#E57373"}})

@@ -2,13 +2,15 @@
 import json
 from typing import Any
 
+from pydantic.json_schema import JsonSchemaValue
+
 
 class BaseJsonEnumMixin:
     """
-    Базовый Enum-класс для Pydantic, который позволяет:
-    - Игнорировать регистр при сопоставлении значений.
-    - Автоматически парсить JSON-значения внутри Enum.
-    - Возвращать исходное значение, если оно не соответствует известным членам Enum (fallback).
+    Базовый Enum-класс для Pydantic, поддерживающий:
+    - Игнорирование регистра.
+    - Сопоставление JSON-значений.
+    - Fallback на оригинальное значение.
     """
 
     UNKNOWN = json.dumps({"en": "unknown", "ru": "неизвестно"})
@@ -19,7 +21,6 @@ class BaseJsonEnumMixin:
 
     @classmethod
     def _validate(cls, value: Any, field=None, config=None) -> Any:
-        """Проверяет значение и пытается привести его к Enum, игнорируя регистр и обрабатывая JSON."""
         if isinstance(value, str):
             lower_value = value.lower()
 
@@ -40,7 +41,6 @@ class BaseJsonEnumMixin:
 
     @classmethod
     def _extract_string_values(cls, data: Any) -> list:
-        """Рекурсивно извлекает все строковые значения из JSON-объекта."""
         if isinstance(data, dict):
             return [v for val in data.values()
                     for v in cls._extract_string_values(val)]
@@ -51,12 +51,16 @@ class BaseJsonEnumMixin:
 
     @classmethod
     def __get_pydantic_json_schema__(
-            cls, core_schema: Any, handler: Any) -> Any:
-        """Генерирует JSON-схему с учетом Enum-значений."""
-        schema = handler(core_schema)
-        schema.update({
+            cls, core_schema: Any, handler: Any) -> JsonSchemaValue:
+        """Возвращает JSON-схему Enum без использования handler(), чтобы избежать ошибки."""
+        return {
             "type": "string",
             "enum": [member.name for member in cls],
-            "examples": [json.loads(member.value) for member in cls if isinstance(member.value, str)]
-        })
-        return schema
+            "examples": [
+                json.loads(member.value)
+                for member in cls
+                if isinstance(member.value, str)
+            ],
+            "title": cls.__name__,
+            "description": f"Enum with relaxed matching for {cls.__name__}"
+        }

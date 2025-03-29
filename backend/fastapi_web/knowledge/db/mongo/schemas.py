@@ -66,6 +66,9 @@ class BotSettings(BaseValidatedModel):
     employee_name: str
     mention_name: bool = False
     avatar: Optional[Photo] = None
+    # bot_color: BotColorEnum = {
+    #     "settings": {"type": "color_multiselect"}
+    # }
     bot_color: BotColorEnum
 
     # Характер и поведение

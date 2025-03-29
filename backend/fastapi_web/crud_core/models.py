@@ -10,6 +10,8 @@ from fastapi.exceptions import HTTPException
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 from pydantic import BaseModel, ValidationError
 
+from .permissions import AllowAll, BasePermission
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,21 +20,29 @@ class BaseCrudCore:
 
     model: Type[BaseModel]
 
+    # Метаинформация
     verbose_name: str = "Unnamed Model"
     plural_name: str = "Unnamed Models"
     icon: str = "pi pi-folder"
     description: str = "No description provided"
+
+    # Отображение
     list_display: List[str] = []
     detail_fields: List[str] = []
     computed_fields: List[str] = []
     read_only_fields: List[str] = []
     field_titles: Dict[str, str] = {}
-    inlines: Dict[str, Any] = {}
+    field_styles: Dict[str, Any] = {}
     field_groups: List[Dict[str, Any]] = []
     help_texts: Dict[str, Dict[str, str]] = {}
 
+    # Инлайны
+    inlines: Dict[str, Any] = {}
+
+    # Ограничения
     user_collection_name: Optional[str] = None
     max_instances_per_user: Optional[int] = None
+
     allow_crud_actions: Dict[str, bool] = {
         "create": True,
         "read": True,
@@ -40,38 +50,77 @@ class BaseCrudCore:
         "delete": True
     }
 
+    permission_class: BasePermission = AllowAll()
+
     def __init__(self, db: AsyncIOMotorCollection) -> None:
         """Инициализирует базовый CRUD-класс с переданной коллекцией Mongo."""
         self.db = db
 
-    async def get_user(self, db_global: AsyncIOMotorDatabase,
-                       user_id: str) -> Optional[dict]:
-        """Ищет пользователя в коллекции user_collection_name, используя db_global."""
-        if not self.user_collection_name:
-            return None
-        user_coll = db_global[self.user_collection_name]
-        return await user_coll.find_one({"_id": ObjectId(user_id)})
+    # --- Логика включения/отключения метода (allow_crud_actions) ---
+    def check_crud_enabled(self, action: str) -> None:
+        """
+        Проверяет, разрешён ли этот CRUD-метод в allow_crud_actions.
+        Если нет — выбрасываем 403.
+        """
+        if not self.allow_crud_actions.get(action, False):
+            raise HTTPException(
+                403, f"{action.capitalize()} is disabled for this model.")
 
+    # --- Проверка прав (на конкретный объект или без него) ---
+    def check_object_permission(
+        self,
+        action: str,
+        user: Optional[BaseModel],
+        obj: Optional[dict] = None
+    ) -> None:
+        """
+        Универсальный вызов permission_class, проверяющий право на действие action.
+        Если у permission_class нет прав — выбрасываем 403.
+        """
+        self.permission_class.check(action, user, obj)
+
+    def check_permission(
+        self,
+        action: str,
+        user: Optional[BaseModel],
+        obj: Optional[dict] = None
+    ) -> None:
+        """
+        Сочетает в себе check_crud_enabled + check_object_permission.
+        Одним вызовом проверяем и включён ли метод, и права пользователя.
+        """
+        self.check_crud_enabled(action)
+        self.check_object_permission(action, user, obj)
+
+    # --- Вспомогательные методы ---
+    def detect_id_field(self):
+        """Определяет, какое поле служит идентификатором."""
+        return "id" if "id" in self.model.__fields__ else "_id"
+
+    def get_user_field_name(self) -> str:
+        """Возвращает имя поля пользователя в зависимости от коллекции (если нужно)."""
+        return "_id" if self.user_collection_name == self.db.name else "user_id"
+
+    # --- Основные методы ---
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
-        current_user_id: Optional[str] = None
+        current_user: Optional[BaseModel] = None
     ) -> List[dict]:
-        """Возвращает список документов с учётом фильтра и user_id (если передан)."""
-        sort_by = self.detect_id_field()
-        query = filters.copy() if filters else {}
-        if current_user_id:
-            query["user_id"] = current_user_id
+        """
+        Возвращает список документов с учётом фильтра (filters) и прав (permission_class).
+        """
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        query = {**(filters or {}), **base_filter}
 
-        cursor = self.db.find(query)
-        if sort_by:
-            cursor = cursor.sort(sort_by, order)
+        sort_field = sort_by or self.detect_id_field()
+        cursor = self.db.find(query).sort(sort_field, order)
 
         objs = []
         async for raw_doc in cursor:
-            objs.append(await self.format_document(raw_doc))
+            objs.append(await self.format_document(raw_doc, current_user))
         return objs
 
     async def list(
@@ -79,18 +128,15 @@ class BaseCrudCore:
         sort_by: Optional[str] = None,
         order: int = 1,
         filters: Optional[dict] = None,
-        current_user_id: Optional[str] = None
+        current_user: Optional[BaseModel] = None
     ) -> List[dict]:
-        """Возвращает список документов (без пагинации)."""
-        if not self.allow_crud_actions["read"]:
-            raise HTTPException(403, "Reading is disabled for this model.")
+        """
+        Возвращает список документов (без пагинации).
+        Пример вызова: crud_instance.list(current_user=user).
+        """
+        self.check_permission("read", current_user)
 
-        return await self.get_queryset(
-            filters=filters,
-            sort_by=sort_by,
-            order=order,
-            current_user_id=current_user_id
-        )
+        return await self.get_queryset(filters, sort_by, order, current_user)
 
     async def list_with_meta(
         self,
@@ -99,18 +145,14 @@ class BaseCrudCore:
         sort_by: Optional[str] = None,
         order: int = 1,
         filters: Optional[dict] = None,
-        current_user_id: Optional[str] = None
+        current_user: Optional[BaseModel] = None
     ) -> dict:
-        """Возвращает список документов с пагинацией и метаданными."""
-        if not self.allow_crud_actions["read"]:
-            raise HTTPException(403, "Reading is disabled for this model.")
+        """
+        Возвращает список документов с пагинацией и метаданными.
+        """
+        self.check_permission("read", current_user)
 
-        all_docs = await self.get_queryset(
-            filters=filters,
-            sort_by=sort_by,
-            order=order,
-            current_user_id=current_user_id
-        )
+        all_docs = await self.get_queryset(filters, sort_by, order, current_user)
         total_count = len(all_docs)
         total_pages = (total_count + page_size - 1) // page_size
         start_idx = (page - 1) * page_size
@@ -126,42 +168,54 @@ class BaseCrudCore:
             }
         }
 
-    async def get(self, object_id: str,
-                  current_user_id: Optional[str] = None) -> Optional[dict]:
-        """Возвращает документ по _id, с учётом user_id (если задан)."""
-        if not self.allow_crud_actions["read"]:
-            raise HTTPException(403, "Reading is disabled for this model.")
-
+    async def get(
+        self,
+        object_id: str,
+        current_user: Optional[BaseModel] = None
+    ) -> Optional[dict]:
+        """
+        Возвращает документ по _id с учётом прав доступа и фильтра.
+        """
+        self.check_crud_enabled("read")
         try:
             docs = await self.get_queryset(
                 filters={"_id": ObjectId(object_id)},
-                current_user_id=current_user_id
+                current_user=current_user
             )
-            return docs[0] if docs else None
-        except BaseException:
+            obj = docs[0] if docs else None
+            if obj:
+                self.check_object_permission("read", current_user, obj)
+            return obj
+        except Exception:
             return None
 
     async def create(self, data: dict,
-                     current_user_id: Optional[str] = None) -> dict:
+                     current_user: Optional[BaseModel] = None) -> dict:
         """
-        Создаёт документ, проверяя права на создание и ограничение числа объектов для пользователя.
-        Если это не коллекция пользователей, автоматически добавляет user_id.
+        Создаёт документ, проверяя права и ограничения.
+        Автоматически добавляет user_id при необходимости.
         """
-        if not self.allow_crud_actions["create"]:
-            raise HTTPException(403, "Creating is disabled for this model.")
+        self.check_permission("create", current_user)
 
-        user_field = "_id" if self.user_collection_name == self.db.name else "user_id"
+        user_field = self.get_user_field_name()
 
-        if self.max_instances_per_user is not None and current_user_id:
-            count_for_user = await self.db.count_documents({user_field: ObjectId(current_user_id)})
-            if count_for_user >= self.max_instances_per_user:
+        if self.max_instances_per_user is not None and current_user:
+            filter_by_user = {
+                user_field: str(
+                    getattr(
+                        current_user,
+                        "id",
+                        None))}
+            count = await self.db.count_documents(filter_by_user)
+            if count >= self.max_instances_per_user:
                 raise HTTPException(
                     403, "You have reached the maximum number of allowed instances.")
 
         valid_data = await self._process_data(data=data)
-
-        if current_user_id and user_field == "user_id" and "user_id" not in valid_data:
-            valid_data["user_id"] = current_user_id
+        if current_user and user_field == "user_id" and "user_id" not in valid_data:
+            user_id = current_user.data["user_id"]
+            if user_id:
+                valid_data["user_id"] = str(user_id)
 
         res = await self.db.insert_one(valid_data)
         if not res.inserted_id:
@@ -171,31 +225,26 @@ class BaseCrudCore:
         if not created_raw:
             raise HTTPException(500, "Failed to retrieve created object.")
 
-        return await self.format_document(created_raw)
+        return await self.format_document(created_raw, current_user)
 
     async def update(self, object_id: str, data: dict,
-                     current_user_id: Optional[str] = None) -> dict:
+                     current_user: Optional[BaseModel] = None) -> dict:
         """
-        Обновляет объект, проверяя права на изменение и принадлежность пользователю (если нужно).
-        Убирает вычисляемые поля при сохранении.
+        Обновляет объект, проверяя права на изменение.
+        Убирает вычисляемые поля перед сохранением.
         """
-        if not self.allow_crud_actions["update"]:
-            raise HTTPException(403, "Updating is disabled for this model.")
+        self.check_crud_enabled("update")
 
-        raw_existing_obj = await self.db.find_one({"_id": ObjectId(object_id)})
-        if not raw_existing_obj:
-            raise HTTPException(404, "Item not found for update.")
+        obj = await self.db.find_one({"_id": ObjectId(object_id)})
+        if not obj:
+            raise HTTPException(404, "Item not found.")
 
-        if current_user_id and raw_existing_obj.get(
-                "user_id") and raw_existing_obj.get("user_id") != current_user_id:
-            raise HTTPException(
-                403, "You don't have permission to update this object.")
+        self.check_object_permission("update", current_user, obj)
 
-        valid_data = await self._process_data(data=data, existing_obj=raw_existing_obj, partial=True)
+        valid_data = await self._process_data(data=data, existing_obj=obj, partial=True)
 
-        for cf in self.computed_fields:
-            if cf in valid_data:
-                del valid_data[cf]
+        for field in self.computed_fields:
+            valid_data.pop(field, None)
 
         res = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": valid_data})
         if res.matched_count == 0:
@@ -205,24 +254,20 @@ class BaseCrudCore:
         if not updated_raw:
             raise HTTPException(500, "Failed to retrieve updated object.")
 
-        return await self.format_document(updated_raw)
+        return await self.format_document(updated_raw, current_user)
 
     async def delete(self, object_id: str,
-                     current_user_id: Optional[str] = None) -> dict:
+                     current_user: Optional[BaseModel] = None) -> dict:
         """
-        Удаляет документ, проверяя права на удаление и принадлежность пользователю (если нужно).
+        Удаляет объект, проверяя права доступа.
         """
-        if not self.allow_crud_actions["delete"]:
-            raise HTTPException(403, "Deleting is disabled for this model.")
+        self.check_crud_enabled("delete")
 
-        existing_obj = await self.get(object_id, current_user_id=current_user_id)
-        if not existing_obj:
-            raise HTTPException(404, "Item not found for deletion.")
+        obj = await self.db.find_one({"_id": ObjectId(object_id)})
+        if not obj:
+            raise HTTPException(404, "Item not found.")
 
-        if current_user_id and existing_obj.get(
-                "user_id") and existing_obj.get("user_id") != current_user_id:
-            raise HTTPException(
-                403, "You don't have permission to delete this object.")
+        self.check_object_permission("delete", current_user, obj)
 
         res = await self.db.delete_one({"_id": ObjectId(object_id)})
         if res.deleted_count == 0:
@@ -230,11 +275,15 @@ class BaseCrudCore:
 
         return {"status": "success"}
 
+    # --- Вспомогательные методы для обработки данных ---
+
     def serialize_value(self, value):
-        """Сериализует значение перед сохранением в MongoDB."""
+        """
+        Сериализует значение перед сохранением в MongoDB.
+        """
         if isinstance(value, BaseModel):
             return value.dict()
-        elif isinstance(value, Enum):
+        if isinstance(value, Enum):
             return value.value
         return value
 
@@ -318,8 +367,12 @@ class BaseCrudCore:
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
-    async def get_inlines(self, doc: dict) -> dict:
-        """Возвращает данные инлайнов из документа."""
+    async def get_inlines(self, doc: dict,
+                          current_user: Optional[dict] = None) -> dict:
+        """
+        Возвращает данные инлайнов из документа (учитывая, что каждый инлайн сам умеет фильтровать,
+        если у него есть permission_class и используется current_user).
+        """
         inl_data = {}
         try:
             for field, inline_cls in self.inlines.items():
@@ -328,17 +381,23 @@ class BaseCrudCore:
                 if not parent_id:
                     inl_data[field] = []
                     continue
-                found = await inline_inst.get_queryset(filters={"_id": parent_id})
+
+                found = await inline_inst.get_queryset(filters={"_id": parent_id}, current_user=current_user)
                 inl_data[field] = [
-                    await inline_inst.format_document(child) if "id" not in child else child
+                    await inline_inst.format_document(child, current_user)
+                    if "id" not in child else child
                     for child in found
                 ]
             return inl_data
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
-    async def format_document(self, doc: dict) -> dict:
-        """Форматирует документ, декодируя JSON-строки, вычисляя вычисляемые поля и дополняя инлайнами."""
+    async def format_document(self, doc: dict,
+                              current_user: Optional[dict] = None) -> dict:
+        """
+        Форматирует документ, декодируя JSON-строки, вычисляя вычисляемые поля и дополняя инлайнами.
+        Если нужны права на просмотр инлайнов — передаём current_user.
+        """
         def parse_json_recursive(value: Any) -> Any:
             """Рекурсивно декодирует JSON-строки, если это валидный JSON."""
             if isinstance(value, str):
@@ -368,7 +427,8 @@ class BaseCrudCore:
                 computed_value = await method(doc)
                 result[cf] = parse_json_recursive(computed_value)
 
-        result.update(await self.get_inlines(doc))
+        result.update(await self.get_inlines(doc, current_user))
+
         return result
 
     async def validate_data(self, data: dict, partial: bool = False) -> dict:
@@ -493,10 +553,6 @@ class BaseCrudCore:
             return None
         return self._find_container(root, any_id)
 
-    def detect_id_field(self):
-        """Определяет, какое поле служит идентификатором."""
-        return "id" if "id" in self.model.__fields__ else "_id"
-
     def __str__(self) -> str:
         """Строковое представление класса."""
         return self.verbose_name
@@ -509,13 +565,13 @@ class InlineCrud(BaseCrudCore):
     dot_field_path: str = ""
 
     def __init__(self, db: AsyncIOMotorDatabase):
-        """Инициализация базы данных и коллекции."""
+        """Инициализирует коллекцию и базовый класс."""
         super().__init__(db)
         self.db = db[self.collection_name] if isinstance(
             db, AsyncIOMotorDatabase) else db
 
     async def _get_nested_field(self, doc: dict, dot_path: str) -> Any:
-        """Получает вложенные данные по точечной нотации."""
+        """Получает вложенные данные по точечной нотации ('a.b.c')."""
         for part in dot_path.split("."):
             if not isinstance(doc, dict) or part not in doc:
                 return None
@@ -523,21 +579,28 @@ class InlineCrud(BaseCrudCore):
         return doc
 
     async def get_queryset(
-        self, filters: Optional[dict] = None,
+        self,
+        filters: Optional[dict] = None,
         sort_by: Optional[str] = "id",
         order: int = 1,
-        current_user_id: Optional[str] = None
+        current_user: Optional[dict] = None
     ) -> List[dict]:
-        """Получает список вложенных объектов."""
-        query = filters.copy() if filters else {}
-        # if current_user_id:
-        #     query["user_id"] = current_user_id
+        """
+        Получает список вложенных объектов (массив или словарь) из dot_field_path
+        у родительских документов, прошедших фильтр permission_class + filters.
+        """
+        self.check_crud_enabled(
+            "read")
+        self.permission_class.check("read", current_user, None)
+
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        query = {**(filters or {}), **base_filter}
 
         cursor = self.db.find(query)
         results = []
 
-        async for doc in cursor:
-            nested_data = await self._get_nested_field(doc, self.dot_field_path)
+        async for parent_doc in cursor:
+            nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
             if isinstance(nested_data, list):
                 results.extend(nested_data)
             elif isinstance(nested_data, dict):
@@ -545,61 +608,83 @@ class InlineCrud(BaseCrudCore):
 
         if sort_by:
             results.sort(key=lambda x: x.get(sort_by), reverse=(order == -1))
-
         return results
 
-    async def get(self, object_id: str,
-                  current_user_id: Optional[str] = None) -> Optional[dict]:
-        """Находит вложенный объект по ID, с учётом user_id (если задан)."""
-        filters = {f"{self.dot_field_path}.id": object_id}
-        # if current_user_id:
-        #     filters["user_id"] = current_user_id
+    async def get(
+        self,
+        object_id: str,
+        current_user: Optional[dict] = None
+    ) -> Optional[dict]:
+        """
+        Находит вложенный объект по ID (в dot_field_path), учитывая права доступа (read).
+        """
+        self.check_crud_enabled("read")
 
-        parent_doc = await self.db.find_one(filters)
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        query = {f"{self.dot_field_path}.id": object_id, **base_filter}
+
+        parent_doc = await self.db.find_one(query)
         if not parent_doc:
             return None
 
         nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
+        item = None
         if isinstance(nested_data, list):
-            return next(
-                (item for item in nested_data if item.get("id") == object_id), None)
+            item = next(
+                (el for el in nested_data if el.get("id") == object_id), None)
+        elif isinstance(nested_data, dict) and nested_data.get("id") == object_id:
+            item = nested_data
 
-        return nested_data if nested_data and nested_data.get(
-            "id") == object_id else None
+        if item:
+            self.permission_class.check("read", current_user, item)
 
-    async def create(self, data: dict,
-                     current_user_id: Optional[str] = None) -> dict:
-        """Создаёт новый вложенный объект."""
+        return item
+
+    async def create(
+        self,
+        data: dict,
+        current_user: Optional[dict] = None
+    ) -> dict:
+        """
+        Создаёт новый вложенный объект (append в список dot_field_path).
+        """
+        self.check_permission("create", current_user)
+
         valid_data = await self._process_data(data)
         if not valid_data:
             raise HTTPException(400, "No valid fields provided.")
 
-        query = {}
-        if current_user_id:
-            query["user_id"] = current_user_id
-
+        base_filter = await self.permission_class.get_base_filter(current_user)
         update_query = {"$push": {self.dot_field_path: valid_data}}
 
-        res = await self.db.update_one(query, update_query, upsert=True)
-        if res.modified_count == 0:
+        res = await self.db.update_one(base_filter, update_query, upsert=True)
+        if res.modified_count == 0 and not res.upserted_id:
             raise HTTPException(500, "Failed to create object.")
 
         return valid_data
 
-    async def update(self, object_id: str, data: dict,
-                     current_user_id: Optional[str] = None) -> dict:
-        """Обновляет вложенный объект в массиве."""
-        existing_obj = await self.get(object_id, current_user_id)
+    async def update(
+        self,
+        object_id: str,
+        data: dict,
+        current_user: Optional[dict] = None
+    ) -> dict:
+        """
+        Обновляет вложенный объект в массиве (dot_field_path) по "id": object_id.
+        """
+        self.check_crud_enabled("update")
+        existing_obj = await self.get(object_id, current_user)
         if not existing_obj:
             raise HTTPException(404, "Item not found for update.")
+
+        self.permission_class.check("update", current_user, existing_obj)
 
         valid_data = await self._process_data(data, partial=True)
         if not valid_data:
             raise HTTPException(400, "No valid fields to update.")
 
-        filters = {f"{self.dot_field_path}.id": object_id}
-        # if current_user_id:
-        #     filters["user_id"] = current_user_id
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        filters = {**base_filter, f"{self.dot_field_path}.id": object_id}
 
         update_query = {
             "$set": {f"{self.dot_field_path}.$.{k}": v for k, v in valid_data.items()}
@@ -609,30 +694,38 @@ class InlineCrud(BaseCrudCore):
         if res.matched_count == 0:
             raise HTTPException(500, "Failed to update object.")
 
-        return await self.get(object_id, current_user_id)
+        updated_obj = await self.get(object_id, current_user)
+        if not updated_obj:
+            raise HTTPException(500, "Failed to retrieve updated object.")
+        return updated_obj
 
-    async def delete(self, object_id: str,
-                     current_user_id: Optional[str] = None) -> dict:
-        """Удаляет вложенный объект (учитывает массив или одиночный объект)."""
-        existing_obj = await self.get(object_id, current_user_id)
+    async def delete(
+        self,
+        object_id: str,
+        current_user: Optional[dict] = None
+    ) -> dict:
+        """
+        Удаляет вложенный объект (учитывает, что dot_field_path может быть списком или единичным объектом).
+        """
+        self.check_crud_enabled("delete")
+
+        existing_obj = await self.get(object_id, current_user)
         if not existing_obj:
             raise HTTPException(404, "Item not found for deletion.")
 
-        # Проверяем, является ли dot_field_path массивом или одиночным объектом
-        parent_doc = await self.db.find_one({f"{self.dot_field_path}.id": object_id})
+        self.permission_class.check("delete", current_user, existing_obj)
+
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        filters = {**base_filter, f"{self.dot_field_path}.id": object_id}
+        parent_doc = await self.db.find_one(filters)
         if not parent_doc:
             raise HTTPException(404, "Parent document not found.")
 
         nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
 
-        filters = {f"{self.dot_field_path}.id": object_id}
-        update_query = {}
-
         if isinstance(nested_data, list):
-            # Удаление из массива через $pull
             update_query = {"$pull": {self.dot_field_path: {"id": object_id}}}
         elif isinstance(nested_data, dict):
-            # Если поле - одиночный объект, просто обнуляем его
             update_query = {"$unset": {self.dot_field_path: ""}}
         else:
             raise HTTPException(
@@ -659,22 +752,21 @@ class BaseCrud(BaseCrudCore):
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
-        sort_by: Optional[str] = "_id",
+        sort_by: Optional[str] = None,
         order: int = 1,
-        current_user_id: Optional[str] = None
+        current_user: Optional[dict] = None
     ) -> List[dict]:
-        """Возвращает список документов, учитывая фильтры и сортировку."""
-        query = filters.copy() if filters else {}
-        id_field_key = self.detect_id_field()
+        """Возвращает список документов, учитывая фильтры, права и сортировку."""
+        self.check_crud_enabled("read")
+        self.permission_class.check("read", current_user)
 
-        cursor = self.db.find(query)
-        if sort_by:
-            cursor = cursor.sort(sort_by, order)
-        else:
-            cursor = cursor.sort(id_field_key, -1)
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        query = {**(filters or {}), **base_filter}
 
-        objs: List[dict] = []
+        sort_field = sort_by or self.detect_id_field()
+        cursor = self.db.find(query).sort(sort_field, order)
+
+        objs = []
         async for raw_doc in cursor:
-            objs.append(await self.format_document(raw_doc))
-
+            objs.append(await self.format_document(raw_doc, current_user))
         return objs

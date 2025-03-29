@@ -1,38 +1,75 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
+from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr, Field
 
-from .enums import ConditionEnum, ConsentEnum, GenderEnum, HealthFormStatus, RelationshipEnum, TransactionTypeEnum
-from db.mongo.base.schemas import BaseValidatedModel
+from db.mongo.base.schemas import BaseValidatedModel, Photo
 
-# from .enums import ()
-
-
-from typing import Optional
-from datetime import date, datetime
-
-from pydantic import BaseModel 
+from .enums import (ConditionEnum, ConsentEnum, FamilyStatusEnum, GenderEnum,
+                    RelationshipEnum, TransactionTypeEnum)
 
 
 # ==========
 # Регистрация
 # ==========
 
-class RegisterSchema(BaseModel):
-    """Шаг 1 регистрации: email/phone + основные поля."""
+class RegistrationSchema(BaseModel):
+    """
+    Шаг 1: Данные для регистрации (телефон обязателен).
+    """
+    phone: str
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    birth_date: Optional[datetime] = None
-    city: Optional[str] = None
-    gender: Optional[str] = None
+    full_name: str
+    password: str
+    password_confirm: str
+    accept_terms: bool = False
+
+    def passwords_match(self) -> bool:
+        """
+        Проверяет совпадение введённого пароля и подтверждения.
+        """
+        return self.password == self.password_confirm
+
+    def hashed_password(self) -> str:
+        """
+        Возвращает хэш текущего пароля (self.password).
+        """
+        return bcrypt.hash(self.password)
 
 
-class ConfirmSchema(RegisterSchema):
-    """Шаг 2 регистрации: наследуемся от RegisterSchema, добавляем 'code'."""
+class ConfirmationSchema(RegistrationSchema):
+    """
+    Шаг 2: подтверждение кода (СМС).
+    Наследует поля из RegistrationSchema и добавляет код.
+    """
+    code: str
+
+
+# ==========
+# Вход и двухфакторная аутентификация
+# ==========
+
+class LoginSchema(BaseModel):
+    """
+    Шаг 1 входа: телефон + пароль.
+    """
+    phone: str
+    password: str
+
+    def check_password(self, hashed: str) -> bool:
+        """
+        Сравнивает self.password с уже сохранённым хэшом (hashed).
+        """
+        return bcrypt.verify(self.password, hashed)
+
+
+class TwoFASchema(BaseModel):
+    """
+    Шаг 2 входа: одноразовый код, высланный на телефон.
+    """
+    phone: str
     code: str
 
 
@@ -40,445 +77,492 @@ class ConfirmSchema(RegisterSchema):
 # Основная информация
 # ==========
 
-
 class MainInfoSchema(BaseValidatedModel):
     """
-    Схема для вкладки 'Основная информация'
+    Схема для вкладки 'Основная информация'.
     """
 
-    # Личные данные
     last_name: str
     first_name: str
-    patronymic: Optional[str]
-    birth_date: date = {
-        "settings": {
-            "type": "calendar",
-            "placeholder": {
-                "ru": "Выберите дату рождения",
-                "en": "Select birth date",
-                "pl": "Wybierz datę urodzenia"
+    patronymic: Optional[str] = None
+
+    birth_date: datetime = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "calendar",
+                "placeholder": {
+                    "ru": "Выберите дату рождения",
+                    "en": "Select birth date",
+                    "pl": "Wybierz datę urodzenia"
+                }
             }
         }
-    }
-    gender: GenderEnum = {
-        "settings": {
-            "type": "select",
-            "placeholder": {
-                "ru": "Выберите пол",
-                "en": "Select gender",
-                "pl": "Wybierz płeć"
-            }
-        }
-    }
-
-    # Информация о компании
-    company_name: Optional[str]
-
-    # Системная информация
-    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime]
-
-
-
-
-
-
-
-class ContactInfoSchema(BaseModel):
-    """
-    Схема для вкладки 'Контактная информация'
-    (по примеру скриншота, включая поля:
-    - Email
-    - Телефон
-    - Адрес
-    - PESEL (идентификатор, может быть в разных странах по-разному)
-    - ID документа (паспорт, водительские права и т.д.)
-    - Экстренный контакт
     )
 
-    Для примера добавим 'settings' в поля,
-    чтобы фронтенд знал, какие виджеты использовать.
+    gender: GenderEnum = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "select",
+                "placeholder": {
+                    "ru": "Выберите пол",
+                    "en": "Select gender",
+                    "pl": "Wybierz płeć"
+                }
+            }
+        }
+    )
+
+    company_name: Optional[str] = None
+
+    avatar: Optional[Photo] = None
+
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+
+# ==========
+# Контактная информация
+# ==========
+
+
+class ContactInfoSchema(BaseValidatedModel):
+    """
+    Схема для вкладки 'Контактная информация'.
     """
 
-    email: EmailStr = {
-        "default": "ivan@example.com",
-        "settings": {
-            "type": "email",       # Позволяет отрисовать email-поле (валидация + формат)
-            "placeholder": "Введите e-mail"
+    email: EmailStr = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "email",
+                "placeholder": {
+                    "ru": "Введите e-mail",
+                    "en": "Enter email",
+                    "pl": "Wprowadź e-mail"
+                }
+            }
         }
-    }
-    phone: str = {
-        "default": "+7 (999) 123-45-67",
-        "settings": {
-            "type": "phone",       # Можно подкючить маску телефона на фронтенде
-            "mask": "+9 (999) 999-99-99"
+    )
+
+    phone: str = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "phone",
+                "mask": "+9 (999) 999-99-99"
+            }
         }
-    }
-    address: str = {
-        "default": "г. Москва, ул. Примерная, д. 123, кв. 45",
-        "settings": {
-            "type": "textarea",    # или "type": "address" (кастомное поле) - если хочется расширить
-            "rows": 2             # кол-во строк в многострочном поле
+    )
+
+    address: str = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "textarea",
+                "rows": 2,
+                "placeholder": {
+                    "ru": "Введите адрес",
+                    "en": "Enter address",
+                    "pl": "Wprowadź adres"
+                }
+            }
         }
-    }
-    pesel: str = {
-        "default": "85051512345",
-        "settings": {
-            "type": "pesel",       # новый, кастомный тип для идентификатора
-            # Фронтенд может решить, как валидировать PESEL (Польша), ИИН (Казахстан), СНИЛС (Россия) и т.д.
+    )
+
+    pesel: str = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "pesel",
+                "placeholder": {
+                    "ru": "Введите идентификатор",
+                    "en": "Enter identifier",
+                    "pl": "Wprowadź identyfikator"
+                }
+            }
         }
-    }
-    doc_id: str = {
-        "default": "4510 123456",
-        "settings": {
-            "type": "text",        # Обычное текстовое поле (можно придумать что-то вроде "document_id")
-            "label": "Номер документа"
+    )
+
+    emergency_contact: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "phone",
+                "mask": "+9 (999) 999-99-99",
+                "allowExtraText": True,
+                "placeholder": {
+                    "ru": "Введите номер экстренного контакта",
+                    "en": "Enter emergency contact number",
+                    "pl": "Wprowadź numer kontaktowy awaryjny"
+                }
+            }
         }
-    }
-    emergency_contact: Optional[str] = {
-        "default": "+7 (999) 765-43-21 (Анна, жена)",
-        "settings": {
-            "type": "phone",
-            "mask": "+9 (999) 999-99-99",
-            "allowExtraText": True  # Допустим, разрешаем приписывать комментарий в конце
-        }
-    }
-    updated_at: datetime = {
-        "default": datetime.now(),
-        "settings": {
-            "type": "datetime"
-        }
-    }
+    )
+
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
 
-class HealthSurveySchema(BaseModel):
+# ==========
+# Анкета здоровья
+# ==========
+
+class HealthSurveySchema(BaseValidatedModel):
     """
     Схема для вкладки 'Анкета здоровья'.
-    Здесь демонстрируются:
-    - Поле с Enum (ConditionEnum) для хронических заболеваний,
-    - Поле с ручным списком choices (smoking_status).
     """
 
-    allergies: str = {
-        "default": {
-            "en": "Penicillin, birch pollen",
-            "ru": "Пенициллин, пыльца березы"
-        },
-        "settings": {
-            "type": "textarea",
-            "rows": 2,
-            "placeholder": {
-                "en": "List allergens separated by commas",
-                "ru": "Перечислите аллергены через запятую"
-            }
-        }
-    }
-
-    # Множественное поле с Enum
-    chronic_conditions: List[ConditionEnum] = {
-        "default": [
-            ConditionEnum.DIABETES,
-            ConditionEnum.ASTHMA
-        ],
-        "settings": {
-            "type": "multiselect"
-            # choices не указываем явно, так как берем значения из Enum ConditionEnum
-        }
-    }
-
-    # Поле со списком выбора (без Enum), где для каждого пункта укажем свои RU/EN и цвет
-    smoking_status: str = {
-        "default": {
-            "en": "Former smoker",
-            "ru": "Бывший курильщик"
-        },
-        "settings": {
-            "type": "select",
-            "placeholder": {
-                "en": "Select smoking status",
-                "ru": "Выберите статус курения"
-            },
-            "choices": [
-                {
-                    "value": {
-                        "en": "Never smoked",
-                        "ru": "Никогда не курил",
-                        "settings": {
-                            "color": "#757575"
-                        }
-                    }
-                },
-                {
-                    "value": {
-                        "en": "Former smoker",
-                        "ru": "Бывший курильщик",
-                        "settings": {
-                            "color": "#FFA726"
-                        }
-                    }
-                },
-                {
-                    "value": {
-                        "en": "Current smoker",
-                        "ru": "Курит в настоящее время",
-                        "settings": {
-                            "color": "#D32F2F"
-                        }
-                    }
+    allergies: Optional[List[Any]] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "tag_cloud",
+                "placeholder": {
+                    "en": "List allergens separated by commas",
+                    "ru": "Перечислите аллергены через запятую",
+                    "pl": "Wymień alergeny, oddzielając je przecinkami"
                 }
-            ]
-        }
-    }
-
-    current_medications: str = {
-        "default": {
-            "en": "Enalapril 10mg daily",
-            "ru": "Эналаприл 10мг ежедневно"
-        },
-        "settings": {
-            "type": "textarea",
-            "rows": 2,
-            "placeholder": {
-                "en": "List medications taken regularly",
-                "ru": "Перечислите препараты, принимаемые регулярно"
             }
         }
-    }
+    )
 
-    # Поле даты/времени
-    last_updated: datetime = {
-        "default": datetime(2023, 5, 15, 13, 30),
-        "settings": {
-            "type": "datetime",
-            "placeholder": {
-                "en": "Pick date/time",
-                "ru": "Выберите дату и время"
+    chronic_conditions: List[ConditionEnum] = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                # "type": "color_multiselect",
+                "color_map": {
+                    "yes": "#4CAF50",
+                    "no": "#F44336"
+                },
+                "searchable": True
             }
         }
-    }
+    )
 
-    form_status: HealthFormStatus = {
-        "default": HealthFormStatus.APPROVED,
-        "settings": {
-            "type": "radio_select",
-            "placeholder": {
-                "en": "Choose survey status",
-                "ru": "Выберите статус анкеты"
+    smoking_status: Optional[dict] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "select",
+                "placeholder": {
+                    "en": "Select smoking status",
+                    "ru": "Выберите статус курения",
+                    "pl": "Wybierz status palenia"
+                },
+                "choices": [
+                    {
+                        "value": {
+                            "en": "Never smoked",
+                            "ru": "Никогда не курил",
+                            "pl": "Nigdy nie palił"
+                        },
+                        "label": {
+                            "en": "Never smoked",
+                            "ru": "Никогда не курил",
+                            "pl": "Nigdy nie palił"
+                        }
+                    },
+                    {
+                        "value": {
+                            "en": "Former smoker",
+                            "ru": "Бывший курильщик",
+                            "pl": "Były palacz"
+                        },
+                        "label": {
+                            "en": "Former smoker",
+                            "ru": "Бывший курильщик",
+                            "pl": "Były palacz"
+                        }
+                    },
+                    {
+                        "value": {
+                            "en": "Current smoker",
+                            "ru": "Курит в настоящее время",
+                            "pl": "Pali obecnie"
+                        },
+                        "label": {
+                            "en": "Current smoker",
+                            "ru": "Курит в настоящее время",
+                            "pl": "Pali obecnie"
+                        }
+                    }
+                ]
             }
-            # Перечисление вариантов берем из Enum HealthFormStatus
         }
-    }
+    )
+
+    current_medications: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "textarea",
+                "rows": 2,
+                "placeholder": {
+                    "en": "List medications taken regularly",
+                    "ru": "Перечислите препараты, принимаемые регулярно",
+                    "pl": "Wymień regularnie przyjmowane leki"
+                }
+            }
+        }
+    )
+
+    last_updated: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
 
-class FamilyMemberSchema(BaseModel):
+# ==========
+# Семья
+# ==========
+
+class FamilyMemberSchema(BaseValidatedModel):
     """
-    Данные одного члена семьи.
-    """
-
-    full_name: str = {
-        "default": {
-            "en": "Anna Petrova",
-            "ru": "Анна Петрова"
-        },
-        "settings": {
-            "type": "text",
-            "placeholder": {
-                "en": "Enter full name",
-                "ru": "Введите полное имя"
-            }
-        }
-    }
-
-    patient_id: str = {
-        "default": {
-            "en": "PAT-789012",
-            "ru": "PAT-789012"
-        },
-        "settings": {
-            "type": "text",
-            "placeholder": {
-                "en": "Patient ID",
-                "ru": "ID пациента"
-            }
-        }
-    }
-
-    birth_date: Optional[date] = {
-        "default": None,
-        "settings": {
-            "type": "calendar",
-            "placeholder": {
-                "en": "Select birth date",
-                "ru": "Выберите дату рождения"
-            }
-        }
-    }
-
-    relationship: RelationshipEnum = {
-        "default": RelationshipEnum.SPOUSE,
-        "settings": {
-            "type": "select",
-            "placeholder": {
-                "en": "Select relationship",
-                "ru": "Выберите тип родства"
-            }
-            # choices будут парситься из RelationshipEnum
-        }
-    }
-
-
-class TransactionSchema(BaseModel):
-    """
-    Описание одной транзакции в бонусной программе.
+    Схема для вкладки 'Семья'. Использует json_schema_extra для настроек UI.
     """
 
-    transaction_type: TransactionTypeEnum = {
-        "default": TransactionTypeEnum.ACCRUED,
-        "settings": {
-            "type": "select",
-            "placeholder": {
-                "en": "Select transaction type",
-                "ru": "Выберите тип операции"
-            }
-            # choices из Enum TransactionTypeEnum
-        }
-    }
-
-    title: str = {
-        "default": {
-            "en": "Referral",
-            "ru": "Реферал"
-        },
-        "settings": {
-            "type": "text",
-            "placeholder": {
-                "en": "Enter reason/title",
-                "ru": "Укажите причину/название"
+    phone: str = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "phone",
+                "mask": "+9 (999) 999-99-99",
+                "placeholder": {
+                    "en": "Enter phone number",
+                    "ru": "Введите номер телефона",
+                    "pl": "Wprowadź numer telefonu"
+                }
             }
         }
-    }
+    )
 
-    date_time: datetime = {
-        "default": datetime(2023, 6, 1, 13, 0),
-        "settings": {
-            "type": "datetime",
-            "placeholder": {
-                "en": "Pick transaction date/time",
-                "ru": "Выберите дату и время транзакции"
+    relationship: RelationshipEnum = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "select",
+                "placeholder": {
+                    "en": "Select relationship",
+                    "ru": "Выберите тип родства",
+                    "pl": "Wybierz relację"
+                }
             }
         }
-    }
+    )
 
-    amount: int = {
-        "default": 100,
-        "settings": {
-            "type": "number",
-            "placeholder": {
-                "en": "Transaction amount",
-                "ru": "Сумма транзакции"
+    status: FamilyStatusEnum = Field(
+        default=FamilyStatusEnum.PENDING,
+        json_schema_extra={
+            "settings": {
+                "type": "select",
+                "placeholder": {
+                    "en": "Select status",
+                    "ru": "Выберите статус",
+                    "pl": "Wybierz status"
+                }
             }
         }
-    }
+    )
 
-    comment: Optional[str] = {
-        "default": {
-            "en": "",
-            "ru": ""
-        },
-        "settings": {
-            "type": "textarea",
-            "rows": 2,
-            "placeholder": {
-                "en": "Additional comment",
-                "ru": "Дополнительный комментарий"
+    birth_date: Optional[datetime] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "calendar",
+                "placeholder": {
+                    "en": "Select birth date",
+                    "ru": "Выберите дату рождения",
+                    "pl": "Wybierz datę urodzenia"
+                }
             }
         }
-    }
+    )
+
+    member_name: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "text",
+                "hide_if_none": True,
+                "placeholder": {
+                    "en": "Full name",
+                    "ru": "Полное имя",
+                    "pl": "Imię i nazwisko"
+                }
+            }
+        }
+    )
+
+    member_id: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "text",
+                "hide_if_none": True,
+                "placeholder": {
+                    "en": "Patient ID",
+                    "ru": "ID пациента",
+                    "pl": "ID pacjenta"
+                }
+            }
+        }
+    )
+
+    bonus_balance: Optional[int] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "int",
+                "hide_if_none": True,
+                "placeholder": {
+                    "en": "Bonuses",
+                    "ru": "Бонусы",
+                    "pl": "Bonusy"
+                }
+            }
+        }
+    )
 
 
+# ==========
+# Бонусная программа
+# ==========
 
-class BonusProgramSchema(BaseModel):
+
+class BonusTransactionSchema(BaseValidatedModel):
     """
-    Вкладка 'Бонусная программа'.
-    Содержит:
-    - Текущий баланс (balance) — вычисляемое поле
-    - Реферальный код (referral_code)
-    - Дата последнего обновления (last_updated)
-    - История транзакций (transaction_history) — список TransactionSchema
+    Схема для вкладки 'Бонусная программа' (транзакции).
     """
 
-    balance: int = {
-        "default": 450,  # Заглушка (будет вычисляться или подтягиваться из логики)
-        "settings": {
-            "type": "number"
-            # read_only_fields для него укажем в админке
-        }
-    }
-
-    referral_code: str = {
-        "default": "IVAN2023",
-        "settings": {
-            "type": "text",
-            "placeholder": {
-                "en": "Referral code",
-                "ru": "Реферальный код"
+    title: str = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "text",
+                "placeholder": {
+                    "en": "Enter title",
+                    "ru": "Введите название",
+                    "pl": "Wprowadź tytuł"
+                }
             }
         }
-    }
+    )
 
-    last_updated: datetime = {
-        "default": datetime(2023, 6, 10, 17, 20),
-        "settings": {
-            "type": "datetime",
-            "placeholder": {
-                "en": "Date of last bonus update",
-                "ru": "Дата последнего обновления"
+    description: Optional[str] = Field(
+        default="",
+        json_schema_extra={
+            "settings": {
+                "type": "str",
+                "placeholder": {
+                    "en": "Additional comment",
+                    "ru": "Дополнительный комментарий",
+                    "pl": "Dodatkowy komentarz"
+                }
             }
         }
-    }
+    )
 
-    transaction_history: List[TransactionSchema] = []
+    date_time: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-
-class ConsentItemSchema(BaseModel):
-    """
-    Одно согласие пользователя.
-    """
-    consent_type: ConsentEnum = {
-        "default": ConsentEnum.GDPR,
-        "settings": {
-            "type": "select",
-            "placeholder": {
-                "en": "Select the type of consent",
-                "ru": "Выберите тип согласия"
-            }
-            # Сами варианты берем из ConsentEnum
-        }
-    }
-
-    accepted: bool = {
-        "default": True,
-        "settings": {
-            "type": "boolean_toggle",
-            # Или type: "switch", "checkbox", "radio" — в зависимости от вашего фронта
-        }
-    }
-
-
-class UserConsentsSchema(BaseModel):
-    """
-    Вкладка 'Согласия'. 
-    Хранит список согласий и дату последнего обновления.
-    """
-    last_updated: datetime = {
-        "default": datetime(2023, 1, 15, 11, 30),
-        "settings": {
-            "type": "datetime",
-            "placeholder": {
-                "en": "Last update date/time",
-                "ru": "Дата и время последнего обновления согласий"
+    transaction_type: TransactionTypeEnum = Field(
+        default=TransactionTypeEnum.ACCRUED,
+        json_schema_extra={
+            "settings": {
+                "type": "select",
+                "placeholder": {
+                    "en": "Select transaction type",
+                    "ru": "Выберите тип операции",
+                    "pl": "Wybierz typ transakcji"
+                }
             }
         }
-    }
+    )
 
-    consents: List[ConsentItemSchema] = []
+    amount: int = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "number",
+                "placeholder": {
+                    "en": "Amount",
+                    "ru": "Сумма",
+                    "pl": "Kwota"
+                }
+            }
+        }
+    )
+
+    referral_code: str = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "str",
+                "can_copy": True
+            }
+        }
+    )
+
+
+class BonusProgramSchema(BaseValidatedModel):
+    """
+    Схема для вкладки 'Бонусная программа' (основная).
+    """
+
+    balance: int = Field(
+        default=0,
+        json_schema_extra={
+            "settings": {
+                "type": "int",
+                "placeholder": {
+                    "en": "Current balance",
+                    "ru": "Текущий баланс",
+                    "pl": "Aktualne saldo"
+                }
+            }
+        }
+    )
+
+    referral_code: Optional[str] = Field(
+        default="",
+        json_schema_extra={
+            "settings": {
+                "type": "str",
+                "placeholder": {
+                    "en": "Referral code",
+                    "ru": "Реферальный код",
+                    "pl": "Kod polecający"
+                }
+            }
+        }
+    )
+
+    last_updated: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+    transaction_history: List[BonusTransactionSchema]
+
+# ==========
+# Согласия
+# ==========
+
+
+class ConsentSchema(BaseValidatedModel):
+    """
+    Схема для вкладки 'Согласия пользователя'.
+    """
+
+    consents: List[ConsentEnum] = Field(
+        json_schema_extra={
+            "settings": {
+                "color_map": {
+                    "yes": "#4CAF50",
+                    "no": "#F44336"
+                },
+                "placeholder": {
+                    "en": "Select consents",
+                    "ru": "Выберите согласия",
+                    "pl": "Wybierz zgody"
+                }
+            }
+        }
+    )
+
+    last_updated: Optional[datetime] = Field(default_factory=datetime.utcnow)

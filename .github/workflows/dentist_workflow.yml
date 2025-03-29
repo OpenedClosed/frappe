@@ -151,7 +151,13 @@ jobs:
             CRON_JOB="*/5 * * * * ~/scripts/restart_containers.sh >> ~/scripts/restart_log.txt 2>&1"
             (crontab -l | grep -qF "$CRON_JOB") || (echo "$CRON_JOB" | crontab -)
 
-            sudo docker-compose down --remove-orphans
+            # Останавливаем контейнеры
+            sudo docker-compose -f ~/docker-compose.yml down --remove-orphans
+
+            # Чистим старые образы
+            echo "Чистим старые образы..."
+            sudo docker system prune -a -f --volumes
+
             touch .env
             cat > .env << EOF
             DOLLAR='$'
@@ -188,11 +194,15 @@ jobs:
 
             EOF
 
-            sudo docker-compose pull
-            sudo docker-compose up -d
+            # Поднимаем контейнеры
+            sudo docker-compose -f ~/docker-compose.yml pull
+            sudo docker-compose -f ~/docker-compose.yml up -d
+
             sleep 10
-            sudo docker exec -it mongo mongo -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
-            sudo docker system prune -a -f --volumes
+
+            # Инициализируем MongoDB (если нужно)
+            echo "Инициализируем MongoDB..."
+            sudo docker-compose exec -it mongo mongo -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
 
 
   send_message:

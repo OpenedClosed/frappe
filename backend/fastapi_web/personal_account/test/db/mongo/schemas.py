@@ -6,7 +6,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr
 
-from db.mongo.base.schemas import BaseValidatedModel, Location, Photo, File, RangeValue, Rating, TableRow
+from db.mongo.base.schemas import (BaseValidatedModel, File, Location, Photo,
+                                   RangeValue, Rating, TableRow)
 
 
 class SingleInlineModel(BaseModel):
@@ -146,9 +147,9 @@ class TestSchema(BaseValidatedModel):
     }
 
     # Поле выбора цвета
-    color_picker: ColorPickerEnum = {
-        "settings": {"type": "color_picker"}
-    }
+    # color_picker: ColorPickerEnum = {
+    #     "settings": {"type": "color_multiselect"}
+    # }
 
     # Таблица (список строк)
     table_data: List[TableRow] = [

@@ -4,7 +4,6 @@ from enum import Enum
 
 from db.mongo.base.enums import BaseJsonEnumMixin
 
-
 # ==========
 # Основная информация
 # ==========
@@ -25,76 +24,71 @@ class GenderEnum(BaseJsonEnumMixin, str, Enum):
     })
 
 
-
-
-
-
-
+# ==========
+# Анкета здоровья
+# ==========
 
 
 class ConditionEnum(str, Enum):
     """
-    Хронические заболевания:
-    Храним перевод (ru/en) и цвет в отдельном блоке settings.
+    Хронические заболевания без цветов (цвета задаются отдельно в color_map).
     """
-    DIABETES = json.dumps({
-        "en": "Diabetes",
-        "ru": "Диабет",
-        "settings": {
-            "color": "#E53935"
-        }
-    })
-    ASTHMA = json.dumps({
-        "en": "Asthma",
-        "ru": "Астма",
-        "settings": {
-            "color": "#E53935"
-        }
-    })
-    HYPERTENSION = json.dumps({
-        "en": "Hypertension",
-        "ru": "Гипертония",
-        "settings": {
-            "color": "#43A047"
-        }
-    })
-    OTHER = json.dumps({
-        "en": "Other",
-        "ru": "Другое",
-        "settings": {
-            "color": "#43A047"
-        }
-    })
+    DIABETES = json.dumps({"en": "Diabetes", "ru": "Диабет"})
+    ASTHMA = json.dumps({"en": "Asthma", "ru": "Астма"})
+    HYPERTENSION = json.dumps({"en": "Hypertension", "ru": "Гипертония"})
+    CANCER = json.dumps({"en": "Cancer", "ru": "Рак"})
+    ARTHRITIS = json.dumps({"en": "Arthritis", "ru": "Артрит"})
+    COPD = json.dumps(
+        {"en": "Chronic Obstructive Pulmonary Disease", "ru": "ХОБЛ"})
+    DEPRESSION = json.dumps({"en": "Depression", "ru": "Депрессия"})
+    ANXIETY = json.dumps({"en": "Anxiety", "ru": "Тревожность"})
+    CHRONIC_KIDNEY_DISEASE = json.dumps(
+        {"en": "Chronic Kidney Disease", "ru": "Хроническая болезнь почек"})
+    LIVER_DISEASE = json.dumps({"en": "Liver Disease", "ru": "Болезнь печени"})
+    MIGRAINE = json.dumps({"en": "Migraine", "ru": "Мигрень"})
+    OSTEOPOROSIS = json.dumps({"en": "Osteoporosis", "ru": "Остеопороз"})
+    THYROID_DISORDER = json.dumps(
+        {"en": "Thyroid Disorder", "ru": "Заболевание щитовидной железы"})
+    EPILEPSY = json.dumps({"en": "Epilepsy", "ru": "Эпилепсия"})
 
 
 class HealthFormStatus(str, Enum):
     """
     Статусы анкеты (одобрена, ожидает, отклонена).
-    Аналогично, у каждого статуса свой цвет в settings.
+    Цвета — в HEX-кодах.
     """
     APPROVED = json.dumps({
         "en": "Approved",
         "ru": "Одобрена",
+        "pl": "Zatwierdzona",
         "settings": {
-            "color": "green"
+            "color": "#4CAF50"
         }
     })
     PENDING = json.dumps({
         "en": "Pending",
         "ru": "Ожидает",
+        "pl": "Oczekuje",
         "settings": {
-            "color": "orange"
+            "color": "#FFA000"
         }
     })
     REJECTED = json.dumps({
         "en": "Rejected",
         "ru": "Отклонена",
+        "pl": "Odrzucona",
         "settings": {
-            "color": "red"
+            "color": "#F44336"
         }
     })
 
-class RelationshipEnum(str, Enum):
+
+# ==========
+# Семья
+# ==========
+
+
+class RelationshipEnum(BaseJsonEnumMixin, str, Enum):
     SPOUSE = json.dumps({
         "en": "Spouse",
         "ru": "Супруг(а)",
@@ -118,77 +112,80 @@ class RelationshipEnum(str, Enum):
     })
 
 
+class FamilyStatusEnum(BaseJsonEnumMixin, str, Enum):
+    PENDING = json.dumps({
+        "en": "Pending",
+        "ru": "В ожидании",
+        "pl": "Oczekuje"
+    })
+    CONFIRMED = json.dumps({
+        "en": "Confirmed",
+        "ru": "Подтверждено",
+        "pl": "Potwierdzony"
+    })
 
 
+# ==========
+# Бонусная программа
+# ==========
 
-class TransactionTypeEnum(str, Enum):
-    # Два варианта: начислено (accrual) или потрачено (spent).
-    # В JSON храним перевод и цвет в settings.
+
+class TransactionTypeEnum(BaseJsonEnumMixin, str, Enum):
     ACCRUED = json.dumps({
         "en": "Accrued",
         "ru": "Начислено",
+        "pl": "Dodane",
         "settings": {
-            "color": "green"
+            "color": "#43A047"
         }
     })
-    SPENT = json.dumps({
-        "en": "Spent",
-        "ru": "Потрачено",
+    REDEEMED = json.dumps({
+        "en": "Redeemed",
+        "ru": "Списано",
+        "pl": "Wykorzystane",
         "settings": {
-            "color": "red"
+            "color": "#E53935"
         }
     })
 
 
+# ==========
+# Согласия
+# ==========
 
-
-class ConsentEnum(str, Enum):
+class ConsentEnum(BaseJsonEnumMixin, str, Enum):
     GDPR = json.dumps({
-        "en": "Consent to process personal data (GDPR)",
+        "en": "GDPR Consent",
         "ru": "Согласие на обработку персональных данных (GDPR)",
-        "settings": {
-            "color": "green"  # или по умолчанию "green" (если принято)
-        }
+        "pl": "Zgoda na przetwarzanie danych (GDPR)"
     })
-    PRIVACY_POLICY = json.dumps({
-        "en": "Consent to the privacy policy",
+    PRIVACY = json.dumps({
+        "en": "Privacy Policy",
         "ru": "Согласие с политикой конфиденциальности",
-        "settings": {
-            "color": "green"
-        }
+        "pl": "Zgoda na politykę prywatności"
     })
-    TERMS_OF_USE = json.dumps({
-        "en": "Consent to terms of use",
+    TERMS = json.dumps({
+        "en": "Terms of Use",
         "ru": "Согласие с условиями использования",
-        "settings": {
-            "color": "green"
-        }
+        "pl": "Zgoda na warunki korzystania"
     })
     COOKIES = json.dumps({
-        "en": "Consent to cookies usage",
+        "en": "Cookies",
         "ru": "Согласие на использование cookies",
-        "settings": {
-            "color": "green"
-        }
+        "pl": "Zgoda na pliki cookie"
     })
-    EMAIL_MARKETING = json.dumps({
-        "en": "Consent to email marketing",
+    EMAIL = json.dumps({
+        "en": "Email Marketing",
         "ru": "Согласие на email-маркетинг",
-        "settings": {
-            "color": "green"
-        }
+        "pl": "Zgoda na email marketing"
     })
-    SMS_MARKETING = json.dumps({
-        "en": "Consent to SMS marketing",
+    SMS = json.dumps({
+        "en": "SMS Marketing",
         "ru": "Согласие на SMS-маркетинг",
-        "settings": {
-            "color": "green"
-        }
+        "pl": "Zgoda na marketing SMS"
     })
     PERSONALIZATION = json.dumps({
-        "en": "Consent to personalization",
+        "en": "Personalization",
         "ru": "Согласие на персонализацию",
-        "settings": {
-            "color": "green"
-        }
-    }) 
+        "pl": "Zgoda na personalizację"
+    })

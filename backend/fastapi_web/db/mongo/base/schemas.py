@@ -128,18 +128,15 @@ class BaseValidatedModel(BaseModel):
         origin = get_origin(field_type)
         args = get_args(field_type)
 
-        # Обработка Union/Optional
         if origin is Union:
             for a in args:
                 if a is not type(None):
                     return cls._validate_field_type(field_name, a, value)
             return None
 
-        # Если это Enum
         if isinstance(field_type, type) and issubclass(field_type, Enum):
             return cls._validate_enum(field_type, value)
 
-        # Если это List[Enum]
         if origin is list:
             inner_type = args[0]
             if isinstance(inner_type, type) and issubclass(inner_type, Enum):
@@ -149,7 +146,6 @@ class BaseValidatedModel(BaseModel):
             validated_obj = TempModel(**{field_name: value})
             return getattr(validated_obj, field_name)
 
-        # Для всего прочего
         try:
             TempModel = create_model(
                 "TempModel", **{field_name: (field_type, ...)})
@@ -214,8 +210,6 @@ class BaseValidatedModel(BaseModel):
 class BaseValidatedIdModel(IdModel, BaseValidatedModel):
     """Базовая модель с универсальной валидацией Enum-полей и полем ID."""
     pass
-
-
 
 
 class File(BaseModel):

@@ -8,7 +8,7 @@ from chats.db.mongo.enums import ChatSource, SenderRole
 from chats.db.mongo.schemas import ChatSession
 from chats.routers import handle_chat_creation
 from chats.ws.ws_handlers import handle_message
-from chats.ws.ws_helpers import get_ws_manager
+from chats.ws.ws_helpers import get_typing_manager, get_ws_manager
 from db.mongo.db_init import mongo_db
 from infra import settings
 
@@ -63,6 +63,7 @@ async def process_instagram_message(
 
     chat_session = ChatSession(**chat_session_data)
     manager = await get_ws_manager(chat_id)
+    typing_manager = await get_typing_manager(chat_id)
 
     data = {
         "type": "new_message",
@@ -76,6 +77,7 @@ async def process_instagram_message(
 
     await handle_message(
         manager=manager,
+        typing_manager=typing_manager,
         chat_id=chat_id,
         client_id=client_id,
         redis_session_key=redis_session_key,

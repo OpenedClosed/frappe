@@ -127,7 +127,6 @@ class BotSettingsAdmin(BaseAdmin):
         }
     }
 
-
     field_groups = [
         {
             "title": {"en": "Basic Settings", "ru": "Основные настройки"},

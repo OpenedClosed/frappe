@@ -14,63 +14,73 @@ from .db.mongo.schemas import User
 class UserAdmin(BaseAdmin):
     """Админка для управления пользователями."""
 
-    collection_name = "users"
     model = User
+    collection_name = "users"
+
     verbose_name = {
         "en": "User",
-        "pl": "Użytkownik",
-        "uk": "Користувач",
-        "zh": "用户",
-        "es": "Usuario",
-        "ru": "Пользователь"
+        "ru": "Пользователь",
+        "pl": "Użytkownik"
     }
     plural_name = {
         "en": "Users",
-        "pl": "Użytkownicy",
-        "uk": "Користувачі",
-        "zh": "用户",
-        "es": "Usuarios",
-        "ru": "Пользователи"
-    }
-    icon = "pi pi-user"
-    description = {
-        "en": "Manage users in the system",
-        "pl": "Zarządzaj użytkownikami w systemie",
-        "uk": "Керування користувачами у системі",
-        "zh": "管理系统中的用户",
-        "es": "Gestionar usuarios en el sistema",
-        "ru": "Управление пользователями в системе"
+        "ru": "Пользователи",
+        "pl": "Użytkownicy"
     }
 
-    detail_fields = ["username", "is_superuser"]
-    list_display = ["username", "is_superuser"]
-    read_only_fields = []
+    icon = "pi pi-user"
+
+    description = {
+        "en": "Manage users in the system",
+        "ru": "Управление пользователями в системе",
+        "pl": "Zarządzanie użytkownikami w systemie"
+    }
+
+    list_display = ["username", "role", "created_at"]
+    detail_fields = ["username", "password", "role", "created_at"]
+    read_only_fields = ["created_at"]
 
     field_titles = {
         "username": {
-            "en": "Username", "pl": "Nazwa użytkownika", "uk": "Ім'я користувача", "zh": "用户名", "es": "Nombre de usuario", "ru": "Имя пользователя"
+            "en": "Username",
+            "ru": "Имя пользователя",
+            "pl": "Nazwa użytkownika"
         },
         "password": {
-            "en": "Hashed password", "pl": "Zahaszowane hasło", "uk": "Хешований пароль", "zh": "哈希密码", "es": "Contraseña cifrada", "ru": "Хешированный пароль"
+            "en": "Password (hashed)",
+            "ru": "Хешированный пароль",
+            "pl": "Hasło (zhashowane)"
         },
-        "is_superuser": {
-            "en": "Superuser", "pl": "Superużytkownik", "uk": "Суперкористувач", "zh": "超级用户", "es": "Superusuario", "ru": "Суперпользователь"
+        "role": {
+            "en": "Role",
+            "ru": "Роль",
+            "pl": "Rola"
+        },
+        "created_at": {
+            "en": "Created at",
+            "ru": "Дата создания",
+            "pl": "Data utworzenia"
         }
     }
 
-    async def _hash_password_if_needed(
-        self, data: dict, existing_hashed_password: Optional[str] = None
-    ) -> None:
-        """Хэширует пароль, если передан и не является уже хэшем."""
+    async def _hash_password_if_needed(self, data: dict) -> None:
+        """
+        Хэширует пароль через метод схемы, если он передан и ещё не хэширован.
+        """
         if "password" in data and data["password"]:
-            if existing_hashed_password and data["password"] == existing_hashed_password:
-                return  # Пропускаем, если пароль уже хэширован
+            if data["password"].startswith("$2b$"):
+                return
             user_schema = self.model(**data)
-            data["hashed_password"] = user_schema.set_password()
-            del data["password"]
+            user_schema.set_password()
+            data["password"] = user_schema.password
 
-    async def create(self, data: dict) -> dict:
-        """Создание пользователя с хэшированием пароля и проверкой уникальности."""
+    async def create(self, data: dict,
+                     current_user: Optional[dict] = None) -> dict:
+        """
+        Создание пользователя с хэшированием пароля и проверкой уникальности.
+        """
+        self.check_permission("create", user=current_user)
+
         validated_data = await self.validate_data(data)
         await self._hash_password_if_needed(validated_data)
 
@@ -81,22 +91,31 @@ class UserAdmin(BaseAdmin):
             )
 
         result = await self.db.insert_one(validated_data)
-        return await self._get_or_raise(result.inserted_id, "Не удалось получить созданный объект.")
+        return await self._get_or_raise(result.inserted_id, "Failed to retrieve created object.", current_user=current_user)
 
-    async def update(self, object_id: str, data: dict) -> dict:
-        """Обновление пользователя с хэшированием пароля и проверкой уникальности."""
+    async def update(self, object_id: str, data: dict,
+                     current_user: Optional[dict] = None) -> dict:
+        """
+        Обновление пользователя с хэшированием пароля и проверкой уникальности.
+        """
+        self.check_permission("update", user=current_user)
+
         validated_data = await self.validate_data(data, partial=True)
-
-        existing_user = await self.get(object_id)
+        existing_user = await self.get(object_id, current_user=current_user)
         if not existing_user:
-            raise HTTPException(
-                status_code=404,
-                detail="Пользователь не найден.")
+            raise HTTPException(404, "User not found.")
 
-        await self._hash_password_if_needed(validated_data, existing_user.get("hashed_password"))
+        full_data = {**existing_user, **validated_data}
+        await self._hash_password_if_needed(full_data)
+
+        if "password" in full_data:
+            validated_data["password"] = full_data["password"]
 
         if "username" in validated_data:
-            if await self.db.find_one({"username": validated_data["username"], "_id": {"$ne": ObjectId(object_id)}}):
+            if await self.db.find_one({
+                "username": validated_data["username"],
+                "_id": {"$ne": ObjectId(object_id)}
+            }):
                 raise HTTPException(
                     status_code=400,
                     detail=f"User with username '{validated_data['username']}' already exists."
@@ -104,16 +123,16 @@ class UserAdmin(BaseAdmin):
 
         result = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": validated_data})
         if result.matched_count == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="Объект не найден для обновления."
-            )
+            raise HTTPException(404, "Object not found for update.")
 
-        return await self._get_or_raise(object_id, "Не удалось получить обновленный объект.")
+        return await self._get_or_raise(object_id, "Failed to retrieve updated object.", current_user=current_user)
 
-    async def _get_or_raise(self, object_id: str, error_message: str) -> dict:
-        """Получает объект по ID или выбрасывает ошибку."""
-        obj = await self.get(str(object_id))
+    async def _get_or_raise(self, object_id: str, error_message: str,
+                            current_user: Optional[dict] = None) -> dict:
+        """
+        Получает объект по ID или выбрасывает ошибку.
+        """
+        obj = await self.get(str(object_id), current_user=current_user)
         if not obj:
             raise HTTPException(status_code=500, detail=error_message)
         return obj

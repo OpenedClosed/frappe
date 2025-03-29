@@ -18,6 +18,7 @@ class ChatMessageInline(InlineAdmin):
     model = ChatMessage
     collection_name = "chats"
     dot_field_path = "messages"
+
     verbose_name = {
         "en": "Chat Message",
         "pl": "Wiadomość czatu",
@@ -30,7 +31,8 @@ class ChatMessageInline(InlineAdmin):
         "uk": "Повідомлення чату",
         "ru": "Сообщения чата"
     }
-    icon: str = "pi pi-send"
+    icon = "pi pi-send"
+
     detail_fields = [
         "message",
         "sender_role",
@@ -39,11 +41,24 @@ class ChatMessageInline(InlineAdmin):
     list_display = ["message", "sender_role", "timestamp", "confidence_status"]
     computed_fields = ["confidence_status"]
     read_only_fields = ["timestamp"]
+
     field_titles = {
-        "message": {"en": "Message", "pl": "Wiadomość", "uk": "Повідомлення", "ru": "Сообщение"},
-        "sender_role": {"en": "Sender Role", "pl": "Rola nadawcy", "uk": "Роль відправника", "ru": "Роль отправителя"},
-        "timestamp": {"en": "Timestamp", "pl": "Znacznik czasu", "uk": "Часова мітка", "ru": "Метка времени"},
-        "confidence_status": {"en": "Confidence Status", "pl": "Poziom pewności", "uk": "Рівень впевненості", "ru": "Уровень уверенности"},
+        "message": {
+            "en": "Message", "pl": "Wiadomość",
+            "uk": "Повідомлення", "ru": "Сообщение"
+        },
+        "sender_role": {
+            "en": "Sender Role", "pl": "Rola nadawcy",
+            "uk": "Роль відправника", "ru": "Роль отправителя"
+        },
+        "timestamp": {
+            "en": "Timestamp", "pl": "Znacznik czasu",
+            "uk": "Часова мітка", "ru": "Метка времени"
+        },
+        "confidence_status": {
+            "en": "Confidence Status", "pl": "Poziom pewności",
+            "uk": "Рівень впевненості", "ru": "Уровень уверенности"
+        },
     }
 
     async def get_queryset(
@@ -51,24 +66,33 @@ class ChatMessageInline(InlineAdmin):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
-        current_user_id: Optional[str] = None
+        current_user: Optional[dict] = None,
     ) -> List[dict]:
-        """Список сообщений."""
+        """Возвращает отфильтрованный и отсортированный список сообщений."""
         filters = filters or {}
-        sort_by = self.detect_id_field()
-        results = await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user_id=current_user_id)
-        filtered = [
-            msg for msg in results
-            # if msg.get("sender_role") == SenderRole.CLIENT and
-            # msg.get("gpt_evaluation")
-        ]
+        sort_by = sort_by or self.detect_id_field()
+
+        messages = await super().get_queryset(
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            current_user=current_user
+        )
+
+        # (опциональный фильтр по роли или другим условиям — можно раскомментировать)
+        # messages = [
+        #     msg for msg in messages
+        #     if msg.get("sender_role") == SenderRole.CLIENT
+        # ]
+
         if sort_by:
-            reverse_sort = (order == -1)
-            filtered.sort(key=lambda x: x.get(sort_by), reverse=reverse_sort)
-        return [await self.format_document(m) for m in filtered]
+            reverse = (order == -1)
+            messages.sort(key=lambda x: x.get(sort_by), reverse=reverse)
+
+        return [await self.format_document(msg) for msg in messages]
 
     async def get_confidence_status(self, obj: dict) -> str:
-        """Возвращает статус уверенности в JSON-формате с переводом на русский и английский."""
+        """Возвращает статус уверенности в формате JSON (en/ru)."""
         evaluation = obj.get("gpt_evaluation", {})
 
         status = {
@@ -101,13 +125,15 @@ class ClientInline(InlineAdmin):
     model = Client
     collection_name = "chats"
     dot_field_path = "client"
+
     verbose_name = {
         "en": "Client", "pl": "Klient", "uk": "Клієнт", "zh": "客户", "es": "Cliente", "ru": "Клиент"
     }
     plural_name = {
         "en": "Clients", "pl": "Klienci", "uk": "Клієнти", "zh": "客户", "es": "Clientes", "ru": "Клиенты"
     }
-    icon: str = "pi pi-user"
+    icon = "pi pi-user"
+
     detail_fields = ["client_id", "source", "external_id", "metadata_display"]
     list_display = ["client_id", "source", "external_id", "metadata_display"]
     computed_fields = ["metadata_display"]
@@ -133,18 +159,27 @@ class ClientInline(InlineAdmin):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
-        current_user_id: Optional[str] = None
+        current_user: Optional[dict] = None
     ) -> List[dict]:
         """Возвращает список уникальных клиентов."""
         filters = filters or {}
-        results = await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user_id=current_user_id)
+        results = await super().get_queryset(
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            current_user=current_user
+        )
 
+        # Уникальность по client_id
         unique_clients = {
-            client["client_id"]: client for client in results if "client_id" in client}
+            client["client_id"]: client
+            for client in results if "client_id" in client
+        }
+
         return [await self.format_document(client) for client in unique_clients.values()]
 
     async def get_metadata_display(self, obj: dict) -> str:
-        """Возвращает строку с метаданными клиента."""
+        """Возвращает строковое представление метаданных клиента."""
         metadata = obj.get("metadata")
         return ", ".join(f"{key}: {value}" for key,
                          value in metadata.items()) if metadata else "No metadata"
@@ -155,139 +190,136 @@ class ChatSessionAdmin(BaseAdmin):
 
     model = ChatSession
     collection_name = "chats"
+
     verbose_name = {
-        "en": "Chat Session",
-        "pl": "Sesja czatu",
-        "uk": "Сесія чату",
-        "ru": "Сессия чата",
-        "zh": "聊天会话",
-        "es": "Sesión de chat"
+        "en": "Chat Session", "pl": "Sesja czatu", "uk": "Сесія чату", "ru": "Сессия чата",
+        "zh": "聊天会话", "es": "Sesión de chat"
     }
     plural_name = {
-        "en": "Chat Sessions",
-        "pl": "Sesje czatu",
-        "uk": "Сесії чату",
-        "ru": "Сессии чата",
-        "zh": "聊天会话",
-        "es": "Sesiones de chat"
+        "en": "Chat Sessions", "pl": "Sesje czatu", "uk": "Сесії чату", "ru": "Сессии чата",
+        "zh": "聊天会话", "es": "Sesiones de chat"
     }
-    icon: str = "pi pi-comments"
+    icon = "pi pi-comments"
 
     list_display = [
-        "chat_id",
-        "client_id_display",
-        "client_source_display",
-        "company_name",
-        "status_display",
-        "duration_display",
-        "created_at",
-        "admin_marker",
+        "chat_id", "client_id_display", "client_source_display",
+        "company_name", "status_display", "duration_display",
+        "created_at", "admin_marker"
     ]
 
-    detail_fields = [
-        "chat_id",
-        "client_id_display",
-        "client_source_display",
-        "company_name",
-        "status_display",
-        "duration_display",
-        "created_at",
-        "admin_marker",
-    ]
-
+    detail_fields = list_display.copy()
     computed_fields = [
-        "client_id_display",
-        "client_source_display",
-        "status_display",
-        "duration_display"]
-
+        "client_id_display", "client_source_display",
+        "status_display", "duration_display"
+    ]
     read_only_fields = ["created_at", "last_activity"]
 
     field_titles = {
         "chat_id": {
-            "en": "Chat ID", "pl": "ID czatu", "uk": "Ідентифікатор чату", "ru": "ID чата", "zh": "聊天ID", "es": "ID de chat"
+            "en": "Chat ID", "ru": "ID чата"
         },
         "client_id_display": {
-            "en": "Client ID", "pl": "ID klienta", "uk": "Ідентифікатор клієнта", "ru": "ID клиента", "zh": "客户端ID", "es": "ID del cliente"
+            "en": "Client ID", "ru": "ID клиента"
         },
         "client_source_display": {
-            "en": "Client Source", "pl": "Źródło klienta", "uk": "Джерело клієнта", "ru": "Источник клиента", "zh": "客户端来源", "es": "Fuente del cliente"
+            "en": "Client Source", "ru": "Источник клиента"
         },
         "company_name": {
-            "en": "Company Name", "pl": "Nazwa firmy", "uk": "Назва компанії", "ru": "Название компании", "zh": "公司名称", "es": "Nombre de la empresa"
+            "en": "Company Name", "ru": "Название компании"
         },
         "status_display": {
-            "en": "Status", "pl": "Status", "uk": "Статус", "ru": "Статус", "zh": "状态", "es": "Estado"
+            "en": "Status", "ru": "Статус"
         },
         "duration_display": {
-            "en": "Duration", "pl": "Czas trwania", "uk": "Тривалість", "ru": "Длительность", "zh": "持续时间", "es": "Duración"
+            "en": "Duration", "ru": "Длительность"
         },
         "created_at": {
-            "en": "Created At", "pl": "Utworzono", "uk": "Створено", "ru": "Создано", "zh": "创建时间", "es": "Creado en"
+            "en": "Created At", "ru": "Создано"
         },
         "last_activity": {
-            "en": "Last Activity", "pl": "Ostatnia aktywność", "uk": "Остання активність", "ru": "Последняя активность", "zh": "最后活动", "es": "Última actividad"
+            "en": "Last Activity", "ru": "Последняя активность"
         },
         "admin_marker": {
-            "en": "Admin Marker", "pl": "Znacznik administratora", "uk": "Мітка адміністратора", "ru": "Админская метка", "zh": "管理员标记", "es": "Marcador de administrador"
+            "en": "Admin Marker", "ru": "Админская метка"
         },
     }
 
-    inlines = {"messages": ChatMessageInline, "client": ClientInline}
+    inlines = {
+        "messages": ChatMessageInline,
+        "client": ClientInline
+    }
 
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
-        current_user_id: Optional[str] = None
+        current_user: Optional[dict] = None
     ) -> List[dict]:
         """Список чатов, у которых есть сообщения."""
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
-        return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user_id=current_user_id)
+        return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user=current_user)
 
     async def get_status_display(self, obj: dict) -> str:
-        """Статус чата."""
+        """Статус чата (в виде JSON строки с переводами)."""
         ttl_value = 0
         if obj.get("last_activity"):
             diff = (datetime.utcnow() - obj["last_activity"]).total_seconds()
             ttl_value = settings.CHAT_TIMEOUT.total_seconds() - max(diff, 0)
+
         chat_session = ChatSession(**obj)
-        return chat_session.compute_status(
-            ttl_value).value.capitalize().replace('_', ' ')
+        status = chat_session.compute_status(ttl_value).value
+
+        translated = {
+            "en": status.replace("_", " ").capitalize(),
+            "ru": {
+                "active": "Активен",
+                "inactive": "Неактивен",
+                "expired": "Истёк"
+            }.get(status, "Неизвестно")
+        }
+        return json.dumps(translated, ensure_ascii=False)
 
     async def get_duration_display(self, obj: dict) -> str:
-        """Длительность чата."""
+        """Длительность чата (в виде JSON строки с переводами)."""
         created_at = obj.get("created_at")
         last_activity = obj.get("last_activity")
         if not created_at or not last_activity:
-            return "0h 0m"
+            return json.dumps({"en": "0h 0m", "ru": "0ч 0м"},
+                              ensure_ascii=False)
+
         duration = last_activity - created_at
         hours, remainder = divmod(duration.total_seconds(), 3600)
         minutes, _ = divmod(remainder, 60)
-        return f"{int(hours)}h {int(minutes)}m"
+
+        return json.dumps({
+            "en": f"{int(hours)}h {int(minutes)}m",
+            "ru": f"{int(hours)}ч {int(minutes)}м"
+        }, ensure_ascii=False)
 
     async def get_client_id_display(self, obj: dict) -> str:
-        """Возвращает корректный client_id, включая external_id, если есть."""
+        """ID клиента или его внешний ID (в виде JSON строки)."""
         client_data = obj.get("client")
+        value = "N/A"
         if isinstance(client_data, dict):
             client = Client(**client_data)
-            return client.external_id or client.client_id
-        return "N/A"
+            value = client.external_id or client.client_id or "N/A"
+
+        return json.dumps({"en": value, "ru": value}, ensure_ascii=False)
 
     async def get_client_source_display(self, obj: dict) -> str:
-        """Возвращает источник клиента с форматированием."""
+        """Источник клиента (в виде JSON строки)."""
         client_data = obj.get("client")
+        value = "Unknown"
         if isinstance(client_data, dict):
             client = Client(**client_data)
             if isinstance(client.source, str):
-                return client.source.replace("_", " ").capitalize()
-            # if client.source:
-            #     return client.source.value.replace("_", " ").capitalize()
-        return "Unknown"
+                value = client.source.replace("_", " ").capitalize()
+
+        return json.dumps({"en": value, "ru": value}, ensure_ascii=False)
 
 
 admin_registry.register("chat_sessions", ChatSessionAdmin(mongo_db))
-admin_registry.register("clients", ClientInline(mongo_db))
+# admin_registry.register("clients", ClientInline(mongo_db))
 admin_registry.register("chat_messages", ChatMessageInline(mongo_db))

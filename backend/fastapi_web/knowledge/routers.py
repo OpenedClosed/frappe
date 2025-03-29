@@ -3,7 +3,8 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Request, Response, File, Form, HTTPException, UploadFile
+from fastapi import (APIRouter, Depends, File, Form, HTTPException, Request,
+                     Response, UploadFile)
 from fastapi_jwt_auth import AuthJWT
 from pydantic import ValidationError
 
@@ -76,7 +77,7 @@ async def apply_knowledge_base(
     request: Request,
     response: Response,
     new_data: KnowledgeBase,
-    Authorize: AuthJWT = Depends()    
+    Authorize: AuthJWT = Depends()
 ):
     """Полностью заменяет базу знаний валидированными данными."""
     now = datetime.now()
@@ -130,11 +131,9 @@ async def generate_patch(
 
 
 @knowledge_base_router.get("/bot_info", response_model=Dict[str, Any])
-# @jwt_required()
 async def get_bot_info(
     request: Request,
     response: Response,
-    # Authorize: AuthJWT = Depends()
 ) -> Dict[str, Any]:
     """Возвращает безопасную информацию о боте, включая его основные настройки и используемую модель AI."""
     bot_context = await get_bot_context()

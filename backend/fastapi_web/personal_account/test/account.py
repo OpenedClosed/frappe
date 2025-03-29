@@ -474,4 +474,4 @@ class TestProfileAccount(BaseAccount):
             "notifications_enabled", False) else "Выключены"
 
 
-account_registry.register("test", TestProfileAccount(mongo_db))
+# account_registry.register("test", TestProfileAccount(mongo_db))

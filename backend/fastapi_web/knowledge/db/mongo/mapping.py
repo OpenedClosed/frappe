@@ -141,8 +141,6 @@ FUNCTIONALITY_DETAILS = {
 }
 
 
-
-
 PERSONALITY_TRAITS_DETAILS = {
     PersonalityTraitsEnum.HIGHLY_STRUCTURED: 0.1,
     PersonalityTraitsEnum.LOGICAL: 0.2,

@@ -3,6 +3,7 @@ import asyncclick as aclick
 import click
 
 from db.mongo.db_init import mongo_db
+from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User
 
 
@@ -14,7 +15,7 @@ def cli():
 @cli.command("create-admin")
 async def create_admin_cli():
     """
-    Создаёт суперпользователя (админа).
+    Создаёт суперадмина.
     Данные запрашиваются интерактивно через консоль.
     """
     username = click.prompt("Enter username", type=str)
@@ -22,8 +23,8 @@ async def create_admin_cli():
         "Enter password",
         type=str,
         hide_input=True,
-        confirmation_prompt=True)
-    is_superuser = click.confirm("Is superuser?", default=False)
+        confirmation_prompt=True
+    )
 
     existing = await mongo_db["users"].find_one({"username": username})
     if existing:
@@ -33,11 +34,11 @@ async def create_admin_cli():
     user = User(
         username=username,
         password=password,
-        is_superuser=is_superuser,
+        role=RoleEnum.SUPERADMIN
     )
     user.set_password()
     await mongo_db["users"].insert_one(user.model_dump())
-    click.echo(f"Admin user was successfully created!")
+    click.echo("Superadmin user was successfully created!")
 
 if __name__ == "__main__":
     cli()
