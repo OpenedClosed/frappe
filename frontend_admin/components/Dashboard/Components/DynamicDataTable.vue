@@ -49,16 +49,16 @@
           <Column class="h-[4rem]" :field="column.field" :header="column.header" :filter="true">
             <template #body="slotProps">
               <p
-                :class="[getAlignmentClass(slotProps.data[column.field]), { 'font-bold': isTotalRow(slotProps.data) }]"
-                class="truncate max-w-[10rem] overflow-hidden"
-              >
-                {{
-                  column.field.toLowerCase().includes("date") || column.field.toLowerCase().includes("created")
-                    ? formatDate(slotProps.data[column.field])
-                    : formatValue(slotProps.data[column.field]) || " "
-                }}
-                &nbsp;
-              </p>
+  :class="[getAlignmentClass(slotProps.data[column.field]), { 'font-bold': isTotalRow(slotProps.data) }]"
+  class="truncate max-w-[10rem] overflow-hidden"
+>
+  {{
+    column.field.toLowerCase().includes("date") || column.field.toLowerCase().includes("created")
+      ? formatDate(slotProps.data[column.field])
+      : getLocalizedValue(slotProps.data[column.field], currentLanguage) || " "
+  }}
+</p>
+
             </template>
           </Column>
         </template>
@@ -153,6 +153,52 @@ const emit = defineEmits(["showFilter", "filterChange", "page",'exportToExcel'])
 
 function onExportToExcel() {
   emit("exportToExcel");
+}
+/**
+ * Safely get a localized string from an object that may contain nested JSON.
+ *
+ * @param {Object|String} fieldObj  The object or string that holds localized data.
+ * @param {String} lang            Current language code (e.g. "ru" or "en").
+ * @return {String}                Localized string to display.
+ */
+ function getLocalizedValue(fieldObj, lang) {
+  if (!fieldObj) return "";
+
+  // If it's already just a string, try to parse or return as-is
+  if (typeof fieldObj === "string") {
+    try {
+      const parsedObj = JSON.parse(fieldObj);
+      // If parsedObj is something like { "en": "...", "ru": "...", "settings": {} }:
+      return parsedObj[lang] || parsedObj["en"] || fieldObj;
+    } catch (e) {
+      // Not valid JSON, so just return the raw string
+      return fieldObj;
+    }
+  }
+
+  // If it's an object, assume it has 'en'/'ru' keys
+  //  1) Get best match for current lang
+  //  2) If the resulting string is itself JSON, parse that
+  const rawValue = fieldObj[lang] || fieldObj["en"] || "";
+  if (typeof rawValue === "string") {
+    try {
+      const parsedObj = JSON.parse(rawValue);
+      // parsedObj might again be { en: "...", ru: "...", settings: ... }
+      if (typeof parsedObj === "object" && parsedObj !== null) {
+        // Get the final string from the object or fallback
+        return parsedObj[lang] || parsedObj["en"] || rawValue;
+      } else {
+        // If it’s just a normal string or number after parse, return it
+        return parsedObj;
+      }
+    } catch (e) {
+      // rawValue is a normal string (not JSON)
+      return rawValue;
+    }
+  }
+
+  // If we get here and rawValue was not a string, just return whatever it is:
+  return rawValue;
 }
 
 // Handler for the plus button click event:

@@ -2,33 +2,44 @@
 <template>
   <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto">
     <!-- Main Layout with Sidebar and DataTable -->
-    <div class="max-w-full flex flex-row flex-1 w-full gap-4 p-4 justify-center">
+    <div class="max-w-full flex flex-row flex-1 w-full gap-4 p-4 justify-start"
+      :class="[currentPageName === 'personal_account' ? 'flex-col' : 'flex-row']">
       <!-- Navigation Sidebar Component -->
-      <NavigationSidebar :navItems="navItems" />
+      <NavigationSidebar v-if="currentPageName === 'admin'" :navItems="navItems" />
+
+      <InfoHeader v-if="currentPageName === 'personal_account'" />
+      <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
 
       <!-- Check if group is "knowledge-base" -->
       <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col basis-11/12 min-w-0 justify-start">
         <KnowledgeBase />
       </div>
+      <div v-else-if="currentEntity === 'patients_health_survey'&& !currentId"
+        class="flex flex-col basis-11/12 min-w-0 justify-center items-center">
+        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
+          label="Заполнить Анкету здоровья"></Button>
+      </div>
+      <div  v-else-if="currentEntity === 'patients_family'&& !currentId"
+        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center">
+          <FamilyTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
+          :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
+          :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
+          @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
+      </div>
+      <div  v-else-if="currentEntity === 'patients_bonus_program'&& !currentId"
+        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center">
+          <PointsTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
+          :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
+          :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
+          @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
+      </div>
 
       <!-- Default behavior: Show Data Table -->
       <div v-else-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between">
-        <DynamicDataTable
-          :title="currentEntityName"
-          :isInline="isEntityInline"
-          :displayedColumns="displayedColumns"
-          :tableData="filteredTableData"
-          :isLoading="isLoading"
-          :fieldOptions="fieldOptions"
-          :rows="pageSize"
-          :first="(currentPage - 1) * pageSize"
-          :totalRecords="totalRecords"
-          :paginator="true"
-          @page="onPageChange"
-          @exportToExcel="onExportToExcel"
-          @showFilter="showFilterDialog"
-          @filterChange="handleFilterChange"
-        />
+        <DynamicDataTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
+          :tableData="filteredTableData" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
+          :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
+          @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
       </div>
 
       <div v-else class="flex flex-col basis-11/12 min-w-0 justify-start">
@@ -37,7 +48,8 @@
     </div>
 
     <!-- Filter Dialog -->
-    <Dialog header="Filter Options" v-model:visible="showFilter" :modal="true" :closable="true" :style="{ width: '25rem' }">
+    <Dialog header="Filter Options" v-model:visible="showFilter" :modal="true" :closable="true"
+      :style="{ width: '25rem' }">
       <!-- Add additional filter options here -->
       <!-- <DateRangeFilter @applyFilter="applyDateFilter" /> -->
     </Dialog>
@@ -66,22 +78,26 @@ import { navigateTo, useAsyncData, useNuxtApp } from "#app"; // Nuxt 3 usage
 import { debounce } from "lodash";
 
 // Components
+import InfoHeader from "./Personal/InfoHeader.vue";
+import NavigationSidebarTabs from "./Personal/NavigationSidebarTabs.vue";
 import NavigationSidebar from "./NavigationSidebar.vue";
 import DynamicDataTable from "./DynamicDataTable.vue";
 import MainForm from "~/components/Dashboard/Components/Form/MainForm.vue";
 import KnowledgeBase from "~/components/Dashboard/Components/KnowledgeBase.vue";
-
+import FamilyTable from "~/components/Dashboard/Components/Personal/FamilyTable.vue";
+import PointsTable from "~/components/Dashboard/Components/Personal/PointsTable.vue";
 // ------------------ State & Refs ------------------
 const showFilter = ref(false);
 const searchQuery = ref("");
 const dateRange = ref({ start: null, end: null });
-const { currentPageName } = usePageState()
+const { currentPageName, currentPageInstances } = usePageState()
 
 const selectedField = ref(null);
 const fieldOptions = ref([
   { label: "Все поля", value: null }, // Option for universal search
   // More dynamic options can be pushed here once we know the fields
 ]);
+
 
 // Display / Table
 const navItems = ref([]);
@@ -100,14 +116,18 @@ const currentId = computed(() => route.params.id); // :entity
 const { currentLanguage } = useLanguageState();
 // Toast reference (PrimeVue)
 const toast = ref(null);
+const onClickCreate = () => {
+  // Чтобы узнать currentGroup, currentEntity, можем взять их из $route.params:
+  const { group, entity } = router.currentRoute.value.params;
 
+  // Переходим на: /${currentPageName.value}/..../..../id
+  navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
+};
 // ------------------ Data Fetching ------------------
 /**
  * Fetch adminData from /${currentPageName.value}/info
  * This is where your entire config is loaded (groups, entities, etc.).
  */
-
-
 
 async function getAdminData() {
   let responseData;
@@ -294,15 +314,7 @@ function validateRoute(data, validCombos) {
   }
 
   console.log("foundEntity =", foundEntity.model.max_instances_per_user);
-  if (foundEntity.model.max_instances_per_user === 1) {
-    if (tableDataOriginal.value.length > 0) {
-      navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/${tableDataOriginal.value[0].id}`);
-      return;
-    } else {
-      navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
-      return;
-    }
-  }
+  console.log("tableDataOriginal =", tableDataOriginal.value);
 
   // If we are here, the route is valid => set the "currentEntityName"
   currentEntityName.value = foundEntity.model?.verbose_name || foundEntity.model?.name || currentEntity.value;
@@ -327,30 +339,64 @@ const totalRecords = ref(0);
 /**
  * Query the actual table data from /${currentPageName.value}/:entity/
  */
+/**
+ * Загружает данные таблицы (или объект) с API.
+ * Если max_instances_per_user === 1, то после получения ответа
+ * сразу редиректим либо на форму создания, либо на форму редактирования.
+ */
 const fetchTableData = async () => {
   if (!currentEntity.value) {
     console.warn("No entity specified in the route.");
     return;
   }
-  isLoading.value = true;
 
+  // Находим конфиг сущности, чтобы понять, single-instance она или нет
+  const entityConfig = findEntityConfig(adminData.value, currentGroup.value, currentEntity.value);
+  if (!entityConfig) {
+    console.warn("No valid entityConfig found.");
+    return;
+  }
+
+  isLoading.value = true;
   try {
-    // Use query parameters for pagination
     const response = await useNuxtApp().$api.get(
-      `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`,
-      {
-        params: {
-          page: currentPage.value,
-          page_size: pageSize.value,
-        },
-      }
+      `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`
     );
 
-    tableDataOriginal.value = response.data.data; // All records for this page
-    totalRecords.value = response.data.meta.total_count;
+    let data = response.data.data ? response.data.data : response.data; // То, что вернёт бекенд
+    console.log("MainData response.data =", response.data);
+    console.log("MainData data =", data);
+    // Если это single-instance сущность:
+    currentPageInstances.value = entityConfig.model?.max_instances_per_user;
+    if (entityConfig.model.max_instances_per_user === 1) {
+      // Сервер может вернуть объект, а не массив
+      if (!Array.isArray(data)) {
+        data = data ? [data] : [];
+      }
+      if (!currentId.value && route.params.id !== "new") {
+        // Если в ответе данные пусты, отправляем на создание
+        if (data.length === 0) {
+          navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
+          return; // прерываем дальнейшую отрисовку таблицы
+        } else {
+          // Если объект есть, у него должен быть id – редиректим на /:id
+          console.log("data =", data);
+          const recordId = data[0]?.id;
+          if (recordId) {
+            navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/${recordId}`);
+            return; // прерываем дальнейшую отрисовку таблицы
+          } else {
+            // На всякий случай, если id нет – тогда тоже создаём
+            navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
+            return;
+          }
+        }
+      }
+    }
 
-    console.log("tableDataOriginal =", tableDataOriginal.value);
-    console.log("Pagination meta =", response.data.meta);
+    // Иначе обычный сценарий: сохраняем массив данных и показываем таблицу
+    tableDataOriginal.value = data || [];
+    totalRecords.value = response.data.meta?.total_count || 0;
   } catch (error) {
     console.error("Error fetching table data:", error);
     toast.value?.add({

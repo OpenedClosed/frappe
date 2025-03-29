@@ -26,13 +26,13 @@
           class="p-2 bg-blue-500 text-white rounded"
           @click="saveOneInline(index)"
         >
-          {{ $t("buttons.save") }}
+        Save
         </button>
         <button
           class="p-2 bg-red-500 text-white rounded"
           @click="deleteOneInline(index)"
         >
-        {{ $t("buttons.delete") }}
+        Delete
         </button>
       </div>
     </div>
@@ -53,7 +53,7 @@
     class="mt-2 p-2 bg-green-500 text-white rounded"
     @click="addNewInline"
   >
-  {{ $t("buttons.create") }}
+  Create
   </button>
 </div>
 

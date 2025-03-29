@@ -11,12 +11,12 @@
           <div
             class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
-            <label for="promptTextArea" class="font-bold mb-2">{{ $t('knowledgeBase.label.promptTextarea') }}</label>
+            <label for="promptTextArea" class="font-bold mb-2">Query field</label>
             <!-- FORM with generatePatch submit handler -->
             <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 overflow-y-auto gap-4">
               <!-- Info button -->
               <Button
-                :label="$t('knowledgeBase.button.howToUse')"
+                label="How to use this tool?"
                 icon="pi pi-info-circle"
                 class="p-button-sm p-button-info w-full"
                 @click="showInstructions = true"
@@ -41,23 +41,34 @@
               <!-- {{ selectedFiles }} -->
 
               <!-- GENERATE SMART CHANGE BUTTON -->
-              <Dropdown v-model="selectedModel" :options="aiModels" optionLabel="label" optionValue="value" class="w-full" placeholder="Select AI Model" />
+              <Dropdown
+                v-model="selectedModel"
+                :options="aiModels"
+                optionLabel="label"
+                optionValue="value"
+                class="w-full"
+                placeholder="Select AI Model"
+              />
               <Button
                 type="submit"
                 :disabled="isLoading"
-                :label="$t('knowledgeBase.button.generateSmartChange')"
+                label="Generate smart change"
                 icon="pi pi-save"
                 class="p-button-sm p-button-success w-full flex justify-center items-center"
               >
                 <LoaderSmall v-if="isLoading" />
               </Button>
 
-              <!-- Кнопка для открытия диалога -->
-              <Button :label="$t('knowledgeBase.button.openTestChat')" class="p-button-sm p-button-info w-full" @click="showDialog = true" />
+              <!-- Button to open test chat -->
+              <Button
+                label="Open test chat"
+                class="p-button-sm p-button-info w-full"
+                @click="showDialog = true"
+              />
               <Dialog
                 v-model:visible="showDialog"
                 :modal="true"
-                :header="$t('knowledgeBase.button.openTestChat')"
+                :header="'Open test chat'"
                 :closable="true"
                 :style="{ width: '80vw', height: '80vh' }"
                 contentStyle="display: flex; flex-direction: column; height: 100%;"
@@ -72,47 +83,57 @@
             class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
             <div class="mb-2 pb-1 flex flex-row border-b border-gray-400 dark:border-gray-600 justify-between items-center">
-              <h2 class="text-lg font-bold border-gray-400 dark:border-gray-600 pb-1">{{ $t('knowledgeBase.header.workspacePlayground') }}</h2>
-              <!-- <p class="text-sm text-gray-500 dark:text-gray-300">Last update: {{ knowledgeBaseData.update_date }}</p> -->
+              <h2 class="text-lg font-bold border-gray-400 dark:border-gray-600 pb-1">Workspace</h2>
               <div class="flex flex-row gap-2">
                 <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
                 <Button
                   :disabled="isLoading"
-                  :label="$t('knowledgeBase.button.clearPlayground')"
+                  label="Clear workspace"
                   icon="pi pi-trash"
                   class="p-button-sm p-button-warning"
                   @click="clearPlayground"
                 />
-
                 <Button
                   v-if="isEditMode"
-                  :label="$t('knowledgeBase.button.addTopic')"
+                  label="Add topic"
                   icon="pi pi-plus"
                   class="p-button-sm p-button-success min-w-[140px]"
                   @click="addTopic"
                 />
               </div>
             </div>
-            <!-- Scrollable content for topics -->
+
+            <!-- Read-only display if not editing -->
             <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
-              <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName"  class="mb-6">
+              <div
+                v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base"
+                :key="topicName"
+                class="mb-6"
+              >
                 <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                 <div v-if="topicValue.subtopics">
-                  <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
+                  <div
+                    v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
+                    :key="subtopicName"
+                    class="ml-4 mb-4"
+                  >
                     <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
                     <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                      <!-- qObj is { text: '', files: [] } -->
-                      <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
-                        <!-- Question & text -->
+                      <li
+                        v-for="(qObj, questionKey) in subtopicValue.questions"
+                        :key="questionKey"
+                        class="mb-4"
+                      >
                         <div>
                           <span class="font-semibold">{{ questionKey }}:</span>
                           <span> {{ qObj.text }}</span>
                         </div>
-
-                        <!-- Files (links) -->
                         <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
-                          <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
-                            <!-- If is image, display <img/>; otherwise display link -->
+                          <div
+                            v-for="(fileLink, fileIndex) in qObj.files"
+                            :key="fileIndex"
+                            class="mb-1"
+                          >
                             <ImageLink :fileLink="fileLink" />
                           </div>
                         </div>
@@ -123,8 +144,14 @@
               </div>
             </div>
 
+            <!-- Edit mode if isEditMode -->
             <div v-else class="flex-1 overflow-y-auto">
-              <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" :id="`topic-${topicName}`" class="mb-6">
+              <div
+                v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base"
+                :key="topicName"
+                :id="`topic-${topicName}`"
+                class="mb-6"
+              >
                 <!-- Topic header with input and buttons -->
                 <div class="flex items-center mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">
                   <input
@@ -133,10 +160,19 @@
                     @blur="renameTopic(topicName, $event.target.value)"
                     @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
                   />
-                  <Button icon="pi pi-minus" class="p-button-danger p-button-sm mr-2" @click="removeTopic(topicName)" />
-                  <Button :label="$t('knowledgeBase.button.addSubtopic')" icon="pi pi-plus" class="p-button-success p-button-sm" @click="addSubtopic(topicName)" />
+                  <Button
+                    icon="pi pi-minus"
+                    class="p-button-danger p-button-sm mr-2"
+                    @click="removeTopic(topicName)"
+                  />
+                  <Button
+                    label="Add subtopic"
+                    icon="pi pi-plus"
+                    class="p-button-success p-button-sm"
+                    @click="addSubtopic(topicName)"
+                  />
                 </div>
-                <!-- Subtopics and questions (similar adjustments can be applied here) -->
+                <!-- Subtopics and questions -->
                 <div
                   v-if="topicValue.subtopics"
                   v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
@@ -151,9 +187,13 @@
                       @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
                       @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
                     />
-                    <Button icon="pi pi-minus" class="p-button-danger p-button-sm mr-2" @click="removeSubtopic(topicName, subtopicName)" />
                     <Button
-                      :label="$t('knowledgeBase.button.addQuestion')"
+                      icon="pi pi-minus"
+                      class="p-button-danger p-button-sm mr-2"
+                      @click="removeSubtopic(topicName, subtopicName)"
+                    />
+                    <Button
+                      label="Add question"
                       icon="pi pi-plus"
                       class="p-button-success p-button-sm"
                       @click="addQuestion(topicName, subtopicName)"
@@ -168,7 +208,7 @@
                     >
                       <!-- Row with label + remove button -->
                       <div class="flex items-center justify-between mb-2">
-                        <label class="font-semibold">{{ $t('knowledgeBase.label.question') }}:</label>
+                        <label class="font-semibold">Question:</label>
                         <Button
                           icon="pi pi-trash"
                           class="p-button-rounded p-button-text p-button-danger"
@@ -184,17 +224,20 @@
                       />
 
                       <!-- ANSWER TEXT -->
-                      <label class="font-semibold">{{ $t('knowledgeBase.label.answerText') }}:</label>
+                      <label class="font-semibold">Answer text:</label>
                       <Textarea
                         v-model="questionObj.text"
                         class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
                       />
 
                       <!-- LINKS / FILES -->
-                      <label class="font-semibold">{{ $t('knowledgeBase.label.linksFiles') }}:</label>
+                      <label class="font-semibold">Links / Files:</label>
                       <ul class="mb-2">
-                        <li v-for="(fileLink, fileIndex) in questionObj.files" :key="fileIndex" class="flex items-center gap-2 mb-1">
-                          <!-- Each file link is just a string you can edit -->
+                        <li
+                          v-for="(fileLink, fileIndex) in questionObj.files"
+                          :key="fileIndex"
+                          class="flex items-center gap-2 mb-1"
+                        >
                           <input
                             v-model="questionObj.files[fileIndex]"
                             type="text"
@@ -208,14 +251,19 @@
                         </li>
                       </ul>
                       <div v-if="localFiles.length" class="mt-4">
-                        <h3>{{ $t('knowledgeBase.label.selectedFiles') }}:</h3>
+                        <h3>Selected files:</h3>
                         <ul>
-                          <li v-for="(file, idx) in localFiles" :key="idx">{{ file.name }} - {{ file.size }} bytes</li>
+                          <li
+                            v-for="(file, idx) in localFiles"
+                            :key="idx"
+                          >
+                            {{ file.name }} - {{ file.size }} bytes
+                          </li>
                         </ul>
                       </div>
 
                       <Button
-                        :label="$t('knowledgeBase.button.addLink')"
+                        label="Add link"
                         icon="pi pi-plus"
                         class="p-button-success p-button-sm"
                         @click="addQuestionFile(topicName, subtopicName, questionKey)"
@@ -225,17 +273,19 @@
                 </div>
               </div>
             </div>
+
+            <!-- Save / Reject / Transfer -->
             <div v-if="isEditMode" class="flex flex-col gap-2 mt-2">
               <Button
                 :disabled="isLoading"
-                :label="$t('knowledgeBase.button.savePlayground')"
+                label="Save workspace"
                 icon="pi pi-save"
                 class="p-button-sm p-button-success"
                 @click="savePlayground"
               />
               <Button
                 :disabled="isLoading"
-                :label="$t('knowledgeBase.button.rejectPlayground')"
+                label="Reject workspace"
                 icon="pi pi-times"
                 class="p-button-sm p-button-danger"
                 @click="rejectPlayground"
@@ -244,14 +294,14 @@
             <div v-else class="flex flex-col gap-2 mt-2">
               <Button
                 :disabled="isLoading"
-                :label="$t('knowledgeBase.button.transferToDatabase')"
+                label="Transfer to database"
                 icon="pi pi-save"
                 class="p-button-sm p-button-success"
                 @click="saveChanges"
               />
               <Button
                 :disabled="isLoading"
-                :label="$t('knowledgeBase.button.rejectPlayground')"
+                label="Reject workspace"
                 icon="pi pi-times"
                 class="p-button-sm p-button-danger"
                 @click="rejectPlayground"
@@ -263,26 +313,37 @@
           <div
             class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
           >
-            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">{{ $t('knowledgeBase.header.readonlyKnowledgeBase') }}</h2>
+            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">Knowledge base (read-only)</h2>
             <div class="flex-1 overflow-y-auto">
-              <div v-for="(topicValue, topicName) in readonlyData.knowledge_base" :key="topicName" class="mb-6">
+              <div
+                v-for="(topicValue, topicName) in readonlyData.knowledge_base"
+                :key="topicName"
+                class="mb-6"
+              >
                 <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                 <div v-if="topicValue.subtopics">
-                  <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
+                  <div
+                    v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
+                    :key="subtopicName"
+                    class="ml-4 mb-4"
+                  >
                     <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
                     <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                      <!-- qObj is { text: '', files: [] } -->
-                      <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
-                        <!-- Question & text -->
+                      <li
+                        v-for="(qObj, questionKey) in subtopicValue.questions"
+                        :key="questionKey"
+                        class="mb-4"
+                      >
                         <div>
                           <span class="font-semibold">{{ questionKey }}:</span>
                           <span> {{ qObj.text }}</span>
                         </div>
-
-                        <!-- Files (links) -->
                         <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
-                          <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
-                            <!-- If is image, display <img/>; otherwise display link -->
+                          <div
+                            v-for="(fileLink, fileIndex) in qObj.files"
+                            :key="fileIndex"
+                            class="mb-1"
+                          >
                             <ImageLink :fileLink="fileLink" />
                           </div>
                         </div>
@@ -294,23 +355,36 @@
             </div>
             <div class="flex gap-2">
               <!-- Export Button -->
-              <Button :label="$t('knowledgeBase.button.exportJson')" icon="pi pi-download" class="p-button-sm p-button-info" @click="exportData" />
-
+              <Button
+                label="Export JSON"
+                icon="pi pi-download"
+                class="p-button-sm p-button-info"
+                @click="exportData"
+              />
               <!-- Import Button -->
-              <Button :label="$t('knowledgeBase.button.importJson')" icon="pi pi-upload" class="p-button-sm p-button-primary" @click="triggerFileInput" />
-
+              <Button
+                label="Import JSON"
+                icon="pi pi-upload"
+                class="p-button-sm p-button-primary"
+                @click="triggerFileInput"
+              />
               <!-- Hidden File Input -->
-              <input type="file" class="hidden" ref="fileInput" @change="importData" accept=".json" />
+              <input
+                type="file"
+                class="hidden"
+                ref="fileInput"
+                @change="importData"
+                accept=".json"
+              />
             </div>
           </div>
         </div>
       </div>
     </div>
     <!-- INSTRUCTIONS DIALOG -->
-    <!-- INSTRUCTIONS DIALOG -->
     <Dialog
       v-model:visible="showInstructions"
-      :header="$t('knowledgeBase.button.howToUse')"
+      :header="'How to use this tool?'"
       :modal="true"
       :closable="true"
       :style="{ width: '50vw' }"
@@ -365,11 +439,11 @@
         <h2>Применение изменений</h2>
         <p>
           После редактирования в <strong>Playground</strong> изменения можно перенести в реальную базу данных, нажав
-          <strong>"Transfer to Database"</strong>.
+          <strong>"Transfer to database"</strong>.
         </p>
 
         <h2>Отмена изменений</h2>
-        <p>Чтобы отменить внесенные изменения и вернуть Playground к исходному состоянию, нажмите <strong>"Отменить изменения"</strong>.</p>
+        <p>Чтобы отменить внесенные изменения и вернуть Playground к исходному состоянию, нажмите <strong>"Reject workspace"</strong>.</p>
 
         <h2>Работа с JSON</h2>
         <p>Доступны следующие возможности:</p>
@@ -384,7 +458,7 @@
         <div class="highlight">
           <p>
             <strong>Важно:</strong> любые изменения в Playground не затрагивают реальную базу данных, пока не будет нажата кнопка "Transfer
-            to Database".
+            to database".
           </p>
         </div>
         <h3 class="text-center">ВАЖНО!</h3>
@@ -396,6 +470,7 @@
     </Dialog>
   </div>
 </template>
+
 
 <script setup>
 import { ref } from "vue";

@@ -99,7 +99,6 @@ export default defineNuxtConfig({
     "@nuxtjs/color-mode",
     'nuxt-jsoneditor',
     "nuxt-maplibre",
-    "dragon-editor",
   ],
 
   jsoneditor: {
@@ -143,11 +142,9 @@ export default defineNuxtConfig({
   },
 
   primevue: {
-    cssLayerOrder: "tailwind-base, primevue, tailwind-utilities",
-    // components: {
-    //   exclude: ["Editor", "Chart"]
-    // }
+    cssLayerOrder: "tailwind-base, primevue, tailwind-utilities",   
   },
+ 
 
   nitro: {
     routeRules: {

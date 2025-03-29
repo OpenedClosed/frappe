@@ -1,0 +1,86 @@
+<template>
+    <!-- Обёртка -->
+    <div class="p-4 rounded border bg-white shadow-sm">
+        <!-- Заголовок всей секции -->
+        <h2 class="text-2xl font-bold mb-4">Основная информация</h2>
+
+        <!-- Контейнер для всех блоков в ряд -->
+        <div class="flex gap-10">
+            <!-- Первый блок: "Личные данные" -->
+            <div class="flex-1 flex flex-col">
+                <h3 class="text-lg font-bold mb-2 text-gray-700">Личные данные</h3>
+                <div class="flex flex-col space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Фамилия:</span>
+                        <span class="ml-1 font-semibold">{{ itemData.last_name }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Имя:</span>
+                        <span class="ml-1 font-semibold">{{ itemData.first_name }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Отчество:</span>
+                        <span class="ml-1 font-semibold">{{ itemData.patronymic }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Дата рождения:</span>
+                        <span class="ml-1 font-semibold">{{ itemData.birth_date }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Пол:</span>
+                        <span class="ml-1 font-semibold">
+                            {{ itemData.gender?.ru || itemData.gender?.en || itemData.gender }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Второй блок: "Контактные данные" -->
+            <div class="flex-1 flex flex-col gap-1">
+                <!-- Второй блок: "Информация о компании" -->
+                <div class="flex-1 flex flex-col">
+                    <h3 class="text-lg font-bold mb-2 text-gray-700">Информация о компании</h3>
+                    <div class="flex flex-col space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500">Название компании:</span>
+                            <span class="ml-1 font-semibold">{{ itemData.company_name }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Третий блок: "Системная информация" -->
+                <div class="flex-1 flex flex-col">
+                    <h3 class="text-lg font-bold mb-2 text-gray-700">Системная информация</h3>
+                    <div class="flex flex-col space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500">ID пациента:</span>
+                            <span class="ml-1 font-semibold">{{ itemData.patient_id }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500">Дата создания:</span>
+                            <span class="ml-1 font-semibold">{{ itemData.created_at }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500">Последнее обновление:</span>
+                            <span class="ml-1 font-semibold">{{ itemData.updated_at }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+  
+  <script setup>
+  const props = defineProps({
+    itemData: {
+      type: Object,
+      default: () => ({})
+    }
+  })
+  </script>
+  
+  <style scoped>
+  /* Дополнительные стили при необходимости */
+  </style>
+  

@@ -29,8 +29,10 @@ export function useChatState() {
 }
 export function usePageState() {
   const currentPageName = useState("currentPageName", () => "admin");
+  const currentPageInstances = useState("currentPageInstances", () => 0);
 
   return {
     currentPageName,
+    currentPageInstances,
   };
 }

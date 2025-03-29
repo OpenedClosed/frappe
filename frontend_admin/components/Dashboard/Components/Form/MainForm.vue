@@ -1,65 +1,99 @@
 <template>
   <div>
     <!-- If we are in "form" view -->
+    <!-- {{ itemData }} -->
     <div v-if="isForm" class="p-4">
       <!-- {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }} -->
-      <h2 class="text-xl font-bold mb-4">{{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle[currentLanguage] || entityTitle?.en || " "  }}</h2>
+      <h2 class="text-xl font-bold mb-4">
+        {{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle[currentLanguage] ||
+        entityTitle?.en || " " }}
+      </h2>
 
       <!-- Global error -->
       <!-- <div v-if="errorMessage" class="my-2 p-2 bg-red-100 text-red-700 rounded">
         {{ errorMessage }}
       </div> -->
-
       <p v-if="isLoading">Загрузка данных...</p>
 
       <div v-else>
         <!-- DynamicForm component -->
-        <DynamicForm
-          :fields="filteredFields"
-          :fieldGroups="fieldGroups"
-          :modelValue="itemData"
-          :read-only="isReadOnly"
-          :isNewItem="isNewItem"
-          :fieldErrors="fieldErrors"
-          @update:modelValue="updateItemData"
-        />
+        <div v-if="currentEntity === 'patients_main_info' && !isNewItem && isReadOnly">
+          <PatientsMainInfoView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+        </div>
+        <div v-else-if="currentEntity === 'patients_contact_info' && !isNewItem && isReadOnly">
+          <ContactInfoView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+        </div>
+        <div v-else-if="currentEntity === 'patients_health_survey' && !isNewItem && isReadOnly">
+          <PatientsHealthSurveyView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+
+        </div>
+        <div v-else-if="currentEntity === 'patients_consents' && !isNewItem && isReadOnly">
+          <AgreesPanel v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+
+        </div>
+
+        <DynamicForm v-else :fields="filteredFields" :fieldGroups="fieldGroups" :modelValue="itemData"
+          :read-only="isReadOnly" :isNewItem="isNewItem" :fieldErrors="fieldErrors"
+          @update:modelValue="updateItemData" />
 
         <!-- 2) Inlines rendering -->
         <!-- {{ inlines }} -->
         <div v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
           <div>
             <h3 class="text-lg font-bold mb-2">
-              {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }}
+              {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " " }}
             </h3>
 
-            <InlineList
-              :inlineDef="inlineDef"
-              :parentEntity="currentEntity"
-              :parentId="currentId"
-              :items="itemData[inlineDef.field]"
-              :readOnly="isReadOnly"
-              @reloadParent="reloadCurrentData"
-            />
+            <InlineList :inlineDef="inlineDef" :parentEntity="currentEntity" :parentId="currentId"
+              :items="itemData[inlineDef.field]" :readOnly="isReadOnly" @reloadParent="reloadCurrentData" />
           </div>
         </div>
 
-        <!-- Control Buttons -->
-        <div class="mt-4 flex flex-col md:flex-row gap-2">
+       <!-- Control Buttons -->
+       <div class="mt-4 flex flex-col md:flex-row gap-2">
           <!-- Existing item: edit, save and delete -->
           <template v-if="!isNewItem">
-            <Button v-if="isReadOnly" label="Редактировать" icon="pi pi-pencil" @click="toggleEditMode" />
-            <Button v-else label="Сохранить" icon="pi pi-save" @click="saveItem" />
-            <Button label="Удалить" icon="pi pi-trash" class="p-button-danger" @click="deleteItem" />
+            <!-- Show edit/save only if update is allowed -->
+            <Button
+              v-if="isReadOnly && allowCrudActions.update"
+              label="Редактировать"
+              icon="pi pi-pencil"
+              @click="toggleEditMode"
+            />
+            <Button
+              v-else-if="!isReadOnly && allowCrudActions.update"
+              label="Сохранить"
+              icon="pi pi-save"
+              @click="saveItem"
+            />
+            <!-- Show delete button only if delete is allowed -->
+            <Button
+              v-if="allowCrudActions.delete"
+              label="Удалить"
+              icon="pi pi-trash"
+              class="p-button-danger"
+              @click="deleteItem"
+            />
           </template>
 
           <!-- New record: create -->
-          <Button v-else label="Создать запись" icon="pi pi-check" @click="createItem" />
+          <Button
+            v-else-if="allowCrudActions.create"
+            label="Создать запись"
+            icon="pi pi-check"
+            @click="createItem"
+          />
 
           <!-- Special button for chat_sessions entity -->
-          <Button v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
+          <Button
+            v-if="currentEntity === 'chat_sessions'"
+            label="Открыть чат"
+            icon="pi pi-comments"
+            @click="openChat(itemData?.chat_id)"
+          />
 
           <!-- Navigation: go back to list -->
-          <Button label="Назад к списку" icon="pi pi-arrow-left" class="p-button-text" @click="goBack" />
+          <Button v-if="currentPageInstances > 1 || currentPageInstances === null" label="Назад к списку" icon="pi pi-arrow-left" class="p-button-text" @click="goBack" />
         </div>
       </div>
     </div>
@@ -78,6 +112,10 @@
 import DynamicForm from "~/components/Dashboard/Components/Form/DynamicForm.vue";
 import EmbeddedChat from "~/components/AdminChat/EmbeddedChat.vue";
 import InlineList from "~/components/Dashboard/Components/Form/InlineList.vue";
+import PatientsMainInfoView from "~/components/Dashboard/Components/Personal/PatientsMainInfoView.vue";
+import ContactInfoView from "~/components/Dashboard/Components/Personal/ContactInfoView.vue";
+import PatientsHealthSurveyView from "~/components/Dashboard/Components/Personal/PatientsHealthSurveyView.vue";
+import AgreesPanel from "~/components/Dashboard/Components/Personal/AgreesPanel.vue";
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter, useAsyncData } from "#imports";
 import _ from "lodash";
@@ -95,6 +133,7 @@ const itemData = ref({});
 const isReadOnly = ref(true);
 const errorMessage = ref("");
 const fieldErrors = ref({});
+const allowCrudActions = ref({});
 
 // URL params
 const currentGroup = computed(() => route.params.group);
@@ -109,7 +148,7 @@ const fields = ref([]);
 
 // Reference to store original data for diffing changes
 const originalData = ref({});
-const { currentPageName } = usePageState()
+const { currentPageName, currentPageInstances } = usePageState();
 
 // ------------------ Lifecycle & Data Loading ------------------
 async function getAdminData() {
@@ -162,6 +201,8 @@ async function initPage() {
     }
     console.log("entityConfig:", entityConfig?.model?.plural_name);
     entityTitle.value = entityConfig.model.plural_name;
+      // Set allowed CRUD actions from the backend config
+      allowCrudActions.value = entityConfig.model.allow_crud_actions || {};
 
     // Get fields and filter only detail fields
     const allFields = entityConfig.model.fields || [];
@@ -171,13 +212,17 @@ async function initPage() {
 
     // Store field groups
     console.log("entityConfig.model.field_groups", entityConfig.model.field_groups);
-    fieldGroups.value = entityConfig.model.field_groups || [];  // Store field groups
+    fieldGroups.value = entityConfig.model.field_groups || []; // Store field groups
 
     inlines.value = entityConfig.model.inlines || [];
 
     if (!isNewItem.value) {
       await fetchItemData(currentId.value);
-      isReadOnly.value = true;
+      if (currentPageInstances.value === 1) {
+        isReadOnly.value = true;
+      } else {
+        isReadOnly.value = false;
+      }
     } else {
       itemData.value = fields.value.reduce((acc, field) => {
         acc[field.name] = field.default || null;
@@ -192,7 +237,6 @@ async function initPage() {
     errorMessage.value = parseError(error);
   }
 }
-
 
 function findEntityConfig() {
   const group = adminData.value[currentGroup.value];
@@ -231,7 +275,7 @@ async function fetchItemData(id) {
     itemData.value = res.data;
     // Save a deep copy of the fetched data for later diffing
     originalData.value = res.data;
-    console.log("Данные загружены:", res.data);
+    console.log("ItemData", res.data);
   } catch (error) {
     console.error("Ошибка при загрузке:", error);
     errorMessage.value = parseError(error);
@@ -288,8 +332,6 @@ async function saveItem() {
     errorMessage.value = parseError(error);
   }
 }
-
-
 
 async function createItem() {
   errorMessage.value = "";

@@ -54,7 +54,7 @@ function onClose() {
 
 const { t } = useI18n();
 
-let openLabel = computed(() => (isMobile.value ? "" : t("buttons.openTestChat")));
+let openLabel = computed(() => (isMobile.value ? "" : 'Open test chat'));
 </script>
 
 <style scoped>

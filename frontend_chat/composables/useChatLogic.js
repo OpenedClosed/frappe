@@ -13,7 +13,7 @@ export function useChatLogic(options = {}) {
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
   const isIphone = ref(false);
-
+ 
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
   const currentUserId = ref("1234");

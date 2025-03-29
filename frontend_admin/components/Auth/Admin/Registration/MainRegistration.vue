@@ -37,7 +37,7 @@
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.phone) }">
               <InputText
                 v-model="regForm.phone"
-                type="text"
+                type="phone"
                 required
                 id="phone"
                 placeholder="Введите ваш телефон"
