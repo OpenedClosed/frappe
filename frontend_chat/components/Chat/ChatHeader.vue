@@ -10,7 +10,7 @@
         <h2 class="font-bold max-w-[100px] w-[100px] block md:hidden truncate text-nowrap">{{ botHeaderData?.app_name || " " }}</h2>
         <p v-if="typingUserNames.length" class="animate-pulse  hidden md:block">is typing...</p>
         <p v-if="typingUserNames.length" class="animate-pulse  block md:hidden">...</p>
-      </div>
+      </div> 
       <!-- Toggle Container -->
       <div class="flex items-center gap-2 bg-light dark:bg-gray-700 px-4 py-[2px] md:py-[2px] rounded-lg shadow ml-4">
         <span class="text-2xl font-medium">🧑‍💻</span>
