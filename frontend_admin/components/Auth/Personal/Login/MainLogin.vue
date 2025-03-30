@@ -25,7 +25,7 @@
               id="phone"
               type="tel"
               required
-              mask="+9 (999) 999-99-99"
+              mask="+48 (999) 999-99-99"
               placeholder="Введите ваш телефон"
               class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
             />
