@@ -2,17 +2,17 @@
   <div>
     <!-- Iterate over field groups -->
     <div v-for="group in groupedFields" :key="group.title.en">
-      <div v-if="!group.fields.every(field => isDisabled(field)) || !isNewItem"
-        class="mb-6 bg-neutralLight dark:bg-neutralDark border border-neutralDark dark:border-neutralLight rounded-lg p-6 shadow">
-
+      <div
+        v-if="!group.fields.every((field) => isDisabled(field)) || !isNewItem"
+        class="mb-6 bg-neutralLight dark:bg-neutralDark border border-neutralDark dark:border-neutralLight rounded-lg p-6 shadow"
+      >
         <!-- Group header -->
         <h2 class="text-2xl font-bold text-primaryDark dark:text-primaryLight mb-2">
-          {{ group.title?.[currentLanguage] || group.title?.en || '' }}
-
+          {{ group.title?.[currentLanguage] || group.title?.en || "" }}
         </h2>
 
         <p v-if="group.help_text" class="text-base dark:text-neutralLight mb-4">
-          {{ group.help_text[currentLanguage] || group.help_text.en || '' }}
+          {{ group.help_text[currentLanguage] || group.help_text.en || "" }}
         </p>
         <!-- {{ internalValue }} -->
 
@@ -23,84 +23,162 @@
             <label :for="field.name" class="font-semibold mb-2 flex items-center">
               {{ field.title[currentLanguage] || field.title["en"] }}
 
-              <span v-if="field.help_text" class="inline-flex items-center ml-2 cursor-pointer"
-                v-tooltip="field.help_text[currentLanguage] || field.help_text['en']">
+              <span
+                v-if="field.help_text && Object.keys(field.help_text).length > 0"
+                class="inline-flex items-center ml-2 cursor-pointer"
+                v-tooltip="field.help_text[currentLanguage] || field.help_text['en']"
+              >
                 <i class="pi pi-question-circle text-gray-600 dark:text-gray-300"></i>
               </span>
+
               <span v-if="field.required" class="text-red-500 ml-1">*</span>
             </label>
 
             <!-- Field element -->
             <div class="flex flex-row gap-2 w-full">
               <!-- 1) Select -->
-              <Dropdown v-if="field.type === 'select'" :id="field.name" v-model="internalValue[field.name]"
-                :options="transformChoices(field.choices)" optionValue="value" optionLabel="label"
-                :disabled="isDisabled(field)" class="w-full" @change="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <Dropdown
+                v-if="field.type === 'select'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :options="transformChoices(field.choices)"
+                optionValue="value"
+                optionLabel="label"
+                :disabled="isDisabled(field)"
+                class="w-full"
+                @change="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- 9) Rating field -->
-              <Rating v-else-if="field.type === 'rating'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" :stars="5"
+              <Rating
+                v-else-if="field.type === 'rating'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                :stars="5"
                 :iconOn="field.default?.type === 'emoji' ? 'pi pi-smile' : 'pi pi-star-fill'"
-                :iconOff="field.default?.type === 'emoji' ? 'pi pi-frown' : 'pi pi-star'" class="w-full"
-                @input="emitUpdate" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                :iconOff="field.default?.type === 'emoji' ? 'pi pi-frown' : 'pi pi-star'"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- 10) Datetime field -->
-              <Calendar v-else-if="field.type === 'datetime'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" showTime dateFormat="yy-mm-dd" class="w-full" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <Calendar
+                v-else-if="field.type === 'datetime'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                showTime
+                dateFormat="yy-mm-dd"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
 
               <!-- 2) MultiSelect -->
-              <MultiSelect v-else-if="field.type === 'multiselect'" :id="field.name" v-model="internalValue[field.name]"
-                :options="transformChoices(field.choices)" optionValue="value" optionLabel="label"
-                :disabled="isDisabled(field)" class="w-full" @change="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <MultiSelect
+                v-else-if="field.type === 'multiselect'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :options="transformChoices(field.choices)"
+                optionValue="value"
+                optionLabel="label"
+                :disabled="isDisabled(field)"
+                class="w-full"
+                @change="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- Tag Cloud Field -->
-              <Chips v-else-if="field.type === 'tag_cloud'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" class="w-full" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" placeholder="Enter tags..." />
+              <Chips
+                v-else-if="field.type === 'tag_cloud'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                placeholder="Enter tags..."
+              />
               <!-- Autocomplete Field -->
-              <AutoComplete v-else-if="field.type === 'autocomplete'" :id="field.name"
-                v-model="internalValue[field.name]" :suggestions="autocompleteSuggestions" field="name"
-                :disabled="isDisabled(field)" class="w-full" @complete="onAutoComplete" @change="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" placeholder="Enter a country..." />
+              <AutoComplete
+                v-else-if="field.type === 'autocomplete'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :suggestions="autocompleteSuggestions"
+                field="name"
+                :disabled="isDisabled(field)"
+                class="w-full"
+                @complete="onAutoComplete"
+                @change="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                placeholder="Enter a country..."
+              />
 
               <!-- Multi Files Upload Field -->
               <div v-else-if="field.type === 'multifile'" class="w-full">
                 <!-- Если файлов ещё нет -->
                 <div v-if="!internalValue[field.name] || internalValue[field.name].length === 0">
-                  <FileUpload :id="field.name" mode="basic" :disabled="isDisabled(field)" :auto="true" :multiple="true"
-                    :maxFileSize="5242880" @upload="(e) => onMultiFileUploadComplete(e, field.name)" class="w-full"
-                    choose-label="Загрузить" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                  <FileUpload
+                    :id="field.name"
+                    mode="basic"
+                    :disabled="isDisabled(field)"
+                    :auto="true"
+                    :multiple="true"
+                    :maxFileSize="5242880"
+                    @upload="(e) => onMultiFileUploadComplete(e, field.name)"
+                    class="w-full"
+                    choose-label="Загрузить"
+                    :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                  />
                 </div>
                 <!-- Если файлы уже загружены -->
                 <div v-else class="flex flex-col gap-2">
                   <div class="flex flex-col gap-2">
-                    <div v-for="(file, index) in internalValue[field.name]" :key="index"
-                      class="flex items-center justify-between border p-2 rounded">
+                    <div
+                      v-for="(file, index) in internalValue[field.name]"
+                      :key="index"
+                      class="flex items-center justify-between border p-2 rounded"
+                    >
                       <a :href="currentUrl + file.url" target="_blank" class="underline">
                         {{ file.name || "Скачать файл" }}
                       </a>
-                      <Button :disabled="isDisabled(field)" icon="pi pi-times" severity="danger"
-                        @click="removeMultiFile(field.name, index)" />
+                      <Button
+                        :disabled="isDisabled(field)"
+                        icon="pi pi-times"
+                        severity="danger"
+                        @click="removeMultiFile(field.name, index)"
+                      />
                     </div>
                   </div>
                   <div class="mt-2">
-                    <FileUpload :id="field.name + '-upload'" mode="basic" accept="*/*" :disabled="isDisabled(field)"
-                      :auto="true" :multiple="true" :maxFileSize="5242880"
-                      @upload="(e) => onMultiFileUploadComplete(e, field.name)" class="w-full"
-                      choose-label="Добавить файлы" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                    <FileUpload
+                      :id="field.name + '-upload'"
+                      mode="basic"
+                      accept="*/*"
+                      :disabled="isDisabled(field)"
+                      :auto="true"
+                      :multiple="true"
+                      :maxFileSize="5242880"
+                      @upload="(e) => onMultiFileUploadComplete(e, field.name)"
+                      class="w-full"
+                      choose-label="Добавить файлы"
+                      :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                    />
                   </div>
                 </div>
               </div>
               <!-- Цветовой мультиселект с квадратиками -->
-               
-
-             
-
 
               <!-- 3) Boolean (checkbox) -->
               <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2">
-                <Checkbox :id="field.name" v-model="internalValue[field.name]" :disabled="isDisabled(field)"
-                  @change="emitUpdate" binary :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                <Checkbox
+                  :id="field.name"
+                  v-model="internalValue[field.name]"
+                  :disabled="isDisabled(field)"
+                  @change="emitUpdate"
+                  binary
+                  :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                />
                 <label :for="field.name">
                   {{ field.title[currentLanguage] || field.title["en"] }}
                 </label>
@@ -109,9 +187,14 @@
               <div v-else-if="field.type === 'checkbox_group'" class="w-full">
                 <div class="flex flex-col gap-2">
                   <div v-for="option in field.choices" :key="option.value" class="flex items-center">
-                    <Checkbox :id="`${field.name}-${option.value}`" v-model="internalValue[field.name]"
-                      :value="option.value" :disabled="isDisabled(field)" class="mr-2"
-                      :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                    <Checkbox
+                      :id="`${field.name}-${option.value}`"
+                      v-model="internalValue[field.name]"
+                      :value="option.value"
+                      :disabled="isDisabled(field)"
+                      class="mr-2"
+                      :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                    />
                     <label :for="`${field.name}-${option.value}`">
                       {{ option.label }}
                     </label>
@@ -158,9 +241,19 @@
               <div v-else-if="field.type === 'file'" сlass="w-full">
                 <!-- If no file is uploaded -->
                 <div v-if="!internalValue[field.name]">
-                  <FileUpload :id="field.name" mode="basic" :disabled="isDisabled(field)" :auto="true" :multiple="false"
-                    accept="*" :maxFileSize="5242880" @upload="(e) => onFileUploadComplete(e, field.name)"
-                    class="w-full" choose-label="Загрузить" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                  <FileUpload
+                    :id="field.name"
+                    mode="basic"
+                    :disabled="isDisabled(field)"
+                    :auto="true"
+                    :multiple="false"
+                    accept="*"
+                    :maxFileSize="5242880"
+                    @upload="(e) => onFileUploadComplete(e, field.name)"
+                    class="w-full"
+                    choose-label="Загрузить"
+                    :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                  />
                 </div>
                 <!-- If file is uploaded, display file link and remove button -->
                 <div v-else class="flex flex-col gap-2 w-full">
@@ -168,95 +261,189 @@
                     {{ internalValue[field.name].name || "Скачать файл" }}
                   </a>
                   <div class="flex gap-2 w-full">
-                    <Button :disabled="isDisabled(field)" label="Удалить" icon="pi pi-times" severity="danger"
-                      @click="removeFile(field.name)" class="w-full" />
+                    <Button
+                      :disabled="isDisabled(field)"
+                      label="Удалить"
+                      icon="pi pi-times"
+                      severity="danger"
+                      @click="removeFile(field.name)"
+                      class="w-full"
+                    />
                   </div>
                 </div>
               </div>
               <!-- Calendar (Date) Field -->
-              <Calendar v-else-if="field.type === 'calendar'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" dateFormat="dd.mm.yy" class="w-full" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <Calendar
+                v-else-if="field.type === 'calendar'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                dateFormat="dd.mm.yy"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- Date & Time Field -->
-              <Calendar v-else-if="field.type === 'calendar_time'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" showTime dateFormat="dd.mm.yy" class="w-full" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <Calendar
+                v-else-if="field.type === 'calendar_time'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                showTime
+                dateFormat="dd.mm.yy"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
 
               <!-- 4) Image -->
               <div v-else-if="field.type === 'image'" class="w-full">
                 <div v-if="!internalValue[field.name]?.url">
-                  <FileUpload :id="field.name" :maxFileSize="5242880" mode="basic" accept="image/*"
-                    :disabled="isDisabled(field)" :auto="true" :multiple="false"
-                    @upload="(e) => onUploadComplete(e, field.name)" class="w-full" choose-label="Загрузить"
-                    :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                  <FileUpload
+                    :id="field.name"
+                    :maxFileSize="5242880"
+                    mode="basic"
+                    accept="image/*"
+                    :disabled="isDisabled(field)"
+                    :auto="true"
+                    :multiple="false"
+                    @upload="(e) => onUploadComplete(e, field.name)"
+                    class="w-full"
+                    choose-label="Загрузить"
+                    :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                  />
                 </div>
                 <div v-else class="flex flex-col gap-2">
-                  <img :src="currentUrl + internalValue[field.name].url" alt="preview"
-                    class="max-h-40 object-contain border rounded shadow" />
+                  <img
+                    :src="currentUrl + internalValue[field.name].url"
+                    alt="preview"
+                    class="max-h-40 object-contain border rounded shadow"
+                  />
                   <div class="flex gap-2">
-                    <Button :disabled="isDisabled(field)" label="Удалить" icon="pi pi-times" severity="danger"
-                      @click="removeImage(field.name)" />
+                    <Button
+                      :disabled="isDisabled(field)"
+                      label="Удалить"
+                      icon="pi pi-times"
+                      severity="danger"
+                      @click="removeImage(field.name)"
+                    />
                   </div>
                 </div>
               </div>
 
               <!-- Range Slider Field -->
-              <Slider v-else-if="field.type === 'range_value'" :id="field.name" v-model="internalValue[field.name]"
-                :range="true" :disabled="isDisabled(field)" :min="field.settings?.min || field.default?.min_value || 0"
-                :max="field.settings?.max || field.default?.max_value || 100" class="w-full my-4" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <Slider
+                v-else-if="field.type === 'range_value'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :range="true"
+                :disabled="isDisabled(field)"
+                :min="field.settings?.min || field.default?.min_value || 0"
+                :max="field.settings?.max || field.default?.max_value || 100"
+                class="w-full my-4"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
 
               <!-- Multi Images Field -->
               <div v-else-if="field.type === 'multiimage'" class="w-full">
                 <!-- If no images have been uploaded yet -->
                 <div v-if="!internalValue[field.name] || internalValue[field.name].length === 0">
-                  <FileUpload :id="field.name" mode="basic" accept="image/*" :disabled="isDisabled(field)" :auto="true"
-                    :multiple="true" :maxFileSize="5242880" @upload="(e) => onMultiUploadComplete(e, field.name)"
-                    class="w-full" choose-label="Загрузить" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                  <FileUpload
+                    :id="field.name"
+                    mode="basic"
+                    accept="image/*"
+                    :disabled="isDisabled(field)"
+                    :auto="true"
+                    :multiple="true"
+                    :maxFileSize="5242880"
+                    @upload="(e) => onMultiUploadComplete(e, field.name)"
+                    class="w-full"
+                    choose-label="Загрузить"
+                    :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                  />
                 </div>
                 <!-- If images exist, display them and allow additional uploads -->
                 <div v-else class="flex flex-col gap-2">
                   <div class="flex flex-wrap gap-2">
                     <div v-for="(image, index) in internalValue[field.name]" :key="index" class="relative">
-                      <img :src="currentUrl + image.url" alt="preview"
-                        class="max-h-40 object-contain border rounded shadow" />
-                      <Button :disabled="isDisabled(field)" icon="pi pi-times" severity="danger"
-                        @click="removeMultiImage(field.name, index)" class="absolute top-0 right-0" />
+                      <img :src="currentUrl + image.url" alt="preview" class="max-h-40 object-contain border rounded shadow" />
+                      <Button
+                        :disabled="isDisabled(field)"
+                        icon="pi pi-times"
+                        severity="danger"
+                        @click="removeMultiImage(field.name, index)"
+                        class="absolute top-0 right-0"
+                      />
                     </div>
                   </div>
                   <div class="mt-2">
-                    <FileUpload :id="field.name + '-upload'" mode="basic" accept="image/*" :disabled="isDisabled(field)"
-                      :auto="true" :multiple="true" :maxFileSize="5242880"
-                      @upload="(e) => onMultiUploadComplete(e, field.name)" class="w-full"
-                      choose-label="Добавить изображения" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                    <FileUpload
+                      :id="field.name + '-upload'"
+                      mode="basic"
+                      accept="image/*"
+                      :disabled="isDisabled(field)"
+                      :auto="true"
+                      :multiple="true"
+                      :maxFileSize="5242880"
+                      @upload="(e) => onMultiUploadComplete(e, field.name)"
+                      class="w-full"
+                      choose-label="Добавить изображения"
+                      :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                    />
                   </div>
                 </div>
               </div>
 
               <!-- 4.5) JSON editor -->
               <div v-else-if="field.type === 'json'" class="w-full">
-                <json-editor v-if="!isDisabled(field)" :id="field.name" height="400" class="w-full"
-                  :mode="isDisabled(field) ? 'view' : 'text'" :queryLanguagesIds="queryLanguages"
-                  v-model="internalValue[field.name]" :disabled="isDisabled(field)" @error="onError" @focus="onFocus"
-                  @blur="onBlur" />
-                <Textarea v-else :id="field.name" v-model="jsonString[field.name]" :disabled="true"
+                <json-editor
+                  v-if="!isDisabled(field)"
+                  :id="field.name"
+                  height="400"
+                  class="w-full"
+                  :mode="isDisabled(field) ? 'view' : 'text'"
+                  :queryLanguagesIds="queryLanguages"
+                  v-model="internalValue[field.name]"
+                  :disabled="isDisabled(field)"
+                  @error="onError"
+                  @focus="onFocus"
+                  @blur="onBlur"
+                />
+                <Textarea
+                  v-else
+                  :id="field.name"
+                  v-model="jsonString[field.name]"
+                  :disabled="true"
                   class="w-full min-h-[200px] bg-gray-100 dark:bg-gray-800 dark:text-white p-2 rounded border dark:border-gray-700"
-                  :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+                  :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                />
               </div>
               <!-- Location Field using nuxt-maplibre -->
               <div v-else-if="field.type === 'location'" class="w-full">
-                <MglMap :map-style="style" :center="center" :zoom="zoom" style="height: 300px; width: 100%"
-                  @click="(e) => onMapClick(e, field.name)">
+                <MglMap
+                  :map-style="style"
+                  :center="center"
+                  :zoom="zoom"
+                  style="height: 300px; width: 100%"
+                  @click="(e) => onMapClick(e, field.name)"
+                >
                   <MglNavigationControl />
-                  <MglMarker v-if="internalValue[field.name]"
-                    :position="[internalValue[field.name].lng, internalValue[field.name].lat]" />
+                  <MglMarker v-if="internalValue[field.name]" :position="[internalValue[field.name].lng, internalValue[field.name].lat]" />
                 </MglMap>
               </div>
 
               <!-- Textarea Field -->
-              <Textarea v-else-if="field.type === 'textarea'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" rows="5" class="w-full" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <Textarea
+                v-else-if="field.type === 'textarea'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                rows="5"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- 11) WYSIWYG Field -->
               <!-- <Editor v-else-if="field.type === 'wysiwyg'" :id="field.name" v-model="internalValue[field.name]"
               :disabled="isDisabled(field)" class="w-full" @input="emitUpdate"
@@ -267,33 +454,70 @@
                 :class="{ 'p-invalid': parsedFieldErrors[field.name] }" /> -->
 
               <!-- 5) String -->
-              <InputText v-else-if="field.type === 'string' || field.type === 'unknown'" :id="field.name"
-                v-model="getLocalizedField(field.name).value" :disabled="isDisabled(field)" class="w-full"
-                @input="emitUpdate" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <InputText
+                v-else-if="field.type === 'string' || field.type === 'unknown'"
+                :id="field.name"
+                v-model="getLocalizedField(field.name).value"
+                :disabled="isDisabled(field)"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- 7) Email -->
-              <InputText v-else-if="field.type === 'email'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" type="email" class="w-full" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <InputText
+                v-else-if="field.type === 'email'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                type="email"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- 7) Phone -->
               <!-- Phone with mask (international variant supported) -->
-              <InputMask v-else-if="field.type === 'phone'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" :mask="field.settings?.mask ? field.settings?.mask : '+999 999 999 9999'"
-                class="w-full" @update:modelValue="emitUpdate" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <InputMask
+                v-else-if="field.type === 'phone'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                :mask="field.settings?.mask ? field.settings?.mask : '+999 999 999 9999'"
+                class="w-full"
+                @update:modelValue="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
               <!-- 8) Password field -->
-              <Password v-else-if="field.type === 'password'" :id="field.name" v-model="internalValue[field.name]"
-                :disabled="isDisabled(field)" toggle-mask class="w-full" @input="emitUpdate"
-                :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
+              <Password
+                v-else-if="field.type === 'password'"
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                toggle-mask
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
 
               <!-- 6) Fallback for unknown types -->
-              <InputText v-else :id="field.name" v-model="internalValue[field.name]" :disabled="isDisabled(field)"
-                class="w-full" @input="emitUpdate" :class="{ 'p-invalid': parsedFieldErrors[field.name] }" />
-              <Button v-if="!isDisabled(field) && (field.type === 'select' || field.type === 'string')"
-                @click="resetField(field)" icon="pi pi-times" class="p-button-sm" />
+              <InputText
+                v-else
+                :id="field.name"
+                v-model="internalValue[field.name]"
+                :disabled="isDisabled(field)"
+                class="w-full"
+                @input="emitUpdate"
+                :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+              />
+              <Button
+                v-if="!isDisabled(field) && (field.type === 'select' || field.type === 'string')"
+                @click="resetField(field)"
+                icon="pi pi-times"
+                class="p-button-sm"
+              />
             </div>
 
             <!-- Field error message -->
-            <div v-if="parsedFieldErrors[field.name]" class="text-red-500 dark:text-red-400 text-sm mt-1"
-              :id="`${field.name}-error`">
+            <div v-if="parsedFieldErrors[field.name]" class="text-red-500 dark:text-red-400 text-sm mt-1" :id="`${field.name}-error`">
               {{ parsedFieldErrors[field.name] }}
             </div>
           </div>
@@ -318,8 +542,6 @@ import draggable from "vuedraggable";
 
 const { currentUrl } = useURLState(); // Your composable for base URL or something similar
 const { currentLanguage } = useLanguageState(); // Your composable for current language
-
-
 
 const props = defineProps({
   fields: {
@@ -347,8 +569,6 @@ const props = defineProps({
   },
 });
 
-
-
 function isObjectValue(fieldName) {
   const value = getLocalizedField(fieldName).value;
   // If the value exists and its type is object, return true.
@@ -357,17 +577,13 @@ function isObjectValue(fieldName) {
 // Your localization function
 function localizeData(data, lang) {
   if (Array.isArray(data)) {
-    return data.map(item => localizeData(item, lang));
+    return data.map((item) => localizeData(item, lang));
   } else if (data && typeof data === "object") {
     if (data.hasOwnProperty("en") && data.hasOwnProperty("ru")) {
       let localized = data[lang] || data["en"];
       try {
         const parsed = JSON.parse(localized);
-        if (
-          parsed &&
-          typeof parsed === "object" &&
-          (parsed.hasOwnProperty(lang) || parsed.hasOwnProperty("en"))
-        ) {
+        if (parsed && typeof parsed === "object" && (parsed.hasOwnProperty(lang) || parsed.hasOwnProperty("en"))) {
           localized = parsed[lang] || parsed["en"];
         }
       } catch (e) {
@@ -385,7 +601,6 @@ function localizeData(data, lang) {
   return data;
 }
 
-
 function getLocalizedField(fieldName) {
   return computed({
     get() {
@@ -399,10 +614,9 @@ function getLocalizedField(fieldName) {
         internalValue[fieldName] = newValue;
       }
       emitUpdate();
-    }
+    },
   });
 }
-
 
 watch(
   () => props.fields,
@@ -465,6 +679,7 @@ watch(
 
     if (!newVal || typeof newVal !== "string") {
       console.warn("Skipping parsing, fieldErrors is not a string:", newVal);
+      parsedFieldErrors.value = newVal;
       return;
     }
 
@@ -519,7 +734,6 @@ const internalValue = reactive({ ...props.modelValue });
 
 // Allowed languages for the JSON editor
 const queryLanguages = ref(["javascript", "lodash", "jmespath"]);
-
 
 function getLocalizedText(field, currentLanguage) {
   if (!field || !field[currentLanguage]) {
@@ -584,9 +798,9 @@ function transformChoices(choices = []) {
 }
 function transformColorChoices(choices) {
   return Array.isArray(choices)
-    ? choices.map(choice => {
-        const label = choice.label?.[currentLanguage.value] || choice.label?.en || '';
-        const color = choice.value?.settings?.color || '';
+    ? choices.map((choice) => {
+        const label = choice.label?.[currentLanguage.value] || choice.label?.en || "";
+        const color = choice.value?.settings?.color || "";
         console.log("Color choice:", {
           label,
           value: color, // must match v-model items!
@@ -599,10 +813,8 @@ function transformColorChoices(choices) {
     : [];
 }
 
-
-
 function emitUpdate() {
-  console.log("internalValue",internalValue)
+  console.log("internalValue", internalValue);
   emit("update:modelValue", { ...internalValue });
 }
 

@@ -4,10 +4,10 @@
     <div class="p-4 m-4 bg-gray-100 dark:bg-gray-800 rounded-md shadow-md w-[30rem] h-[80vh] overflow-auto">
       <!-- Заголовок -->
       <div class="w-full flex flex-col justify-center items-center mb-4">
-        <h1 class="text-center text-[24px] text-black dark:text-white font-bold">
+        <h1 class="text-center text-[20px] text-black dark:text-white font-bold">
           Регистрация
         </h1>
-        <p class="text-gray-500 dark:text-gray-300 text-center mt-1">
+        <p class="text-gray-500 dark:text-gray-300 text-center mt-1 text-[14px]">
           Создайте новую учетную запись
         </p>
       </div>
@@ -16,53 +16,53 @@
       <div v-if="!isCode">
         <form @submit.prevent="sendReg" class="flex flex-col gap-4">
 
-          <!-- Email (required) -->
-          <div>
-            <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
-              Email
-            </label>
-            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.email }">
-              <InputText size="small" v-model="regForm.email" type="email" id="email" placeholder="mail@example.com"
-                required class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none" />
-            </div>
-            <small class="text-red-500 mt-1">
-              {{ regError.email }}
-            </small>
-          </div>
-
           <!-- Номер телефона (required) -->
           <div>
             <label for="phone" class="block mb-1 text-[14px] text-black dark:text-white">
-              Номер телефона
+              Номер телефона <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.phone }">
               <InputMask
-        v-model="regForm.phone"
-        id="phone"
-        type="tel"
-        required
-        mask="+9 (999) 999-99-99"
-        placeholder="Введите ваш телефон"
-        class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
-      />
+                v-model="regForm.phone"
+                id="phone"
+                type="tel"
+                required
+                mask="+9 (999) 999-99-99"
+                placeholder="Введите ваш телефон"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              />
             </div>
-            <small class="text-red-500 mt-1">
+            <small class="text-red-500 mt-1 text-[12px]">
               {{ regError.phone }}
+            </small>
+          </div>
+
+          <!-- Email (required) -->
+          <div>
+            <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
+              Email  
+            </label>
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.email }">
+              <InputText size="small" v-model="regForm.email" type="email" id="email" placeholder="mail@example.com"
+                 class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
+            </div>
+            <small class="text-red-500 mt-1 text-[12px]">
+              {{ regError.email }}
             </small>
           </div>
 
           <!-- ФИО (required) -->
           <div>
             <label for="full_name" class="block mb-1 text-[14px] text-black dark:text-white">
-              ФИО
+              ФИО <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg"
               :class="{ 'p-invalid': !!regError.full_name }">
               <InputText size="small" v-model="regForm.full_name" type="text" id="full_name"
                 placeholder="Иванов Иван Иванович" required
-                class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none" />
+                class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
             </div>
-            <small class="text-red-500 mt-1">
+            <small class="text-red-500 mt-1 text-[12px]">
               {{ regError.full_name }}
             </small>
           </div>
@@ -70,24 +70,24 @@
           <!-- Пароль (required) -->
           <div>
             <label for="password" class="block mb-1 text-[14px] text-black dark:text-white">
-              Пароль
+              Пароль <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg"
               :class="{ 'p-invalid': !!regError.password }">
               <InputText size="small" v-model="regForm.password" :type="passwordType" id="password"
                 placeholder="Минимум 10 символов" required
-                class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none" />
+                class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
               <!-- Кнопка-переключатель для видимости пароля -->
-              <button type="button" @click="togglePasswordVisibility" class="px-2 text-gray-600 dark:text-gray-300">
+              <button type="button" @click="togglePasswordVisibility" class="px-2 text-gray-600 dark:text-gray-300 text-[14px]">
                 <span v-if="passwordType === 'password'">Показать</span>
                 <span v-else>Скрыть</span>
               </button>
             </div>
-            <small class="text-gray-500 block mt-1">
+            <small class="text-gray-500 block mt-1 text-[12px]">
               Минимум 10 символов, включая заглавные, строчные буквы, цифры
               и спецсимволы
             </small>
-            <small class="text-red-500 mt-1 block">
+            <small class="text-red-500 mt-1 block text-[12px]">
               {{ regError.password }}
             </small>
           </div>
@@ -95,21 +95,21 @@
           <!-- Подтверждение пароля (required) -->
           <div>
             <label for="password_confirm" class="block mb-1 text-[14px] text-black dark:text-white">
-              Подтверждение пароля
+              Подтверждение пароля <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg"
               :class="{ 'p-invalid': !!regError.password_confirm }">
               <InputText size="small" v-model="regForm.password_confirm" :type="passwordTypeConfirm"
                 id="password_confirm" placeholder="Повторите пароль" required
-                class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none" />
+                class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
               <!-- Кнопка-переключатель для видимости пароля -->
               <button type="button" @click="togglePasswordVisibilityConfirm"
-                class="px-2 text-gray-600 dark:text-gray-300">
+                class="px-2 text-gray-600 dark:text-gray-300 text-[14px]">
                 <span v-if="passwordTypeConfirm === 'password'">Показать</span>
                 <span v-else>Скрыть</span>
               </button>
             </div>
-            <small class="text-red-500 mt-1 block">
+            <small class="text-red-500 mt-1 block text-[12px]">
               {{ regError.password_confirm }}
             </small>
           </div>
@@ -129,19 +129,19 @@
                 </a>
               </label>
             </div>
-            <small class="text-red-500 mt-1">
+            <small class="text-red-500 mt-1 text-[12px]">
               {{ regError.accept_terms }}
             </small>
           </div>
 
           <!-- Кнопка регистрации -->
           <Button type="submit" label="Зарегистрироваться"
-            class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full mt-4 border-none" />
+            class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full mt-4 border-none text-[14px]" />
 
           <!-- Ссылка на "Войти" -->
           <p class="text-center text-[14px] mt-4 text-black dark:text-white">
             Уже есть аккаунт?
-            <a href="#" class="underline ml-1">Войти</a>
+            <span @click="goLogin" class="cursor-pointer ml-1 underline">Войти</span>
           </p>
         </form>
       </div>
@@ -333,7 +333,7 @@ function sendCode() {
       // }
       let responceData = response.data;
       console.log('responceData', responceData);
-      navigateTo(`/${currentPageName.value}/`);
+      reloadNuxtApp({ path: `/${currentPageName.value}`, ttl: 1000 })
     })
     .catch((err) => {
       console.log('err', err);
@@ -365,7 +365,7 @@ function resetForm() {
 
 onMounted(() => {
   if (currentPageName.value != 'personal_account') {
-   navigateTo(`/${currentPageName.value}/login/`);
+   reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
   }
 });
 </script>

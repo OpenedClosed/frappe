@@ -27,6 +27,12 @@ export function useChatState() {
     isAutoMode,
   };
 }
+
+export const useHeaderState = () => {
+  const botHeaderData = useState("botHeaderData", () => {});
+  const rooms = useState("rooms", () => []);
+  return { botHeaderData, rooms };
+};
 export function usePageState() {
   const currentPageName = useState("currentPageName", () => "admin");
   const currentPageInstances = useState("currentPageInstances", () => 0);

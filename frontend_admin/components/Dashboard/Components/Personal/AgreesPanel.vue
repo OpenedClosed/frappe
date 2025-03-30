@@ -1,100 +1,79 @@
 <template>
-    <div class="p-6 border rounded-lg shadow-sm bg-white">
-      <!-- Заголовок и описание -->
-      <h2 class="text-xl font-semibold mb-1">Согласия пользователя</h2>
-      <p class="text-gray-600 mb-4">Информация о согласиях пользователя</p>
-  
-      <!-- Список согласий -->
-      <ul>
-        <li
-          v-for="(consent, index) in consents"
-          :key="index"
-          class="flex items-center mb-2"
-        >
-          <!-- Цветной кружок -->
-          <span
-            :class="consent.status ? 'bg-green-500' : 'bg-red-500'"
-            class="inline-block w-3 h-3 rounded-full mr-2"
-          />
-          <!-- Текст согласия -->
-          <span>{{ consent.title }}</span>
-        </li>
-      </ul>
-  
-      <!-- Дата последнего обновления -->
-      <p class="text-sm text-gray-500 mt-4">
-        Дата последнего обновления согласия:
-        <span class="font-medium">
-          {{ formatDate(props.itemData.lastUpdated) }}
-        </span>
-      </p>
-    </div>
-  </template>
-  
-  <script setup>
-  import { defineProps, watch, computed } from 'vue'
-  
-  const props = defineProps({
-    itemData: {
-      type: Object,
-      required: true,
-    }
-  })
-  
-  // Отслеживаем изменение данных для отладки (необязательно)
-  watch(
-    () => props.itemData,
-    (newVal) => {
-      if (newVal) {
-        console.log('Updated itemData:', newVal)
-      }
-    },
-    { immediate: true }
-  )
-  
-  // Функция для форматирования даты
-  function formatDate(dateStr) {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    return date.toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  <div class="p-6 border rounded-lg shadow-sm bg-white">
+    <!-- Заголовок и описание -->
+    <h2 class="text-xl font-semibold mb-1">Согласия пользователя</h2>
+    <p class="text-gray-600 mb-4">Информация о согласиях пользователя</p>
+
+    <!-- Список согласий -->
+    <ul>
+      <li v-for="(consent, index) in consents" :key="index" class="flex items-center mb-2">
+        <!-- Цветной кружок: зеленый если заполнено, красный если нет -->
+        <span
+          :class="consent.status ? 'bg-green-500' : 'bg-red-500'"
+          class="inline-block w-3 h-3 rounded-full mr-2"
+        ></span>
+        <!-- Текст согласия -->
+        <span>{{ consent.title }}</span>
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script setup>
+import { defineProps, watch, computed } from 'vue'
+
+const props = defineProps({
+  itemData: {
+    type: Object,
+    required: true,
+  },
+  filteredFields: {
+    // filteredFields is expected to be an array of field definitions
+    type: Array,
+    required: true,
   }
-  
-  // Список согласий (настраивайте названия полей под вашу структуру)
-  const consents = computed(() => [
-    {
-      title: 'Согласие на обработку персональных данных (GDPR)',
-      status: props.itemData.gdpr
-    },
-    {
-      title: 'Согласие с политикой конфиденциальности',
-      status: props.itemData.privacyPolicy
-    },
-    {
-      title: 'Согласие с условиями использования',
-      status: props.itemData.termsOfUse
-    },
-    {
-      title: 'Согласие на использование cookies',
-      status: props.itemData.cookies
-    },
-    {
-      title: 'Согласие на email-маркетинг',
-      status: props.itemData.emailMarketing
-    },
-    {
-      title: 'Согласие на SMS-маркетинг',
-      status: props.itemData.smsMarketing
-    },
-    {
-      title: 'Согласие на персонализацию',
-      status: props.itemData.personalization
+})
+
+// Отслеживаем изменение данных для отладки (необязательно)
+watch(
+  () => props,
+  (newVal) => {
+    if (newVal) {
+      console.log('Updated itemData:', props.itemData)
+      console.log('Updated filteredFields:', props.filteredFields)
     }
-  ])
-  </script>
-  
+  },
+  { immediate: true }
+)
+
+// Функция для форматирования даты
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// Создаем вычисляемое свойство, которое собирает все варианты согласий
+// и определяет, заполнено оно или нет.
+const consents = computed(() => {
+  // Находим определение поля согласий в filteredFields
+  const consentField = props.filteredFields.find(field => field.name === "consents")
+  if (!consentField || !consentField.choices) return []
+
+  // Создаем набор согласий, которые пользователь заполнил
+  // Здесь мы используем русские переводы для сравнения
+  const filledConsents = new Set((props.itemData.consents || []).map(c => c.ru))
+
+  // Проходим по всем доступным вариантам согласий и определяем их статус
+  return consentField.choices.map(choice => ({
+    title: choice.label.ru, // Отображаем название на русском языке
+    status: filledConsents.has(choice.value.ru) // true, если согласие заполнено
+  }))
+})
+</script>

@@ -2,8 +2,10 @@
 <template>
   <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto">
     <!-- Main Layout with Sidebar and DataTable -->
-    <div class="max-w-full flex flex-row flex-1 w-full gap-4 p-4 justify-start"
-      :class="[currentPageName === 'personal_account' ? 'flex-col' : 'flex-row']">
+    <div
+      class="max-w-full flex flex-row flex-1 w-full gap-4 p-4 justify-start"
+      :class="[currentPageName === 'personal_account' ? 'flex-col' : 'flex-row']"
+    >
       <!-- Navigation Sidebar Component -->
       <NavigationSidebar v-if="currentPageName === 'admin'" :navItems="navItems" />
 
@@ -14,32 +16,82 @@
       <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col basis-11/12 min-w-0 justify-start">
         <KnowledgeBase />
       </div>
-      <div v-else-if="currentEntity === 'patients_health_survey'&& !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
-          label="Заполнить Анкету здоровья"></Button>
+      <div v-if="currentGroup === 'support'" class="flex flex-col flex-1 basis-11/12 min-h-0 min-w-0 justify-start">
+        <SupportPage class="" />
       </div>
-      <div  v-else-if="currentEntity === 'patients_family'&& !currentId"
-        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center">
-          <FamilyTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
-          :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
-          :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
-          @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
+      <div
+        v-else-if="currentEntity === 'patients_health_survey' && !currentId"
+        class="flex flex-col basis-11/12 min-w-0 justify-center items-center"
+      >
+        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить Анкету здоровья"></Button>
       </div>
-      <div  v-else-if="currentEntity === 'patients_bonus_program'&& !currentId"
-        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center">
-          <PointsTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
-          :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
-          :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
-          @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
+      <div
+        v-else-if="currentEntity === 'patients_consents' && !currentId"
+        class="flex flex-col basis-11/12 min-w-0 justify-center items-center"
+      >
+        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить Согласия"></Button>
       </div>
+      <div
+        v-else-if="currentEntity === 'patients_family' && !currentId"
+        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center"
+      >
+        <FamilyTable
+          :title="currentEntityName"
+          :isInline="isEntityInline"
+          :displayedColumns="displayedColumns"
+          :tableData="tableDataOriginal"
+          :isLoading="isLoading"
+          :fieldOptions="fieldOptions"
+          :rows="pageSize"
+          :first="(currentPage - 1) * pageSize"
+          :totalRecords="totalRecords"
+          :paginator="true"
+          @page="onPageChange"
+          @exportToExcel="onExportToExcel"
+          @showFilter="showFilterDialog"
+          @filterChange="handleFilterChange"
+        />
+      </div>
+      <!-- <div
+        v-else-if="currentEntity === 'patients_bonus_program' && !currentId"
+        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center"
+      >
+        <PointsTable
+          :title="currentEntityName"
+          :isInline="isEntityInline"
+          :displayedColumns="displayedColumns"
+          :tableData="tableDataOriginal"
+          :isLoading="isLoading"
+          :fieldOptions="fieldOptions"
+          :rows="pageSize"
+          :first="(currentPage - 1) * pageSize"
+          :totalRecords="totalRecords"
+          :paginator="true"
+          @page="onPageChange"
+          @exportToExcel="onExportToExcel"
+          @showFilter="showFilterDialog"
+          @filterChange="handleFilterChange"
+        />
+      </div> -->
 
       <!-- Default behavior: Show Data Table -->
       <div v-else-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between">
-        <DynamicDataTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
-          :tableData="filteredTableData" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
-          :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
-          @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
+        <DynamicDataTable v-if="currentPageInstances.value > 1"
+          :title="currentEntityName"
+          :isInline="isEntityInline"
+          :displayedColumns="displayedColumns"
+          :tableData="filteredTableData"
+          :isLoading="isLoading"
+          :fieldOptions="fieldOptions"
+          :rows="pageSize"
+          :first="(currentPage - 1) * pageSize"
+          :totalRecords="totalRecords"
+          :paginator="true"
+          @page="onPageChange"
+          @exportToExcel="onExportToExcel"
+          @showFilter="showFilterDialog"
+          @filterChange="handleFilterChange"
+        />
       </div>
 
       <div v-else class="flex flex-col basis-11/12 min-w-0 justify-start">
@@ -48,8 +100,7 @@
     </div>
 
     <!-- Filter Dialog -->
-    <Dialog header="Filter Options" v-model:visible="showFilter" :modal="true" :closable="true"
-      :style="{ width: '25rem' }">
+    <Dialog header="Filter Options" v-model:visible="showFilter" :modal="true" :closable="true" :style="{ width: '25rem' }">
       <!-- Add additional filter options here -->
       <!-- <DateRangeFilter @applyFilter="applyDateFilter" /> -->
     </Dialog>
@@ -85,19 +136,18 @@ import DynamicDataTable from "./DynamicDataTable.vue";
 import MainForm from "~/components/Dashboard/Components/Form/MainForm.vue";
 import KnowledgeBase from "~/components/Dashboard/Components/KnowledgeBase.vue";
 import FamilyTable from "~/components/Dashboard/Components/Personal/FamilyTable.vue";
-import PointsTable from "~/components/Dashboard/Components/Personal/PointsTable.vue";
+import SupportPage from "~/components/Dashboard/Components/Personal/SupportPage.vue";
 // ------------------ State & Refs ------------------
 const showFilter = ref(false);
 const searchQuery = ref("");
 const dateRange = ref({ start: null, end: null });
-const { currentPageName, currentPageInstances } = usePageState()
+const { currentPageName, currentPageInstances } = usePageState();
 
 const selectedField = ref(null);
 const fieldOptions = ref([
   { label: "Все поля", value: null }, // Option for universal search
   // More dynamic options can be pushed here once we know the fields
 ]);
-
 
 // Display / Table
 const navItems = ref([]);
@@ -276,7 +326,7 @@ function validateRoute(data, validCombos) {
   }
 
   // If route doesn't have :group or we can't find it in data => redirect to first group
-  if ((!currentGroup.value || !data[currentGroup.value]) && currentGroup.value !== "knowledge-base") {
+  if ((!currentGroup.value || !data[currentGroup.value]) && currentGroup.value !== "knowledge-base" && currentGroup.value !== "support") {
     const firstGroup = groupKeys[0];
     const firstEntity = data[firstGroup].entities[0]?.registered_name;
     if (firstGroup && firstEntity) {
@@ -399,12 +449,14 @@ const fetchTableData = async () => {
     totalRecords.value = response.data.meta?.total_count || 0;
   } catch (error) {
     console.error("Error fetching table data:", error);
-    toast.value?.add({
-      severity: "error",
-      summary: "Error",
-      detail: "Failed to load table data.",
-      life: 3000,
-    });
+    if (error.status != 404) {
+      toast.value?.add({
+        severity: "error",
+        summary: "Error",
+        detail: `Failed to load table data. (${error.status})`,
+        life: 3000,
+      });
+    }
   } finally {
     isLoading.value = false;
   }

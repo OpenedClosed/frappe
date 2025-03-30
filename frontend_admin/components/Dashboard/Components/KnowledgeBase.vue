@@ -490,12 +490,12 @@ const showInstructions = ref(false);
 const isLoading = ref(false);
 // Local array to store *all* selected files
 const localFiles = ref([]);
-const selectedModel = ref("gpt-4o-mini");
+const selectedModel = ref("gpt-4o");
 
 const aiModels = ref([
-  { label: "GPT-4o", value: "gpt-4o" },
-  { label: "GPT-4o Mini", value: "gpt-4o-mini" },
-  { label: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
+  { label: "gpt-4o", value: "gpt-4o" },
+  { label: "gpt-4o-mini", value: "gpt-4o-mini" },
+  { label: "gemini-2.0-flash", value: "gemini-2.0-flash" },
 ]);
 
 function showSuccess(message) {

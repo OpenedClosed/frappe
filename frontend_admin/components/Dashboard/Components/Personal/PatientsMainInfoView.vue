@@ -24,7 +24,7 @@
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-500">Дата рождения:</span>
-                        <span class="ml-1 font-semibold">{{ itemData.birth_date }}</span>
+                        <span class="ml-1 font-semibold">{{ formatDate(itemData.birth_date) }}</span>
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-500">Пол:</span>
@@ -58,11 +58,11 @@
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-sm text-gray-500">Дата создания:</span>
-                            <span class="ml-1 font-semibold">{{ itemData.created_at }}</span>
+                            <span class="ml-1 font-semibold">{{ formatDate(itemData.created_at) }}</span>
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-sm text-gray-500">Последнее обновление:</span>
-                            <span class="ml-1 font-semibold">{{ itemData.updated_at }}</span>
+                            <span class="ml-1 font-semibold">{{ formatDate(itemData.updated_at) }}</span>
                         </div>
                     </div>
                 </div>
@@ -71,16 +71,41 @@
     </div>
 </template>
   
-  <script setup>
-  const props = defineProps({
+<script setup>
+import _ from 'lodash'
+
+// Props
+const props = defineProps({
     itemData: {
-      type: Object,
-      default: () => ({})
+        type: Object,
+        default: () => ({})
     }
-  })
-  </script>
+})
+
+// Helper function to format dates with time
+function formatDate(date) {
+    if (!date) return '—'
+    try {
+        const parsedDate = new Date(date)
+        if (_.isDate(parsedDate) && !isNaN(parsedDate)) {
+            return `${_.padStart(parsedDate.getDate(), 2, '0')}.${_.padStart(
+                parsedDate.getMonth() + 1,
+                2,
+                '0'
+            )}.${parsedDate.getFullYear()} ${_.padStart(parsedDate.getHours(), 2, '0')}:${_.padStart(
+                parsedDate.getMinutes(),
+                2,
+                '0'
+            )}`
+        }
+        return 'Invalid date'
+    } catch (error) {
+        console.error('Invalid date:', date)
+        return 'Invalid date'
+    }
+}
+</script>
   
-  <style scoped>
-  /* Дополнительные стили при необходимости */
-  </style>
-  
+<style scoped>
+/* Дополнительные стили при необходимости */
+</style>

@@ -5,7 +5,8 @@ import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
 
 export function useChatLogic(options = {}) {
-  const { isTelegram = false } = options; // Переключение под Telegram при необходимости
+  const { isTelegram = false, chat_id } = options; // Переключение под Telegram при необходимости
+  console.log('chat_id',chat_id)
   const { t, locale } = useI18n();
   const toast = useToast();
   const { isAutoMode } = useChatState();
@@ -16,7 +17,7 @@ export function useChatLogic(options = {}) {
  
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
-  const currentUserId = ref("1234");
+  const currentUserId = ref("4321");
   const activeRoomId = ref("1");
   rooms.value = [
     {
@@ -33,6 +34,7 @@ export function useChatLogic(options = {}) {
       typingUsers: [],
     },
   ];
+  
 
   // Список сообщений и статус загрузки
   const messages = ref([]);
@@ -53,18 +55,18 @@ export function useChatLogic(options = {}) {
 
   // Текстовые сообщения для vue-advanced-chat (i18n)
   const textMessagesObject = computed(() => ({
-    SEARCH: t("textMessages.SEARCH"),
-    TYPE_MESSAGE: t("textMessages.TYPE_MESSAGE"),
-    ROOM_EMPTY: t("textMessages.ROOM_EMPTY"),
-    ROOMS_EMPTY: t("textMessages.ROOMS_EMPTY"),
-    MESSAGES_EMPTY: t("textMessages.MESSAGES_EMPTY"),
-    MESSAGE_DELETED: t("textMessages.MESSAGE_DELETED"),
-    NEW_MESSAGES: t("textMessages.NEW_MESSAGES"),
-    IS_ONLINE: t("textMessages.IS_ONLINE"),
-    IS_TYPING: t("textMessages.IS_TYPING"),
-    LAST_SEEN: t("textMessages.LAST_SEEN"),
-    CONVERSATION_STARTED: t("textMessages.CONVERSATION_STARTED"),
-    CANCEL_SELECT_MESSAGE: t("textMessages.CANCEL_SELECT_MESSAGE"),
+    SEARCH: "Search",
+    TYPE_MESSAGE: "Type a message",
+    ROOM_EMPTY: "This room is empty",
+    ROOMS_EMPTY: "No rooms available",
+    MESSAGES_EMPTY: "No messages yet",
+    MESSAGE_DELETED: "Message deleted",
+    NEW_MESSAGES: "New messages",
+    IS_ONLINE: "is online",
+    IS_TYPING: "is typing...",
+    LAST_SEEN: "Last seen",
+    CONVERSATION_STARTED: "Conversation started",
+    CANCEL_SELECT_MESSAGE: "Cancel message selection",
   }));
   const textMessagesJson = computed(() => JSON.stringify(textMessagesObject.value));
 
@@ -99,13 +101,13 @@ export function useChatLogic(options = {}) {
    * Преобразовать сообщения API в формат для компонента чата (vue-advanced-chat).
    */
   async function transformChatMessages(apiMessages) {
-    const currentLocale = locale.value; // например, "ru-RU" или "en-US"
+    const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
     const results = [];
 
     for (let [index, msg] of apiMessages.entries()) {
       const contentString = typeof msg.message === "string" ? msg.message : "";
 
-      // Прикреплённые файлы (если есть превью по ссылке)
+      // Attached files (if link preview exists)
       let files = null;
       if (detectUrl(contentString)) {
         const previewData = await fetchLinkPreview(contentString);
@@ -121,7 +123,7 @@ export function useChatLogic(options = {}) {
         }
       }
 
-      // Парсим дату из UTC-строки
+      // Parse date from UTC string
       const utcString = msg.timestamp ? msg.timestamp.replace(/\.\d+$/, "") + "Z" : null;
       const dateObj = utcString ? new Date(utcString) : new Date();
 
@@ -135,12 +137,12 @@ export function useChatLogic(options = {}) {
         minute: "2-digit",
       });
 
-      // Парсим роль (sender_role может быть JSON)
+      // Parse role (sender_role can be JSON)
       let role = msg.sender_role;
       try {
         role = JSON.parse(role);
       } catch (e) {
-        // Если не JSON, оставим строку, как есть
+        // If not JSON, leave it as a string
       }
 
       let roleEn;
@@ -152,7 +154,7 @@ export function useChatLogic(options = {}) {
         roleEn = "unknown";
       }
 
-      // Определяем senderId и username
+      // Determine senderId and username
       let senderId;
       let username;
       if (roleEn === "Client") {
@@ -160,7 +162,7 @@ export function useChatLogic(options = {}) {
         username = "Client";
       } else if (roleEn === "ai" || roleEn === "AI Assistant") {
         senderId = "4321";
-        username = "AI Bot";
+        username = "AI Assistant";
       } else if (roleEn === "consultant" || roleEn === "Consultant") {
         senderId = "4321";
         username = "Consultant";
@@ -169,7 +171,7 @@ export function useChatLogic(options = {}) {
         username = "Unknown";
       }
 
-      // Определяем, отображать сообщение справа (sent) или слева
+      // Determine if the message should appear on the right (sent) or left
       const isSent = ["ai", "AI Assistant", "consultant", "Consultant"].includes(roleEn);
 
       results.push({
@@ -179,7 +181,7 @@ export function useChatLogic(options = {}) {
         username,
         date: formattedDate,
         timestamp: formattedTime,
-        sent: isSent,
+        sent: isSent, // true for messages from Consultant/AI, false for Client
         disableActions: true,
         disableReactions: true,
         files,
@@ -266,13 +268,18 @@ export function useChatLogic(options = {}) {
   function reloadPage() {
     window.location.reload();
   }
+
+  const token = useCookie("access_token");
   const { $event, $listen } = useNuxtApp();
   // УБРАНА throttle и прочие повторные вызовы, оставляем простую функцию
   function initializeWebSocket(chatId) {
+    if (!token.value) {
+      return;
+    }
     // Определяем схему (ws для localhost, wss для prod)
-    const scheme = window.location.hostname === "localhost" ? "ws" : "wss";
-    const host = window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname;
-    const wsUrl = `${scheme}://${host}/ws/${chatId}/`;
+    const wsUrl = `${window.location.hostname === "localhost" ? "ws" : "wss"}://${
+      window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname
+    }/ws/${chatId}/?token=${token.value}`;
 
     console.log("Инициализация WebSocket по адресу:", wsUrl);
     websocket.value = new WebSocket(wsUrl);
@@ -333,8 +340,6 @@ export function useChatLogic(options = {}) {
               choiceOptions.value = [];
               isChoiceStrict.value = false;
             }
-            // Синхронизируем режим
-          isAutoMode.value = !data.manual_mode;
           }
           break;
 
@@ -354,8 +359,6 @@ export function useChatLogic(options = {}) {
               isChoiceStrict.value = false;
             }
             $event("choice_options_arrived", choiceOptions.value);
-            // Синхронизируем режим
-          isAutoMode.value = !data.manual_mode;
           }
           break;
 
@@ -398,7 +401,6 @@ export function useChatLogic(options = {}) {
    */
   async function refreshChat() {
     try {
-      const response = await useNuxtApp().$api.post("api/chats/get_chat?mode=new");
       if (response.data) {
         toast.add({
           severity: "success",
@@ -407,8 +409,8 @@ export function useChatLogic(options = {}) {
           life: 3000,
         });
         messages.value = [];
-        currenChatId.value = response.data.chat_id;
-        initializeWebSocket(response.data.chat_id);
+        currenChatId.value = chat_id;
+        initializeWebSocket(chat_id);
       }
     } catch (error) {
       toast.add({
@@ -453,7 +455,7 @@ export function useChatLogic(options = {}) {
     // Получаем начальный chat_id с бэкенда
     const chatData = await useAsyncData("chatData", getChatData);
     if (chatData.data && chatData.data.value) {
-      const { chat_id } = chatData.data.value;
+
       currenChatId.value = chat_id;
       initializeWebSocket(chat_id);
     }

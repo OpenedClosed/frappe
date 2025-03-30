@@ -108,6 +108,7 @@ const toggle = (event) => {
 const userData = await useAsyncData("userData", getUserData);
 
 if (userData.data) {
+  console.log("userData= ", userData.data);
   if (userData.data.value) {
     setData(userData.data.value);
   }
@@ -115,17 +116,16 @@ if (userData.data) {
 function setData(data) {
   if (data) {
     console.log("userData data= ", data);
-    if (data[0]){
-      userName.value = data[0]?.email;
+    if (data){
+      userName.value = `${data.username}`;
     }
-    
   }
 }
 
 async function getUserData() {
   let responseData;
   await useNuxtApp()
-    .$api.get(`api/${currentPageName.value}/user_profiles/`)
+    .$api.get(`/api/users/me`)
     .then((response) => {
       responseData = response.data;
       console.log("Profile responseData= ", responseData);

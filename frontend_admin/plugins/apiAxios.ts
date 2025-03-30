@@ -8,8 +8,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   if (window.location.hostname === "localhost") {
     defaultUrl = "http://localhost:8000/";
   } else {
-    defaultUrl =
-      window.location.protocol + "//" + window.location.hostname + "/";
+    defaultUrl = window.location.protocol + "//" + window.location.hostname + "/";
   }
 
   const api = axios.create({
@@ -20,7 +19,6 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
   });
 
-  
   const csrfTokenCookie = useCookie("csrftoken");
   // console.log("token.value", token.value);
   // Reset Authorization header function
@@ -41,9 +39,14 @@ export default defineNuxtPlugin((nuxtApp) => {
       api.defaults.headers.common["X-CSRFToken"] = csrfToken;
     }
   };
+  function redirectToLoginIfNeeded() {
+    const currentRoute = window.location.pathname;
+    if (!currentRoute.includes("login") && !currentRoute.includes("registration")) {
+      reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
+    }
+  }
 
   setupHeaders();
-
 
   // ----- Request Interceptor -----
   api.interceptors.request.use(
@@ -66,7 +69,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       return Promise.reject(error);
     }
   );
-  const { currentPageName } = usePageState()
+  const { currentPageName } = usePageState();
   // ----- Request Interceptor #2 (for refresh) -----
   // This will remove Authorization ONLY when requesting api/auth/refresh.
   api.interceptors.request.use(
@@ -90,12 +93,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     async (error) => {
       const originalRequest = error.config;
 
-      if (
-        error.response &&
-        error.response.status === 401 &&
-        first_time.value &&
-        !originalRequest._retry
-      ) {
+      if (error.response && error.response.status === 401 && first_time.value && !originalRequest._retry) {
         originalRequest._retry = true;
         first_time.value = false;
 
@@ -104,28 +102,29 @@ export default defineNuxtPlugin((nuxtApp) => {
         try {
           const token = useCookie("access_token");
 
-        if(token.value){
-          const response = await api.post(`api/${currentPageName.value}/refresh`).catch((err) => {
-            console.log("Axioserror 1")
-            reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
-          });
-          const myString = token.value;
+          if (token.value) {
+            const response = await api.post(`api/${currentPageName.value}/refresh`).catch((err) => {
+              console.log("Axioserror 1");
+              redirectToLoginIfNeeded();
+            });
+            const myString = token.value;
 
-          if (myString) {
-            
-            api.defaults.headers.common["Authorization"] = `Bearer ${myString}`;
-            // Update the Authorization header for the retried request
-            originalRequest.headers["Authorization"] = `Bearer ${myString}`;
-
-            // Retry the original request
-            return api(originalRequest);
+            if (myString) {
+              api.defaults.headers.common["Authorization"] = `Bearer ${myString}`;
+              originalRequest.headers["Authorization"] = `Bearer ${myString}`;
+              return api(originalRequest); // Retry the original request
+            }
           }
-        }
         } catch (err) {
           console.log(err.response ? err.response.data : err.message);
-          console.log("Axioserror 2")
-          reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
+          console.log("Axioserror 2");
+          redirectToLoginIfNeeded();
           resetAuthorizationHeader();
+        }
+      } else {
+        console.log("error.response", error.response);
+        if(error.response && (error.response.status === 403 || error.response.status === 401)) {
+        redirectToLoginIfNeeded();
         }
       }
       return Promise.reject(error);

@@ -1,12 +1,12 @@
 <template>
-    <div v-if="tableData && tableData.length > 0" class="flex flex-col w-full gap-4 p-6 border-2 rounded-lg shadow-sm">
+    <div  class="flex flex-col w-full gap-4 p-6 border-2 rounded-lg shadow-sm">
       <div class="flex flex-row gap-4 justify-start items-center">
         <h2 class="text-3xl font-semibold" v-if="title">
           {{ typeof title === 'object' ? (title[currentLanguage] || title.en) : title }}
         </h2>
         <Button @click="onClickCreate" label="Добавить члена семьи" size="small" icon="pi pi-plus" class=""></Button>
       </div>
-      <div v-for="(member, index) in tableData" :key="index" class="flex items-center justify-between p-4 rounded-lg border border-gray-200 gap-4">
+      <div v-if="tableData && tableData.length > 0" v-for="(member, index) in tableData" :key="index" class="flex items-center justify-between p-4 rounded-lg border border-gray-200 gap-4">
         <div class="flex-1 flex flex-row justify-start items-center gap-4">
           <Avatar icon="pi pi-user" class="mr-2" size="medium" shape="circle" />
           <div class="flex flex-col">

@@ -28,11 +28,16 @@
 
         </div>
         <div v-else-if="currentEntity === 'patients_consents' && !isNewItem && isReadOnly">
-          <AgreesPanel v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+          <AgreesPanel v-if="itemData && Object.keys(itemData).length > 0" :filteredFields="filteredFields" :itemData="itemData" />
+
+        </div>
+        <div v-else-if="currentEntity === 'patients_bonus_program' && !isNewItem && isReadOnly">
+          <PointsTable v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
 
         </div>
 
-        <DynamicForm v-else :fields="filteredFields" :fieldGroups="fieldGroups" :modelValue="itemData"
+        <div class="flex flex-col" v-else>
+          <DynamicForm  :fields="filteredFields" :fieldGroups="fieldGroups" :modelValue="itemData"
           :read-only="isReadOnly" :isNewItem="isNewItem" :fieldErrors="fieldErrors"
           @update:modelValue="updateItemData" />
 
@@ -47,6 +52,7 @@
             <InlineList :inlineDef="inlineDef" :parentEntity="currentEntity" :parentId="currentId"
               :items="itemData[inlineDef.field]" :readOnly="isReadOnly" @reloadParent="reloadCurrentData" />
           </div>
+        </div>
         </div>
 
        <!-- Control Buttons -->
@@ -100,7 +106,7 @@
 
     <!-- Chat view -->
     <div v-else class="flex flex-col justify-between">
-      <EmbeddedChat :id="itemData.chat_id" :user_id="itemData.client_id" />
+      <EmbeddedChat v-if="itemData.chat_id" :id="itemData.chat_id" :user_id="itemData.client[0].client_id || null" />
       <div class="w-full mt-4">
         <Button label="Назад к записи" icon="pi pi-arrow-left" @click="goToFormView" />
       </div>
@@ -116,6 +122,7 @@ import PatientsMainInfoView from "~/components/Dashboard/Components/Personal/Pat
 import ContactInfoView from "~/components/Dashboard/Components/Personal/ContactInfoView.vue";
 import PatientsHealthSurveyView from "~/components/Dashboard/Components/Personal/PatientsHealthSurveyView.vue";
 import AgreesPanel from "~/components/Dashboard/Components/Personal/AgreesPanel.vue";
+import PointsTable from "~/components/Dashboard/Components/Personal/PointsTable.vue";
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter, useAsyncData } from "#imports";
 import _ from "lodash";

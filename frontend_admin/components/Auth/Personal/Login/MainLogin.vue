@@ -15,31 +15,31 @@
         <!-- Логин (например, телефон) -->
         <div class="w-full flex flex-col justify-start">
           <label for="phone" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            Телефон 
+            Телефон <span class="text-red-500">*</span>
           </label>
           <div class="input-container flex items-center border rounded-lg"
-               :class="{ 'p-invalid': Boolean(loginError.message) }"
+               :class="{ 'p-invalid': Boolean(loginError.phone) }"
           >
-          <InputMask
-        v-model="loginForm.phone"
-        id="phone"
-        type="tel"
-        required
-        mask="+9 (999) 999-99-99"
-        placeholder="Введите ваш телефон"
-        class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
-      />
+            <InputMask
+              v-model="loginForm.phone"
+              id="phone"
+              type="tel"
+              required
+              mask="+9 (999) 999-99-99"
+              placeholder="Введите ваш телефон"
+              class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
+            />
           </div>
-          <small class="text-red-500 mt-1">{{ loginError.message }}</small>
+          <small v-if="loginError.phone" class="text-red-500 mt-1">{{ loginError.phone }}</small>
         </div>
 
         <!-- Пароль -->
         <div class="w-full flex flex-col justify-start">
           <label for="password" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            Пароль
+            Пароль <span class="text-red-500">*</span>
           </label>
           <div class="input-container flex items-center border rounded-lg"
-               :class="{ 'p-invalid': Boolean(loginError.message) }"
+               :class="{ 'p-invalid': Boolean(loginError.password) }"
           >
             <InputText size="small"
               :type="showPassword ? 'text' : 'password'"
@@ -53,7 +53,7 @@
               <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
             </span>
           </div>
-          <small class="text-red-500 mt-1">{{ loginError.message }}</small>
+          <small v-if="loginError.password" class="text-red-500 mt-1">{{ loginError.password }}</small>
         </div>
 
         <!-- Кнопка «Войти» -->
@@ -77,11 +77,21 @@
             Подтверждение входа
           </p>
         </div>
+ <!-- Для отладки: вывести код, если бэкенд вернул debug_code -->
+ <div class="w-full flex flex-col" v-if="debugCode">
+          <label class="text-[14px] text-black dark:text-white">
+            Тестовый код:
+          </label>
+          <div class="flex items-center gap-2">
+            <InputText :value="debugCode" readonly class="w-full" />
+            <Button icon="pi pi-copy" @click="copyDebugCode" />
+          </div>
+        </div>
 
         <!-- Код 2FA -->
         <div class="w-full flex flex-col justify-start">
           <label for="twofa_code" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            Код из SMS / почты
+            Код из SMS / почты <span class="text-red-500">*</span>
           </label>
           <div class="input-container flex items-center border rounded-lg"
                :class="{ 'p-invalid': Boolean(twoFAError.message) }"
@@ -97,17 +107,7 @@
           <small class="text-red-500 mt-1">{{ twoFAError.message }}</small>
         </div>
 
-        <!-- Для отладки: вывести код, если бэкенд вернул debug_code -->
-        <div class="w-full flex flex-col" v-if="debugCode">
-          <label class="text-[14px] text-black dark:text-white">
-            Тестовый код:
-          </label>
-          <div class="flex items-center gap-2">
-            <InputText :value="debugCode" readonly class="w-full" />
-            <Button icon="pi pi-copy" @click="copyDebugCode" />
-          </div>
-        </div>
-
+       
         <!-- Кнопка «Подтвердить» -->
         <div class="w-full mt-6">
           <Button type="submit" label="Подтвердить"
@@ -154,7 +154,8 @@ let loginForm = ref({
  * Ошибка (шаг 1)
  */
 let loginError = ref({
-  message: '',
+  phone: '',
+  password: '',
 })
 
 /**
@@ -195,7 +196,8 @@ function goRegistration() {
  */
 function sendLogin() {
   // Очищаем ошибки
-  loginError.value.message = ''
+  loginError.value.phone = ''
+  loginError.value.password = ''
   debugCode.value = ''
 
   let formData = loginForm.value
@@ -218,10 +220,10 @@ function sendLogin() {
       if (err.response) {
         // Если бэкенд отдает detail { "password": "..."} или { "phone": "..." }
         // упростим логику и просто выводим detail как message
-        loginError.value.message =
+        loginError.value =
           typeof err.response.data.detail === 'string'
-            ? err.response.data.detail
-            : JSON.stringify(err.response.data.detail)
+            ? { phone: err.response.data.detail, password: err.response.data.detail }
+            : err.response.data.detail
       }
     })
 }

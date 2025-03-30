@@ -76,7 +76,7 @@
               Последнее обновление
             </label>
             <span class="text-[14px] font-normal text-[#4F4F59]">
-              {{ itemData.updated_at }}
+              {{ formatDate(itemData.updated_at) }}
             </span>
           </div>
         </div>
@@ -85,9 +85,10 @@
   </template>
   
   <script setup>
+  import _ from 'lodash'
+
   /**
-   * Предполагаем, что в родительском компоненте
-   * передаётся объект itemData с данными из API.
+   * Props for receiving data from the parent component
    */
   const props = defineProps({
     itemData: {
@@ -95,9 +96,33 @@
       default: () => ({})
     }
   })
+
+  /**
+   * Helper function to format dates with time
+   */
+  function formatDate(date) {
+    if (!date) return '—'
+    try {
+      const parsedDate = new Date(date)
+      if (_.isDate(parsedDate) && !isNaN(parsedDate)) {
+        return `${_.padStart(parsedDate.getDate(), 2, '0')}.${_.padStart(
+          parsedDate.getMonth() + 1,
+          2,
+          '0'
+        )}.${parsedDate.getFullYear()} ${_.padStart(parsedDate.getHours(), 2, '0')}:${_.padStart(
+          parsedDate.getMinutes(),
+          2,
+          '0'
+        )}`
+      }
+      return 'Invalid date'
+    } catch (error) {
+      console.error('Invalid date:', date)
+      return 'Invalid date'
+    }
+  }
   </script>
   
   <style scoped>
-  /* При необходимости можно добавить дополнительные стили */
+  /* Add additional styles if necessary */
   </style>
-  

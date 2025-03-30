@@ -1,7 +1,8 @@
 <template>
   <div class="flex">
     <!-- Карточка с основными сведениями о пациенте -->
-    <div class="bg-white dark:bg-neutralDark border-2 shadow rounded flex-1 flex flex-row justify-start items-center p-4 gap-4">
+    <div class="bg-white dark:bg-neutralDark border-2 shadow rounded flex-1 flex flex-row justify-between items-center p-4 gap-4">
+     <div class="flex items-center gap-4">
       <Avatar icon="pi pi-user" class="mr-2" size="xlarge" shape="circle" />
       <div class="flex flex-col">
         <div class="text-xl font-bold text-black dark:text-white">
@@ -11,7 +12,22 @@
           ID пациента: {{ patientId }} • Бонусов: {{ bonusCount }}
         </div>
       </div>
+     </div>
+      <div class="flex items-center gap-2">
+          <Button
+            text
+            :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
+            type="button"
+            :label="userName"
+            class="text-white bg-primary"
+            @click="toggle"
+            aria-haspopup="true"
+            aria-controls="overlay_tmenu"
+          />
+          <TieredMenu ref="menu" id="overlay_tmenu" :model="items" popup />
+        </div>
     </div>
+    
   </div>
 </template>
 
@@ -78,6 +94,72 @@ async function getHeaderData() {
   }
   return responseData;
 }
+
+
+
+const { isSidebarOpen } = useSidebarState();
+const { currentPageName } = usePageState()
+// Initialize the color mode
+const colorMode = useColorMode();
+
+const userName = ref("Действия");
+
+function toggleTheme() {
+  colorMode.preference = colorMode.preference === "dark" ? "light" : "dark";
+  updateTheme();
+}
+
+function updateTheme() {
+  const systemTheme =
+    colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
+  //console.log("systemTheme", systemTheme)
+  const themeLink = document.getElementById("theme-link");
+  //console.log(themeLink)
+  themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
+  //console.log(themeLink)
+}
+
+
+// Logout function with API request
+async function onLogout() {
+  try {
+    await useNuxtApp().$api.post(`/api/${currentPageName.value}/logout`, {}, { withCredentials: true });
+
+    reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
+  } catch (error) {
+    console.error("Logout failed:", error);
+  }
+}
+
+// Reference for the menu component and its open state
+const menu = ref(null);
+const menuOpen = ref(false);
+
+// Use a computed property for the menu items so that the icon updates reactively.
+const items = computed(() => [
+  {
+    label: "Выйти",
+    icon: "pi pi-power-off",
+    command: onLogout,
+  },
+]);
+
+if (currentPageName.value === "admin") {
+  items.value.unshift({
+    label: "В личный кабинет",
+    icon: "pi pi-user",
+    command: () => {
+      window.location.href = "/personal_account";
+    },
+  });
+}
+
+// Toggle the TieredMenu popup
+const toggle = (event) => {
+  menuOpen.value = !menuOpen.value;
+  menu.value.toggle(event);
+};
+
 </script>
 
 <style scoped>
