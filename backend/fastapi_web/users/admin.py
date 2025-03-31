@@ -5,6 +5,7 @@ from bson import ObjectId
 from fastapi import HTTPException
 
 from admin_core.base_admin import BaseAdmin
+from crud_core.permissions import SuperAdminOnlyPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 
@@ -16,6 +17,8 @@ class UserAdmin(BaseAdmin):
 
     model = User
     collection_name = "users"
+
+    permission_class = SuperAdminOnlyPermission()
 
     verbose_name = {
         "en": "User",

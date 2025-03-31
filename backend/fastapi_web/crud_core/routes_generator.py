@@ -389,7 +389,8 @@ def generate_base_routes(registry: BaseRegistry):
         """
         Информация для админа (список зарегистрированных моделей и т.д.).
         """
-        return get_routes_by_apps(registry)
+        current_user = await get_current_user(Authorize)
+        return get_routes_by_apps(registry, current_user)
 
     return router
 
@@ -771,13 +772,45 @@ def _build_model_entry(instance, api_prefix,
     }
 
 
-def get_routes_by_apps(registry: BaseRegistry) -> Dict[str, Any]:
-    """Формирует структуру описания моделей для переданного реестра (админка, личный кабинет и т.д.)."""
+# def get_routes_by_apps(registry: BaseRegistry) -> Dict[str, Any]:
+#     """Формирует структуру описания моделей для переданного реестра (админка, личный кабинет и т.д.)."""
+#     apps = {}
+#     api_prefix = f"/api/{registry.name}"
+
+#     for registered_name, instance in registry.get_registered().items():
+#         module_path = instance.__module__
+#         app_name, verbose_name, icon, color = _get_app_info(
+#             module_path, registry.name)
+
+#         if app_name not in apps:
+#             apps[app_name] = {
+#                 "verbose_name": verbose_name,
+#                 "icon": icon,
+#                 "color": color,
+#                 "entities": []}
+
+#         apps[app_name]["entities"].append(
+#             _build_model_entry(
+#                 instance,
+#                 api_prefix,
+#                 registered_name))
+
+#     return apps
+
+
+def get_routes_by_apps(registry, current_user) -> Dict[str, Any]:
+    """Формирует структуру описания моделей с учётом прав пользователя."""
     apps = {}
     api_prefix = f"/api/{registry.name}"
 
     for registered_name, instance in registry.get_registered().items():
         module_path = instance.__module__
+
+        try:
+            instance.check_permission("read", user=current_user)
+        except HTTPException:
+            continue
+
         app_name, verbose_name, icon, color = _get_app_info(
             module_path, registry.name)
 

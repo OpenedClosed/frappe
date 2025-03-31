@@ -145,6 +145,30 @@ class AdminPanelPermission(RoleBasedPermission):
         return {"user_id": user_id}
 
 
+class SuperAdminOnlyPermission(MethodPermissionMixin):
+    """Permission-класс, только для суперадминов."""
+
+    def _is_superadmin(self, user: Optional[BaseModel]) -> bool:
+        return bool(user and user.role == RoleEnum.SUPERADMIN)
+
+    def can_create(self, user, obj):
+        return self._is_superadmin(user)
+
+    def can_read(self, user, obj):
+        return self._is_superadmin(user)
+
+    def can_update(self, user, obj):
+        return self._is_superadmin(user)
+
+    def can_delete(self, user, obj):
+        return self._is_superadmin(user)
+
+    async def get_base_filter(self, user: Optional[BaseModel]) -> dict:
+        """Суперадмин получает доступ ко всем записям."""
+        if not self._is_superadmin(user):
+            raise HTTPException(403, "Superadmin access required.")
+        return {}
+
 class PersonalCabinetPermission(RoleBasedPermission):
     """Permission-класс, для Личного кабинета."""
     roles_create = [

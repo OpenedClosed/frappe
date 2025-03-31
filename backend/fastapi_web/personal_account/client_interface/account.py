@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from fastapi import HTTPException
 
+# from crud_core.permissions import AdminPanelPermission
 from crud_core.registry import account_registry
 from db.mongo.db_init import mongo_db
 from personal_account.base_account import BaseAccount, InlineAccount
@@ -258,7 +259,7 @@ class MainInfoAccount(BaseAccount):
     }
 
     allow_crud_actions = {
-        "create": False,
+        "create": True,
         "read": True,
         "update": True,
         "delete": False
@@ -449,7 +450,7 @@ class ContactInfoAccount(BaseAccount):
     }
 
     allow_crud_actions = {
-        "create": False,
+        "create": True,
         "read": True,
         "update": True,
         "delete": False
