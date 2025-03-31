@@ -181,7 +181,6 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
             "debug_code": code_2fa
         }
 
-
     @router.post("/login_confirm")
     async def login_confirm(
         data: TwoFASchema,
@@ -233,7 +232,6 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
             "message": "Logged in",
             "access_token": access_token
         }
-
 
     base_router = generate_base_routes(registry)
     router.include_router(base_router)

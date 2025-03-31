@@ -13,7 +13,7 @@ from .db.mongo.schemas import User
 user_router = APIRouter()
 
 
-@user_router.post("/me")
+@user_router.get("/me")
 @jwt_required()
 async def get_my_info(
     request: Request,

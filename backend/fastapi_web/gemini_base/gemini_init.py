@@ -9,7 +9,6 @@ import aiohttp
 
 from infra import settings
 
-
 MAX_INPUT_TOKENS = 4000
 MAX_OUTPUT_TOKENS = 12000
 

@@ -5,27 +5,28 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from fastapi import FastAPI
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.routing import APIRouter
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
+from utils.errors import (general_exception_handler,
+                          validation_exception_handler)
 from users.routers import user_router
-from basic.routers import basic_router
-from chats.integrations.instagram.instagram import instagram_router
-from chats.routers import chat_router
-from crud_core.registry import account_registry, admin_registry
+from personal_account.routes_generator import generate_base_account_routes
+from knowledge.routers import knowledge_base_router
+from infra.middlewares import BasicAuthMiddleware
+from infra import settings
+from db.mongo.db_init import mongo_db_on_startapp
 from crud_core.routes_generator import (auto_discover_modules,
                                         generate_base_routes,
                                         get_routes_by_apps)
-from db.mongo.db_init import mongo_db_on_startapp
-from infra import settings
-from infra.middlewares import BasicAuthMiddleware
-from knowledge.routers import knowledge_base_router
-from personal_account.routes_generator import generate_base_account_routes
-from utils.errors import (general_exception_handler,
-                          validation_exception_handler)
+from crud_core.registry import account_registry, admin_registry
+from chats.routers import chat_router
+from chats.integrations.meta.whatsapp.whatsapp import whatsapp_router
+from chats.integrations.meta.instagram.instagram import instagram_router
+from basic.routers import basic_router
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.routing import APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI
 
 
 logging.basicConfig(
@@ -49,7 +50,6 @@ async def print_routes():
 async def on_startup():
     """Действия при запуске приложения."""
     from chats.ws import websockets as _
-
     await auto_discover_modules("admin")
     await auto_discover_modules("account")
     await mongo_db_on_startapp()
@@ -76,6 +76,7 @@ async def on_shutdown():
     pass
 
 chat_router.include_router(instagram_router, prefix="/instagram")
+chat_router.include_router(whatsapp_router, prefix="/whatsapp")
 base_api_router.include_router(chat_router, prefix="/chats")
 base_api_router.include_router(user_router, prefix="/users")
 base_api_router.include_router(knowledge_base_router, prefix="/knowledge")

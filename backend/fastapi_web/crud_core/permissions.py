@@ -171,12 +171,5 @@ class PersonalCabinetPermission(RoleBasedPermission):
     async def get_base_filter(self, user: Optional[BaseModel]) -> dict:
         if not user:
             raise HTTPException(403, "Authentication required.")
-        phone = None
-        phone = await user.get_phone()
-
-        if not phone:
-            raise HTTPException(403, "Phone not found.")
-
-        main_info = await mongo_db["patients_main_info"].find_one({"phone": phone})
-        user_id = str(main_info.get("user_id")) if main_info else None
+        user_id = user.data["user_id"]
         return {"user_id": user_id}

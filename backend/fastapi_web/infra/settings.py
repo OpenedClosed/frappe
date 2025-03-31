@@ -67,3 +67,12 @@ INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET", "change_me")
 INSTAGRAM_VERIFY_TOKEN = os.getenv("INSTAGRAM_VERIFY_TOKEN", "change_me")
 INSTAGRAM_BOT_NAME = os.getenv("INSTAGRAM_BOT_NAME", "change_me")
 INSTAGRAM_BOT_ID = os.getenv("INSTAGRAM_BOT_ID", "change_me")
+
+# WhatsApp API настройки
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "change_me")
+WHATSAPP_BUSINESS_ACCOUNT_ID = os.getenv(
+    "WHATSAPP_BUSINESS_ACCOUNT_ID", "change_me")
+WHATSAPP_BOT_NUMBER_ID = os.getenv("WHATSAPP_BOT_NUMBER_ID", "change_me")
+WHATSAPP_BOT_NUMBER = os.getenv("WHATSAPP_BOT_NUMBER", "change_me")
+WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "change_me")
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "change_me")

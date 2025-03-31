@@ -136,24 +136,55 @@ async def broadcast_message(
 
 
 async def save_and_broadcast_new_message(
-    manager: Any, chat_session: ChatSession, new_msg: ChatMessage, redis_key_session: str
+    manager: Any,
+    chat_session: ChatSession,
+    new_msg: ChatMessage,
+    redis_key_session: str
 ) -> None:
-    """Сохраняет сообщение, отправляет в чат и обновляет TTL в Redis."""
+    """Сохраняет сообщение, отправляет в чат и Redis, и отправляет в интеграции."""
     await save_message_to_db(chat_session, new_msg)
     await broadcast_message(manager, chat_session, new_msg)
-    await redis_db.set(redis_key_session, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+    await redis_db.set(
+        redis_key_session,
+        chat_session.chat_id,
+        ex=int(settings.CHAT_TIMEOUT.total_seconds())
+    )
 
-    if chat_session.client.source == ChatSource.INSTAGRAM and chat_session.client.external_id and new_msg.sender_role != SenderRole.CLIENT:
-        await send_instagram_message(chat_session.client.external_id, new_msg.message)
+    if new_msg.sender_role != SenderRole.CLIENT and chat_session.client.external_id:
+        await send_message_to_external_meta_channel(chat_session, new_msg)
 
 
 # ==============================
-# БЛОК: Интеграция с Instagram Direct
+# БЛОК: Интеграция с Meta
+# ==============================
+
+
+async def send_message_to_external_meta_channel(
+        chat_session: ChatSession, new_msg: ChatMessage) -> None:
+    """Отправляет сообщение в стороннюю интеграцию (Instagram / WhatsApp)."""
+    source = chat_session.client.source
+    external_id = chat_session.client.external_id
+    message = new_msg.message
+
+    if source == ChatSource.INSTAGRAM:
+        await send_instagram_message(external_id, message)
+    elif source == ChatSource.WHATSAPP:
+        await send_whatsapp_message(external_id, message)
+    else:
+        logging.warning(f"Интеграция для источника {source} не реализована")
+
+# ==============================
+# Instagram
 # ==============================
 
 async def send_instagram_message(recipient_id: str, message: str) -> None:
-    """Отправляет сообщение пользователю в Instagram Direct через API."""
-    url = "https://graph.instagram.com/v21.0/me/messages"
+    """Отправляет сообщение в Instagram Direct."""
+
+    # Рабочий вариант с `me` (через user token)
+    url = "https://graph.instagram.com/v22.0/me/messages"
+
+    # Альтернативный вариант через Facebook Graph
+    # url = f"https://graph.facebook.com/v22.0/{settings.INSTAGRAM_BOT_ID}/messages"
 
     payload = {
         "recipient": {"id": recipient_id},
@@ -169,10 +200,45 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
     response = requests.post(url, json=payload, headers=headers)
 
     if response.status_code == 200:
-        logging.info(f"Сообщение отправлено в Instagram (ID: {recipient_id})")
+        logging.info(f"Отправлено в Instagram: {recipient_id}")
     else:
-        logging.error(
-            f"Ошибка отправки сообщения в Instagram: {response.text}")
+        logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
+
+
+# ==============================
+# WhatsApp
+# ==============================
+
+async def send_whatsapp_message(recipient_phone_id: str, message: str) -> None:
+    """Отправляет сообщение в WhatsApp через Cloud API."""
+
+    # Рабочий вариант с `me` (если токен привязан к номеру напрямую)
+    # url = "https://graph.facebook.com/v22.0/me/messages"
+
+    # Официальный вариант через phone_number_id
+    url = f"https://graph.facebook.com/v22.0/{settings.WHATSAPP_BOT_NUMBER_ID}/messages"
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": recipient_phone_id,
+        "type": "text",
+        "text": {
+            "body": message
+        },
+        "metadata": "broadcast"
+    }
+
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    if response.status_code == 200:
+        logging.info(f"Отправлено в WhatsApp: {recipient_phone_id}")
+    else:
+        logging.error(f"Ошибка WhatsApp: {response.status_code} {response.text}")
 
 
 # ==============================

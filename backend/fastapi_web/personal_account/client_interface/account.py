@@ -2,9 +2,10 @@
 from datetime import datetime
 from typing import List, Optional
 
+from fastapi import HTTPException
+
 from crud_core.registry import account_registry
 from db.mongo.db_init import mongo_db
-from fastapi import HTTPException
 from personal_account.base_account import BaseAccount, InlineAccount
 
 from .db.mongo.enums import (FamilyStatusEnum, HealthFormStatus,
@@ -856,7 +857,7 @@ class BonusTransactionInlineAccount(InlineAccount):
         "en": "Transactions",
         "ru": "Транзакции",
         "pl": "Transakcje"}
-    
+
     list_display = [
         "title",
         "amount",
@@ -1060,11 +1061,11 @@ class BonusProgramAccount(BaseAccount):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
-        current_user = None
+        current_user=None
     ) -> List[dict]:
         """
         Переопределяем, чтобы если в коллекции нет записи для текущего юзера,
-        то мы её создаём и сразу возвращаем вместе с любыми другими возможными 
+        то мы её создаём и сразу возвращаем вместе с любыми другими возможными
         данными (если логика дополняется).
         """
 
@@ -1074,7 +1075,8 @@ class BonusProgramAccount(BaseAccount):
         user_id = str(current_user.data["user_id"])
         final_filters["user_id"] = user_id
 
-        cursor = self.db.find(final_filters).sort(sort_by or self.detect_id_field(), order)
+        cursor = self.db.find(final_filters).sort(
+            sort_by or self.detect_id_field(), order)
         docs = await cursor.to_list(None)
 
         if not docs:
@@ -1097,7 +1099,8 @@ class BonusProgramAccount(BaseAccount):
             insert_res = await self.db.insert_one(new_doc)
             if not insert_res.inserted_id:
                 raise HTTPException(500, "Failed to create bonus program.")
-            cursor = self.db.find(final_filters).sort(sort_by or self.detect_id_field(), order)
+            cursor = self.db.find(final_filters).sort(
+                sort_by or self.detect_id_field(), order)
             docs = await cursor.to_list(None)
 
         formatted = []
@@ -1107,12 +1110,10 @@ class BonusProgramAccount(BaseAccount):
 
         return formatted
 
-
-
     async def get_balance(self, obj: dict) -> int:
         """
-        Пример: считаем сумму транзакций типа ACCRUED (прибавляем) 
-        и типа SPENT (вычитаем). 
+        Пример: считаем сумму транзакций типа ACCRUED (прибавляем)
+        и типа SPENT (вычитаем).
         """
         transactions = obj.get("transaction_history", [])
         balance = 0

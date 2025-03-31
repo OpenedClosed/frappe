@@ -1,8 +1,5 @@
 """Вспомогательные функции интеграции Instagram."""
-import hashlib
-import hmac
-
-from fastapi import HTTPException, Request
+from typing import Any, Dict, List
 
 from chats.db.mongo.enums import ChatSource, SenderRole
 from chats.db.mongo.schemas import ChatSession
@@ -10,26 +7,42 @@ from chats.routers import handle_chat_creation
 from chats.ws.ws_handlers import handle_message
 from chats.ws.ws_helpers import get_typing_manager, get_ws_manager
 from db.mongo.db_init import mongo_db
-from infra import settings
 
 
-async def verify_instagram_signature(request: Request):
-    """Проверяет подпись входящего запроса от Instagram."""
-    signature = request.headers.get("X-Hub-Signature-256")
-    if not signature:
-        raise HTTPException(status_code=400, detail="Missing signature")
+def parse_instagram_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Разбирает JSON, приходящий от Instagram/Messenger API,
+    и приводит к единому формату: список словарей с полями
+    [sender_id, recipient_id, message_text, message_id, timestamp, metadata].
+    """
+    results = []
+    for entry in payload.get("entry", []):
+        for messaging_event in entry.get("messaging", []):
+            sender_id = messaging_event.get("sender", {}).get("id")
+            recipient_id = messaging_event.get("recipient", {}).get("id")
+            message_data = messaging_event.get("message", {})
 
-    raw_body = await request.body()
-    expected_signature = hmac.new(
-        key=settings.INSTAGRAM_APP_SECRET.encode(),
-        msg=raw_body,
-        digestmod=hashlib.sha256
-    ).hexdigest()
+            message_text = message_data.get("text", "")
+            message_id = message_data.get("mid")
+            timestamp = messaging_event.get("timestamp")
+            meta = {
+                "attachments": message_data.get("attachments"),
+                "referral": messaging_event.get("referral"),
+                "postback": messaging_event.get("postback"),
+                "context": messaging_event.get("context"),
+                "metadata": messaging_event.get("metadata"),
+            }
+            meta = {k: v for k, v in meta.items() if v}
 
-    if not hmac.compare_digest(f"sha256={expected_signature}", signature):
-        raise HTTPException(status_code=403, detail="Invalid signature")
-
-    return True
+            results.append({
+                "sender_id": sender_id,
+                "recipient_id": recipient_id,
+                "message_text": message_text,
+                "message_id": message_id,
+                "timestamp": timestamp,
+                "metadata": meta
+            })
+    return results
 
 
 async def process_instagram_message(

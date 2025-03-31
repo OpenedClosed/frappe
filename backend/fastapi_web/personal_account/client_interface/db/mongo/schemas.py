@@ -1,6 +1,6 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
 from datetime import datetime
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 
 from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr, Field
@@ -10,10 +10,10 @@ from db.mongo.base.schemas import BaseValidatedModel, Photo
 from .enums import (ConditionEnum, ConsentEnum, FamilyStatusEnum, GenderEnum,
                     RelationshipEnum, TransactionTypeEnum)
 
-
 # ==========
 # Регистрация
 # ==========
+
 
 class RegistrationSchema(BaseModel):
     """
