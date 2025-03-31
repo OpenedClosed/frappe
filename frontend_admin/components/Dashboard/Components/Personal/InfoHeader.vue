@@ -56,7 +56,7 @@ if (headerData.value) {
   // Destructure the two objects from headerData.value
   const { responseData, responseDataMe } = headerData.value;
   console.log("responseDataMe", responseDataMe);
-  if (responseDataMe.role === "admin" || responseDataMe.role === "superadmin") {
+  if (responseDataMe.role && (responseDataMe.role === "admin" || responseDataMe.role === "superadmin")) {
     isAdmin.value = true;
   }
   // Use responseData (and responseDataMe if needed) inside setData
