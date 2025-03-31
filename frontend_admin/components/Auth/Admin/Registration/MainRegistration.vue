@@ -367,6 +367,7 @@ function sendCode() {
       // }
       let responceData = response.data;
       console.log('responceData', responceData);
+      currentPageName.value = "admin"; // Обновляем state на 'admin'
       navigateTo(`/${currentPageName.value}/`);
     })
     .catch((err) => {

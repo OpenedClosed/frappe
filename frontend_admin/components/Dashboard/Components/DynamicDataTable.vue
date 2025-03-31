@@ -5,7 +5,7 @@
     <div class="max-w-full mb-4">
       <div class="outline outline-primary dark:outline-secondary rounded-md p-2">
         <div class="flex flex-col xl:flex-row items-center md:justify-between gap-4">
-          <h2 class="font-bold text-lg ml-2">{{ title[currentLanguage] || title['en'] }}</h2>
+          <h2 class="font-bold text-lg ml-2">{{ title[currentLanguage] || title['en'] || '' }}</h2>
           <!-- <Dropdown
             class="min-w-[14rem]"
             v-model="internalSelectedField"
@@ -55,7 +55,7 @@
   {{
     column.field.toLowerCase().includes("date") || column.field.toLowerCase().includes("created")
       ? formatDate(slotProps.data[column.field])
-      : getLocalizedValue(slotProps.data[column.field], currentLanguage) || " "
+      : getLocalizedValue(slotProps.data[column.field], currentLanguage.value) || " "
   }}
 </p>
 
@@ -162,43 +162,36 @@ function onExportToExcel() {
  * @return {String}                Localized string to display.
  */
  function getLocalizedValue(fieldObj, lang) {
+  // Default lang to "en" if not provided
+  lang = lang || "en";
+  
   if (!fieldObj) return "";
 
-  // If it's already just a string, try to parse or return as-is
+  // If fieldObj is a string, try to parse it as JSON
   if (typeof fieldObj === "string") {
     try {
       const parsedObj = JSON.parse(fieldObj);
-      // If parsedObj is something like { "en": "...", "ru": "...", "settings": {} }:
-      return parsedObj[lang] || parsedObj["en"] || fieldObj;
+      if (parsedObj && typeof parsedObj === "object") {
+        // Check if the key exists before returning
+        return parsedObj[lang] !== undefined
+          ? parsedObj[lang]
+          : parsedObj["en"] !== undefined
+          ? parsedObj["en"]
+          : fieldObj;
+      }
+      return fieldObj;
     } catch (e) {
-      // Not valid JSON, so just return the raw string
       return fieldObj;
     }
   }
 
-  // If it's an object, assume it has 'en'/'ru' keys
-  //  1) Get best match for current lang
-  //  2) If the resulting string is itself JSON, parse that
-  const rawValue = fieldObj[lang] || fieldObj["en"] || "";
-  if (typeof rawValue === "string") {
-    try {
-      const parsedObj = JSON.parse(rawValue);
-      // parsedObj might again be { en: "...", ru: "...", settings: ... }
-      if (typeof parsedObj === "object" && parsedObj !== null) {
-        // Get the final string from the object or fallback
-        return parsedObj[lang] || parsedObj["en"] || rawValue;
-      } else {
-        // If it’s just a normal string or number after parse, return it
-        return parsedObj;
-      }
-    } catch (e) {
-      // rawValue is a normal string (not JSON)
-      return rawValue;
-    }
+  // If fieldObj is an object, safely check for the keys
+  if (typeof fieldObj === "object") {
+    if (fieldObj[lang] !== undefined) return fieldObj[lang];
+    if (fieldObj["en"] !== undefined) return fieldObj["en"];
   }
-
-  // If we get here and rawValue was not a string, just return whatever it is:
-  return rawValue;
+  
+  return "";
 }
 
 // Handler for the plus button click event:

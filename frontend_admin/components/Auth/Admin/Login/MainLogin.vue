@@ -94,6 +94,7 @@ function sendLogin() {
     .then((response) => {
       let responseData = response.data;
       console.log("Profile responseData= ", responseData);
+      currentPageName.value = "admin"; // Обновляем state на 'admin'
       reloadNuxtApp({ path: "/admin", ttl: 1000 });
     })
     .catch((err) => {

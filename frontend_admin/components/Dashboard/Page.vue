@@ -26,7 +26,7 @@ function updateTheme() {
   themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
   //console.log(themeLink)
 }
-if(currentPageName.value = 'personal_account') {
+if(currentPageName.value === 'personal_account') {
     colorMode.preference = "light";
     updateTheme();
 }

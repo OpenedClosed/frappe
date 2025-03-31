@@ -20,7 +20,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   });
 
   const csrfTokenCookie = useCookie("csrftoken");
-  // console.log("token.value", token.value);
+
   // Reset Authorization header function
   const resetAuthorizationHeader = () => {
     delete api.defaults.headers.common["Authorization"];
@@ -39,10 +39,23 @@ export default defineNuxtPlugin((nuxtApp) => {
       api.defaults.headers.common["X-CSRFToken"] = csrfToken;
     }
   };
+
+  const route = useRoute();
+  // Use a fallback for route.params.pagename (defaulting to "admin")
+  const pagename = route.params.pagename || "admin";
+  console.log("route pagename:", pagename);
+
+  const { currentPageName } = usePageState();
+  // Ensure currentPageName is set correctly if missing
+  if (!currentPageName.value) {
+    currentPageName.value = pagename;
+  }
+
   function redirectToLoginIfNeeded() {
     const currentRoute = window.location.pathname;
     if (!currentRoute.includes("login") && !currentRoute.includes("registration")) {
-      reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
+      // Use the fallback pagename for constructing the URL
+      reloadNuxtApp({ path: `/${pagename}/login/`, ttl: 1000 });
     }
   }
 
@@ -61,6 +74,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       return Promise.reject(error);
     }
   );
+
   api.interceptors.request.use(
     async (config) => {
       return config;
@@ -69,7 +83,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       return Promise.reject(error);
     }
   );
-  const { currentPageName } = usePageState();
+
   // ----- Request Interceptor #2 (for refresh) -----
   // This will remove Authorization ONLY when requesting api/auth/refresh.
   api.interceptors.request.use(
@@ -104,7 +118,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
           if (token.value) {
             const response = await api.post(`api/${currentPageName.value}/refresh`).catch((err) => {
-              console.log("Axioserror 1");
+              console.log("Axios error during refresh");
               redirectToLoginIfNeeded();
             });
             const myString = token.value;
@@ -117,14 +131,14 @@ export default defineNuxtPlugin((nuxtApp) => {
           }
         } catch (err) {
           console.log(err.response ? err.response.data : err.message);
-          console.log("Axioserror 2");
+          console.log("Axios error 2");
           redirectToLoginIfNeeded();
           resetAuthorizationHeader();
         }
       } else {
         console.log("error.response", error.response);
         if(error.response && (error.response.status === 403 || error.response.status === 401)) {
-        redirectToLoginIfNeeded();
+          redirectToLoginIfNeeded();
         }
       }
       return Promise.reject(error);

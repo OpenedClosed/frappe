@@ -35,9 +35,10 @@
 import { ref } from "vue";
 
 // Определяем реактивные переменные с начальными значениями
-const patientName = ref("Загрузка...");
+const patientName = ref("Имя");
 const patientId = ref("");
 const bonusCount = ref(0);
+const isAdmin = ref(false);
 
 const contactInfo = ref({
   email: "",
@@ -52,7 +53,17 @@ const contactInfo = ref({
 const { data: headerData, error } = await useAsyncData('headerData', getHeaderData);
 
 if (headerData.value) {
-  setData(headerData.value);
+  // Destructure the two objects from headerData.value
+  const { responseData, responseDataMe } = headerData.value;
+  console.log("responseDataMe", responseDataMe);
+  if (responseDataMe.role === "admin" || responseDataMe.role === "superadmin") {
+    isAdmin.value = true;
+  }
+  // Use responseData (and responseDataMe if needed) inside setData
+  setData(responseData);
+  
+  // For example, if you want to log responseDataMe:
+  console.log("User data =", responseDataMe);
 } else if (error.value) {
   console.error("Ошибка загрузки данных:", error.value);
 }
@@ -82,20 +93,21 @@ function setData(data: any) {
 
 // Функция для получения данных из API
 async function getHeaderData() {
+  let responseDataMe;
   let responseData;
   try {
     const response = await useNuxtApp().$api.get(`api/personal_account/patients_main_info/`);
+    const response_me = await useNuxtApp().$api.get(`/api/users/me`);
     responseData = response.data;
+    responseDataMe = response_me.data;
     console.log("Profile responseData =", responseData);
   } catch (err: any) {
     if (err.response) {
       console.error("Ошибка API:", err.response.data);
     }
   }
-  return responseData;
+  return { responseData, responseDataMe };
 }
-
-
 
 const { isSidebarOpen } = useSidebarState();
 const { currentPageName } = usePageState()
@@ -144,12 +156,12 @@ const items = computed(() => [
   },
 ]);
 
-if (currentPageName.value === "admin") {
+if (isAdmin.value) {
   items.value.unshift({
-    label: "В личный кабинет",
+    label: "В админ панель",
     icon: "pi pi-user",
     command: () => {
-      window.location.href = "/personal_account";
+      window.location.href = "/admin";
     },
   });
 }
