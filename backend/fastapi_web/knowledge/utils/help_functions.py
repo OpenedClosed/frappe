@@ -135,7 +135,50 @@ async def analyze_update_snippets_via_gpt(
         raw_content = response.choices[0].message.content.strip()
 
     result = _extract_json_from_gpt(raw_content)
-    return {"topics": result.get("topics", [])}
+    normalized = normalize_snippets_structure(result)
+    return {"topics": normalized}
+
+
+def normalize_snippets_structure(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Нормализовать структуру сниппетов под ожидаемый формат."""
+    normalized_topics = []
+
+    for topic in result.get("topics", []):
+        if not isinstance(topic, dict):
+            continue
+        topic_name = topic.get("topic")
+        if not isinstance(topic_name, str):
+            continue
+
+        norm_subtopics = []
+        for sub in topic.get("subtopics", []):
+            if isinstance(sub, str):
+                norm_subtopics.append({"subtopic": sub, "questions": {}})
+            elif isinstance(sub, dict):
+                sub_name = sub.get("subtopic")
+                questions = sub.get("questions", {})
+                if isinstance(sub_name, str):
+                    if isinstance(questions, list):
+                        questions = {q: {"text": "", "files": []} for q in questions if isinstance(q, str)}
+                    elif isinstance(questions, dict):
+                        questions = {
+                            q: {
+                                "text": (a.get("text") if isinstance(a, dict) else ""),
+                                "files": (a.get("files") if isinstance(a, dict) and isinstance(a.get("files"), list) else [])
+                            }
+                            for q, a in questions.items() if isinstance(q, str)
+                        }
+                    else:
+                        questions = {}
+                    norm_subtopics.append({"subtopic": sub_name, "questions": questions})
+
+        normalized_topics.append({
+            "topic": topic_name,
+            "subtopics": norm_subtopics
+        })
+
+    return normalized_topics
+
 
 
 async def get_knowledge_full_document():

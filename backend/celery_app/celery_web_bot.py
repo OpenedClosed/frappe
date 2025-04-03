@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Загрузка переменных окружения
-load_dotenv(dotenv_path=Path("fastapi_web/infra/.env"))
+load_dotenv(dotenv_path=Path("../infra/.env"))
 
 # Добавляем путь к fastapi_web
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -46,8 +46,9 @@ celery.autodiscover_tasks(["celery_app"])
 # Настройка Beat
 celery.conf.beat_schedule = {
     "clean-unused-media-daily": {
-        "task": "celery_app.tasks.clean_unused_files",
+        "task": "clean_unused_media_files",
         "schedule": timedelta(hours=1),
+        # "schedule": timedelta(seconds=5),
     },
 }
 
