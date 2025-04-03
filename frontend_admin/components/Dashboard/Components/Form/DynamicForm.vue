@@ -300,16 +300,18 @@
               <div v-else-if="field.type === 'image'" class="w-full">
                 <div v-if="!internalValue[field.name]?.url">
                   <FileUpload
-  mode="basic"
-  accept="image/*"
-  :multiple="false"
-  :auto="false"
-  :customUpload="true"
-  :uploadHandler="onUploadComplete"  
-  :maxFileSize="5242880"
-  choose-label="Загрузить"
-/>
-
+                    :id="field.name"
+                    :maxFileSize="5242880"
+                    mode="basic"
+                    accept="image/*"
+                    :disabled="isDisabled(field)"
+                    :auto="true"
+                    :multiple="false"
+                    @upload="(e) => onUploadComplete(e, field.name)"
+                    class="w-full"
+                    choose-label="Загрузить"
+                    :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
+                  />
                 </div>
                 <div v-else class="flex flex-col gap-2">
                   <img
@@ -826,28 +828,34 @@ function onBlur() {
   emitUpdate();
 }
 
-function onUploadComplete(event) {
-  // event.files -- те же файлы, которые пользователь выбрал
+// Image upload handling
+function onUploadComplete(event, fieldName) {
+  console.log("Upload complete:", event);
+
   const formData = new FormData();
-  event.files.forEach(file => {
+  event.files.forEach((file) => {
     formData.append("file", file);
   });
 
-  // Выполнить свой POST-запрос
-  $api.post("/api/basic/upload_file", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  })
-  .then(response => {
-    console.log("Upload successful:", response);
-    // Здесь сами присваиваем поля, вызываем emitUpdate() и т.д.
-  })
-  .catch(error => {
-    console.error("Upload failed:", error);
-  });
+  const { $api } = useNuxtApp();
+  $api
+    .post("/api/basic/upload_file", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+    .then((response) => {
+      console.log("Upload successful:", response);
+      const imageUrl = response.data?.file_path;
+      if (imageUrl) {
+        internalValue[fieldName] = { url: imageUrl };
+        emitUpdate();
+      }
+    })
+    .catch((error) => {
+      console.error("Upload failed:", error);
+    });
 }
-
 function onMultiUploadComplete(event, fieldName) {
   console.log("Multi-upload complete:", event);
   const formData = new FormData();
