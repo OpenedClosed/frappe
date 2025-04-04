@@ -21,11 +21,13 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    command: ["redis-server", "--replicaof", "no", "one"]
 
   redis_storage:
     image: redis:latest
     volumes:
       - redis_storage_data:/data
+    command: ["redis-server", "--replicaof", "no", "one"]
 
   backend:
     image: 89639339335/dentist_backend:latest
