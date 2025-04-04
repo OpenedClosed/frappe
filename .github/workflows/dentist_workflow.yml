@@ -59,7 +59,7 @@ jobs:
           push: true
           context: ./backend
           file: ./backend/Dockerfile
-          tags: ${{ secrets.DOCKER_USERNAME }}/hotels_ai_hub_backend:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
       # - name: Push backend to Docker Hub
       #   uses: docker/build-push-action@v3
