@@ -166,7 +166,7 @@ jobs:
             echo "Чистим старые образы..."
             sudo docker system prune -a -f --volumes
 
-            touch .env
+            touch .env 
             cat > .env << EOF
             DOLLAR='$'
             HOST=${{ env.HOST }}
