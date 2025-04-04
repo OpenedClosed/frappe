@@ -72,4 +72,4 @@ def _normalize_path(path: str) -> str:
     Приводит путь к унифицированной форме: только имя файла, без путей и префиксов.
     Например: "/media/images/test.png" -> "test.png"
     """
-    return os.path.basename(path.strip()).lower()
+    return os.path.basename(path.strip()).lower() 
