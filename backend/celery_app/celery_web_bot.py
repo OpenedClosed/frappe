@@ -47,8 +47,8 @@ celery.autodiscover_tasks(["celery_app"])
 celery.conf.beat_schedule = {
     "clean-unused-media-daily": {
         "task": "clean_unused_media_files",
-        # "schedule": timedelta(hours=1),
-        "schedule": timedelta(seconds=5),
+        "schedule": timedelta(hours=1),
+        # "schedule": timedelta(seconds=5),
     },
 }
 
