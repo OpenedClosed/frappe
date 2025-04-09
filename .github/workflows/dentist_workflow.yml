@@ -218,12 +218,9 @@ jobs:
             sudo docker-compose -f ~/docker-compose.yml pull
             sudo docker-compose -f ~/docker-compose.yml up -d
 
-            # Перезапуск nginx
-            ~/scripts/restart_nginx.sh || echo "Nginx restart failed"
-
             # Инициализация Mongo (реплика, если нужно)
             echo "Инициализируем MongoDB..."
-            sudo docker-compose exec -T mongo mongosh -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
+            sudo docker-compose exec -T mongo mongosh --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
 
   # ============== Уведомления в Telegram =============
 
