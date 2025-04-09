@@ -1,6 +1,7 @@
 #!/bin/bash
 
-LOG_DIR="./logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/../logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/restart_containers_$(date +'%Y-%m-%d_%H-%M').log"
 
@@ -31,14 +32,15 @@ else
   echo "Все контейнеры работают нормально." | tee -a "$LOG_FILE"
 fi
 
-RUNNING_CONTAINERS=$(docker ps --format "{{.ID}}")
-if [ -z "$RUNNING_CONTAINERS" ]; then
+# Проверка: если совсем нет запущенных контейнеров
+if [ -z "$(docker ps -q)" ]; then
   echo "Нет запущенных контейнеров. Перезапускаем..." | tee -a "$LOG_FILE"
   docker-compose down >> "$LOG_FILE" 2>&1
   docker system prune -af >> "$LOG_FILE" 2>&1
   docker-compose up -d --force-recreate >> "$LOG_FILE" 2>&1
 fi
 
+# Удаление старых логов (каждый запуск)
 echo "Очистка логов старше 14 дней..." | tee -a "$LOG_FILE"
 find "$LOG_DIR" -type f -name "*.log" -mtime +14 -exec rm {} \; >> "$LOG_FILE" 2>&1
 

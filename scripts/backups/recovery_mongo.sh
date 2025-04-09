@@ -1,13 +1,14 @@
 #!/bin/bash
 
-MONGO_CONTAINER="root-mongo-1"
-MONGO_DB_NAME="Nan"
-BACKUP_PATH="./mongo_backups"
+MONGO_CONTAINER="root_mongo_1"
+MONGO_DB_NAME="NaN"
+BACKUP_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../mongo_backups"
 
-LOG_DIR="./logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/../logs"
 mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/recovery_mongo_$(date +'%Y-%m-%d_%H-%M').log"
 
+LOG_FILE="$LOG_DIR/recovery_mongo_$(date +'%Y-%m-%d_%H-%M').log"
 echo "=== Восстановление MongoDB ===" | tee -a "$LOG_FILE"
 
 LATEST_MONGO_BACKUP=$(ls -Art "$BACKUP_PATH" | tail -n 1)

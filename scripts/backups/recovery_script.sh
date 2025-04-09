@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# Параметры PostgreSQL
-POSTGRES_CONTAINER="root-db-1"
-DB_NAME="Nan"
-DB_USER="Nan"
-DB_PASSWORD="Nan"
-BACKUP_PATH="./backups"
+POSTGRES_CONTAINER="root_db_1"
+DB_NAME="NaN"
+DB_USER="NaN"
+DB_PASSWORD="NaN"
+BACKUP_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../backups"
 
-LOG_DIR="./logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/../logs"
 mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/recovery_postgres_$(date +'%Y-%m-%d_%H-%M').log"
 
+LOG_FILE="$LOG_DIR/recovery_postgres_$(date +'%Y-%m-%d_%H-%M').log"
 echo "=== Восстановление PostgreSQL ===" | tee -a "$LOG_FILE"
 
-LATEST_DB_BACKUP=$(ls -Art "$BACKUP_PATH"/*.sql | tail -n 1)
+LATEST_DB_BACKUP=$(ls -Art "$BACKUP_PATH"/*.sql 2>/dev/null | tail -n 1)
 if [ -z "$LATEST_DB_BACKUP" ]; then
   echo "❌ Нет доступных .sql-файлов для восстановления" | tee -a "$LOG_FILE"
   exit 1
