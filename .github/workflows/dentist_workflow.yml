@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - dev
  
 env:
-  HOST: ${{ secrets.HOST }}
+  PROD_HOST: ${{ secrets.PROD_HOST }}
+  DEV_HOST: ${{ secrets.DEV_HOST }}
   REDIS_URL: ${{ secrets.REDIS_URL }}
   MONGO_URL: ${{ secrets.MONGO_URL }}
   MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
@@ -28,8 +30,6 @@ env:
   INSTAGRAM_BOT_NAME: ${{ secrets.INSTAGRAM_BOT_NAME }}
   INSTAGRAM_BOT_ID: ${{ secrets.INSTAGRAM_BOT_ID }}
 
-
-
 jobs:
   build_and_push_to_docker_hub:
     name: Push Docker images to Docker Hub
@@ -37,23 +37,38 @@ jobs:
 
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      # 1) Определяем, какие файлы изменились в этом пуше
+      - name: Check changed files
+        id: changes
+        uses: tj-actions/changed-files@v34
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+
       - name: Login to Docker
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # - name: Push mongo to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./mongo
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
+      # ============== 2) Ниже – условная сборка и пуш разных контейнеров =============
 
+      # Mongo
+      - name: Build and push Mongo
+        if: contains( steps.changes.outputs.all_modified_files, 'mongo/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./mongo
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
+
+      # Backend (FastAPI + Celery)
       - name: Build and push Backend (FastAPI + Celery)
+        if: contains( steps.changes.outputs.all_modified_files, 'backend/')
         uses: docker/build-push-action@v3
         with:
           push: true
@@ -61,87 +76,91 @@ jobs:
           file: ./backend/Dockerfile
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
-      # - name: Push backend to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./backend
-      #     file: ./backend/fastapi_web/FastApiWebDockerfile
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
+      # Bot (если бот в отдельной папке, например /backend/telegram_bot/)
+      - name: Build and push Bot
+        if: contains( steps.changes.outputs.all_modified_files, 'backend/telegram_bot/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/telegram_bot/TelegramBotDockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
 
-      # - name: Push bot to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./backend
-      #     file: ./backend/telegram_bot/TelegramBotDockerfile
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
+      # Frontend admin
+      - name: Build and push Frontend admin
+        if: contains( steps.changes.outputs.all_modified_files, 'frontend_admin/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./frontend_admin
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
 
-      # - name: Push frontend admin to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./frontend_admin
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
+      # Frontend chat
+      - name: Build and push Frontend chat
+        if: contains( steps.changes.outputs.all_modified_files, 'frontend_chat/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./frontend_chat
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
 
-      # - name: Push frontend chat to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with: 
-      #     push: true
-      #     context: ./frontend_chat
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
+      # Nginx
+      - name: Build and push Nginx proxy
+        if: contains( steps.changes.outputs.all_modified_files, 'nginx/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./nginx
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_nginx:latest
 
-      # - name: Push nginx proxy to Docker Hub
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./nginx
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_nginx:latest
+  # ============== Дальше деплой на сервер =============
 
   deploy:
     runs-on: ubuntu-latest
     needs: build_and_push_to_docker_hub
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Debug repository contents
+      - name: Determine deployment host
+        id: set-host
         run: |
-          echo "### GitHub Actions workspace:"
-          pwd
-          echo "### Listing root directory:"
-          ls -lah
-          echo "### Listing all files recursively:"
-          find . -type d
-          echo "### Checking backend/infra/:"
-          ls -lah backend/infra || echo "backend/infra/ not found"
-          echo "### Checking scripts/:"
-          ls -lah scripts || echo "scripts/ not found"
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "HOST=${{ env.PROD_HOST }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "HOST=${{ env.DEV_HOST }}" >> $GITHUB_ENV
+          fi
 
+      - name: Set environment dynamically
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENV=prod" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "ENV=dev" >> $GITHUB_ENV
+          fi
 
-      - name: Copy docker-compose.yml to server root
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ env.HOST }}
-          username: ${{ secrets.USER }} 
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          source: "backend/infra/docker-compose.yml"
-          target: "~/"  # Копируем в корень пользователя
-          strip_components: 2  # Убираем 2 уровня директорий
-          overwrite: true
-
-      - name: Copy restart_containers.sh to scripts folder
+      - name: Copy docker-compose.yml to server
         uses: appleboy/scp-action@master
         with:
           host: ${{ env.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          source: "scripts/restart_containers.sh"
+          source: "backend/infra/docker-compose.yml"
+          target: "~/"
+          strip_components: 2
+          overwrite: true
+
+      - name: Copy all scripts to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          source: "scripts/**"
           target: "~/scripts/"
-          strip_components: 1  # Убираем 1 уровень директорий
+          strip_components: 1
           overwrite: true
 
       - name: Execute remote SSH commands to deploy
@@ -152,46 +171,39 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
-            # Даем права на выполнение скрипта
-            chmod +x ~/scripts/restart_containers.sh
+            mkdir -p ~/scripts/backups ~/scripts/logs
 
-            # Проверяем, есть ли запись в cron
-            CRON_JOB="*/5 * * * * ~/scripts/restart_containers.sh >> ~/scripts/restart_log.txt 2>&1"
-            (crontab -l | grep -qF "$CRON_JOB") || (echo "$CRON_JOB" | crontab -)
+            # Права на все скрипты
+            chmod +x ~/scripts/*.sh
+            chmod +x ~/scripts/backups/*.sh
 
-            # Останавливаем контейнеры
+            # CRON задачи (ежедневно в 00:00 по МСК → значит 21:00 по UTC)
+            (crontab -l 2>/dev/null; echo "*/20 * * * * ~/scripts/restart_containers.sh >> ~/scripts/logs/restart_containers.log 2>&1") | sort -u | crontab -
+            (crontab -l 2>/dev/null; echo "*/5 * * * * ~/scripts/restart_nginx.sh >> ~/scripts/logs/restart_nginx.log 2>&1") | sort -u | crontab -
+            (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_backup_script.sh >> ~/scripts/logs/full_backup.log 2>&1") | sort -u | crontab -
+            (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_mongo_backup.sh >> ~/scripts/logs/mongo_backup.log 2>&1") | sort -u | crontab -
+            (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_media_backup_script.sh >> ~/scripts/logs/media_backup.log 2>&1") | sort -u | crontab -
+            
+            # Останавливаем старые контейнеры, чистим образы
             sudo docker-compose -f ~/docker-compose.yml down --remove-orphans
-
-            # Чистим старые образы
-            echo "Чистим старые образы..."
             sudo docker system prune -a -f --volumes
 
+            # Создаём .env файл
             touch .env 
             cat > .env << EOF
             DOLLAR='$'
             HOST=${{ env.HOST }}
-
-            # Подключение к Redis
             REDIS_URL=${{ env.REDIS_URL }}
-
-            # Подключение к MongoDB
             MONGO_URL=${{ env.MONGO_URL }}
             MONGO_DB_NAME=${{ env.MONGO_DB_NAME }}
-
-            # AI API
             OPENAI_API_KEY=${{ env.OPENAI_API_KEY }}
             GEMINI_API_KEY=${{ env.GEMINI_API_KEY }}
-
-            # Настройки Redis
             REDIS_STORAGE_URL=${{ env.REDIS_STORAGE_URL }}
-
-            # Настройки Telegram API
             CHANNEL_USERNAME=${{ env.CHANNEL_USERNAME }}
             SERVICE_NAME=${{ env.SERVICE_NAME }}
             BOT_LINK=${{ env.BOT_LINK }}
             TOKEN=${{ env.TOKEN }}
             CERTBOT_EMAIL=${{ env.CERTBOT_EMAIL }}
-
             WEATHER_API_KEY=${{ env.WEATHER_API_KEY }}
             INSTAGRAM_ACCESS_TOKEN=${{ env.INSTAGRAM_ACCESS_TOKEN }}
             INSTAGRAM_APP_ID=${{ env.INSTAGRAM_APP_ID }}
@@ -199,19 +211,20 @@ jobs:
             INSTAGRAM_VERIFY_TOKEN=${{ env.INSTAGRAM_VERIFY_TOKEN }}
             INSTAGRAM_BOT_NAME=${{ env.INSTAGRAM_BOT_NAME }}
             INSTAGRAM_BOT_ID=${{ env.INSTAGRAM_BOT_ID }}
-
             EOF
 
-            # Поднимаем контейнеры
+            # Подтягиваем свежие образы (те, что мы успели запушить)
             sudo docker-compose -f ~/docker-compose.yml pull
             sudo docker-compose -f ~/docker-compose.yml up -d
 
-            sleep 10
+            # Перезапуск nginx
+            ~/scripts/restart_nginx.sh || echo "Nginx restart failed"
 
-            # Инициализируем MongoDB (если нужно)
+            # Инициализация Mongo (реплика, если нужно)
             echo "Инициализируем MongoDB..."
-            sudo docker-compose exec -it mongo mongo -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
+            sudo docker-compose exec -T mongo mongo -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
 
+  # ============== Уведомления в Telegram =============
 
   send_message:
     runs-on: ubuntu-latest
