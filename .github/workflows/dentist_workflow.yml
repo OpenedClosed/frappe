@@ -172,7 +172,7 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             mkdir -p ~/scripts/backups ~/scripts/logs
-
+ 
             # Права на все скрипты
             chmod +x ~/scripts/*.sh
             chmod +x ~/scripts/backups/*.sh
