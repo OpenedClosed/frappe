@@ -223,7 +223,7 @@ jobs:
 
             # Инициализация Mongo (реплика, если нужно)
             echo "Инициализируем MongoDB..."
-            sudo docker-compose exec -T mongo mongo -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
+            sudo docker-compose exec -T mongo mongosh -u root -p example --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})'
 
   # ============== Уведомления в Telegram =============
 
