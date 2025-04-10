@@ -1,0 +1,103 @@
+{
+  "chat": "Czat",
+  "newChat": "Nowy czat",
+  "showCommands": "Pokaż polecenia",
+  "sendMessage": "Wyślij wiadomość...",
+  "chatAgain": "Rozpocznij ponownie",
+  "language": "Język",
+  "roomActions": [
+    {
+      "name": "archiveRoom",
+      "title": "Archiwizuj pokój"
+    }
+  ],
+  "menuActions": [
+    {
+      "name": "inviteUser",
+      "title": "Zaproś użytkownika"
+    },
+    {
+      "name": "removeUser",
+      "title": "Usuń użytkownika"
+    },
+    {
+      "name": "deleteRoom",
+      "title": "Usuń pokój"
+    }
+  ],
+  "messageActions": [
+    {
+      "name": "replyMessage",
+      "title": "Odpowiedz"
+    },
+    {
+      "name": "editMessage",
+      "title": "Edytuj wiadomość",
+      "onlyMe": true
+    },
+    {
+      "name": "deleteMessage",
+      "title": "Usuń wiadomość",
+      "onlyMe": true
+    },
+    {
+      "name": "selectMessages",
+      "title": "Wybierz"
+    }
+  ],
+  "messageSelectionActions": [
+    {
+      "name": "deleteMessages",
+      "title": "Usuń"
+    },
+    {
+      "name": "forwardMessages",
+      "title": "Prześlij"
+    }
+  ],
+  "templatesText": [
+    {
+      "tag": "help",
+      "text": "To jest pomoc"
+    },
+    {
+      "tag": "action",
+      "text": "To jest działanie"
+    }
+  ],
+  "textMessages": {
+    "ROOMS_EMPTY": "Brak konwersacji",
+    "ROOM_EMPTY": "Brak wybranej konwersacji",
+    "NEW_MESSAGES": "Nowe wiadomości",
+    "MESSAGE_DELETED": "Wiadomość została usunięta",
+    "MESSAGES_EMPTY": "Brak wiadomości",
+    "CONVERSATION_STARTED": "Rozmowa rozpoczęła się:",
+    "TYPE_MESSAGE": "Wpisz swoją wiadomość",
+    "SEARCH": "Szukaj",
+    "IS_ONLINE": "jest online",
+    "LAST_SEEN": "ostatnio widziano ",
+    "IS_TYPING": "pisze...",
+    "CANCEL_SELECT_MESSAGE": "Anuluj wybór"
+  },
+  "additionalMessages": {
+    "chatRefreshed": "Czat odświeżony",
+    "chatRefreshedSuccessfully": "Czat został pomyślnie odświeżony.",
+    "errorRefreshingChat": "Błąd podczas odświeżania czatu:",
+    "failedToRefreshChat": "Nie udało się odświeżyć czatu.",
+    "sendingMessage": "Wysyłanie wiadomości:",
+    "attention": "Uwaga",
+    "error": "Błąd",
+    "choiceOptions": "Opcje wyboru:",
+    "choiceOptionsFromLastMessage": "Opcje (z ostatniej wiadomości):",
+    "messagesRetrieved": "Odebrano wiadomości:",
+    "newMessage": "Nowa wiadomość:",
+    "unknownMessageType": "Nieznany typ wiadomości:",
+    "webSocketConnectionEstablished": "Połączono z WebSocket.",
+    "webSocketConnectionClosed": "Połączenie WebSocket zostało zamknięte.",
+    "webSocketError": "Błąd WebSocket:",
+    "pageIsVisibleCheckingWSConnection": "Strona jest widoczna. Sprawdzanie połączenia...",
+    "pageIsHiddenPausingUpdates": "Strona jest ukryta. Wstrzymano aktualizacje.",
+    "windowInFocus": "Okno w fokuse",
+    "webSocketIsNotOpenReconnecting": "WebSocket nie jest otwarty. Ponowne łączenie..."
+  }
+}

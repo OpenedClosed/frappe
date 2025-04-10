@@ -156,7 +156,8 @@
                 <div class="flex items-center mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">
                   <input
                     class="border p-1 flex-1 mr-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
-                    :value="topicName"
+                    :placeholder="topicName.includes('New Topic') ? topicName : ''"
+                    :value="topicName.includes('New Topic') ? '' : topicName"
                     @blur="renameTopic(topicName, $event.target.value)"
                     @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
                   />
@@ -183,7 +184,8 @@
                   <div class="flex items-center mb-2">
                     <input
                       class="border p-1 flex-1 mr-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
-                      :value="subtopicName"
+                      :placeholder="subtopicName.includes('New Subtopic') ? subtopicName : ''"
+                      :value="subtopicName.includes('New Subtopic') ? '' : subtopicName"
                       @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
                       @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
                     />
@@ -218,7 +220,8 @@
 
                       <!-- QUESTION (the key) -->
                       <Textarea
-                        :value="questionKey"
+                        :placeholder="questionKey.includes('New Question') ? questionKey : ''"
+                        :value="questionKey.includes('New Question') ? '' : questionKey"
                         class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                         @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
                       />
@@ -966,7 +969,7 @@ async function saveDatabase() {
 }
 
 function clearPlayground() {
-  if (confirm(t("knowledgeBase.clearPlayground"))) {
+  if (confirm(`Очистить рабочую область?\n\nИзменения в рабочей области будут удалены.\nЭто действие НЕ повлияет на базу знаний.`)) {
     knowledgeBaseData.value.knowledge_base = {};
     showSuccess("Playground cleared successfully");
   }
@@ -976,10 +979,12 @@ function savePlayground() {
   updatePlayground();
 }
 function rejectPlayground() {
+  const confirmation = confirm(`Отклонить рабочую область?\n\nИзменения в рабочей области будут удалены.\nЭто действие НЕ повлияет на базу знаний.`);
+  if (!confirmation) return;
+
   isEditMode.value = false;
-  // clear data to readonlyData
-  let temp = readonlyData.value.knowledge_base;
-  knowledgeBaseData.value.knowledge_base = temp;
+  // Use cloneDeep to create a completely new copy of readonlyData
+  knowledgeBaseData.value.knowledge_base = cloneDeep(readonlyData.value.knowledge_base);
   showSuccess("Playground rejected successfully");
 }
 let isDirty = ref(false);
@@ -1009,6 +1014,13 @@ onUnmounted(() => {
 
 // Reset `isDirty` after saving
 function saveChanges() {
+  const kb = knowledgeBaseData.value.knowledge_base;
+  
+  if (!kb || Object.keys(kb).length === 0) {
+    const confirmation = confirm("Рабочая область пуста. Вы уверены, что хотите сохранить изменения в рабочей области?\n\nЭто действие ОЧИСТИТ базу знаний.");
+    if (!confirmation) return;
+  }
+  
   saveDatabase();
 }
 async function generatePatch() {

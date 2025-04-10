@@ -4,7 +4,14 @@
     <div class="flex flex-row items-center gap-2">
       <!-- Left Section: Title -->
       <!-- {{ currentUrl+botHeaderData.avatar }} -->
-      <Avatar :image="currentUrl + botHeaderData?.avatar || ' '" class="mr-2" size="large" shape="circle" />
+      <div class="min-w-[3rem] w-12 h-12 flex-shrink-0">
+        <Avatar 
+          :image="currentUrl + botHeaderData?.avatar || ' '" 
+          class="mr-2 w-full h-full object-cover" 
+          size="large" 
+          shape="circle"
+        />
+      </div>
       <div class="flex flex-row items-center gap-2">
         <h2 class="font-bold hidden md:block">{{ botHeaderData?.app_name || " " }}</h2> 
         <h2 class="font-bold max-w-[100px] w-[100px] block md:hidden truncate text-nowrap">{{ botHeaderData?.app_name || " " }}</h2>

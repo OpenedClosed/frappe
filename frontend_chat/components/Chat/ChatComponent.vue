@@ -11,7 +11,9 @@
     <Toast class="max-w-[18rem] md:max-w-full" />
     <!-- Сам чат -->
     <vue-advanced-chat
-      :class="[{ 'iphone-margin': isIphone }]"
+      :class="[{ 'iphone-margin': showIphoneMargin }]"
+      @focusin="handleFocus($event, true)"
+      @focusout="handleFocus($event, false)"
       auto-scroll='{
     "send": { "new": true, "newAfterScrollUp": true },
     "receive": { "new": true, "newAfterScrollUp": true }
@@ -33,10 +35,16 @@
       @send-message="sendMessage($event.detail[0])"
       @fetch-messages="fetchMessages($event.detail[0])"
       :theme="colorMode.preference"
-      
     >
       <div slot="room-header-info" class="w-full">
-        <ChatHeader :isTelegram="isTelegram" :refreshChat="refreshChat" :closeChat="closeChat" :rooms="rooms" :currentUserId="currentUserId" @toggle-chat-mode="toggleChatMode($event)" />
+        <ChatHeader
+          :isTelegram="isTelegram"
+          :refreshChat="refreshChat"
+          :closeChat="closeChat"
+          :rooms="rooms"
+          :currentUserId="currentUserId"
+          @toggle-chat-mode="toggleChatMode($event)"
+        />
       </div>
     </vue-advanced-chat>
 
@@ -94,12 +102,22 @@ $listen("new_message_arrived", async (message) => {
   }
 });
 $listen("choice_options_arrived", async (options) => {
-  console.log("choice_options:", options);
+  // console.log("choice_options:", options);
   if (options) {
     choiceOptions.value = options;
   }
 });
 
+const isTextareaFocused = ref(false)
+
+function handleFocus(e, value) {
+  const el = e.target
+  if (el?.classList?.contains('vac-textarea')) {
+    isTextareaFocused.value = value
+  }
+}
+
+const showIphoneMargin = computed(() => isIphone.value && !isTextareaFocused.value)
 // Получаем из composable все нужные refs и методы
 // (кроме closeChat - его оставляем здесь локально)
 const {
@@ -126,9 +144,16 @@ const {
 
 <style scoped>
 /* Перенесите нужные стили из вашего SFC */
+/* keeps some air for the iPhone safe‑area */
 .iphone-margin {
   margin-bottom: 20px;
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* keyboard open → the input (a descendant) is focused */
+.iphone-margin:focus-within {
+  margin-bottom: 0; /* or whatever value you prefer */
+  padding-bottom: 0;
 }
 </style>
 

@@ -75,28 +75,40 @@ const menu = ref(null);
 const menuOpen = ref(false);
 
 // Use a computed property for the menu items so that the icon updates reactively.
-const items = computed(() => [
-  {
-    label: "Сменить тему",
-    icon: colorMode.preference === 'dark' ? 'pi pi-sun' : 'pi pi-moon',
-    command: toggleTheme,
-  },
-  {
-    label: "Выйти",
-    icon: "pi pi-power-off",
-    command: onLogout,
-  },
-]);
-
-if (currentPageName.value === "admin") {
-  items.value.unshift({
-    label: "В личный кабинет",
-    icon: "pi pi-user",
-    command: () => {
-      window.location.href = "/personal_account";
+const items = computed(() => {
+  const menuItems = [
+    {
+      label: "Сменить тему",
+      icon: colorMode.preference === "dark" ? "pi pi-sun" : "pi pi-moon",
+      command: toggleTheme,
     },
-  });
-}
+    {
+      label: "Выйти",
+      icon: "pi pi-power-off",
+      command: onLogout,
+    },
+  ];
+
+  if (currentPageName.value === "admin") {
+    menuItems.unshift({
+      label: "В личный кабинет",
+      icon: "pi pi-user",
+      command: () => {
+        window.location.href = "/personal_account";
+      },
+    });
+  } else {
+    menuItems.unshift({
+      label: "AI Assistant",
+      icon: "pi pi-user",
+      command: () => {
+        window.location.href = "/admin";
+      },
+    });
+  }
+
+  return menuItems;
+});
 
 // Toggle the TieredMenu popup
 const toggle = (event) => {
