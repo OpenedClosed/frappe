@@ -334,8 +334,8 @@ async def handle_new_message(
     if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
         return
     
-    # if not msg_text.strip():
-    #     return
+    if not msg_text.strip():
+        return
 
     new_msg = ChatMessage(
         message=msg_text,
