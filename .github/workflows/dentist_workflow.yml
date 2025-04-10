@@ -19,6 +19,7 @@ env:
   SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
   BOT_LINK: ${{ secrets.BOT_LINK }}
   TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+  DEV_TOKEN: ${{ secrets.DEV_TOKEN }}
   TOKEN: ${{ secrets.TOKEN }}
   CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
 
@@ -55,7 +56,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # ============== 2) Ниже – условная сборка и пуш разных контейнеров =============
+      # ============== 2) Сборка и пуш контейнеров =============
 
       # Mongo
       - name: Build and push Mongo
@@ -212,7 +213,7 @@ jobs:
             CHANNEL_USERNAME=${{ env.CHANNEL_USERNAME }}
             SERVICE_NAME=${{ env.SERVICE_NAME }}
             BOT_LINK=${{ env.BOT_LINK }}
-            TOKEN=${{ env.TOKEN }}
+            TOKEN=$([ "${{ env.ENV }}" = "prod" ] && echo '${{ secrets.TOKEN }}' || echo '${{ secrets.DEV_TOKEN }}')
             CERTBOT_EMAIL=${{ env.CERTBOT_EMAIL }}
             WEATHER_API_KEY=${{ env.WEATHER_API_KEY }}
             INSTAGRAM_ACCESS_TOKEN=${{ env.INSTAGRAM_ACCESS_TOKEN }}

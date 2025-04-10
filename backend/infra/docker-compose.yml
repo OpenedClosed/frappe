@@ -42,7 +42,7 @@ services:
     image: 89639339335/dentist_bot:latest
     ports:
       - "9999:9999"
-    restart: always
+    # restart: always
     volumes:
       - media_value:/app/media
     depends_on:
