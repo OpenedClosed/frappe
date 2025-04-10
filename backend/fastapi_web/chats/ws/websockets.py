@@ -1,6 +1,6 @@
 """Веб-сокеты приложения Чаты."""
 import logging
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
@@ -18,55 +18,86 @@ from ..utils.help_functions import (determine_language, generate_client_id,
 from .ws_helpers import (get_typing_manager, get_ws_manager,
                          websocket_jwt_required)
 
+from .ws_helpers import gpt_task_manager
+
 # ==============================
 # Основной WebSocket эндпоинт
 # ==============================
+
+import asyncio
+from asyncio import Task, Lock
+
 
 
 @app.websocket("/ws/{chat_id}/")
 async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     """WebSocket соединение для чата."""
-    is_superuser = bool(await websocket_jwt_required(websocket))
 
+    # 1. Подключение пользователя и определение роли
+    is_superuser = bool(await websocket_jwt_required(websocket))
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)
 
     client_id = await get_client_id(websocket, chat_id, is_superuser)
     generated_id = await generate_client_id(websocket)
-    id_to_connect = "admin_pass" if (is_superuser and (
-        generated_id == client_id)) else generated_id if is_superuser else client_id
+    id_to_connect = (
+        "admin_pass" if is_superuser and (generated_id == client_id)
+        else generated_id if is_superuser
+        else client_id
+    )
 
     await manager.connect(websocket, id_to_connect)
 
     user_language = determine_language(
-        websocket.headers.get(
-            "accept-language", "en"))
+        websocket.headers.get("accept-language", "en")
+    )
     redis_session_key = f"chat:{client_id}"
     redis_flood_key = f"flood:{client_id}"
 
+    # 2. Загрузка сессии и проверка доступа
     chat_session = await load_chat_session(manager, client_id, chat_id)
     if not chat_session:
         return
 
+    if not await validate_session(manager, client_id, chat_id, redis_session_key, is_superuser):
+        return
+
+    # 3. Загрузка истории чата (если новая сессия)
     if not await handle_get_messages(manager, chat_id, redis_session_key):
         await start_brief(chat_session, manager, redis_session_key, user_language)
 
+    # 4. Основной цикл приёма сообщений
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
             data = await websocket.receive_json()
-            await handle_message(
-                manager, typing_manager, data, chat_id, client_id, redis_session_key, redis_flood_key, is_superuser, user_language
+
+            # Получаем GPT-лок для этого чата
+            gpt_lock = gpt_task_manager.get_lock(chat_id)
+
+            # Обрабатываем сообщение в отдельной задаче
+            asyncio.create_task(
+                handle_message(
+                    manager=manager,
+                    typing_manager=typing_manager,
+                    data=data,
+                    chat_id=chat_id,
+                    client_id=client_id,
+                    redis_session_key=redis_session_key,
+                    redis_flood_key=redis_flood_key,
+                    is_superuser=is_superuser,
+                    user_language=user_language,
+                    gpt_lock=gpt_lock
+                )
             )
+
     except WebSocketDisconnect:
-        logging.warning(
-            f"Client disconnected: chat_id={chat_id}, client_id={client_id}")
+        logging.warning(f"Client disconnected: chat_id={chat_id}, client_id={client_id}")
         await manager.disconnect(client_id)
         await typing_manager.remove_typing(chat_id, client_id, manager)
 
     except Exception as e:
         logging.error(f"WebSocket error: {e}")
         await manager.disconnect(client_id)
-
 
 # ==============================
 # Вспомогательные функции

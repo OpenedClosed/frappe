@@ -64,7 +64,16 @@ jobs:
         with:
           push: true
           context: ./mongo
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_mongo:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/mongo:latest
+
+      # Redis
+      - name: Build and push Mongo
+        if: contains( steps.changes.outputs.all_modified_files, 'redis/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./redis
+          tags: ${{ secrets.DOCKER_USERNAME }}/redis:latest
 
       # Backend (FastAPI + Celery)
       - name: Build and push Backend (FastAPI + Celery)

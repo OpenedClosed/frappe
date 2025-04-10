@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 import requests
+from asyncio import Lock
 from pydantic import ValidationError
 
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
@@ -28,7 +29,8 @@ from ..utils.help_functions import (find_last_bot_message, get_bot_context,
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
-from .ws_helpers import ConnectionManager, TypingManager, custom_json_dumps
+from .ws_helpers import ConnectionManager, TypingManager, custom_json_dumps, gpt_task_manager
+
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -36,18 +38,19 @@ from .ws_helpers import ConnectionManager, TypingManager, custom_json_dumps
 
 
 async def handle_message(
-    manager: Any,
+    manager: ConnectionManager,
     typing_manager: TypingManager,
-    data: Dict[str, Any],
+    data: dict,
     chat_id: str,
     client_id: str,
     redis_session_key: str,
     redis_flood_key: str,
     is_superuser: bool,
-    user_language: str
+    user_language: str,
+    gpt_lock: Lock,   # <--- Получаем лок GPT
 ) -> None:
-    """Обрабатывает входящее сообщение от клиента."""
-
+    """Определяем тип сообщения и вызываем нужный handler."""
+    
     handlers = {
         "status_check": handle_status_check,
         "get_messages": handle_get_messages,
@@ -60,15 +63,21 @@ async def handle_message(
 
     handler = handlers.get(data.get("type"), handle_unknown_type)
 
+    # Если "new_message" – пойдём в спец. обработчик
     if handler == handle_new_message:
         async with await mongo_client.start_session() as session:
             await handler(
-                manager, chat_id, client_id, redis_session_key, redis_flood_key, data, is_superuser, user_language, typing_manager
+                manager, chat_id, client_id, redis_session_key, redis_flood_key,
+                data, is_superuser, user_language, typing_manager,
+                gpt_lock  # передаём лок в handle_new_message
             )
+
     elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
+        # Просто примеры прочих handler-ов
         await handler(typing_manager, chat_id, client_id, manager)
     else:
         await handler(manager, chat_id, redis_session_key)
+
 
 
 # ==============================
@@ -294,6 +303,8 @@ async def handle_get_messages(
     await manager.broadcast(response)
 
 
+
+
 async def handle_new_message(
     manager: ConnectionManager,
     chat_id: str,
@@ -303,9 +314,11 @@ async def handle_new_message(
     data: dict,
     is_superuser: bool,
     user_language: str,
-    typing_manager: TypingManager
+    typing_manager: TypingManager,
+    gpt_lock: Lock
 ) -> None:
     """Обрабатывает новое сообщение от пользователя."""
+
     msg_text = data.get("message", "")
     reply_to = data.get("reply_to")
     external_id = data.get("external_id")
@@ -320,6 +333,9 @@ async def handle_new_message(
 
     if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
         return
+    
+    # if not msg_text.strip():
+    #     return
 
     new_msg = ChatMessage(
         message=msg_text,
@@ -331,7 +347,8 @@ async def handle_new_message(
     if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
         return
 
-    if not await check_flood_control(manager, client_id, chat_id, redis_key_flood, chat_session.calculate_mode(BRIEF_QUESTIONS), user_language):
+    if not await check_flood_control(manager, client_id, chat_id, redis_key_flood,
+                                     chat_session.calculate_mode(BRIEF_QUESTIONS), user_language):
         return
 
     if not await validate_choice(manager, client_id, chat_session, chat_id, msg_text, user_language):
@@ -343,7 +360,24 @@ async def handle_new_message(
         return
 
     if not chat_session.manual_mode:
-        await process_user_query_after_brief(manager, chat_id, new_msg, chat_session, redis_key_session, user_language, typing_manager)
+        # Отменяем старую задачу GPT
+        gpt_task_manager.cancel_task(chat_id)
+
+        # Запускаем новую GPT-задачу
+        new_task = asyncio.create_task(
+            process_user_query_after_brief(
+                manager=manager,
+                chat_id=chat_id,
+                user_msg=new_msg,
+                chat_session=chat_session,
+                redis_key_session=redis_key_session,
+                user_language=user_language,
+                typing_manager=typing_manager,
+                gpt_lock=gpt_lock  # ⬅️ важно!
+            )
+        )
+        gpt_task_manager.set_task(chat_id, new_task)
+
 
 
 # ==============================
@@ -798,38 +832,65 @@ async def process_user_query_after_brief(
     chat_session: ChatSession,
     redis_key_session: str,
     user_language: str,
-    typing_manager: TypingManager
-) -> ChatMessage:
-    """Обрабатывает пользовательский запрос после брифа, используя GPT-логику."""
-    user_info = extract_brief_info(chat_session)
-    chat_history = chat_session.messages[-25:]
-    knowledge_base = await get_knowledge_base()
-    gpt_data = await determine_topics_via_gpt(user_msg.message, user_info, knowledge_base)
+    typing_manager: TypingManager,
+    gpt_lock: Lock
+) -> Optional[ChatMessage]:
+    """
+    Обрабатывает пользовательский запрос после брифа, используя GPT-логику.
+    Выполняется строго последовательно с помощью gpt_lock.
+    Может быть отменена, если пришло новое сообщение.
+    """
+    try:
+        async with gpt_lock:
+            # 1. Извлекаем данные пользователя и базу знаний
+            user_info = extract_brief_info(chat_session)
+            chat_history = chat_session.messages[-25:]
+            knowledge_base = await get_knowledge_base()
 
-    user_msg.gpt_evaluation = GptEvaluation(
-        topics=gpt_data.get("topics", []),
-        confidence=gpt_data.get("confidence", 0.0),
-        out_of_scope=gpt_data.get("out_of_scope", False),
-        consultant_call=gpt_data.get("consultant_call", False)
-    )
+            # 2. GPT: определяем темы
+            gpt_data = await determine_topics_via_gpt(
+                user_msg.message, user_info, knowledge_base
+            )
 
-    await _update_gpt_evaluation_in_db(chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation)
+            # 3. Сохраняем результат оценки
+            user_msg.gpt_evaluation = GptEvaluation(
+                topics=gpt_data.get("topics", []),
+                confidence=gpt_data.get("confidence", 0.0),
+                out_of_scope=gpt_data.get("out_of_scope", False),
+                consultant_call=gpt_data.get("consultant_call", False)
+            )
+            await _update_gpt_evaluation_in_db(
+                chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation
+            )
 
-    ai_msg = await _build_ai_response(
-        manager=manager,
-        chat_session=chat_session,
-        user_msg=user_msg,
-        chat_history=chat_history,
-        redis_key_session=redis_key_session,
-        user_language=user_language,
-        typing_manager=typing_manager,
-        chat_id=chat_id
-    )
+            # 4. GPT-ответ
+            ai_msg = await _build_ai_response(
+                manager=manager,
+                chat_session=chat_session,
+                user_msg=user_msg,
+                chat_history=chat_history,
+                redis_key_session=redis_key_session,
+                user_language=user_language,
+                typing_manager=typing_manager,
+                chat_id=chat_id
+            )
 
-    if ai_msg:
-        await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+            # 5. Отправка ответа
+            if ai_msg:
+                await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
 
-    return ai_msg
+            return ai_msg
+
+    except asyncio.CancelledError:
+        # GPT-вызов был отменён — просто выходим без ошибок
+        print(f"[GPT] Задача GPT для чата {chat_id} отменена.")
+        return None
+
+    except Exception as e:
+        # Логируем исключение
+        logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+        return None
+
 
 
 async def determine_topics_via_gpt(
@@ -1223,7 +1284,8 @@ def _assemble_system_prompt(
 
 async def _simulate_delay() -> None:
     """Имитирует задержку от 5 до 15 секунд перед вызовом AI."""
-    delay = random.uniform(3, 7)
+    # delay = random.uniform(3, 7)
+    delay = random.uniform(10, 20)
     logging.info(f"⏳ Artificial delay {delay:.2f}s before AI generation...")
     await asyncio.sleep(delay)
 

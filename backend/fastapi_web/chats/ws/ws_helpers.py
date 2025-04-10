@@ -12,6 +12,10 @@ from starlette.websockets import WebSocketState
 
 from auth.utils.help_functions import is_token_blacklisted
 
+from typing import Dict, Optional
+import asyncio
+from asyncio import Task, Lock
+
 chat_managers: Dict[str, "ConnectionManager"] = {}
 typing_managers: Dict[str, "TypingManager"] = {}
 
@@ -105,6 +109,35 @@ class TypingManager:
         })
         await manager.broadcast(message)
 
+
+class GptTaskManager:
+    """Менеджер задач GPT и блокировок для последовательной обработки."""
+
+    def __init__(self) -> None:
+        self.gpt_tasks: Dict[str, Task] = {}
+        self.gpt_locks: Dict[str, Lock] = {}
+
+    def get_lock(self, chat_id: str) -> Lock:
+        """Возвращает asyncio.Lock для чата (создаёт, если не существует)."""
+        if chat_id not in self.gpt_locks:
+            self.gpt_locks[chat_id] = Lock()
+        return self.gpt_locks[chat_id]
+
+    def cancel_task(self, chat_id: str) -> None:
+        """Отменяет текущую GPT-задачу, если она ещё не завершена."""
+        task = self.gpt_tasks.get(chat_id)
+        if task and not task.done():
+            task.cancel()
+
+    def set_task(self, chat_id: str, task: Task) -> None:
+        """Устанавливает новую GPT-задачу для чата."""
+        self.gpt_tasks[chat_id] = task
+
+    def get_task(self, chat_id: str) -> Optional[Task]:
+        """Возвращает текущую GPT-задачу, если она есть."""
+        return self.gpt_tasks.get(chat_id)
+
+gpt_task_manager = GptTaskManager()
 
 class DateTimeEncoder(json.JSONEncoder):
     """Кастомный JSONEncoder для обработки datetime."""
