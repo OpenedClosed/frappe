@@ -59,7 +59,7 @@ jobs:
 
       # Mongo
       - name: Build and push Mongo
-        # if: contains( steps.changes.outputs.all_modified_files, 'mongo/')
+        if: contains( steps.changes.outputs.all_modified_files, 'mongo/')
         uses: docker/build-push-action@v3
         with:
           push: true
