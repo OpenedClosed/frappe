@@ -138,6 +138,11 @@ FUNCTIONALITY_DETAILS = {
         "Engage in open-ended conversations and respond naturally to various subjects the user brings up. "
         "Maintain an adaptive conversational style that allows for a dynamic and engaging interaction."
     ),
+    FunctionalityEnum.SEARCH_WEB_IF_NEEDED: (
+        "When the user directly requests up-to-date information or when there is a lack of data to give a confident answer, "
+        "proactively perform a web search to supplement the response. Clearly indicate that the information was retrieved online, "
+        "and cite the source if possible. Ensure the external content is relevant, safe, and compliant before including it in the reply."
+    ),
 }
 
 

@@ -27,6 +27,7 @@ from knowledge.db.mongo.mapping import (COMMUNICATION_STYLE_DETAILS,
 from knowledge.db.mongo.schemas import BotSettings
 
 from .knowledge_base import KNOWLEDGE_BASE
+import re
 
 # ===== Основные функции для работы с сессией чата =====
 
@@ -481,3 +482,40 @@ def format_value(field_name: str, value: Any) -> str:
         return value.value
 
     return str(value)
+
+
+def split_text_into_chunks(text, max_length=998):
+    """
+    Делит текст на чанки, сохраняя переносы строк, кавычки, emoji и т.д.
+    Не завершает на числовых точках (1., 2., 3. и т.д.)
+    """
+    # Разбиваем текст по "завершенным предложениям" (с учётом символов вроде : ; …)
+    pattern = re.compile(
+        r"""
+        (?<!\d)                           # Исключаем цифры перед точкой: 1. 2. и т.д.
+        (                                 
+            .*?                           # Всё, что угодно, не жадно
+            [.!?…:;]+                     # Завершающие знаки
+            [)\]"»»”’…\s\w]*              # Возможные закрывающие знаки, пробелы, emoji
+        )
+        (?=\n|\s|$)                       # Должен быть пробел, перенос строки или конец текста
+        """,
+        re.VERBOSE | re.DOTALL
+    )
+
+    sentences = pattern.findall(text)
+    chunks = []
+    current_chunk = ""
+
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) <= max_length:
+            current_chunk += sentence
+        else:
+            if current_chunk.strip():
+                chunks.append(current_chunk.rstrip())
+            current_chunk = sentence
+
+    if current_chunk.strip():
+        chunks.append(current_chunk.rstrip())
+
+    return chunks

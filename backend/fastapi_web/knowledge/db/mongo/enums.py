@@ -45,6 +45,9 @@ class FunctionalityEnum(BaseJsonEnumMixin, str, Enum):
     FLEXIBLE_CONVERSATION = json.dumps(
         {"en": "Do not insist on the main project topic, engage in free discussions.",
          "ru": "Не настаивать на целевой теме проекта, вести свободный диалог."})
+    SEARCH_WEB_IF_NEEDED = json.dumps(
+        {"en": "Search the web if needed",
+         "ru": "Искать в интернете при запросе или нехватке информации"})
 
 
 class PersonalityTraitsEnum(BaseJsonEnumMixin, str, Enum):

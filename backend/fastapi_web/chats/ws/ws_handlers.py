@@ -25,7 +25,7 @@ from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
 from ..utils.help_functions import (find_last_bot_message, get_bot_context,
                                     get_knowledge_base, get_weather_by_address,
-                                    send_message_to_bot)
+                                    send_message_to_bot, split_text_into_chunks)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
@@ -159,6 +159,12 @@ async def save_and_broadcast_new_message(
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
 
+    chunks = split_text_into_chunks(new_msg.message)
+    print(new_msg.message)
+    print('='*100)
+    for i, chunk in enumerate(chunks):
+        print(f"Чанк {i}\n", chunk)
+
     if new_msg.sender_role != SenderRole.CLIENT and chat_session.client.external_id:
         await send_message_to_external_meta_channel(chat_session, new_msg)
 
@@ -195,23 +201,27 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
     # Альтернативный вариант через Facebook Graph
     # url = f"https://graph.facebook.com/v22.0/{settings.INSTAGRAM_BOT_ID}/messages"
 
-    payload = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": message},
-        "metadata": "broadcast"
-    }
+    chunks = split_text_into_chunks(message)
 
-    headers = {
-        "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
-        "Content-Type": "application/json"
-    }
+    for i, chunk in enumerate(chunks, 1):
 
-    response = requests.post(url, json=payload, headers=headers)
+        payload = {
+            "recipient": {"id": recipient_id},
+            "message": {"text": chunk},
+            "metadata": "broadcast"
+        }
 
-    if response.status_code == 200:
-        logging.info(f"Отправлено в Instagram: {recipient_id}")
-    else:
-        logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
+        headers = {
+            "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+
+        if response.status_code == 200:
+            logging.info(f"Отправлено в Instagram: {recipient_id}")
+        else:
+            logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
 
 
 # ==============================
@@ -1284,8 +1294,8 @@ def _assemble_system_prompt(
 
 async def _simulate_delay() -> None:
     """Имитирует задержку от 5 до 15 секунд перед вызовом AI."""
-    # delay = random.uniform(3, 7)
-    delay = random.uniform(10, 20)
+    delay = random.uniform(3, 7)
+    # delay = random.uniform(10, 20)
     logging.info(f"⏳ Artificial delay {delay:.2f}s before AI generation...")
     await asyncio.sleep(delay)
 

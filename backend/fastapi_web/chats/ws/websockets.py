@@ -32,6 +32,7 @@ from asyncio import Task, Lock
 @app.websocket("/ws/{chat_id}/")
 async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     """WebSocket соединение для чата."""
+    print("Обращение к ws")
 
     # 1. Подключение пользователя и определение роли
     is_superuser = bool(await websocket_jwt_required(websocket))
@@ -69,7 +70,9 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     # 4. Основной цикл приёма сообщений
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
+            print('Пытаемся получить данные')
             data = await websocket.receive_json()
+            print('Получили данные', data)
 
             # Получаем GPT-лок для этого чата
             gpt_lock = gpt_task_manager.get_lock(chat_id)
