@@ -380,6 +380,10 @@ async def get_bot_context() -> Dict[str, Any]:
             farewell_message={
                 "en": "Goodbye! Feel free to ask anything else.",
                 "ru": "До свидания! Если вам что-то понадобится, обращайтесь."},
+            fallback_ai_error_message={
+                "en": "Unfortunately, I'm having trouble generating a response right now. Please try again later.",
+                "ru": "К сожалению, я не могу сейчас сгенерировать ответ. Пожалуйста, попробуйте позже."
+            },
             ai_model=AIModelEnum.GPT_4_O,
             created_at=datetime.utcnow()
         )
@@ -398,6 +402,7 @@ def build_bot_settings_context(
         "welcome_message": settings.greeting or {"en": "Hello!", "ru": "Здравствуйте!"},
         "redirect_message": settings.error_message or {"en": "Please wait...", "ru": "Ожидайте..."},
         "farewell_message": settings.farewell_message or {"en": "Goodbye!", "ru": "До свидания!"},
+        "fallback_ai_error_message": settings.fallback_ai_error_message or {"en": "Error!", "ru": "Ошибка!"},
         "app_name": settings.project_name,
         "app_description": settings.additional_instructions,
         "forbidden_topics": settings.forbidden_topics,

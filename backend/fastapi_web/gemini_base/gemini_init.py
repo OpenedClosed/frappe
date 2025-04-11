@@ -70,6 +70,8 @@ class GeminiClient:
         if total_input_words <= MAX_INPUT_TOKENS:
             logging.info("[GeminiClient] Input within limit, single request.")
             single_resp = await self._chat_generate_single(model, messages, temperature)
+            if 'error' in single_resp:
+                logging.error(f"[GeminiClient] Ошибка {single_resp['detail']}")
             answer_text = self._extract_text(single_resp)
             answer_words = self._count_words(answer_text)
             logging.info(
@@ -177,7 +179,7 @@ class GeminiClient:
                     err_body = await r.text()
                     return {
                         "error": f"Gemini API returned status {r.status}",
-                        "details": err_body
+                        "detail": err_body
                     }
                 await asyncio.sleep(1)
                 return await r.json()

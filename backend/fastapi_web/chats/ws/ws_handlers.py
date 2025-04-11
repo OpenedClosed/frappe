@@ -160,8 +160,6 @@ async def save_and_broadcast_new_message(
     )
 
     chunks = split_text_into_chunks(new_msg.message)
-    print(new_msg.message)
-    print('='*100)
     for i, chunk in enumerate(chunks):
         print(f"Чанк {i}\n", chunk)
 
@@ -862,6 +860,7 @@ async def process_user_query_after_brief(
                 user_msg.message, user_info, knowledge_base
             )
 
+
             # 3. Сохраняем результат оценки
             user_msg.gpt_evaluation = GptEvaluation(
                 topics=gpt_data.get("topics", []),
@@ -899,8 +898,69 @@ async def process_user_query_after_brief(
     except Exception as e:
         # Логируем исключение
         logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+        bot_context = await get_bot_context()
+        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+            user_language, "The assistant is currently unavailable."
+        )
+        ai_msg = ChatMessage(
+            message=ai_text,
+            sender_role=SenderRole.AI,
+        )
+        if ai_msg:
+            await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
         return None
 
+async def generate_ai_answer(
+    user_message: str,
+    snippets: List[str],
+    user_info: str,
+    chat_history: List[ChatMessage],
+    user_language: str,
+    typing_manager: TypingManager,
+    chat_id: str,
+    manager: ConnectionManager,
+    style: str = "confident",
+    return_json: bool = False,
+) -> Union[str, Dict[str, Any]]:
+    """
+    Генерирует ответ от AI, учитывая историю чата, язык пользователя,
+    сниппеты знаний и настройки бота из MongoDB.
+    """
+    bot_context = await get_bot_context()
+    chosen_model = bot_context["ai_model"]
+    chosen_temp = bot_context["temperature"]
+
+    weather_info = {
+        "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
+    }
+
+    system_prompt = _assemble_system_prompt(
+        bot_context, snippets, user_info, user_language, weather_info)
+    messages = build_messages_for_model(
+        system_prompt=system_prompt,
+        messages_data=chat_history,
+        user_message=user_message,
+        model=chosen_model
+    )
+
+    await typing_manager.add_typing(chat_id, "ai_bot", manager)
+    await _simulate_delay()
+
+    client, real_model = pick_model_and_client(chosen_model)
+    try:
+        ai_text = await _generate_model_response(client, real_model, messages, chosen_temp)
+    except Exception as e:
+        logging.error(f"AI generation failed: {e}")
+        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+            user_language, "The assistant is currently unavailable."
+        )
+
+    await typing_manager.remove_typing(chat_id, "ai_bot", manager)
+
+    if return_json:
+        return _try_parse_json(ai_text)
+
+    return ai_text
 
 
 async def determine_topics_via_gpt(
@@ -912,38 +972,39 @@ async def determine_topics_via_gpt(
     Обращается к GPT для определения тематики,
     вычисления confidence, out_of_scope и consultant_call.
     """
-    kb_description = _build_kb_description(knowledge_base)
-    bot_context = await get_bot_context()
-    app_description = bot_context["app_description"]
-    forbidden_topics = bot_context["forbidden_topics"]
-
-    system_prompt = AI_PROMPTS["system_topics_prompt"].format(
-        user_info=user_info,
-        kb_description=kb_description,
-        app_description=app_description,
-        forbidden_topics=forbidden_topics,
-    )
-
-    messages = [
-        {"role": "model", "content": system_prompt.strip()},
-        {"role": "user", "content": user_message.strip()}
-    ]
-    response = await gemini_client.chat_generate(
-        model="gemini-2.0-flash",
-        messages=messages,
-        temperature=0.1
-    )
-    raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
-    )
-    match = re.search(r"\{.*\}", raw_content, re.DOTALL)
-
-    if not match:
-        return {"topics": [], "confidence": 0.0,
-                "out_of_scope": False, "consultant_call": False}
-
-    json_text = match.group(0).replace("None", "null")
-
     try:
+        kb_description = _build_kb_description(knowledge_base)
+        bot_context = await get_bot_context()
+        app_description = bot_context["app_description"]
+        forbidden_topics = bot_context["forbidden_topics"]
+
+        system_prompt = AI_PROMPTS["system_topics_prompt"].format(
+            user_info=user_info,
+            kb_description=kb_description,
+            app_description=app_description,
+            forbidden_topics=forbidden_topics,
+        )
+
+        messages = [
+            {"role": "model", "content": system_prompt.strip()},
+            {"role": "user", "content": user_message.strip()}
+        ]
+        response = await gemini_client.chat_generate(
+            model="gemini-2.0-flash",
+            messages=messages,
+            temperature=0.1
+        )
+        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
+        )
+        match = re.search(r"\{.*\}", raw_content, re.DOTALL)
+
+        if not match:
+            return {"topics": [], "confidence": 0.0,
+                    "out_of_scope": False, "consultant_call": False}
+
+        json_text = match.group(0).replace("None", "null")
+
+
         result = json.loads(json_text)
         return {
             "topics": result.get("topics", []),
@@ -1256,7 +1317,9 @@ async def generate_ai_answer(
         ai_text = await _generate_model_response(client, real_model, messages, chosen_temp)
     except Exception as e:
         logging.error(f"AI generation failed: {e}")
-        ai_text = "Error: AI model failed to generate a response."
+        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+            user_language, "The assistant is currently unavailable."
+        )
 
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
 
