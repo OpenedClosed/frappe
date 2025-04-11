@@ -29,18 +29,19 @@ if [ -n "$STOPPED_CONTAINERS" ]; then
   docker-compose up -d --force-recreate >> "$LOG_FILE" 2>&1
   echo "Перезапуск завершён." | tee -a "$LOG_FILE"
 else
-  echo "Все контейнеры работают нормально." | tee -a "$LOG_FILE"
+  RUNNING_CONTAINERS=$(docker ps -q)
+  if [ -z "$RUNNING_CONTAINERS" ]; then
+    echo "Нет запущенных контейнеров. Перезапускаем..." | tee -a "$LOG_FILE"
+    docker-compose down >> "$LOG_FILE" 2>&1
+    docker system prune -af >> "$LOG_FILE" 2>&1
+    docker-compose up -d --force-recreate >> "$LOG_FILE" 2>&1
+    echo "Перезапуск завершён." | tee -a "$LOG_FILE"
+  else
+    echo "✅ Все контейнеры работают нормально." | tee -a "$LOG_FILE"
+  fi
 fi
 
-# Проверка: если совсем нет запущенных контейнеров
-if [ -z "$(docker ps -q)" ]; then
-  echo "Нет запущенных контейнеров. Перезапускаем..." | tee -a "$LOG_FILE"
-  docker-compose down >> "$LOG_FILE" 2>&1
-  docker system prune -af >> "$LOG_FILE" 2>&1
-  docker-compose up -d --force-recreate >> "$LOG_FILE" 2>&1
-fi
-
-# Удаление старых логов (каждый запуск)
+# Очистка логов старше 14 дней
 echo "Очистка логов старше 14 дней..." | tee -a "$LOG_FILE"
 find "$LOG_DIR" -type f -name "*.log" -mtime +14 -exec rm {} \; >> "$LOG_FILE" 2>&1
 
