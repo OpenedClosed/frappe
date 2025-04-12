@@ -2,7 +2,7 @@
 
 # Параметры
 MEDIA_CONTAINER="root_backend_1"
-MEDIA_VOLUME_PATH="app/media/"
+MEDIA_VOLUME_PATH="app/fastapi_web/media/"
 MEDIA_BACKUP_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../media_backups"
 
 # Логи
