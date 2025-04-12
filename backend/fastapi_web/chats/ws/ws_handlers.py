@@ -4,11 +4,11 @@ import json
 import logging
 import random
 import re
+from asyncio import Lock
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-from asyncio import Lock
 from pydantic import ValidationError
 
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
@@ -25,12 +25,13 @@ from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
 from ..utils.help_functions import (find_last_bot_message, get_bot_context,
                                     get_knowledge_base, get_weather_by_address,
-                                    send_message_to_bot, split_text_into_chunks)
+                                    send_message_to_bot,
+                                    split_text_into_chunks)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
-from .ws_helpers import ConnectionManager, TypingManager, custom_json_dumps, gpt_task_manager
-
+from .ws_helpers import (ConnectionManager, TypingManager, custom_json_dumps,
+                         gpt_task_manager)
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -47,10 +48,10 @@ async def handle_message(
     redis_flood_key: str,
     is_superuser: bool,
     user_language: str,
-    gpt_lock: Lock,   # <--- Получаем лок GPT
+    gpt_lock: Lock,
 ) -> None:
     """Определяем тип сообщения и вызываем нужный handler."""
-    
+
     handlers = {
         "status_check": handle_status_check,
         "get_messages": handle_get_messages,
@@ -63,21 +64,18 @@ async def handle_message(
 
     handler = handlers.get(data.get("type"), handle_unknown_type)
 
-    # Если "new_message" – пойдём в спец. обработчик
     if handler == handle_new_message:
         async with await mongo_client.start_session() as session:
             await handler(
                 manager, chat_id, client_id, redis_session_key, redis_flood_key,
                 data, is_superuser, user_language, typing_manager,
-                gpt_lock  # передаём лок в handle_new_message
+                gpt_lock
             )
 
     elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
-        # Просто примеры прочих handler-ов
         await handler(typing_manager, chat_id, client_id, manager)
     else:
         await handler(manager, chat_id, redis_session_key)
-
 
 
 # ==============================
@@ -159,10 +157,6 @@ async def save_and_broadcast_new_message(
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
 
-    chunks = split_text_into_chunks(new_msg.message)
-    for i, chunk in enumerate(chunks):
-        print(f"Чанк {i}\n", chunk)
-
     if new_msg.sender_role != SenderRole.CLIENT and chat_session.client.external_id:
         await send_message_to_external_meta_channel(chat_session, new_msg)
 
@@ -190,10 +184,9 @@ async def send_message_to_external_meta_channel(
 # Instagram
 # ==============================
 
+
 async def send_instagram_message(recipient_id: str, message: str) -> None:
     """Отправляет сообщение в Instagram Direct."""
-
-    # Рабочий вариант с `me` (через user token)
     url = "https://graph.instagram.com/v22.0/me/messages"
 
     # Альтернативный вариант через Facebook Graph
@@ -219,7 +212,8 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
         if response.status_code == 200:
             logging.info(f"Отправлено в Instagram: {recipient_id}")
         else:
-            logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
+            logging.error(
+                f"Ошибка Instagram: {response.status_code} {response.text}")
 
 
 # ==============================
@@ -255,7 +249,8 @@ async def send_whatsapp_message(recipient_phone_id: str, message: str) -> None:
     if response.status_code == 200:
         logging.info(f"Отправлено в WhatsApp: {recipient_phone_id}")
     else:
-        logging.error(f"Ошибка WhatsApp: {response.status_code} {response.text}")
+        logging.error(
+            f"Ошибка WhatsApp: {response.status_code} {response.text}")
 
 
 # ==============================
@@ -311,8 +306,6 @@ async def handle_get_messages(
     await manager.broadcast(response)
 
 
-
-
 async def handle_new_message(
     manager: ConnectionManager,
     chat_id: str,
@@ -341,7 +334,7 @@ async def handle_new_message(
 
     if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
         return
-    
+
     if not msg_text.strip():
         return
 
@@ -368,10 +361,8 @@ async def handle_new_message(
         return
 
     if not chat_session.manual_mode:
-        # Отменяем старую задачу GPT
         gpt_task_manager.cancel_task(chat_id)
 
-        # Запускаем новую GPT-задачу
         new_task = asyncio.create_task(
             process_user_query_after_brief(
                 manager=manager,
@@ -381,11 +372,10 @@ async def handle_new_message(
                 redis_key_session=redis_key_session,
                 user_language=user_language,
                 typing_manager=typing_manager,
-                gpt_lock=gpt_lock  # ⬅️ важно!
+                gpt_lock=gpt_lock
             )
         )
         gpt_task_manager.set_task(chat_id, new_task)
-
 
 
 # ==============================
@@ -670,7 +660,6 @@ async def process_brief_question(
         {"$push": {"brief_answers": ans.model_dump()}}
     )
 
-    # Обновляем локальный объект чата
     updated_data = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
     chat_session.__dict__.update(ChatSession(**updated_data).__dict__)
 
@@ -850,18 +839,14 @@ async def process_user_query_after_brief(
     """
     try:
         async with gpt_lock:
-            # 1. Извлекаем данные пользователя и базу знаний
             user_info = extract_brief_info(chat_session)
             chat_history = chat_session.messages[-25:]
             knowledge_base = await get_knowledge_base()
 
-            # 2. GPT: определяем темы
             gpt_data = await determine_topics_via_gpt(
                 user_msg.message, user_info, knowledge_base
             )
 
-
-            # 3. Сохраняем результат оценки
             user_msg.gpt_evaluation = GptEvaluation(
                 topics=gpt_data.get("topics", []),
                 confidence=gpt_data.get("confidence", 0.0),
@@ -872,7 +857,6 @@ async def process_user_query_after_brief(
                 chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation
             )
 
-            # 4. GPT-ответ
             ai_msg = await _build_ai_response(
                 manager=manager,
                 chat_session=chat_session,
@@ -884,20 +868,18 @@ async def process_user_query_after_brief(
                 chat_id=chat_id
             )
 
-            # 5. Отправка ответа
             if ai_msg:
                 await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
 
             return ai_msg
 
     except asyncio.CancelledError:
-        # GPT-вызов был отменён — просто выходим без ошибок
         print(f"[GPT] Задача GPT для чата {chat_id} отменена.")
         return None
 
     except Exception as e:
-        # Логируем исключение
-        logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+        logging.error(
+            f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
         bot_context = await get_bot_context()
         ai_text = bot_context.get("fallback_ai_error_message", {}).get(
             user_language, "The assistant is currently unavailable."
@@ -909,6 +891,7 @@ async def process_user_query_after_brief(
         if ai_msg:
             await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
         return None
+
 
 async def generate_ai_answer(
     user_message: str,
@@ -1003,7 +986,6 @@ async def determine_topics_via_gpt(
                     "out_of_scope": False, "consultant_call": False}
 
         json_text = match.group(0).replace("None", "null")
-
 
         result = json.loads(json_text)
         return {

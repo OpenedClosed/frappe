@@ -3,6 +3,7 @@ import hashlib
 import json
 import locale
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Union
@@ -27,7 +28,6 @@ from knowledge.db.mongo.mapping import (COMMUNICATION_STYLE_DETAILS,
 from knowledge.db.mongo.schemas import BotSettings
 
 from .knowledge_base import KNOWLEDGE_BASE
-import re
 
 # ===== Основные функции для работы с сессией чата =====
 
@@ -494,11 +494,12 @@ def split_text_into_chunks(text, max_length=998):
     Делит текст на чанки, сохраняя переносы строк, кавычки, emoji и т.д.
     Не завершает на числовых точках (1., 2., 3. и т.д.)
     """
-    # Разбиваем текст по "завершенным предложениям" (с учётом символов вроде : ; …)
+    # Разбиваем текст по "завершенным предложениям" (с учётом символов вроде :
+    # ; …)
     pattern = re.compile(
         r"""
         (?<!\d)                           # Исключаем цифры перед точкой: 1. 2. и т.д.
-        (                                 
+        (
             .*?                           # Всё, что угодно, не жадно
             [.!?…:;]+                     # Завершающие знаки
             [)\]"»»”’…\s\w]*              # Возможные закрывающие знаки, пробелы, emoji

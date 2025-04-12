@@ -160,5 +160,4 @@ class BotSettingsAdmin(BaseAdmin):
     ]
 
 
-
 admin_registry.register("bot_settings", BotSettingsAdmin(mongo_db))

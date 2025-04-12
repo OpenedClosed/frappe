@@ -1,6 +1,7 @@
 """Вспомогательные сущности для работы с веб-сокетом приложения Чаты."""
 import json
 import logging
+from asyncio import Lock, Task
 from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, Optional, Set
@@ -11,10 +12,6 @@ from fastapi_jwt_auth import AuthJWT
 from starlette.websockets import WebSocketState
 
 from auth.utils.help_functions import is_token_blacklisted
-
-from typing import Dict, Optional
-import asyncio
-from asyncio import Task, Lock
 
 chat_managers: Dict[str, "ConnectionManager"] = {}
 typing_managers: Dict[str, "TypingManager"] = {}
@@ -137,7 +134,9 @@ class GptTaskManager:
         """Возвращает текущую GPT-задачу, если она есть."""
         return self.gpt_tasks.get(chat_id)
 
+
 gpt_task_manager = GptTaskManager()
+
 
 class DateTimeEncoder(json.JSONEncoder):
     """Кастомный JSONEncoder для обработки datetime."""

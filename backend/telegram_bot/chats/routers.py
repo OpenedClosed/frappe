@@ -1,4 +1,5 @@
 """Обработчики маршрутов приложения Чаты."""
+import logging
 from aiohttp import web
 from fastapi import APIRouter, HTTPException
 
@@ -30,6 +31,6 @@ async def send_message(request: web.Request):
             {"status": "success", "detail": "Message sent successfully"})
 
     except Exception as e:
-        print(f"Ошибка обработки запроса: {e}")
+        logging.error(f"Ошибка обработки запроса: {e}")
         return web.json_response(
             {"status": "error", "detail": str(e)}, status=500)

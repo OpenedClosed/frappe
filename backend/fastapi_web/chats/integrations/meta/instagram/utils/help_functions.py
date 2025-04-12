@@ -56,7 +56,7 @@ async def process_instagram_message(
     user_language: str
 ):
     """Обрабатывает сообщение из Instagram и передаёт его в систему чатов."""
-    
+
     chat_data = await handle_chat_creation(
         mode=None,
         chat_source=ChatSource.INSTAGRAM,
