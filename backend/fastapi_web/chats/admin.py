@@ -321,5 +321,6 @@ class ChatSessionAdmin(BaseAdmin):
 
 
 admin_registry.register("chat_sessions", ChatSessionAdmin(mongo_db))
+# Временно уберем сообщения и клиентов из админки
 # admin_registry.register("clients", ClientInline(mongo_db))
-admin_registry.register("chat_messages", ChatMessageInline(mongo_db))
+# admin_registry.register("chat_messages", ChatMessageInline(mongo_db))

@@ -125,7 +125,7 @@
                         class="mb-4"
                       >
                         <div>
-                          <span class="font-semibold">{{ questionKey }}:</span>
+                          <span class="font-semibold">{{ questionKey }}: </span>
                           <span> {{ qObj.text }}</span>
                         </div>
                         <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
@@ -156,7 +156,8 @@
                 <div class="flex items-center mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">
                   <input
                     class="border p-1 flex-1 mr-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
-                    :value="topicName"
+                    :placeholder="topicName.includes('New Topic') ? topicName : ''"
+                    :value="topicName.includes('New Topic') ? '' : topicName"
                     @blur="renameTopic(topicName, $event.target.value)"
                     @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
                   />
@@ -183,7 +184,8 @@
                   <div class="flex items-center mb-2">
                     <input
                       class="border p-1 flex-1 mr-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
-                      :value="subtopicName"
+                      :placeholder="subtopicName.includes('New Subtopic') ? subtopicName : ''"
+                      :value="subtopicName.includes('New Subtopic') ? '' : subtopicName"
                       @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
                       @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
                     />
@@ -218,7 +220,8 @@
 
                       <!-- QUESTION (the key) -->
                       <Textarea
-                        :value="questionKey"
+                        :placeholder="questionKey.includes('New Question') ? questionKey : ''"
+                        :value="questionKey.includes('New Question') ? '' : questionKey"
                         class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                         @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
                       />
@@ -262,7 +265,7 @@
                         </ul>
                       </div>
 
-                      <Button
+                     <Button
                         label="Add link"
                         icon="pi pi-plus"
                         class="p-button-success p-button-sm"
@@ -293,7 +296,7 @@
             </div>
             <div v-else class="flex flex-col gap-2 mt-2">
               <Button
-                :disabled="isLoading"
+                :disabled="isLoading || !hasChanges"
                 label="Transfer to database"
                 icon="pi pi-save"
                 class="p-button-sm p-button-success"
@@ -335,7 +338,7 @@
                         class="mb-4"
                       >
                         <div>
-                          <span class="font-semibold">{{ questionKey }}:</span>
+                          <span class="font-semibold">{{ questionKey }}: </span>
                           <span> {{ qObj.text }}</span>
                         </div>
                         <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
@@ -468,6 +471,17 @@
         </ul>
       </div>
     </Dialog>
+    <SaveChangesDialog
+      v-model:visible="showSaveChangesDialog"
+      :is-edit-mode="isEditMode"
+      :has-changes="hasChanges"
+      :changes="changes"
+      :added-items="addedItems"
+      :changed-items="changedItems"
+      :deleted-items="getDeletedItems()"
+      @save="handleConfirmChanges"
+      @cancel="showSaveChangesDialog = false"
+    />
   </div>
 </template>
 
@@ -479,6 +493,7 @@ import { ref } from "vue";
 import cloneDeep from "lodash/cloneDeep";
 import ImageLink from "./ImageLink.vue";
 import { useI18n } from "vue-i18n"; // Добавляем i18n
+import SaveChangesDialog from './SaveChangesDialog.vue';
 
 const { t } = useI18n(); // Получаем функцию перевода
 const toast = useToast();
@@ -609,6 +624,10 @@ function renameQuestion(topicName, subtopicName, oldQuestion, newQuestion) {
   // Move entire object { text, files } to the new key
   subtopic.questions[newQuestion] = subtopic.questions[oldQuestion];
   delete subtopic.questions[oldQuestion];
+  
+  const originalName = questionRenamingMap.value.get(oldQuestion) || oldQuestion;
+  questionRenamingMap.value.delete(oldQuestion); 
+  questionRenamingMap.value.set(newQuestion, originalName); 
 }
 
 /**
@@ -686,6 +705,11 @@ function addTopic() {
     lastAddedElement.value = document.getElementById(`topic-${newName}`);
     if (lastAddedElement.value) {
       lastAddedElement.value.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      const inputElement = lastAddedElement.value.querySelector("input");
+      if (inputElement) {
+        inputElement.focus();
+      }
     }
   });
   showSuccess("Topic added successfully");
@@ -694,13 +718,37 @@ function addTopic() {
 
 // Удалить тему
 function removeTopic(topicName) {
-  if (confirm(t("knowledgeBase.removeTopic", { topicName }))) { 
+  if (confirm(t("knowledgeBase.removeTopic", { topicName }))) {
+    countDeletedItemsFromTopic(topicName);
+
     delete knowledgeBaseData.value.knowledge_base[topicName];
     showSuccess("Topic removed successfully");
-  }
-  else {
+  } else {
     showError("Topic not removed");
   }
+}
+
+function countDeletedItemsFromTopic(topicName) {
+  const originalTopic = readonlyData.value.knowledge_base?.[topicName];
+    const currentTopic = knowledgeBaseData.value.knowledge_base[topicName];
+    
+    if (originalTopic) {
+      deletedItemsCount.value++;
+
+      for (const subtopic in originalTopic.subtopics || {}) {
+        if (currentTopic?.subtopics?.[subtopic]) {
+          deletedItemsCount.value++;
+          const originalQuestions = originalTopic.subtopics[subtopic].questions || {};
+          const currentQuestions = currentTopic.subtopics[subtopic].questions || {};
+
+          for (const question in originalQuestions) {
+            if (currentQuestions[question]) {
+              deletedItemsCount.value++;
+            }
+          }
+        }
+      }
+    }
 }
 
 function addSubtopic(topicName) {
@@ -724,6 +772,12 @@ function addSubtopic(topicName) {
     lastAddedElement.value = document.getElementById(`subtopic-${topicName}-${newName}`);
     if (lastAddedElement.value) {
       lastAddedElement.value.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      const inputElement = lastAddedElement.value.querySelector("input");
+
+      if (inputElement) {
+        inputElement.focus();
+      }
     }
   });
   showSuccess("Subtopic added successfully");
@@ -735,11 +789,28 @@ function removeSubtopic(topicName, subtopicName) {
   if (confirm(t("knowledgeBase.removeSubtopic", { subtopicName, topicName }))) {
     const topic = knowledgeBaseData.value.knowledge_base[topicName];
     if (topic && topic.subtopics[subtopicName]) {
+      countDeletedItemsFromSubtopic(topicName, subtopicName, topic);
+
       delete topic.subtopics[subtopicName];
       showSuccess("Subtopic removed successfully");
-    }
-    else {
+    } else {
       showError("Subtopic not removed");
+    }
+  }
+}
+
+function countDeletedItemsFromSubtopic(topicName, subtopicName, topic) {
+  const originalSubtopic = readonlyData.value.knowledge_base?.[topicName]?.subtopics?.[subtopicName];
+  const currentSubtopic = topic.subtopics[subtopicName];
+  
+  if (originalSubtopic) {
+    deletedItemsCount.value++;
+    const originalQuestions = originalSubtopic.questions || {};
+    const currentQuestions = currentSubtopic.questions || {};
+    for (const question in originalQuestions) {
+      if (currentQuestions[question]) {
+        deletedItemsCount.value++;
+      }
     }
   }
 }
@@ -772,6 +843,11 @@ function addQuestion(topicName, subtopicName) {
     lastAddedElement.value = document.getElementById(`question-${topicName}-${subtopicName}-${newName}`);
     if (lastAddedElement.value) {
       lastAddedElement.value.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      const textareaElement = lastAddedElement.value.querySelector("textarea");
+      if (textareaElement) {
+        textareaElement.focus();
+      }
     }
   });
   showSuccess("Question added successfully");
@@ -784,6 +860,20 @@ function addQuestionFile(topicName, subtopicName, question) {
   }
   // For a new empty link, push an empty string "" or some default text
   questionObj.files.push("");
+  
+  nextTick(() => {
+    const escapedTopicName = CSS.escape(topicName);
+    const escapedSubtopicName = CSS.escape(subtopicName);
+    const escapedQuestion = CSS.escape(question);
+    
+    const inputs = document.querySelectorAll(`#question-${escapedTopicName}-${escapedSubtopicName}-${escapedQuestion} input[type="text"]`);
+    const lastInput = inputs[inputs.length - 1];
+    if (lastInput) {
+      lastInput.focus();
+      lastInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+  
   showSuccess("File added successfully");
 }
 
@@ -827,10 +917,13 @@ function removeQuestion(topicName, subtopicName, questionKey) {
     const subtopic = topic.subtopics[subtopicName];
     if (!subtopic) return;
 
+    const existedInOriginal = readonlyData.value.knowledge_base?.[topicName]?.subtopics?.[subtopicName]?.questions?.[questionKey];
     delete subtopic.questions[questionKey];
+    if (existedInOriginal) {
+      deletedItemsCount.value++;
+    }
     showSuccess("Question removed successfully");
-  }
-  else {
+  } else {
     showError("Question not removed");
   }
 }
@@ -936,10 +1029,10 @@ async function updatePlayground(data) {
 
     console.log("Успешное обновление базы знаний:", response.data);
     isEditMode.value = false;
-    showSuccess("Knowledge base updated successfully");
+    showSuccess("Playground updated successfully");
   } catch (error) {
     console.error("Ошибка при обновлении базы знаний:", error);
-    showError("Knowledge base not updated");
+    showError("Playground not updated");
   }
 }
 // Метод для обновления базы знаний
@@ -954,6 +1047,9 @@ async function saveDatabase() {
       console.log("baseData data= ", data);
       knowledgeBaseData.value.knowledge_base = data.knowledge_base;
       readonlyData.value = cloneDeep(knowledgeBaseData.value);
+
+      clearVariables();
+
       setTimeout(() => {
         isDirty.value = false; // Mark as saved
       }, 300);
@@ -966,20 +1062,45 @@ async function saveDatabase() {
 }
 
 function clearPlayground() {
-  if (confirm(t("knowledgeBase.clearPlayground"))) {
+  if (confirm(`Clear playground?\n\nChanges in the playground will be discarded.\nThis action will NOT affect the knowledge base.`)) {
+    countDeletedItems();
     knowledgeBaseData.value.knowledge_base = {};
+
     showSuccess("Playground cleared successfully");
   }
 }
 
-function savePlayground() {
-  updatePlayground();
+function countDeletedItems() {
+  const readonlyBase = readonlyData.value.knowledge_base;
+  let totalDeleted = 0;
+  
+  for (const topic in readonlyBase) {
+    totalDeleted++;
+    const subtopics = readonlyBase[topic].subtopics || {};
+    for (const subtopic in subtopics) {
+      totalDeleted++;
+      const questions = subtopics[subtopic].questions || {};
+      totalDeleted += Object.keys(questions).length;
+    }
+  }
+  
+  deletedItemsCount.value = totalDeleted;
 }
+
+function savePlayground() {
+  calculateChanges(); 
+  showSaveChangesDialog.value = true;
+}
+
 function rejectPlayground() {
+  const confirmation = confirm(`Reject playground?\n\nChanges in the playground will be discarded.\nThis action will NOT affect the knowledge base.`);
+  if (!confirmation) return;
+
   isEditMode.value = false;
-  // clear data to readonlyData
-  let temp = readonlyData.value.knowledge_base;
-  knowledgeBaseData.value.knowledge_base = temp;
+
+  clearVariables();
+
+  knowledgeBaseData.value.knowledge_base = cloneDeep(readonlyData.value.knowledge_base);
   showSuccess("Playground rejected successfully");
 }
 let isDirty = ref(false);
@@ -1007,9 +1128,9 @@ onUnmounted(() => {
   window.removeEventListener("beforeunload", beforeUnloadHandler);
 });
 
-// Reset `isDirty` after saving
 function saveChanges() {
-  saveDatabase();
+  calculateChanges(); 
+  showSaveChangesDialog.value = true;
 }
 async function generatePatch() {
   // 1. Prepare FormData
@@ -1049,8 +1170,15 @@ async function generatePatch() {
 // Переименовать тему
 function renameTopic(oldName, newName) {
   if (!newName || newName === oldName) return;
-  knowledgeBaseData.value.knowledge_base[newName] = knowledgeBaseData.value.knowledge_base[oldName];
+
+  knowledgeBaseData.value.knowledge_base[newName] = {
+    ...knowledgeBaseData.value.knowledge_base[oldName]
+  };
   delete knowledgeBaseData.value.knowledge_base[oldName];
+
+  const originalName = renamingMap.value.get(oldName) || oldName;
+  renamingMap.value.delete(oldName); 
+  renamingMap.value.set(newName, originalName); 
 }
 
 // Переименовать подтему
@@ -1061,6 +1189,302 @@ function renameSubtopic(topicName, oldSubtopicName, newSubtopicName) {
 
   topic.subtopics[newSubtopicName] = topic.subtopics[oldSubtopicName];
   delete topic.subtopics[oldSubtopicName];
+  
+  const originalName = subtopicRenamingMap.value.get(oldSubtopicName) || oldSubtopicName;
+  subtopicRenamingMap.value.delete(oldSubtopicName);
+  subtopicRenamingMap.value.set(newSubtopicName, originalName); 
+}
+
+const showSaveChangesDialog = ref(false);
+const changes = ref({ added: 0, changed: 0, deleted: 0 });
+const deletedItemsCount = ref(0);
+const addedItems = ref({});
+const changedItems = ref({});
+const renamingMap = ref(new Map());
+const subtopicRenamingMap = ref(new Map());
+const questionRenamingMap = ref(new Map());
+const hasChanges = ref(false);
+
+function clearVariables() {
+  changes.value = { added: 0, changed: 0, deleted: 0 };
+  deletedItemsCount.value = 0;
+  addedItems.value = {};
+  changedItems.value = {};
+  hasChanges.value = false;
+  
+  renamingMap.value.clear();
+  subtopicRenamingMap.value.clear();
+  questionRenamingMap.value.clear();
+}
+
+function calculateChanges() {
+  const original = readonlyData.value.knowledge_base;
+  const current = knowledgeBaseData.value.knowledge_base;
+  const result = { added: 0, changed: 0, deleted: 0 };
+  const added = {};
+  const changed = {};
+  
+  for (const topic in current) {
+    const currentSubtopics = current[topic]?.subtopics || {};
+
+    //if key doesn't exist, it can be new or changed topic
+    if (!original[topic]) {
+      const currentTopic = renamingMap.value.get(topic);
+      if (currentTopic && !currentTopic?.includes('New Topic')) {
+        result.changed++;
+        changed[topic] = {
+          _changed: true,
+          subtopics: {}
+        };
+      } else {
+        result.added++;
+        added[topic] = { 
+          subtopics: {},
+          _new: true
+        };
+        
+        // Count and add all subtopics and questions inside new topic
+        for (const subtopic in currentSubtopics) {
+          result.added++;
+          added[topic].subtopics[subtopic] = { 
+            questions: {},
+            _new: true 
+          };
+          
+          const questions = currentSubtopics[subtopic]?.questions || {};
+          for (const question in questions) {
+            result.added++;
+            added[topic].subtopics[subtopic].questions[question] = {
+              ...questions[question],
+              _new: true 
+            };
+          }
+        }
+        continue;
+      }
+    }
+
+    const originalTopicName = renamingMap.value.get(topic) || topic;
+    const originalSubtopics = original[originalTopicName]?.subtopics || {};
+    
+    for (const subtopic in currentSubtopics) {
+      const currentQuestions = currentSubtopics[subtopic]?.questions || {};
+
+      if (!originalSubtopics[subtopic]) {
+
+        const currentSubtopic = subtopicRenamingMap.value.get(subtopic);
+
+        if (currentSubtopic && !currentSubtopic?.includes('New Subtopic')) {
+          result.changed++;
+          if (!changed[topic]) {
+            changed[topic] = { subtopics: {} };
+          }
+          if (!changed[topic].subtopics[subtopic]) {
+            changed[topic].subtopics[subtopic] = {
+              _changed: true,
+              questions: {}
+            };
+          }
+        } else {
+          result.added++; 
+          
+          if (!added[topic]) {
+            added[topic] = { subtopics: {} };
+          }
+          
+          added[topic].subtopics[subtopic] = {
+            questions: {},
+            _new: true  
+          };
+          
+          // Add and count all questions inside new subtopic
+          const questions = currentSubtopics[subtopic]?.questions || {};
+          for (const question in questions) {
+            result.added++;
+            added[topic].subtopics[subtopic].questions[question] = {
+              ...questions[question],
+              _new: true
+            };
+          }
+          continue;
+        }
+      }
+
+      const originalSubtopicName = subtopicRenamingMap.value.get(subtopic) || subtopic;
+      const originalQuestions = originalSubtopics[originalSubtopicName]?.questions || {};
+
+      // For each question in existing subtopic
+      for (const qstn in currentQuestions) {
+        const question = questionRenamingMap.value.get(qstn) || qstn;
+        
+        if (!originalQuestions[question]) {
+          const currentQuestion = questionRenamingMap.value.get(qstn);
+
+          if (currentQuestion && !currentQuestion?.includes('New Question')) {
+            result.changed++;
+
+            const currentQuestion = currentQuestions[question];
+            
+            if (!changed[topic]) {
+              changed[topic] = { subtopics: {} };
+            }
+            if (!changed[topic].subtopics[subtopic]) {
+              changed[topic].subtopics[subtopic] = { questions: {} };
+            }
+            changed[topic].subtopics[subtopic].questions[qstn] = {
+              ...currentQuestion,
+              _changed: true
+            };
+          } else {
+            result.added++; 
+            
+            if (!added[topic]) {
+              added[topic] = { subtopics: {} };
+            }
+            if (!added[topic].subtopics[subtopic]) {
+              added[topic].subtopics[subtopic] = { questions: {} };
+            }
+            added[topic].subtopics[subtopic].questions[qstn] = {
+              ...currentQuestions[qstn],
+              _new: true 
+            };
+          }
+        } 
+        else if (JSON.stringify(currentQuestions[question]) !== JSON.stringify(originalQuestions[question])) {
+          result.changed++;
+          
+          if (!changed[topic]) {
+            changed[topic] = { subtopics: {} };
+          }
+          if (!changed[topic].subtopics[subtopic]) {
+            changed[topic].subtopics[subtopic] = { questions: {} };
+          }
+          if (question === qstn) {
+            const currentQuestion = currentQuestions[question];
+            const originalQuestion = originalQuestions[question];
+
+            changed[topic].subtopics[subtopic].questions[question] = {
+              _previous: { ...originalQuestion },
+              _current: { ...currentQuestion },
+            };
+          } else {
+            const currentQuestion = currentQuestions[qstn];
+            const originalQuestion = originalQuestions[question];
+
+            changed[topic].subtopics[subtopic].questions[qstn] = {
+              _previous: { ...originalQuestion },
+              _current: { ...currentQuestion },
+              _changed: question !== qstn,
+            };
+
+            if (currentQuestion.text !== originalQuestion.text || currentQuestion.files.join('') !== originalQuestion.files.join('')) {
+              result.changed++;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  result.deleted = deletedItemsCount.value;
+  
+  changes.value = result;
+  addedItems.value = added;
+  changedItems.value = changed;
+
+  hasChanges.value = result.added > 0 || result.changed > 0 || result.deleted > 0;
+}
+
+function getDeletedItems() {
+  const original = readonlyData.value.knowledge_base;
+  const current = knowledgeBaseData.value.knowledge_base;
+  const deleted = {};
+
+  for (const topic in original) {
+    if (!current[topic]) {
+      // Topic was completely deleted
+      deleted[topic] = {
+        ...original[topic],
+        _deleted: true,
+        subtopics: Object.entries(original[topic].subtopics || {}).reduce((acc, [subtopicName, subtopicData]) => {
+          acc[subtopicName] = {
+            ...subtopicData,
+            _deleted: true,
+            questions: Object.entries(subtopicData.questions || {}).reduce((qAcc, [questionKey, questionData]) => {
+              qAcc[questionKey] = {
+                ...questionData,
+                _deleted: true
+              };
+              return qAcc;
+            }, {})
+          };
+          return acc;
+        }, {})
+      };
+      continue;
+    }
+
+    const originalSubtopics = original[topic].subtopics || {};
+    const currentSubtopics = current[topic].subtopics || {};
+    const topicDeleted = { subtopics: {} };
+    let hasDeletedItems = false;
+
+    for (const subtopic in originalSubtopics) {
+      if (!currentSubtopics[subtopic]) {
+        // Subtopic was deleted
+        topicDeleted.subtopics[subtopic] = {
+          ...originalSubtopics[subtopic],
+          _deleted: true,
+          questions: Object.entries(originalSubtopics[subtopic].questions || {}).reduce((acc, [questionKey, questionData]) => {
+            acc[questionKey] = {
+              ...questionData,
+              _deleted: true
+            };
+            return acc;
+          }, {})
+        };
+        hasDeletedItems = true;
+        continue;
+      }
+
+      const originalQuestions = originalSubtopics[subtopic].questions || {};
+      const currentQuestions = currentSubtopics[subtopic].questions || {};
+      const deletedQuestions = {};
+      let hasDeletedQuestions = false;
+
+      for (const question in originalQuestions) {
+        if (!currentQuestions[question]) {
+          deletedQuestions[question] = {
+            ...originalQuestions[question],
+            _deleted: true
+          };
+          hasDeletedQuestions = true;
+        }
+      }
+
+      if (hasDeletedQuestions) {
+        topicDeleted.subtopics[subtopic] = {
+          questions: deletedQuestions
+        };
+        hasDeletedItems = true;
+      }
+    }
+
+    if (hasDeletedItems) {
+      deleted[topic] = topicDeleted;
+    }
+  }
+
+  return deleted;
+}
+
+function handleConfirmChanges() {
+  showSaveChangesDialog.value = false;
+  if (isEditMode.value) {
+    updatePlayground();
+  } else {
+    saveDatabase();
+  }
 }
 </script>
 

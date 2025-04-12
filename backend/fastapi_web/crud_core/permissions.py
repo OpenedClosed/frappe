@@ -169,6 +169,7 @@ class SuperAdminOnlyPermission(MethodPermissionMixin):
             raise HTTPException(403, "Superadmin access required.")
         return {}
 
+
 class PersonalCabinetPermission(RoleBasedPermission):
     """Permission-класс, для Личного кабинета."""
     roles_create = [

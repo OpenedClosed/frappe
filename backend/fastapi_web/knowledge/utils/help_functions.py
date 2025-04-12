@@ -139,7 +139,8 @@ async def analyze_update_snippets_via_gpt(
     return {"topics": normalized}
 
 
-def normalize_snippets_structure(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+def normalize_snippets_structure(
+        result: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Нормализовать структуру сниппетов под ожидаемый формат."""
     normalized_topics = []
 
@@ -159,7 +160,8 @@ def normalize_snippets_structure(result: Dict[str, Any]) -> List[Dict[str, Any]]
                 questions = sub.get("questions", {})
                 if isinstance(sub_name, str):
                     if isinstance(questions, list):
-                        questions = {q: {"text": "", "files": []} for q in questions if isinstance(q, str)}
+                        questions = {q: {"text": "", "files": []}
+                                     for q in questions if isinstance(q, str)}
                     elif isinstance(questions, dict):
                         questions = {
                             q: {
@@ -170,7 +172,8 @@ def normalize_snippets_structure(result: Dict[str, Any]) -> List[Dict[str, Any]]
                         }
                     else:
                         questions = {}
-                    norm_subtopics.append({"subtopic": sub_name, "questions": questions})
+                    norm_subtopics.append(
+                        {"subtopic": sub_name, "questions": questions})
 
         normalized_topics.append({
             "topic": topic_name,
@@ -178,7 +181,6 @@ def normalize_snippets_structure(result: Dict[str, Any]) -> List[Dict[str, Any]]
         })
 
     return normalized_topics
-
 
 
 async def get_knowledge_full_document():

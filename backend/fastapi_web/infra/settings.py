@@ -55,6 +55,10 @@ FLOOD_TIMEOUTS = {
     "manual": timedelta(seconds=3),
     "automatic": timedelta(seconds=10),
 }
+# FLOOD_TIMEOUTS = {
+#     "manual": timedelta(seconds=0),
+#     "automatic": timedelta(seconds=0),
+# }
 SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru"}
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "change_me")
 WEATHER_API_URL = "http://api.openweathermap.org/data/2.5/weather"

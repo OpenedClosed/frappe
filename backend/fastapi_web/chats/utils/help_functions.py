@@ -1,11 +1,13 @@
 """Вспомогательные функции приложения Чаты."""
+import base64
 import hashlib
 import json
 import locale
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 from fastapi import HTTPException, Request, WebSocket
@@ -31,6 +33,17 @@ from .knowledge_base import KNOWLEDGE_BASE
 # ===== Основные функции для работы с сессией чата =====
 
 
+def generate_short_id() -> str:
+    """Генерирует короткий уникальный ID на основе UUID4 и base64."""
+    uid = uuid.uuid4()
+    return base64.urlsafe_b64encode(uid.bytes).rstrip(b'=').decode()
+
+
+def generate_chat_id() -> str:
+    """Создаёт короткий уникальный chat_id."""
+    return f"chat-{generate_short_id()}"
+
+
 async def generate_client_id(
     source: Union[Request, WebSocket],
     chat_source: ChatSource = ChatSource.INTERNAL,
@@ -51,18 +64,21 @@ async def generate_client_id(
         raise ValueError("Invalid source type. Must be Request or WebSocket.")
 
     headers = source.headers
-    client_ip = headers.get("x-forwarded-for",
-                            "").split(",")[0].strip() or source.client.host
+    client_ip = headers.get("x-forwarded-for", "").split(",")[0].strip() or source.client.host
     user_agent = headers.get("user-agent", "unknown")
 
     if "PostmanRuntime" in user_agent:
         user_agent = "unknown"
 
-    return f"{chat_source_value}_{hashlib.sha256(f'{client_ip}-{user_agent}'.encode()).hexdigest()}"
+    hash_input = f"{client_ip}-{user_agent}"
+    short_hash = base64.urlsafe_b64encode(
+        hashlib.sha256(hash_input.encode()).digest()
+    ).decode()[:12]
+
+    return f"{chat_source_value}_{short_hash}"
 
 
-async def get_client_id(websocket: WebSocket, chat_id: str,
-                        is_superuser: bool) -> str:
+async def get_client_id(websocket: WebSocket, chat_id: str, is_superuser: bool) -> str:
     """Определяет `client_id`, связанный с чатом, в зависимости от типа пользователя."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
@@ -70,11 +86,6 @@ async def get_client_id(websocket: WebSocket, chat_id: str,
 
     chat_session = ChatSession(**chat_data)
     return chat_session.get_client_id() if is_superuser else await generate_client_id(websocket)
-
-
-def generate_chat_id() -> str:
-    """Создаёт уникальный идентификатор чата."""
-    return f"chat-{uuid.uuid4()}-{int(datetime.utcnow().timestamp())}"
 
 
 def determine_language(accept_language: str) -> str:
@@ -379,6 +390,10 @@ async def get_bot_context() -> Dict[str, Any]:
             farewell_message={
                 "en": "Goodbye! Feel free to ask anything else.",
                 "ru": "До свидания! Если вам что-то понадобится, обращайтесь."},
+            fallback_ai_error_message={
+                "en": "Unfortunately, I'm having trouble generating a response right now. Please try again later.",
+                "ru": "К сожалению, я не могу сейчас сгенерировать ответ. Пожалуйста, попробуйте позже."
+            },
             ai_model=AIModelEnum.GPT_4_O,
             created_at=datetime.utcnow()
         )
@@ -397,6 +412,7 @@ def build_bot_settings_context(
         "welcome_message": settings.greeting or {"en": "Hello!", "ru": "Здравствуйте!"},
         "redirect_message": settings.error_message or {"en": "Please wait...", "ru": "Ожидайте..."},
         "farewell_message": settings.farewell_message or {"en": "Goodbye!", "ru": "До свидания!"},
+        "fallback_ai_error_message": settings.fallback_ai_error_message or {"en": "Error!", "ru": "Ошибка!"},
         "app_name": settings.project_name,
         "app_description": settings.additional_instructions,
         "forbidden_topics": settings.forbidden_topics,
@@ -481,3 +497,65 @@ def format_value(field_name: str, value: Any) -> str:
         return value.value
 
     return str(value)
+
+
+def split_text_into_chunks(text, max_length=998) -> List[str]:
+    """
+    Делит текст на чанки, сохраняя переносы строк, кавычки, emoji и т.д.
+    Не завершает на числовых точках (1., 2., 3. и т.д.)
+    """
+    # Разбиваем текст по "завершенным предложениям" (с учётом символов вроде :
+    # ; …)
+    pattern = re.compile(
+        r"""
+        (?<!\d)                           # Исключаем цифры перед точкой: 1. 2. и т.д.
+        (
+            .*?                           # Всё, что угодно, не жадно
+            [.!?…:;]+                     # Завершающие знаки
+            [)\]"»»”’…\s\w]*              # Возможные закрывающие знаки, пробелы, emoji
+        )
+        (?=\n|\s|$)                       # Должен быть пробел, перенос строки или конец текста
+        """,
+        re.VERBOSE | re.DOTALL
+    )
+
+    sentences = pattern.findall(text)
+    chunks = []
+    current_chunk = ""
+
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) <= max_length:
+            current_chunk += sentence
+        else:
+            if current_chunk.strip():
+                chunks.append(current_chunk.rstrip())
+            current_chunk = sentence
+
+    if current_chunk.strip():
+        chunks.append(current_chunk.rstrip())
+
+    return chunks
+
+
+import re
+
+def clean_markdown(text: str) -> str:
+    """
+    Удаляет markdown-разметку и сохраняет ссылки в читаемом виде.
+    Markdown-ссылки [текст](ссылка) → ссылка.
+    Заголовки (#, ##, ###) → удаляются.
+    """
+    if not text:
+        return ""
+
+    text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\2', text)
+    text = re.sub(r'^\s*#{1,6}\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    text = re.sub(r'`([^`]*)`', r'\1', text)
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'\*([^*]+)\*', r'\1', text)
+    text = re.sub(r'_([^_]+)_', r'\1', text)
+    text = re.sub(r'~([^~]+)~', r'\1', text)
+
+    return text.strip()
+

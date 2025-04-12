@@ -101,6 +101,12 @@ class BotSettings(BaseValidatedModel):
             "ru": "До свидания! Если вам что-то понадобится, обращайтесь."
         }
     )
+    fallback_ai_error_message: Dict[str, str] = Field(
+        default_factory=lambda: {
+            "en": "Unfortunately, I'm having trouble generating a response right now. Please try again later.",
+            "ru": "К сожалению, я не могу сейчас сгенерировать ответ. Пожалуйста, попробуйте позже."
+        }
+    )
 
     ai_model: AIModelEnum
     created_at: datetime = Field(default_factory=datetime.utcnow)

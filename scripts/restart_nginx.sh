@@ -1,6 +1,7 @@
 #!/bin/bash
 
-LOG_DIR="./logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/../logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/restart_nginx_$(date +'%Y-%m-%d_%H-%M').log"
 
@@ -34,7 +35,8 @@ else
   echo "Nginx работает нормально." | tee -a "$LOG_FILE"
 fi
 
-echo "Очистка логов старше 14 дней..." | tee -a "$LOG_FILE"
-find "$LOG_DIR" -type f -name "*.log" -mtime +14 -exec rm {} \; >> "$LOG_FILE" 2>&1
+# Очищаем логи, которые старше 1 дня
+echo "🧹 Удаляем лог-файлы старше 1 дня..." | tee -a "$LOG_FILE"
+find "$LOG_DIR" -type f -name "*.log" -mtime +1 -exec rm {} \; >> "$LOG_FILE" 2>&1
 
 echo "✅ Скрипт restart_nginx завершён." | tee -a "$LOG_FILE"

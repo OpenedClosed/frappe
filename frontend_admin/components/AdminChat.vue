@@ -109,7 +109,7 @@ let openLabel = computed(() => (isMobile.value ? "" : 'Open test chat'));
     bottom: 80px;
     right: 20px;
     width: 400px;
-    height: 600px;
+    height: 82vh;
     border: 1px solid #ccc;
     background-color: #fff;
     display: flex;

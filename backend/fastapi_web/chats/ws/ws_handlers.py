@@ -4,9 +4,11 @@ import json
 import logging
 import random
 import re
+from asyncio import Lock
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
+import httpx
 import requests
 from pydantic import ValidationError
 
@@ -22,13 +24,15 @@ from openai_base.openai_init import openai_client
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
-from ..utils.help_functions import (find_last_bot_message, get_bot_context,
+from ..utils.help_functions import (clean_markdown, find_last_bot_message, get_bot_context,
                                     get_knowledge_base, get_weather_by_address,
-                                    send_message_to_bot)
+                                    send_message_to_bot,
+                                    split_text_into_chunks)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
-from .ws_helpers import ConnectionManager, TypingManager, custom_json_dumps
+from .ws_helpers import (ConnectionManager, TypingManager, custom_json_dumps,
+                         gpt_task_manager)
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -36,17 +40,19 @@ from .ws_helpers import ConnectionManager, TypingManager, custom_json_dumps
 
 
 async def handle_message(
-    manager: Any,
+    manager: ConnectionManager,
     typing_manager: TypingManager,
-    data: Dict[str, Any],
+    data: dict,
     chat_id: str,
     client_id: str,
     redis_session_key: str,
     redis_flood_key: str,
     is_superuser: bool,
-    user_language: str
+    user_language: str,
+    gpt_lock: Lock,
+    user_data: dict
 ) -> None:
-    """Обрабатывает входящее сообщение от клиента."""
+    """Определяем тип сообщения и вызываем нужный handler."""
 
     handlers = {
         "status_check": handle_status_check,
@@ -63,8 +69,11 @@ async def handle_message(
     if handler == handle_new_message:
         async with await mongo_client.start_session() as session:
             await handler(
-                manager, chat_id, client_id, redis_session_key, redis_flood_key, data, is_superuser, user_language, typing_manager
+                manager, chat_id, client_id, redis_session_key, redis_flood_key,
+                data, is_superuser, user_language, typing_manager,
+                gpt_lock, user_data
             )
+
     elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
         await handler(typing_manager, chat_id, client_id, manager)
     else:
@@ -149,6 +158,8 @@ async def save_and_broadcast_new_message(
         chat_session.chat_id,
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
+    message = clean_markdown(new_msg.message)
+    chunks = split_text_into_chunks(message)
 
     if new_msg.sender_role != SenderRole.CLIENT and chat_session.client.external_id:
         await send_message_to_external_meta_channel(chat_session, new_msg)
@@ -177,32 +188,38 @@ async def send_message_to_external_meta_channel(
 # Instagram
 # ==============================
 
+
 async def send_instagram_message(recipient_id: str, message: str) -> None:
     """Отправляет сообщение в Instagram Direct."""
-
-    # Рабочий вариант с `me` (через user token)
     url = "https://graph.instagram.com/v22.0/me/messages"
 
     # Альтернативный вариант через Facebook Graph
     # url = f"https://graph.facebook.com/v22.0/{settings.INSTAGRAM_BOT_ID}/messages"
 
-    payload = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": message},
-        "metadata": "broadcast"
-    }
+    message = clean_markdown(message)
+    chunks = split_text_into_chunks(message)
 
     headers = {
         "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
 
-    response = requests.post(url, json=payload, headers=headers)
+    async with httpx.AsyncClient() as client:
+        for i, chunk in enumerate(chunks, 1):
+            payload = {
+                "recipient": {"id": recipient_id},
+                "message": {"text": chunk},
+                "metadata": "broadcast"
+            }
 
-    if response.status_code == 200:
-        logging.info(f"Отправлено в Instagram: {recipient_id}")
-    else:
-        logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
+            try:
+                response = await client.post(url, json=payload, headers=headers)
+                if response.status_code == 200:
+                    logging.info(f"Отправлено в Instagram: {recipient_id}")
+                else:
+                    logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
+            except httpx.HTTPError as e:
+                logging.error(f"HTTP ошибка при отправке в Instagram: {e}")
 
 
 # ==============================
@@ -233,12 +250,18 @@ async def send_whatsapp_message(recipient_phone_id: str, message: str) -> None:
         "Content-Type": "application/json"
     }
 
-    response = requests.post(url, json=payload, headers=headers)
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=payload, headers=headers)
 
-    if response.status_code == 200:
-        logging.info(f"Отправлено в WhatsApp: {recipient_phone_id}")
-    else:
-        logging.error(f"Ошибка WhatsApp: {response.status_code} {response.text}")
+            if response.status_code == 200:
+                logging.info(f"Отправлено в WhatsApp: {recipient_phone_id}")
+            else:
+                logging.error(
+                    f"Ошибка WhatsApp: {response.status_code} {response.text}"
+                )
+        except httpx.HTTPError as e:
+            logging.error(f"HTTP ошибка при отправке в WhatsApp: {e}")
 
 
 # ==============================
@@ -303,9 +326,12 @@ async def handle_new_message(
     data: dict,
     is_superuser: bool,
     user_language: str,
-    typing_manager: TypingManager
+    typing_manager: TypingManager,
+    gpt_lock: Lock,
+    user_data: dict
 ) -> None:
     """Обрабатывает новое сообщение от пользователя."""
+
     msg_text = data.get("message", "")
     reply_to = data.get("reply_to")
     external_id = data.get("external_id")
@@ -321,6 +347,9 @@ async def handle_new_message(
     if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
         return
 
+    if not msg_text.strip():
+        return
+
     new_msg = ChatMessage(
         message=msg_text,
         sender_role=SenderRole.CLIENT,
@@ -331,7 +360,8 @@ async def handle_new_message(
     if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
         return
 
-    if not await check_flood_control(manager, client_id, chat_id, redis_key_flood, chat_session.calculate_mode(BRIEF_QUESTIONS), user_language):
+    if not await check_flood_control(manager, client_id, chat_id, redis_key_flood,
+                                     chat_session.calculate_mode(BRIEF_QUESTIONS), user_language):
         return
 
     if not await validate_choice(manager, client_id, chat_session, chat_id, msg_text, user_language):
@@ -343,7 +373,22 @@ async def handle_new_message(
         return
 
     if not chat_session.manual_mode:
-        await process_user_query_after_brief(manager, chat_id, new_msg, chat_session, redis_key_session, user_language, typing_manager)
+        gpt_task_manager.cancel_task(chat_id)
+
+        new_task = asyncio.create_task(
+            process_user_query_after_brief(
+                manager=manager,
+                chat_id=chat_id,
+                user_msg=new_msg,
+                chat_session=chat_session,
+                redis_key_session=redis_key_session,
+                user_language=user_language,
+                typing_manager=typing_manager,
+                gpt_lock=gpt_lock,
+                user_data=user_data
+            )
+        )
+        gpt_task_manager.set_task(chat_id, new_task)
 
 
 # ==============================
@@ -628,7 +673,6 @@ async def process_brief_question(
         {"$push": {"brief_answers": ans.model_dump()}}
     )
 
-    # Обновляем локальный объект чата
     updated_data = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
     chat_session.__dict__.update(ChatSession(**updated_data).__dict__)
 
@@ -798,81 +842,169 @@ async def process_user_query_after_brief(
     chat_session: ChatSession,
     redis_key_session: str,
     user_language: str,
-    typing_manager: TypingManager
-) -> ChatMessage:
-    """Обрабатывает пользовательский запрос после брифа, используя GPT-логику."""
-    user_info = extract_brief_info(chat_session)
-    chat_history = chat_session.messages[-25:]
-    knowledge_base = await get_knowledge_base()
-    gpt_data = await determine_topics_via_gpt(user_msg.message, user_info, knowledge_base)
+    typing_manager: TypingManager,
+    gpt_lock: Lock,
+    user_data: dict
+) -> Optional[ChatMessage]:
+    """
+    Обрабатывает пользовательский запрос после брифа, используя GPT-логику.
+    Выполняется строго последовательно с помощью gpt_lock.
+    Может быть отменена, если пришло новое сообщение.
+    """
+    try:
+        async with gpt_lock:
+            if not user_data:
+                user_data = {}
+            brief_info = extract_brief_info(chat_session)
+            user_data["brief_info"] = brief_info
+            chat_history = chat_session.messages[-25:]
+            knowledge_base = await get_knowledge_base()
 
-    user_msg.gpt_evaluation = GptEvaluation(
-        topics=gpt_data.get("topics", []),
-        confidence=gpt_data.get("confidence", 0.0),
-        out_of_scope=gpt_data.get("out_of_scope", False),
-        consultant_call=gpt_data.get("consultant_call", False)
+            gpt_data = await determine_topics_via_gpt(
+                user_msg.message, user_data, knowledge_base
+            )
+
+            user_msg.gpt_evaluation = GptEvaluation(
+                topics=gpt_data.get("topics", []),
+                confidence=gpt_data.get("confidence", 0.0),
+                out_of_scope=gpt_data.get("out_of_scope", False),
+                consultant_call=gpt_data.get("consultant_call", False)
+            )
+            await _update_gpt_evaluation_in_db(
+                chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation
+            )
+
+            ai_msg = await _build_ai_response(
+                manager=manager,
+                chat_session=chat_session,
+                user_msg=user_msg,
+                user_data=user_data,
+                chat_history=chat_history,
+                redis_key_session=redis_key_session,
+                user_language=user_language,
+                typing_manager=typing_manager,
+                chat_id=chat_id
+            )
+
+            if ai_msg:
+                await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+
+            return ai_msg
+
+    except asyncio.CancelledError:
+        print(f"[GPT] Задача GPT для чата {chat_id} отменена.")
+        return None
+
+    except Exception as e:
+        logging.error(
+            f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+        bot_context = await get_bot_context()
+        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+            user_language, "The assistant is currently unavailable."
+        )
+        ai_msg = ChatMessage(
+            message=ai_text,
+            sender_role=SenderRole.AI,
+        )
+        if ai_msg:
+            await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+        return None
+
+
+async def generate_ai_answer(
+    user_message: str,
+    snippets: List[str],
+    user_info: str,
+    chat_history: List[ChatMessage],
+    user_language: str,
+    typing_manager: TypingManager,
+    chat_id: str,
+    manager: ConnectionManager,
+    style: str = "confident",
+    return_json: bool = False,
+) -> Union[str, Dict[str, Any]]:
+    """
+    Генерирует ответ от AI, учитывая историю чата, язык пользователя,
+    сниппеты знаний и настройки бота из MongoDB.
+    """
+    bot_context = await get_bot_context()
+    chosen_model = bot_context["ai_model"]
+    chosen_temp = bot_context["temperature"]
+
+    weather_info = {
+        "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
+    }
+
+    system_prompt = _assemble_system_prompt(
+        bot_context, snippets, user_info, user_language, weather_info)
+    messages = build_messages_for_model(
+        system_prompt=system_prompt,
+        messages_data=chat_history,
+        user_message=user_message,
+        model=chosen_model
     )
 
-    await _update_gpt_evaluation_in_db(chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation)
+    await typing_manager.add_typing(chat_id, "ai_bot", manager)
+    await _simulate_delay()
 
-    ai_msg = await _build_ai_response(
-        manager=manager,
-        chat_session=chat_session,
-        user_msg=user_msg,
-        chat_history=chat_history,
-        redis_key_session=redis_key_session,
-        user_language=user_language,
-        typing_manager=typing_manager,
-        chat_id=chat_id
-    )
+    client, real_model = pick_model_and_client(chosen_model)
+    try:
+        ai_text = await _generate_model_response(client, real_model, messages, chosen_temp)
+    except Exception as e:
+        logging.error(f"AI generation failed: {e}")
+        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+            user_language, "The assistant is currently unavailable."
+        )
 
-    if ai_msg:
-        await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+    await typing_manager.remove_typing(chat_id, "ai_bot", manager)
 
-    return ai_msg
+    if return_json:
+        return _try_parse_json(ai_text)
+
+    return ai_text
 
 
 async def determine_topics_via_gpt(
     user_message: str,
-    user_info: str,
+    user_info: dict,
     knowledge_base: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Обращается к GPT для определения тематики,
     вычисления confidence, out_of_scope и consultant_call.
     """
-    kb_description = _build_kb_description(knowledge_base)
-    bot_context = await get_bot_context()
-    app_description = bot_context["app_description"]
-    forbidden_topics = bot_context["forbidden_topics"]
-
-    system_prompt = AI_PROMPTS["system_topics_prompt"].format(
-        user_info=user_info,
-        kb_description=kb_description,
-        app_description=app_description,
-        forbidden_topics=forbidden_topics,
-    )
-
-    messages = [
-        {"role": "model", "content": system_prompt.strip()},
-        {"role": "user", "content": user_message.strip()}
-    ]
-    response = await gemini_client.chat_generate(
-        model="gemini-2.0-flash",
-        messages=messages,
-        temperature=0.1
-    )
-    raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
-    )
-    match = re.search(r"\{.*\}", raw_content, re.DOTALL)
-
-    if not match:
-        return {"topics": [], "confidence": 0.0,
-                "out_of_scope": False, "consultant_call": False}
-
-    json_text = match.group(0).replace("None", "null")
-
     try:
+        kb_description = _build_kb_description(knowledge_base)
+        bot_context = await get_bot_context()
+        app_description = bot_context["app_description"]
+        forbidden_topics = bot_context["forbidden_topics"]
+
+        system_prompt = AI_PROMPTS["system_topics_prompt"].format(
+            user_info=user_info,
+            kb_description=kb_description,
+            app_description=app_description,
+            forbidden_topics=forbidden_topics,
+        )
+
+        messages = [
+            {"role": "model", "content": system_prompt.strip()},
+            {"role": "user", "content": user_message.strip()}
+        ]
+        response = await gemini_client.chat_generate(
+            model="gemini-2.0-flash",
+            messages=messages,
+            temperature=0.1
+        )
+        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
+        )
+        match = re.search(r"\{.*\}", raw_content, re.DOTALL)
+
+        if not match:
+            return {"topics": [], "confidence": 0.0,
+                    "out_of_scope": False, "consultant_call": False}
+
+        json_text = match.group(0).replace("None", "null")
+
         result = json.loads(json_text)
         return {
             "topics": result.get("topics", []),
@@ -923,6 +1055,7 @@ async def _build_ai_response(
     manager: Any,
     chat_session: ChatSession,
     user_msg: ChatMessage,
+    user_data: dict,
     chat_history: List[ChatMessage],
     redis_key_session: str,
     user_language: str,
@@ -969,7 +1102,7 @@ async def _build_ai_response(
     final_text = await generate_ai_answer(
         user_message=user_msg.message,
         snippets=snippet_data,
-        user_info=extract_brief_info(chat_session),
+        user_info=str(user_data),
         chat_history=chat_history,
         style="",
         user_language=user_language,
@@ -1185,7 +1318,9 @@ async def generate_ai_answer(
         ai_text = await _generate_model_response(client, real_model, messages, chosen_temp)
     except Exception as e:
         logging.error(f"AI generation failed: {e}")
-        ai_text = "Error: AI model failed to generate a response."
+        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+            user_language, "The assistant is currently unavailable."
+        )
 
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
 
@@ -1224,6 +1359,7 @@ def _assemble_system_prompt(
 async def _simulate_delay() -> None:
     """Имитирует задержку от 5 до 15 секунд перед вызовом AI."""
     delay = random.uniform(3, 7)
+    # delay = random.uniform(10, 20)
     logging.info(f"⏳ Artificial delay {delay:.2f}s before AI generation...")
     await asyncio.sleep(delay)
 

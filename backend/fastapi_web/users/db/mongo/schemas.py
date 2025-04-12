@@ -68,6 +68,7 @@ class UserWithData(User):
     data: Optional[dict] = {}
 
     async def get_email(self) -> Optional[str]:
+        """Получить email из контактной информации."""
         contact = None
         if self.data and self.data.get("user_id"):
             user_id = self.data.get("user_id")
@@ -75,8 +76,28 @@ class UserWithData(User):
         return contact.get("email") if contact else None
 
     async def get_phone(self) -> Optional[str]:
+        """Получить номер телефона из основной информации."""
         main = None
         if self.data and self.data.get("user_id"):
             user_id = self.data.get("user_id")
             main = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
         return main.get("phone") if main else None
+    
+    async def get_full_user_data(self) -> dict:
+        """
+        Возвращает объединённую информацию о пользователе: базовую, контактную и основную.
+        """
+        base_data = self.dict(exclude={"password"})
+        user_id = self.data.get("user_id") if self.data else None
+
+        contact_info = await mongo_db["patients_contact_info"].find_one({"user_id": user_id}) or {}
+        main_info = await mongo_db["patients_main_info"].find_one({"user_id": user_id}) or {}
+
+        full_data = {
+            **base_data,
+            "main_info": main_info,
+            "contact_info": contact_info,
+        }
+
+        return full_data
+

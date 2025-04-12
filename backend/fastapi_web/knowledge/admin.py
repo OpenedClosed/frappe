@@ -7,7 +7,6 @@ from .db.mongo.schemas import BotSettings
 
 
 class BotSettingsAdmin(BaseAdmin):
-    """Админ для настройки бота."""
     model = BotSettings
     collection_name = "bot_settings"
 
@@ -24,7 +23,7 @@ class BotSettingsAdmin(BaseAdmin):
         "project_name", "employee_name", "mention_name", "avatar", "bot_color",
         "communication_tone", "personality_traits", "additional_instructions", "role", "target_action",
         "core_principles", "special_instructions", "forbidden_topics",
-        "greeting", "error_message", "farewell_message",
+        "greeting", "error_message", "farewell_message", "fallback_ai_error_message",
         "ai_model", "created_at"
     ]
 
@@ -34,7 +33,7 @@ class BotSettingsAdmin(BaseAdmin):
     field_titles = {
         "project_name": {"en": "Project Name", "ru": "Название проекта"},
         "employee_name": {"en": "Employee Name", "ru": "Имя сотрудника"},
-        "mention_name": {"en": "Mention Name in Conversation", "ru": "Упоминать имя в общении"},
+        "mention_name": {"en": "Mention Bot Name in Conversation", "ru": "Упоминать свое имя при общении"},
         "avatar": {"en": "Avatar", "ru": "Аватар"},
         "bot_color": {"en": "Bot Color", "ru": "Цвет бота"},
         "communication_tone": {"en": "Choose Communication Tone", "ru": "Выберите тон общения"},
@@ -48,6 +47,7 @@ class BotSettingsAdmin(BaseAdmin):
         "greeting": {"en": "Greeting", "ru": "Приветствие"},
         "error_message": {"en": "Error Message", "ru": "Ошибка"},
         "farewell_message": {"en": "Farewell Message", "ru": "Прощание"},
+        "fallback_ai_error_message": {"en": "AI Error Fallback", "ru": "Сообщение при ошибке ИИ"},
         "ai_model": {"en": "AI Model", "ru": "Выбор модели"},
         "created_at": {"en": "Created At", "ru": "Дата создания"}
     }
@@ -62,8 +62,8 @@ class BotSettingsAdmin(BaseAdmin):
             "ru": "Имя сотрудника, которого представляет бот."
         },
         "mention_name": {
-            "en": "Should the bot mention users by name?",
-            "ru": "Должен ли бот упоминать пользователей по имени?"
+            "en": "Should the bot mention its name?",
+            "ru": "Должен ли бот упоминать свое имя?"
         },
         "avatar": {
             "en": "Upload an image for the bot's avatar.",
@@ -117,6 +117,10 @@ class BotSettingsAdmin(BaseAdmin):
             "en": "Bot's goodbye message.",
             "ru": "Прощальное сообщение бота."
         },
+        "fallback_ai_error_message": {
+            "en": "Message shown if AI fails to generate a response.",
+            "ru": "Сообщение при ошибке генерации ответа ИИ."
+        },
         "ai_model": {
             "en": "AI model the bot is using.",
             "ru": "Модель ИИ, которую использует бот."
@@ -145,7 +149,7 @@ class BotSettingsAdmin(BaseAdmin):
         },
         {
             "title": {"en": "Interaction Guidelines", "ru": "Правила взаимодействия"},
-            "fields": ["greeting", "error_message", "farewell_message"],
+            "fields": ["greeting", "error_message", "farewell_message", "fallback_ai_error_message"],
             "help_text": {"en": "Set the bot's predefined messages", "ru": "Определите автоматические сообщения бота"}
         },
         {

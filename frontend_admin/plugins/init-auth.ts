@@ -41,7 +41,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     const refresh_token = useCookie("refresh_token");
   
     try {
-      await nuxtApp.$api.get(`api/${currentPageName.value}/info`);
+      await nuxtApp.$api.get(`api/users/me`);
       isAuthorized.value = true;
     } catch (err) {
       if (err?.request?.status === 401 && refresh_token.value) {

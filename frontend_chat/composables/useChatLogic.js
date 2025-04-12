@@ -228,6 +228,7 @@ export function useChatLogic(options = {}) {
    */
   function sendMessage(message) {
     if (!message || !message.content) return;
+    console.log("Отправляем сообщение:", message);
     websocket.value?.send(
       JSON.stringify({
         type: "new_message",
@@ -235,7 +236,7 @@ export function useChatLogic(options = {}) {
       })
     );
   }
-
+ 
   /**
    * Переключение режима (авто/вручную).
    */
@@ -267,6 +268,32 @@ export function useChatLogic(options = {}) {
     window.location.reload();
   }
   const { $event, $listen } = useNuxtApp();
+
+  const MIN_INTERVAL = 0;   // ≥ 5 с между отправками
+  const AFTER_MESSAGE = 0;  // ≥ 2 с после события «пришло сообщение»
+
+
+  // ---- NEW: управление status_check ----
+  let lastStatusSent = 0;          // timeStamp последней отправки
+  let pendingStatusTimer = null;   // id тайм‑аута, если уже запланирован
+
+  function scheduleStatusCheck() {
+    const now = Date.now();
+
+    // если тайм‑аут уже стоит, ничего не делаем – он отправит в нужное время
+    if (pendingStatusTimer) return;
+
+    // когда мы _теоретически_ можем отправить следующий статус
+    const earliest = lastStatusSent + MIN_INTERVAL;
+    const plannedAt = Math.max(now + AFTER_MESSAGE, earliest);
+    const delay = plannedAt - now;
+
+    pendingStatusTimer = setTimeout(() => {
+      websocket.value?.send(JSON.stringify({ type: 'status_check' }));
+      lastStatusSent = Date.now();
+      pendingStatusTimer = null;   // освободили слоты для следующего сообщения
+    }, delay);
+  }
   // УБРАНА throttle и прочие повторные вызовы, оставляем простую функцию
   function initializeWebSocket(chatId) {
     // Определяем схему (ws для localhost, wss для prod)
@@ -309,10 +336,13 @@ export function useChatLogic(options = {}) {
       // Основная обработка типов сообщений
       switch (data.type) {
         case "status_check":
+          
           if (data.remaining_time) {
             startCountdown(data.remaining_time);
           }
+          console.log("status_check", data);
           // Синхронизируем режим
+          console.log("isAutoMode", !data.manual_mode);
           isAutoMode.value = !data.manual_mode;
           break;
 
@@ -321,6 +351,8 @@ export function useChatLogic(options = {}) {
             const transformed = await transformChatMessages(data.messages);
             messages.value = transformed;
             messagesLoaded.value = true;
+            scheduleStatusCheck();
+
             if (data.remaining_time) {
               startCountdown(data.remaining_time);
             }
@@ -342,6 +374,7 @@ export function useChatLogic(options = {}) {
           {
             const [transformed] = await transformChatMessages([data]);
             $event("new_message_arrived", transformed);
+            scheduleStatusCheck();
 
             // УБРАНО повторное status_check после каждого сообщения
 

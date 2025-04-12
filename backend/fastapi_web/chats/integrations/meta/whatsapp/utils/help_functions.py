@@ -8,6 +8,7 @@ from chats.ws.ws_handlers import handle_message
 from chats.ws.ws_helpers import get_typing_manager, get_ws_manager
 from db.mongo.db_init import mongo_db
 
+from chats.ws.ws_helpers import gpt_task_manager
 
 def parse_whatsapp_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
@@ -96,6 +97,7 @@ async def process_whatsapp_message(
     chat_session = ChatSession(**chat_session_data)
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)
+    gpt_lock = gpt_task_manager.get_lock(chat_id)
 
     data = {
         "type": "new_message",
@@ -107,6 +109,16 @@ async def process_whatsapp_message(
     redis_session_key = f"chat:{client_id}"
     redis_flood_key = f"flood:{client_id}"
 
+    user_data = {
+        "platform": "instagram",
+        "sender_id": sender_id,
+        "external_id": external_id,
+        "client_external_id": client_external_id,
+        "metadata": metadata,
+        "is_superuser": sender_role == SenderRole.CONSULTANT
+    }
+
+
     await handle_message(
         manager=manager,
         typing_manager=typing_manager,
@@ -116,5 +128,7 @@ async def process_whatsapp_message(
         redis_flood_key=redis_flood_key,
         data=data,
         is_superuser=(sender_role == SenderRole.CONSULTANT),
-        user_language=user_language
+        user_language=user_language,
+        gpt_lock=gpt_lock,
+        user_data=user_data
     )

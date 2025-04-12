@@ -1,0 +1,305 @@
+<template>
+  <Dialog
+    :visible="visible"
+    @update:visible="$emit('update:visible', $event)"
+    :modal="true"
+    :dismissableMask="true"
+    :header="
+      isEditMode
+        ? 'Do you want to save changes to playground?'
+        : 'Do you want to save changes to knowledge base?'
+    "
+    class="w-1/2 max-w-4xl min-w-96"
+  >
+    <p class="mb-4 text-sm text-gray-600">
+      {{
+        !isEditMode && !hasChanges
+          ? "There are no changes to apply to knowledge base."
+          : isEditMode
+          ? "It will change the playground, but WILL NOT update the knowledge base."
+          : "It will CHANGE the knowledge base."
+      }}
+    </p>
+    <div class="p-4">
+      <div class="flex flex-row justify-between items-center mb-4">
+        <div class="flex items-center gap-4">
+          <div>
+            <span class="font-bold text-green-600">Added:</span>
+            {{ changes.added }}
+          </div>
+          <div>
+            <span class="font-bold text-blue-600">Changed:</span>
+            {{ changes.changed }}
+          </div>
+          <div>
+            <span class="font-bold text-red-600">Deleted:</span>
+            {{ changes.deleted }}
+          </div>
+        </div>
+      </div>
+
+      <div v-if="changes.added > 0" class="mb-6">
+        <h3 class="font-semibold text-green-900 dark:text-gray-200">
+          Added Items
+        </h3>
+
+        <div
+          v-for="(topicValue, topicName) in addedItems"
+          :key="topicName"
+          class="mb-6"
+        >
+          <h3
+            class="font-semibold text-gray-900 dark:text-gray-200"
+            :class="{ 'text-green-600': topicValue._new }"
+          >
+            {{ topicName }}
+          </h3>
+          <div v-if="topicValue.subtopics">
+            <div
+              v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
+              :key="subtopicName"
+              class="ml-4 mb-4"
+            >
+              <h4
+                class="font-medium text-gray-800 dark:text-gray-300"
+                :class="{ 'text-green-600': subtopicValue._new }"
+              >
+                {{ subtopicName }}
+              </h4>
+              <ul
+                v-if="subtopicValue.questions"
+                class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400"
+              >
+                <li
+                  v-for="(qObj, questionKey) in subtopicValue.questions"
+                  :key="questionKey"
+                  class="mb-4"
+                >
+                  <div :class="{ 'text-green-600': qObj._new }">
+                    <span class="font-semibold">{{ questionKey }}: </span>
+                    <span>{{ qObj.text }}</span>
+                  </div>
+                  <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
+                    <div
+                      v-for="(fileLink, fileIndex) in qObj.files"
+                      :key="fileIndex"
+                      class="mb-1"
+                    >
+                      <ImageLink :fileLink="fileLink" />
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="changes.changed > 0" class="mb-6">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-200">
+          Changed Items
+        </h3>
+        <div
+          v-for="(topicValue, topicName) in changedItems"
+          :key="topicName"
+          class="mb-6"
+        >
+          <h3
+            class="font-semibold text-gray-900 dark:text-gray-200"
+            :class="{ '!text-blue-600': topicValue._changed }"
+          >
+            {{ topicName }}
+          </h3>
+          <div v-if="topicValue.subtopics">
+            <div
+              v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
+              :key="subtopicName"
+              class="ml-4 mb-4"
+            >
+              <h4
+                class="font-medium text-gray-800 dark:text-gray-300"
+                :class="{ '!text-blue-600': subtopicValue._changed }"
+              >
+                {{ subtopicName }}
+              </h4>
+              <ul
+                v-if="subtopicValue.questions"
+                class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400"
+              >
+                <li
+                  v-for="(qObj, questionKey) in subtopicValue.questions"
+                  :key="questionKey"
+                  class="mb-4"
+                >
+                  <div>
+                    <span
+                      class="font-semibold"
+                      :class="{ '!text-blue-600': qObj._changed }"
+                      >{{ questionKey }}</span
+                    >
+                    <template
+                      v-if="
+                        qObj._previous &&
+                        qObj._previous.text !== qObj._current.text
+                      "
+                    >
+                      <div class="line-through text-red-600">
+                        {{ qObj._previous.text }}
+                      </div>
+                      <div class="text-green-600">
+                        {{ qObj._current.text }}
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="text-gray-900 dark:text-gray-200">
+                        {{ qObj.text }}
+                      </div>
+                    </template>
+                    <template
+                      v-if="
+                        qObj._previous &&
+                        qObj._previous.files?.join(', ') !==
+                          qObj._current.files?.join(', ')
+                      "
+                    >
+                      <div
+                        v-if="qObj._previous.files?.length"
+                        class="line-through text-red-600 break-all"
+                      >
+                        {{ qObj._previous.files.join(", ") }}
+                      </div>
+                      <div
+                        v-if="qObj._current.files?.length"
+                        class="text-green-600 break-all"
+                      >
+                        {{ qObj._current.files.join(", ") }}
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div
+                        v-if="qObj.files?.length"
+                        class="text-gray-900 dark:text-gray-200 break-all"
+                      >
+                        {{ qObj.files.join(", ") }}
+                      </div>
+                    </template>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="changes.deleted > 0" class="mb-6">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-200">
+          Deleted Items
+        </h3>
+
+        <div
+          v-for="(topicValue, topicName) in deletedItems"
+          :key="topicName"
+          class="mb-6"
+        >
+          <h3
+            class="font-semibold text-gray-900 dark:text-gray-200"
+            :class="{ 'text-red-600': topicValue._deleted }"
+          >
+            {{ topicName }}
+          </h3>
+          <div v-if="topicValue.subtopics">
+            <div
+              v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
+              :key="subtopicName"
+              class="ml-4 mb-4"
+            >
+              <h4
+                class="font-medium text-gray-800 dark:text-gray-300"
+                :class="{ 'text-red-600': subtopicValue._deleted }"
+              >
+                {{ subtopicName }}
+              </h4>
+              <ul
+                v-if="subtopicValue.questions"
+                class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400"
+              >
+                <li
+                  v-for="(qObj, questionKey) in subtopicValue.questions"
+                  :key="questionKey"
+                  class="mb-4"
+                >
+                  <div :class="{ 'text-red-600': qObj._deleted }">
+                    <span class="font-semibold">{{ questionKey }}: </span>
+                    <span>{{ qObj.text }}</span>
+                  </div>
+                  <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
+                    <div
+                      v-for="(fileLink, fileIndex) in qObj.files"
+                      :key="fileIndex"
+                      class="mb-1"
+                    >
+                      <ImageLink :fileLink="fileLink" />
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <Button
+          label="Cancel"
+          class="p-button-secondary p-button-sm"
+          @click="$emit('cancel')"
+        />
+        <Button
+          label="Confirm"
+          class="p-button-success p-button-sm"
+          :disabled="!isEditMode && !hasChanges"
+          @click="$emit('save')"
+        />
+      </div>
+    </template>
+  </Dialog>
+</template>
+
+<script setup>
+import { defineProps, defineEmits } from "vue";
+import ImageLink from "./ImageLink.vue";
+
+const props = defineProps({
+  visible: {
+    type: Boolean,
+    required: true,
+  },
+  isEditMode: {
+    type: Boolean,
+    default: false,
+  },
+  hasChanges: {
+    type: Boolean,
+    default: false,
+  },
+  changes: {
+    type: Object,
+    default: () => ({ added: 0, changed: 0, deleted: 0 }),
+  },
+  addedItems: {
+    type: Object,
+    default: () => ({}),
+  },
+  changedItems: {
+    type: Object,
+    default: () => ({}),
+  },
+  deletedItems: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+defineEmits(["update:visible", "save", "cancel"]);
+</script>
