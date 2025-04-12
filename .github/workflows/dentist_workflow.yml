@@ -7,7 +7,7 @@ on:
       - dev
  
 env:
-  PROD_HOST: ${{ secrets.PROD_HOST }}
+  PROD_HOST: ${{ secrets.HOST }}
   DEV_HOST: ${{ secrets.DEV_HOST }}
   REDIS_URL: ${{ secrets.REDIS_URL }}
   MONGO_URL: ${{ secrets.MONGO_URL }}
@@ -30,6 +30,13 @@ env:
   INSTAGRAM_VERIFY_TOKEN: ${{ secrets.INSTAGRAM_VERIFY_TOKEN }}
   INSTAGRAM_BOT_NAME: ${{ secrets.INSTAGRAM_BOT_NAME }}
   INSTAGRAM_BOT_ID: ${{ secrets.INSTAGRAM_BOT_ID }}
+
+  WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+  WHATSAPP_BOT_NUMBER_ID: ${{ secrets.WHATSAPP_BOT_NUMBER_ID }}
+  WHATSAPP_BOT_NUMBER: ${{ secrets.WHATSAPP_BOT_NUMBER }}
+  WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
+  WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+  WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
 
 jobs:
   build_and_push_to_docker_hub:
@@ -222,6 +229,12 @@ jobs:
             INSTAGRAM_VERIFY_TOKEN=${{ env.INSTAGRAM_VERIFY_TOKEN }}
             INSTAGRAM_BOT_NAME=${{ env.INSTAGRAM_BOT_NAME }}
             INSTAGRAM_BOT_ID=${{ env.INSTAGRAM_BOT_ID }}
+            WHATSAPP_ACCESS_TOKEN=${{ env.WHATSAPP_ACCESS_TOKEN }}
+            WHATSAPP_BOT_NUMBER_ID=${{ env.WHATSAPP_BOT_NUMBER_ID }}
+            WHATSAPP_BOT_NUMBER=${{ env.WHATSAPP_BOT_NUMBER }}
+            WHATSAPP_APP_SECRET=${{ env.WHATSAPP_APP_SECRET }}
+            WHATSAPP_BUSINESS_ACCOUNT_ID=${{ env.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+            WHATSAPP_VERIFY_TOKEN=${{ env.WHATSAPP_VERIFY_TOKEN }}
             EOF
 
             # Подтягиваем свежие образы (те, что мы успели запушить)
