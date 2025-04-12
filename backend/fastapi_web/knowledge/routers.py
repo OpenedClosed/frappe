@@ -3,14 +3,14 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from auth.utils.help_functions import jwt_required, permission_required
+from chats.utils.help_functions import get_bot_context
+from crud_core.permissions import AdminPanelPermission
+from db.mongo.db_init import mongo_db
 from fastapi import (APIRouter, Depends, File, Form, HTTPException, Request,
                      Response, UploadFile)
 from fastapi_jwt_auth import AuthJWT
 from pydantic import ValidationError
-
-from auth.utils.help_functions import jwt_required
-from chats.utils.help_functions import get_bot_context
-from db.mongo.db_init import mongo_db
 
 from .db.mongo.schemas import (KnowledgeBase, PatchKnowledgeRequest,
                                UpdateResponse)
@@ -23,6 +23,7 @@ knowledge_base_router = APIRouter()
 
 @knowledge_base_router.get("/knowledge_base", response_model=KnowledgeBase)
 @jwt_required()
+@permission_required(AdminPanelPermission)
 async def find_knowledge_full_document(
     request: Request,
     response: Response,
@@ -34,6 +35,7 @@ async def find_knowledge_full_document(
 
 @knowledge_base_router.patch("/knowledge_base", response_model=UpdateResponse)
 @jwt_required()
+@permission_required(AdminPanelPermission)
 async def patch_knowledge_base(
     request: Request,
     response: Response,
@@ -73,6 +75,7 @@ async def patch_knowledge_base(
 @knowledge_base_router.put("/knowledge_base/apply",
                            response_model=UpdateResponse)
 @jwt_required()
+@permission_required(AdminPanelPermission)
 async def apply_knowledge_base(
     request: Request,
     response: Response,
@@ -99,6 +102,7 @@ async def apply_knowledge_base(
 
 @knowledge_base_router.post("/generate_patch", response_model=Dict[str, Any])
 @jwt_required()
+@permission_required(AdminPanelPermission)
 async def generate_patch(
     request: Request,
     response: Response,

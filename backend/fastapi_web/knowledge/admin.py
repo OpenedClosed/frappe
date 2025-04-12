@@ -33,7 +33,7 @@ class BotSettingsAdmin(BaseAdmin):
     field_titles = {
         "project_name": {"en": "Project Name", "ru": "Название проекта"},
         "employee_name": {"en": "Employee Name", "ru": "Имя сотрудника"},
-        "mention_name": {"en": "Mention Name in Conversation", "ru": "Упоминать имя в общении"},
+        "mention_name": {"en": "Mention Bot Name in Conversation", "ru": "Упоминать свое имя при общении"},
         "avatar": {"en": "Avatar", "ru": "Аватар"},
         "bot_color": {"en": "Bot Color", "ru": "Цвет бота"},
         "communication_tone": {"en": "Choose Communication Tone", "ru": "Выберите тон общения"},
@@ -62,8 +62,8 @@ class BotSettingsAdmin(BaseAdmin):
             "ru": "Имя сотрудника, которого представляет бот."
         },
         "mention_name": {
-            "en": "Should the bot mention users by name?",
-            "ru": "Должен ли бот упоминать пользователей по имени?"
+            "en": "Should the bot mention its name?",
+            "ru": "Должен ли бот упоминать свое имя?"
         },
         "avatar": {
             "en": "Upload an image for the bot's avatar.",

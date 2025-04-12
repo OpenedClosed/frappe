@@ -8,6 +8,7 @@ from asyncio import Lock
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
+import httpx
 import requests
 from pydantic import ValidationError
 
@@ -23,7 +24,7 @@ from openai_base.openai_init import openai_client
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatSession, GptEvaluation)
-from ..utils.help_functions import (find_last_bot_message, get_bot_context,
+from ..utils.help_functions import (clean_markdown, find_last_bot_message, get_bot_context,
                                     get_knowledge_base, get_weather_by_address,
                                     send_message_to_bot,
                                     split_text_into_chunks)
@@ -49,6 +50,7 @@ async def handle_message(
     is_superuser: bool,
     user_language: str,
     gpt_lock: Lock,
+    user_data: dict
 ) -> None:
     """Определяем тип сообщения и вызываем нужный handler."""
 
@@ -69,7 +71,7 @@ async def handle_message(
             await handler(
                 manager, chat_id, client_id, redis_session_key, redis_flood_key,
                 data, is_superuser, user_language, typing_manager,
-                gpt_lock
+                gpt_lock, user_data
             )
 
     elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
@@ -156,6 +158,8 @@ async def save_and_broadcast_new_message(
         chat_session.chat_id,
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
+    message = clean_markdown(new_msg.message)
+    chunks = split_text_into_chunks(message)
 
     if new_msg.sender_role != SenderRole.CLIENT and chat_session.client.external_id:
         await send_message_to_external_meta_channel(chat_session, new_msg)
@@ -192,28 +196,30 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
     # Альтернативный вариант через Facebook Graph
     # url = f"https://graph.facebook.com/v22.0/{settings.INSTAGRAM_BOT_ID}/messages"
 
+    message = clean_markdown(message)
     chunks = split_text_into_chunks(message)
 
-    for i, chunk in enumerate(chunks, 1):
+    headers = {
+        "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
 
-        payload = {
-            "recipient": {"id": recipient_id},
-            "message": {"text": chunk},
-            "metadata": "broadcast"
-        }
+    async with httpx.AsyncClient() as client:
+        for i, chunk in enumerate(chunks, 1):
+            payload = {
+                "recipient": {"id": recipient_id},
+                "message": {"text": chunk},
+                "metadata": "broadcast"
+            }
 
-        headers = {
-            "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
-            "Content-Type": "application/json"
-        }
-
-        response = requests.post(url, json=payload, headers=headers)
-
-        if response.status_code == 200:
-            logging.info(f"Отправлено в Instagram: {recipient_id}")
-        else:
-            logging.error(
-                f"Ошибка Instagram: {response.status_code} {response.text}")
+            try:
+                response = await client.post(url, json=payload, headers=headers)
+                if response.status_code == 200:
+                    logging.info(f"Отправлено в Instagram: {recipient_id}")
+                else:
+                    logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
+            except httpx.HTTPError as e:
+                logging.error(f"HTTP ошибка при отправке в Instagram: {e}")
 
 
 # ==============================
@@ -244,13 +250,18 @@ async def send_whatsapp_message(recipient_phone_id: str, message: str) -> None:
         "Content-Type": "application/json"
     }
 
-    response = requests.post(url, json=payload, headers=headers)
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=payload, headers=headers)
 
-    if response.status_code == 200:
-        logging.info(f"Отправлено в WhatsApp: {recipient_phone_id}")
-    else:
-        logging.error(
-            f"Ошибка WhatsApp: {response.status_code} {response.text}")
+            if response.status_code == 200:
+                logging.info(f"Отправлено в WhatsApp: {recipient_phone_id}")
+            else:
+                logging.error(
+                    f"Ошибка WhatsApp: {response.status_code} {response.text}"
+                )
+        except httpx.HTTPError as e:
+            logging.error(f"HTTP ошибка при отправке в WhatsApp: {e}")
 
 
 # ==============================
@@ -316,7 +327,8 @@ async def handle_new_message(
     is_superuser: bool,
     user_language: str,
     typing_manager: TypingManager,
-    gpt_lock: Lock
+    gpt_lock: Lock,
+    user_data: dict
 ) -> None:
     """Обрабатывает новое сообщение от пользователя."""
 
@@ -372,7 +384,8 @@ async def handle_new_message(
                 redis_key_session=redis_key_session,
                 user_language=user_language,
                 typing_manager=typing_manager,
-                gpt_lock=gpt_lock
+                gpt_lock=gpt_lock,
+                user_data=user_data
             )
         )
         gpt_task_manager.set_task(chat_id, new_task)
@@ -830,7 +843,8 @@ async def process_user_query_after_brief(
     redis_key_session: str,
     user_language: str,
     typing_manager: TypingManager,
-    gpt_lock: Lock
+    gpt_lock: Lock,
+    user_data: dict
 ) -> Optional[ChatMessage]:
     """
     Обрабатывает пользовательский запрос после брифа, используя GPT-логику.
@@ -839,12 +853,15 @@ async def process_user_query_after_brief(
     """
     try:
         async with gpt_lock:
-            user_info = extract_brief_info(chat_session)
+            if not user_data:
+                user_data = {}
+            brief_info = extract_brief_info(chat_session)
+            user_data["brief_info"] = brief_info
             chat_history = chat_session.messages[-25:]
             knowledge_base = await get_knowledge_base()
 
             gpt_data = await determine_topics_via_gpt(
-                user_msg.message, user_info, knowledge_base
+                user_msg.message, user_data, knowledge_base
             )
 
             user_msg.gpt_evaluation = GptEvaluation(
@@ -861,6 +878,7 @@ async def process_user_query_after_brief(
                 manager=manager,
                 chat_session=chat_session,
                 user_msg=user_msg,
+                user_data=user_data,
                 chat_history=chat_history,
                 redis_key_session=redis_key_session,
                 user_language=user_language,
@@ -948,7 +966,7 @@ async def generate_ai_answer(
 
 async def determine_topics_via_gpt(
     user_message: str,
-    user_info: str,
+    user_info: dict,
     knowledge_base: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
@@ -1037,6 +1055,7 @@ async def _build_ai_response(
     manager: Any,
     chat_session: ChatSession,
     user_msg: ChatMessage,
+    user_data: dict,
     chat_history: List[ChatMessage],
     redis_key_session: str,
     user_language: str,
@@ -1083,7 +1102,7 @@ async def _build_ai_response(
     final_text = await generate_ai_answer(
         user_message=user_msg.message,
         snippets=snippet_data,
-        user_info=extract_brief_info(chat_session),
+        user_info=str(user_data),
         chat_history=chat_history,
         style="",
         user_language=user_language,

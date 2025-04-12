@@ -7,6 +7,7 @@ from fastapi_jwt_auth.exceptions import JWTDecodeError, MissingTokenError
 
 from db.mongo.db_init import mongo_db
 from users.db.mongo.schemas import Settings
+from users.utils.help_functions import get_current_user
 
 
 @AuthJWT.load_config
@@ -72,6 +73,63 @@ def jwt_required():
                 raise e
             except Exception as e:
                 raise e
+
+        return wrapper
+    return decorator
+
+
+def permission_required(permission_cls):
+    """
+    Декоратор, проверяющий права доступа через permission.check().
+    Автоматически определяет `action` из метода запроса.
+    """
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(
+            request: Request,
+            response: Response,
+            *args,
+            Authorize: AuthJWT = Depends(),
+            **kwargs
+        ):
+            user = None
+            try:
+                Authorize.jwt_required()
+                user = await get_current_user(Authorize)
+            except (MissingTokenError, JWTDecodeError):
+                user = None
+            except HTTPException as e:
+                raise e
+            except Exception as e:
+                raise HTTPException(401, f"Auth error: {str(e)}")
+
+            method = request.method.upper()
+            method_to_action = {
+                "GET": "read",
+                "POST": "create",
+                "PUT": "update",
+                "PATCH": "update",
+                "DELETE": "delete",
+            }
+            action = method_to_action.get(method)
+            if not action:
+                raise HTTPException(405, f"Unsupported method: {method}")
+
+            permission = permission_cls()
+            try:
+                permission.check(user=user, action=action)
+            except HTTPException as e:
+                raise e
+            except Exception as e:
+                raise HTTPException(403, f"No permission to perform '{action}'.")
+
+            return await func(
+                request=request,
+                response=response,
+                *args,
+                Authorize=Authorize,
+                **kwargs
+            )
 
         return wrapper
     return decorator

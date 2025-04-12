@@ -12,6 +12,8 @@ from chats.ws.ws_handlers import (broadcast_error, handle_get_messages,
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from main import app
+from users.db.mongo.enums import RoleEnum
+from users.utils.help_functions import get_user_by_id
 
 from ..db.mongo.schemas import ChatSession
 from ..utils.help_functions import (determine_language, generate_client_id,
@@ -27,7 +29,19 @@ from .ws_helpers import (get_typing_manager, get_ws_manager, gpt_task_manager,
 @app.websocket("/ws/{chat_id}/")
 async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     """WebSocket соединение для чата."""
-    is_superuser = bool(await websocket_jwt_required(websocket))
+    user_data = None
+    user=None
+    user_id = await websocket_jwt_required(websocket)
+    
+    if user_id:
+        try:
+            user = await get_user_by_id(user_id)
+            user_data = await user.get_full_user_data()
+        except Exception as e:
+            logging.warning(f"Cannot load user from JWT: {e}")
+
+    is_superuser = user and user.role == RoleEnum.SUPERADMIN
+
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)
 
@@ -74,19 +88,20 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
                     redis_flood_key=redis_flood_key,
                     is_superuser=is_superuser,
                     user_language=user_language,
-                    gpt_lock=gpt_lock
+                    gpt_lock=gpt_lock,
+                    user_data=user_data
                 )
             )
 
     except WebSocketDisconnect:
-        logging.warning(
-            f"Client disconnected: chat_id={chat_id}, client_id={client_id}")
+        logging.warning(f"Client disconnected: chat_id={chat_id}, client_id={client_id}")
         await manager.disconnect(client_id)
         await typing_manager.remove_typing(chat_id, client_id, manager)
 
     except Exception as e:
         logging.error(f"WebSocket error: {e}")
         await manager.disconnect(client_id)
+
 
 # ==============================
 # Вспомогательные функции

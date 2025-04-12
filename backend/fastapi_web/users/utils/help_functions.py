@@ -21,16 +21,24 @@ async def get_current_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    # Ищем пользователя по _id в коллекции "users" (название подставь своё)
+    user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    user_doc["_id"] = str(user_doc["_id"])
+    data["user_id"] = user_id
+    user = UserWithData(**user_doc, data=data)
+    return user
+
+
+async def get_user_by_id(user_id: str, data: Optional[dict] = {}) -> UserWithData:
+    """
+    Получает пользователя по ID из MongoDB и возвращает в виде UserWithData.
+    """
     user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
     if not user_doc:
         raise HTTPException(status_code=401, detail="User not found")
 
-    # Приводим _id -> str, чтобы удобно было использовать дальше
     user_doc["_id"] = str(user_doc["_id"])
-
-    # Пример: user_doc может содержать "role", "username", "is_superuser" и т.д.
-    # user_doc = User(**user_doc)
     data["user_id"] = user_id
-    user_doc = UserWithData(**user_doc, data=data)
-    return user_doc
+    return UserWithData(**user_doc, data=data)
