@@ -42,6 +42,12 @@
           :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
           @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
       </div>
+      <div v-else-if="currentEntity === 'chat_sessions' && !currentId"
+        class="flex w-full flex-col min-w-0 justify-start items-center">
+
+          <EmbeddedChat class="w-full" v-if="filteredTableData.length>0"  :id="filteredTableData[0]?.chat_id" :chatsData="filteredTableData" />
+
+      </div>
       <!-- <div
         v-else-if="currentEntity === 'patients_bonus_program' && !currentId"
         class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center"
@@ -117,6 +123,7 @@ import MainForm from "~/components/Dashboard/Components/Form/MainForm.vue";
 import KnowledgeBase from "~/components/Dashboard/Components/KnowledgeBase.vue";
 import FamilyTable from "~/components/Dashboard/Components/Personal/FamilyTable.vue";
 import SupportPage from "~/components/Dashboard/Components/Personal/SupportPage.vue";
+import EmbeddedChat from "~/components/AdminChat/EmbeddedChat.vue";
 // ------------------ State & Refs ------------------
 const showFilter = ref(false);
 const searchQuery = ref("");
@@ -362,7 +369,7 @@ function findEntityConfig(data, groupKey, entityKey) {
 
 // Add near your other refs
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 const totalRecords = ref(0);
 
 // ------------------ Table Data Fetching & Display ------------------
@@ -389,6 +396,8 @@ const fetchTableData = async () => {
 
   isLoading.value = true;
   try {
+
+    let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
     const response = await useNuxtApp().$api.get(
       `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`
     );

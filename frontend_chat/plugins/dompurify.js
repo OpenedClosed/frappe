@@ -1,6 +1,6 @@
-import { defineNuxtPlugin } from '#app';
-import DOMPurify from 'dompurify';
+import { defineNuxtPlugin } from "#app";
+import DOMPurify from "dompurify";
 
-export default defineNuxtPlugin(nuxtApp => {
-  nuxtApp.provide('dompurify', DOMPurify);
+export default defineNuxtPlugin((nuxtApp) => {
+  nuxtApp.provide("dompurify", DOMPurify);
 });

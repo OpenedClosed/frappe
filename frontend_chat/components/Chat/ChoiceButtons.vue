@@ -5,7 +5,7 @@
     <Button
       v-for="(option, index) in choiceOptions"
       :key="index"
-      :label="Array.isArray(option) ? option[0] : option" 
+      :label="Array.isArray(option) ? option[0] : option"
       class="p-button-outlined min-w-[160px]"
       @click="() => handleChoiceClick(Array.isArray(option) ? option[1] : option)"
     />
@@ -13,39 +13,38 @@
 </template>
 
 <script setup>
-import Button from "primevue/button";
-import { watch } from "vue";
+  import Button from "primevue/button";
+  import { watch } from "vue";
 
-const props = defineProps({
-  choiceOptions: {
-    type: Array,
-    default: () => []
-  },
-  handleChoiceClick: {
-    type: Function,
-    required: true
-  }
-});
+  const props = defineProps({
+    choiceOptions: {
+      type: Array,
+      default: () => [],
+    },
+    handleChoiceClick: {
+      type: Function,
+      required: true,
+    },
+  });
 
-watch(
-  () => props.choiceOptions,
-  (newVal) => {
-    console.log("ChoiceButtons: choiceOptions changed", newVal);
-  }
-);
+  watch(
+    () => props.choiceOptions,
+    (newVal) => {
+      console.log("ChoiceButtons: choiceOptions changed", newVal);
+    }
+  );
 </script>
 
 <style>
-.buttons-background {
-  font-family: "Quicksand", sans-serif;
-  overflow: hidden;
-  background-color: #f8f9fa;
-}
-
-@media (prefers-color-scheme: dark) {
   .buttons-background {
-    background-color: #131415 !important;
+    font-family: "Quicksand", sans-serif;
+    overflow: hidden;
+    background-color: #f8f9fa;
   }
-}
 
+  @media (prefers-color-scheme: dark) {
+    .buttons-background {
+      background-color: #131415 !important;
+    }
+  }
 </style>

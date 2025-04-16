@@ -56,7 +56,7 @@ if (headerData.value) {
   // Destructure the two objects from headerData.value
   const { responseData, responseDataMe } = headerData.value;
   console.log("responseDataMe", responseDataMe);
-  if (responseDataMe.role && (responseDataMe.role === "admin" || responseDataMe.role === "superadmin")) {
+  if (responseDataMe?.role && (responseDataMe?.role === "admin" || responseDataMe?.role === "superadmin")) {
     isAdmin.value = true;
   }
   // Use responseData (and responseDataMe if needed) inside setData
@@ -72,21 +72,21 @@ if (headerData.value) {
 function setData(data: any) {
   console.log("Полученные данные headerData =", data);
   // Пример: формируем полное имя из first_name и last_name (и patronymic, если есть)
-  patientName.value = [data.first_name, data.patronymic, data.last_name]
+  patientName.value = [data?.first_name, data?.patronymic, data?.last_name]
     .filter(Boolean)
     .join(" ") || "Неизвестный пациент";
-  patientId.value = data.patient_id || "";
-  bonusCount.value = data.bonus_count || 0;
+  patientId.value = data?.patient_id || "";
+  bonusCount.value = data?.bonus_count || 0;
 
   // Если в ответе API присутствует контактная информация, устанавливаем её
-  if(data.contact) {
+  if(data?.contact) {
     contactInfo.value = {
-      email: data.contact.email || "",
-      phone: data.contact.phone || "",
-      address: data.contact.address || "",
-      pesel: data.contact.pesel || "",
-      documentId: data.contact.document_id || "",
-      emergencyContact: data.contact.emergency_contact || "",
+      email: data?.contact.email || "",
+      phone: data?.contact.phone || "",
+      address: data?.contact.address || "",
+      pesel: data?.contact.pesel || "",
+      documentId: data?.contact.document_id || "",
+      emergencyContact: data?.contact.emergency_contact || "",
     };
   }
 }

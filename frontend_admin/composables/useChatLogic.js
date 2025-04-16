@@ -1,20 +1,22 @@
 // ~/composables/useChatLogic.js
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
-import { useI18n } from "vue-i18n";
-import { useToast } from "primevue/usetoast";
+// import { useI18n } from "vue-i18n";
+// import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
+const { isAutoMode, currentChatId } = useChatState();
+
+import { debounce } from "lodash";
 
 export function useChatLogic(options = {}) {
-  const { isTelegram = false, chat_id } = options; // Переключение под Telegram при необходимости
-  console.log('chat_id',chat_id)
-  const { t, locale } = useI18n();
-  const toast = useToast();
-  const { isAutoMode } = useChatState();
+  const { isTelegram = false } = options; // Переключение под Telegram при необходимости
+  console.log("currentChatId.value", currentChatId.value);
+  // const { t, locale } = useI18n();
+  // const toast = useToast();
 
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
   const isIphone = ref(false);
- 
+
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
   const currentUserId = ref("4321");
@@ -34,7 +36,6 @@ export function useChatLogic(options = {}) {
       typingUsers: [],
     },
   ];
-  
 
   // Список сообщений и статус загрузки
   const messages = ref([]);
@@ -101,7 +102,8 @@ export function useChatLogic(options = {}) {
    * Преобразовать сообщения API в формат для компонента чата (vue-advanced-chat).
    */
   async function transformChatMessages(apiMessages) {
-    const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
+    // const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
+    const currentLocale = "en";
     const results = [];
 
     for (let [index, msg] of apiMessages.entries()) {
@@ -153,6 +155,7 @@ export function useChatLogic(options = {}) {
       } else {
         roleEn = "unknown";
       }
+      // console.log("roleEn", roleEn);
 
       // Determine senderId and username
       let senderId;
@@ -173,6 +176,7 @@ export function useChatLogic(options = {}) {
 
       // Determine if the message should appear on the right (sent) or left
       const isSent = ["ai", "AI Assistant", "consultant", "Consultant"].includes(roleEn);
+      // console.log("senderId", senderId);
 
       results.push({
         _id: msg._id ?? index,
@@ -295,22 +299,24 @@ export function useChatLogic(options = {}) {
 
     websocket.value.onmessage = async (event) => {
       const data = JSON.parse(event.data);
-
+      console.log("Получено сообщение:", data);
       // Показываем toast при определённых типах
       if (data.type === "attention") {
-        toast.add({
-          severity: "warn",
-          summary: t("additionalMessages.attention"),
-          detail: data.message,
-          life: 6000,
-        });
+        // toast.add({
+        //   severity: "warn",
+        //   // summary: t("additionalMessages.attention"),
+        //   summary: "attention",
+        //   detail: data.message,
+        //   life: 6000,
+        // });
       } else if (data.type === "error") {
-        toast.add({
-          severity: "error",
-          summary: t("additionalMessages.error"),
-          detail: data.message,
-          life: 6000,
-        });
+        // toast.add({
+        //   severity: "error",
+        //   // summary: t("additionalMessages.error"),
+        //   summary: "error",
+        //   detail: data.message,
+        //   life: 6000,
+        // });
       }
 
       // Основная обработка типов сообщений
@@ -397,29 +403,29 @@ export function useChatLogic(options = {}) {
   }
 
   /**
-   * Обновление чата (просим новый chat_id, очищаем сообщения).
+   * Обновление чата (просим новый currentChatId.value, очищаем сообщения).
    */
   async function refreshChat() {
-    try {
-      if (response.data) {
-        toast.add({
-          severity: "success",
-          summary: t("additionalMessages.chatRefreshed"),
-          detail: t("additionalMessages.chatRefreshedSuccessfully"),
-          life: 3000,
-        });
-        messages.value = [];
-        currenChatId.value = chat_id;
-        initializeWebSocket(chat_id);
-      }
-    } catch (error) {
-      toast.add({
-        severity: "error",
-        summary: t("additionalMessages.error"),
-        detail: t("additionalMessages.failedToRefreshChat"),
-        life: 3000,
-      });
-    }
+    // try {
+    //   if (response.data) {
+    //     // toast.add({
+    //     //   severity: "success",
+    //     //   summary: t("additionalMessages.chatRefreshed"),
+    //     //   detail: t("additionalMessages.chatRefreshedSuccessfully"),
+    //     //   life: 3000,
+    //     // });
+    //     messages.value = [];
+    //     currenChatId.value = currentChatId.value;
+    //     // initializeWebSocket(currentChatId.value);
+    //   }
+    // } catch (error) {
+    //   // toast.add({
+    //   //   severity: "error",
+    //   //   summary: t("additionalMessages.error"),
+    //   //   detail: t("additionalMessages.failedToRefreshChat"),
+    //   //   life: 3000,
+    //   // });
+    // }
   }
 
   /**
@@ -443,6 +449,7 @@ export function useChatLogic(options = {}) {
     // Можно оставить пустым, чтобы не было автопереподключений или повторных запросов
   }
 
+
   // ---------------- Жизненный цикл ----------------
 
   onMounted(async () => {
@@ -452,12 +459,11 @@ export function useChatLogic(options = {}) {
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     isIphone.value = /iPhone/i.test(ua);
 
-    // Получаем начальный chat_id с бэкенда
+    // Получаем начальный currentChatId.value с бэкенда
     const chatData = await useAsyncData("chatData", getChatData);
     if (chatData.data && chatData.data.value) {
-
-      currenChatId.value = chat_id;
-      initializeWebSocket(chat_id);
+      currenChatId.value = currentChatId.value;
+      initializeWebSocket(currentChatId.value);
     }
 
     // Настройки для Telegram (если нужно)
@@ -489,11 +495,23 @@ export function useChatLogic(options = {}) {
     window.removeEventListener("resize", checkScreenSize);
   });
 
+  // ⟵⟵⟵  добавляем функцию‑чистильщик
+  function destroy() {
+    if (websocket.value) {
+      websocket.value.onclose = null;
+      websocket.value.close();
+      websocket.value = null;
+    }
+    if (countdownInterval) clearInterval(countdownInterval);
+    window.removeEventListener("focus", handleFocus);
+    window.removeEventListener("resize", checkScreenSize);
+  }
+
   // ---------------- Возвращаемые переменные и методы ----------------
 
   return {
     // Состояния
-    t,
+
     isMobile,
     isIphone,
     currentUserId,
@@ -513,5 +531,8 @@ export function useChatLogic(options = {}) {
     reloadPage,
     refreshChat,
     updateMessages,
+    transformChatMessages,
+    destroy,
+    initializeWebSocket,
   };
 }

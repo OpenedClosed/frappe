@@ -13,7 +13,7 @@ export function useChatLogic(options = {}) {
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
   const isIphone = ref(false);
- 
+
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
   const currentUserId = ref("1234");
@@ -236,14 +236,14 @@ export function useChatLogic(options = {}) {
       })
     );
   }
- 
+
   /**
    * Переключение режима (авто/вручную).
    */
   function toggleChatMode(isAuto) {
-    console.log("toggleChatMode:", isAuto);
+    // console.log("toggleChatMode:", isAuto);
     const command = isAuto ? "/auto" : "/manual";
-    console.log("Отправляем команду:", command);
+    // console.log("Отправляем команду:", command);
     sendMessage({ content: command });
   }
 
@@ -269,13 +269,12 @@ export function useChatLogic(options = {}) {
   }
   const { $event, $listen } = useNuxtApp();
 
-  const MIN_INTERVAL = 0;   // ≥ 5 с между отправками
-  const AFTER_MESSAGE = 0;  // ≥ 2 с после события «пришло сообщение»
-
+  const MIN_INTERVAL = 0; // ≥ 5 с между отправками
+  const AFTER_MESSAGE = 0; // ≥ 2 с после события «пришло сообщение»
 
   // ---- NEW: управление status_check ----
-  let lastStatusSent = 0;          // timeStamp последней отправки
-  let pendingStatusTimer = null;   // id тайм‑аута, если уже запланирован
+  let lastStatusSent = 0; // timeStamp последней отправки
+  let pendingStatusTimer = null; // id тайм‑аута, если уже запланирован
 
   function scheduleStatusCheck() {
     const now = Date.now();
@@ -289,9 +288,9 @@ export function useChatLogic(options = {}) {
     const delay = plannedAt - now;
 
     pendingStatusTimer = setTimeout(() => {
-      websocket.value?.send(JSON.stringify({ type: 'status_check' }));
+      websocket.value?.send(JSON.stringify({ type: "status_check" }));
       lastStatusSent = Date.now();
-      pendingStatusTimer = null;   // освободили слоты для следующего сообщения
+      pendingStatusTimer = null; // освободили слоты для следующего сообщения
     }, delay);
   }
   // УБРАНА throttle и прочие повторные вызовы, оставляем простую функцию
@@ -336,13 +335,12 @@ export function useChatLogic(options = {}) {
       // Основная обработка типов сообщений
       switch (data.type) {
         case "status_check":
-          
           if (data.remaining_time) {
             startCountdown(data.remaining_time);
           }
-          console.log("status_check", data);
+          // console.log("status_check", data);
           // Синхронизируем режим
-          console.log("isAutoMode", !data.manual_mode);
+          // console.log("isAutoMode", !data.manual_mode);
           isAutoMode.value = !data.manual_mode;
           break;
 
@@ -366,7 +364,7 @@ export function useChatLogic(options = {}) {
               isChoiceStrict.value = false;
             }
             // Синхронизируем режим
-          isAutoMode.value = !data.manual_mode;
+            isAutoMode.value = !data.manual_mode;
           }
           break;
 
@@ -388,7 +386,7 @@ export function useChatLogic(options = {}) {
             }
             $event("choice_options_arrived", choiceOptions.value);
             // Синхронизируем режим
-          isAutoMode.value = !data.manual_mode;
+            isAutoMode.value = !data.manual_mode;
           }
           break;
 
@@ -465,13 +463,33 @@ export function useChatLogic(options = {}) {
       return null;
     }
   }
+  // ───  Настройки «debounce» для переподключения  ────────────────────────────────
+  const RECONNECT_DEBOUNCE = 5000; // 5 секунд
+  let lastReconnectAttempt = 0; // timestamp последней попытки
 
   /**
-   * Если вкладка вернулась в фокус, при необходимости можно проверить состояние.
-   * (УБРАНО повторное переподключение тут же)
+   * Если WebSocket закрыт / не открыт — переподключаемся.
+   * Если открыт — просто шлём status_check.
+   * Повторяем не чаще, чем раз в 5 секунд.
    */
+  function attemptReconnect() {
+    const now = Date.now();
+    if (now - lastReconnectAttempt < RECONNECT_DEBOUNCE) return; // debounce
+
+    lastReconnectAttempt = now;
+
+    if (!websocket.value || [WebSocket.CLOSED, WebSocket.CLOSING].includes(websocket.value.readyState)) {
+      console.log("[focus] сокет закрыт → переподключаемся");
+      initializeWebSocket(currenChatId.value);
+    } else {
+      console.log("[focus] сокет открыт → status_check");
+      websocket.value?.send(JSON.stringify({ type: "status_check" }));
+    }
+  }
+
+  // ───  Заменяем пустую handleFocus  ─────────────────────────────────────────────
   function handleFocus() {
-    // Можно оставить пустым, чтобы не было автопереподключений или повторных запросов
+    attemptReconnect();
   }
 
   // ---------------- Жизненный цикл ----------------

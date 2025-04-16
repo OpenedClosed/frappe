@@ -1,148 +1,148 @@
 {
-    "chat": "Chat",
-    "newChat": "New chat",
-    "showCommands": "Show commands",
-    "sendMessage": "Send a message...",
-    "chatAgain": "Chat again",
-    "language": "Language",
-    "roomActions": [
-      {
-        "name": "archiveRoom",
-        "title": "Archive Room"
-      }
-    ],
-    "menuActions": [
-      {
-        "name": "inviteUser",
-        "title": "Invite User"
-      },
-      {
-        "name": "removeUser",
-        "title": "Remove User"
-      },
-      {
-        "name": "deleteRoom",
-        "title": "Delete Room"
-      }
-    ],
-    "messageActions": [
-      {
-        "name": "replyMessage",
-        "title": "Reply"
-      },
-      {
-        "name": "editMessage",
-        "title": "Edit Message",
-        "onlyMe": true
-      },
-      {
-        "name": "deleteMessage",
-        "title": "Delete Message",
-        "onlyMe": true
-      },
-      {
-        "name": "selectMessages",
-        "title": "Select"
-      }
-    ],
-    "messageSelectionActions": [
-      {
-        "name": "deleteMessages",
-        "title": "Delete"
-      },
-      {
-        "name": "forwardMessages",
-        "title": "Forward"
-      }
-    ],
-    "templatesText": [
-      {
-        "tag": "help",
-        "text": "This is the help"
-      },
-      {
-        "tag": "action",
-        "text": "This is the action"
-      }
-    ],
-    "textMessages": {
-      "ROOMS_EMPTY": "No conversations",
-      "ROOM_EMPTY": "No conversation selected",
-      "NEW_MESSAGES": "New messages",
-      "MESSAGE_DELETED": "This message was deleted",
-      "MESSAGES_EMPTY": "No messages",
-      "CONVERSATION_STARTED": "The conversation started on:",
-      "TYPE_MESSAGE": "Type your message",
-      "SEARCH": "Search",
-      "IS_ONLINE": "is online",
-      "LAST_SEEN": "last seen ",
-      "IS_TYPING": "is typing...",
-      "CANCEL_SELECT_MESSAGE": "Cancel Selection"
-    },
-    "additionalMessages": {
-      "chatRefreshed": "Chat Refreshed",
-      "chatRefreshedSuccessfully": "The chat has been refreshed successfully.",
-      "errorRefreshingChat": "Error refreshing chat:",
-      "failedToRefreshChat": "Failed to refresh the chat.",
-      "sendingMessage": "Sending message:",
-      "attention": "Attention",
-      "error": "Error",
-      "choiceOptions": "Choice Options:",
-      "choiceOptionsFromLastMessage": "Choice Options (from last message):",
-      "messagesRetrieved": "Messages Retrieved:",
-      "newMessage": "New Message:",
-      "unknownMessageType": "Unknown message type:",
-      "webSocketConnectionEstablished": "WebSocket connection established.",
-      "webSocketConnectionClosed": "WebSocket connection closed.",
-      "webSocketError": "WebSocket error:",
-      "pageIsVisibleCheckingWSConnection": "Page is visible. Checking WebSocket connection...",
-      "pageIsHiddenPausingUpdates": "Page is hidden. Pausing updates.",
-      "windowInFocus": "Window in focus",
-      "webSocketIsNotOpenReconnecting": "WebSocket is not open. Reconnecting..."
-    },
-    "knowledgeBase": {
-      "addTopic": "Add Topic",
-      "removeTopic": "Remove Topic",
-      "addSubtopic": "Add Subtopic",
-      "removeSubtopic": "Remove Subtopic",
-      "addQuestion": "Add Question",
-      "removeQuestion": "Remove Question",
-      "renameTopic": "Rename Topic",
-      "renameSubtopic": "Rename Subtopic",
-      "saveChanges": "Save Changes",
-      "discardChanges": "Discard Changes",
-      "exportData": "Export Data",
-      "importData": "Import Data",
-      "clearPlayground": "Clear Playground",
-      "confirmRemoveTopic": "Remove topic \"{topicName}\"?",
-      "confirmRemoveSubtopic": "Remove subtopic \"{subtopicName}\" from \"{topicName}\"?",
-      "confirmRemoveQuestion": "Remove question \"{questionKey}\"?",
-      "unsavedChangesWarning": "You have unsaved changes. Are you sure you want to leave?",
-      "label": {
-        "promptTextarea": "Query field",
-        "question": "Question",
-        "answerText": "Answer text",
-        "linksFiles": "Links / Files",
-        "selectedFiles": "Selected files"
-      },
-      "button": {
-        "howToUse": "How to use this tool?",
-        "generateSmartChange": "Generate smart change",
-        "openTestChat": "Open test chat",
-        "clearPlayground": "Clear workspace",
-        "addTopic": "Add topic",
-        "addSubtopic": "Add subtopic",
-        "addQuestion": "Add question",
-        "addLink": "Add link",
-        "savePlayground": "Save workspace",
-        "rejectPlayground": "Reject workspace",
-        "transferToDatabase": "Transfer to database",
-        "exportJson": "Export JSON",
-        "importJson": "Import JSON"
-      },
-      "header": {
-        "workspacePlayground": "Workspace",
-        "readonlyKnowledgeBase": "Knowledge base (read-only)"
-      }
+  "chat": "Chat",
+  "newChat": "New chat",
+  "showCommands": "Show commands",
+  "sendMessage": "Send a message...",
+  "chatAgain": "Chat again",
+  "language": "Language",
+  "roomActions": [
+    {
+      "name": "archiveRoom",
+      "title": "Archive Room"
     }
+  ],
+  "menuActions": [
+    {
+      "name": "inviteUser",
+      "title": "Invite User"
+    },
+    {
+      "name": "removeUser",
+      "title": "Remove User"
+    },
+    {
+      "name": "deleteRoom",
+      "title": "Delete Room"
+    }
+  ],
+  "messageActions": [
+    {
+      "name": "replyMessage",
+      "title": "Reply"
+    },
+    {
+      "name": "editMessage",
+      "title": "Edit Message",
+      "onlyMe": true
+    },
+    {
+      "name": "deleteMessage",
+      "title": "Delete Message",
+      "onlyMe": true
+    },
+    {
+      "name": "selectMessages",
+      "title": "Select"
+    }
+  ],
+  "messageSelectionActions": [
+    {
+      "name": "deleteMessages",
+      "title": "Delete"
+    },
+    {
+      "name": "forwardMessages",
+      "title": "Forward"
+    }
+  ],
+  "templatesText": [
+    {
+      "tag": "help",
+      "text": "This is the help"
+    },
+    {
+      "tag": "action",
+      "text": "This is the action"
+    }
+  ],
+  "textMessages": {
+    "ROOMS_EMPTY": "No conversations",
+    "ROOM_EMPTY": "No conversation selected",
+    "NEW_MESSAGES": "New messages",
+    "MESSAGE_DELETED": "This message was deleted",
+    "MESSAGES_EMPTY": "No messages",
+    "CONVERSATION_STARTED": "The conversation started on:",
+    "TYPE_MESSAGE": "Type your message",
+    "SEARCH": "Search",
+    "IS_ONLINE": "is online",
+    "LAST_SEEN": "last seen ",
+    "IS_TYPING": "is typing...",
+    "CANCEL_SELECT_MESSAGE": "Cancel Selection"
+  },
+  "additionalMessages": {
+    "chatRefreshed": "Chat Refreshed",
+    "chatRefreshedSuccessfully": "The chat has been refreshed successfully.",
+    "errorRefreshingChat": "Error refreshing chat:",
+    "failedToRefreshChat": "Failed to refresh the chat.",
+    "sendingMessage": "Sending message:",
+    "attention": "Attention",
+    "error": "Error",
+    "choiceOptions": "Choice Options:",
+    "choiceOptionsFromLastMessage": "Choice Options (from last message):",
+    "messagesRetrieved": "Messages Retrieved:",
+    "newMessage": "New Message:",
+    "unknownMessageType": "Unknown message type:",
+    "webSocketConnectionEstablished": "WebSocket connection established.",
+    "webSocketConnectionClosed": "WebSocket connection closed.",
+    "webSocketError": "WebSocket error:",
+    "pageIsVisibleCheckingWSConnection": "Page is visible. Checking WebSocket connection...",
+    "pageIsHiddenPausingUpdates": "Page is hidden. Pausing updates.",
+    "windowInFocus": "Window in focus",
+    "webSocketIsNotOpenReconnecting": "WebSocket is not open. Reconnecting..."
+  },
+  "knowledgeBase": {
+    "addTopic": "Add Topic",
+    "removeTopic": "Remove Topic",
+    "addSubtopic": "Add Subtopic",
+    "removeSubtopic": "Remove Subtopic",
+    "addQuestion": "Add Question",
+    "removeQuestion": "Remove Question",
+    "renameTopic": "Rename Topic",
+    "renameSubtopic": "Rename Subtopic",
+    "saveChanges": "Save Changes",
+    "discardChanges": "Discard Changes",
+    "exportData": "Export Data",
+    "importData": "Import Data",
+    "clearPlayground": "Clear Playground",
+    "confirmRemoveTopic": "Remove topic \"{topicName}\"?",
+    "confirmRemoveSubtopic": "Remove subtopic \"{subtopicName}\" from \"{topicName}\"?",
+    "confirmRemoveQuestion": "Remove question \"{questionKey}\"?",
+    "unsavedChangesWarning": "You have unsaved changes. Are you sure you want to leave?",
+    "label": {
+      "promptTextarea": "Query field",
+      "question": "Question",
+      "answerText": "Answer text",
+      "linksFiles": "Links / Files",
+      "selectedFiles": "Selected files"
+    },
+    "button": {
+      "howToUse": "How to use this tool?",
+      "generateSmartChange": "Generate smart change",
+      "openTestChat": "Open test chat",
+      "clearPlayground": "Clear workspace",
+      "addTopic": "Add topic",
+      "addSubtopic": "Add subtopic",
+      "addQuestion": "Add question",
+      "addLink": "Add link",
+      "savePlayground": "Save workspace",
+      "rejectPlayground": "Reject workspace",
+      "transferToDatabase": "Transfer to database",
+      "exportJson": "Export JSON",
+      "importJson": "Import JSON"
+    },
+    "header": {
+      "workspacePlayground": "Workspace",
+      "readonlyKnowledgeBase": "Knowledge base (read-only)"
+    }
+  }
 }

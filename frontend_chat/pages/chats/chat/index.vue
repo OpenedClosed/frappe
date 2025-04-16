@@ -1,11 +1,6 @@
-<script setup>
-
-
-
-</script>
+<script setup></script>
 <template>
-    <div class="Main">
-        <ChatMainChat/>
-        
-    </div>
+  <div class="Main">
+    <ChatMainChat />
+  </div>
 </template>

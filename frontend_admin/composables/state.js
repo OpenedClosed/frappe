@@ -22,9 +22,11 @@ export const useLanguageState = () => {
 
 export function useChatState() {
   const isAutoMode = useState("isAutoMode", () => true);
+  const currentChatId = useState("currentChatId", () => '');
 
   return {
     isAutoMode,
+    currentChatId,
   };
 }
 
