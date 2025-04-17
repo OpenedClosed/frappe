@@ -106,7 +106,7 @@ export function useChatLogic(options = {}) {
     const currentLocale = "en";
     const results = [];
 
-    for (let [index, msg] of apiMessages.entries()) {
+    for (let [index, msg] of apiMessages?.entries()) {
       const contentString = typeof msg.message === "string" ? msg.message : "";
 
       // Attached files (if link preview exists)
