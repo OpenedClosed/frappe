@@ -1,9 +1,10 @@
 (function () {
     function injectIframe() {
       var iframe = document.createElement("iframe");
+      
      
       // Set the iframe attributes
-      iframe.src = `https://hotel-aihub.su/chat/`;
+      iframe.src = `${window.location.protocol}//${window.location.hostname}/chats/chat/`;
       iframe.style.position = "fixed";
       iframe.style.top = "0";
       iframe.style.left = "0";
