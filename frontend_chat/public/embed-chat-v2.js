@@ -4,7 +4,7 @@
       
      
       // Set the iframe attributes
-      iframe.src = `https://dev.panamed-aihubworks.com/chats/chat/`;
+      iframe.src = `https://panamed-aihubworks.com/chats/chat/`;
       
       iframe.style.position = "fixed";
       iframe.style.top = "0";
