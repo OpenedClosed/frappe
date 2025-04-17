@@ -29,7 +29,7 @@ from .ws_helpers import (get_typing_manager, get_ws_manager, gpt_task_manager,
 @app.websocket("/ws/{chat_id}/")
 async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     """WebSocket соединение для чата."""
-    user_data = None
+    user_data = {}
     user=None
     user_id = await websocket_jwt_required(websocket)
     
@@ -40,7 +40,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
         except Exception as e:
             logging.warning(f"Cannot load user from JWT: {e}")
 
-    is_superuser = user and user.role == RoleEnum.SUPERADMIN
+    is_superuser = user and user.role in [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
 
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)
@@ -52,6 +52,8 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
         else generated_id if is_superuser
         else client_id
     )
+    print("ID", client_id, generated_id)
+    user_data["client_id"] = client_id
 
     await manager.connect(websocket, id_to_connect)
 
@@ -68,7 +70,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     if not await validate_session(manager, client_id, chat_id, redis_session_key, is_superuser):
         return
 
-    if not await handle_get_messages(manager, chat_id, redis_session_key):
+    if not await handle_get_messages(manager, chat_id, redis_session_key, user_data):
         await start_brief(chat_session, manager, redis_session_key, user_language)
 
     try:

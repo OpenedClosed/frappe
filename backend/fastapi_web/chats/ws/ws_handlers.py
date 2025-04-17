@@ -2,16 +2,18 @@
 import asyncio
 import json
 import logging
+import pprint
 import random
 import re
 from asyncio import Lock
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Union
 
 import httpx
 import requests
 from pydantic import ValidationError
 
+from users.db.mongo.enums import RoleEnum
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
@@ -22,7 +24,7 @@ from knowledge.utils.help_functions import (build_messages_for_model,
 from openai_base.openai_init import openai_client
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
-from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
+from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage, ChatReadInfo,
                                 ChatSession, GptEvaluation)
 from ..utils.help_functions import (clean_markdown, find_last_bot_message, get_bot_context,
                                     get_knowledge_base, get_weather_by_address,
@@ -73,7 +75,8 @@ async def handle_message(
                 data, is_superuser, user_language, typing_manager,
                 gpt_lock, user_data
             )
-
+    elif handler == handle_get_messages:
+        await handler(manager, chat_id, redis_session_key, user_data)
     elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
         await handler(typing_manager, chat_id, client_id, manager)
     else:
@@ -133,6 +136,7 @@ async def broadcast_message(
         "id": new_msg.id,
         "chat_id": chat_session.chat_id,
         "sender_role": new_msg.sender_role.value,
+        "sender_id": new_msg.sender_id,
         "message": new_msg.message,
         "reply_to": new_msg.reply_to,
         "choice_options": new_msg.choice_options,
@@ -269,16 +273,35 @@ async def send_whatsapp_message(recipient_phone_id: str, message: str) -> None:
 # ==============================
 
 async def handle_status_check(
-        manager: ConnectionManager, chat_id: str, redis_key_session: str) -> None:
-    """Проверяет статус чата и отправляет информацию о текущем режиме (авто/ручной)."""
+    manager: ConnectionManager,
+    chat_id: str,
+    redis_key_session: str
+) -> None:
+    """Проверяет статус чата, режим работы и прочитан ли чат хотя бы одним сотрудником."""
+
     remaining_time = max(await redis_db.ttl(redis_key_session), 0)
-    chat_session = await mongo_db.chats.find_one({"chat_id": chat_id}, {"manual_mode": 1})
+
+    chat_data = await mongo_db.chats.find_one(
+        {"chat_id": chat_id},
+        {"chat_id": 1, "manual_mode": 1, "read_state": 1, "messages": 1}
+    )
+    if not chat_data:
+        return
+
+    chat_session = ChatSession(**chat_data)
+
+    staff_roles = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    staff_users_cursor = mongo_db.users.find({"role": {"$in": [role.value for role in staff_roles]}}, {"_id": 1})
+    staff_ids = {str(user["_id"]) async for user in staff_users_cursor}
+
+    read_by_staff = chat_session.is_read_by_any_staff(staff_ids)
 
     response = custom_json_dumps({
         "type": "status_check",
         "message": "Session is active." if remaining_time > 0 else "Session is expired.",
         "remaining_time": remaining_time,
-        "manual_mode": chat_session.get("manual_mode", False) if chat_session else False
+        "manual_mode": chat_session.manual_mode,
+        "read_by_staff": read_by_staff
     })
     await manager.broadcast(response)
 
@@ -294,28 +317,103 @@ async def handle_get_my_id(manager: ConnectionManager,
 # БЛОК: Хэндлеры сообщений
 # ==============================
 
+# ==============================
+# Получение всех сообщений
+# ==============================
+
 async def handle_get_messages(
-        manager: ConnectionManager, chat_id: str, redis_key_session: str) -> None:
-    """Получает историю сообщений чата."""
-    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
+    manager,
+    chat_id: str,
+    redis_key_session: str,
+    user_data: dict
+) -> bool:
+    """Отдаёт историю чата и фиксирует прочтение текущим клиентом."""
+    chat_data: Dict[str, Any] | None = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
-        response = custom_json_dumps({"type": "get_messages", "messages": [
-        ], "remaining_time": 0, "message": "No chat found."})
-        await manager.broadcast(response)
-        return
+        await manager.broadcast(custom_json_dumps({
+            "type": "get_messages",
+            "messages": [],
+            "remaining_time": 0,
+            "message": "No chat found."
+        }))
+        return False
 
-    chat_session = ChatSession(**chat_data)
-    remaining_time = max(await redis_db.ttl(redis_key_session), 0)
-    messages = sorted([msg.model_dump()
-                      for msg in chat_session.messages], key=lambda x: x["timestamp"])
+    messages: List[dict] = chat_data.get("messages", [])
+    if not messages:
+        remaining = max(await redis_db.ttl(redis_key_session), 0)
+        await manager.broadcast(custom_json_dumps({
+            "type": "get_messages",
+            "messages": [],
+            "remaining_time": remaining
+        }))
+        return messages
 
-    response = custom_json_dumps({
+    last_id = messages[-1]["id"]
+    client_id = user_data["client_id"]
+    user_id = user_data.get("user_id")
+    read_state_raw = chat_data.get("read_state", [])
+    read_state: List[ChatReadInfo] = [
+        ChatReadInfo(**ri) if isinstance(ri, dict) else ri
+        for ri in read_state_raw
+    ]
+
+    now = datetime.utcnow()
+    modified = False
+
+    for ri in read_state:
+        if ri.client_id == client_id:
+            if ri.last_read_msg != last_id:
+                ri.last_read_msg = last_id
+                ri.last_read_at = now
+                modified = True
+            break
+    else:
+        read_state.append(ChatReadInfo(
+            client_id=client_id,
+            user_id=user_id,
+            last_read_msg=last_id,
+            last_read_at=now
+        ))
+        modified = True
+
+    if modified:
+        await mongo_db.chats.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"read_state": [ri.model_dump() for ri in read_state]}}
+        )
+
+    idx = {m["id"]: i for i, m in enumerate(messages)}
+    enriched: List[dict] = []
+
+    for m in messages:
+        own = m.get("sender_id") == client_id
+        if not own:
+            m["read_by"] = []
+            enriched.append(m)
+            continue
+
+        readers = [
+            ri.client_id
+            for ri in read_state
+            if idx.get(ri.last_read_msg, -1) >= idx[m["id"]]
+            and ri.client_id != m.get("sender_id")
+        ]
+        m["read_by"] = readers
+        enriched.append(m)
+
+    remaining = max(await redis_db.ttl(redis_key_session), 0)
+    await manager.broadcast(custom_json_dumps({
         "type": "get_messages",
-        "messages": messages,
-        "remaining_time": remaining_time
-    })
-    await manager.broadcast(response)
+        "messages": enriched,
+        "remaining_time": remaining
+    }))
+    return enriched
 
+
+
+# ==============================
+# Обработка нового сообщения
+# ==============================
 
 async def handle_new_message(
     manager: ConnectionManager,
@@ -353,6 +451,7 @@ async def handle_new_message(
     new_msg = ChatMessage(
         message=msg_text,
         sender_role=SenderRole.CLIENT,
+        sender_id=client_id,
         reply_to=reply_to,
         external_id=external_id
     )
@@ -822,6 +921,7 @@ async def handle_superuser_message(
     new_msg = ChatMessage(
         message=msg_text,
         sender_role=SenderRole.CONSULTANT,
+        sender_id=client_id,
         reply_to=reply_to
     )
 
