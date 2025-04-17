@@ -13,7 +13,8 @@ export function useChatLogic(options = {}) {
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
   const isIphone = ref(false);
-
+// ← здесь
+let skipNextStatusCheck = false;
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
   const currentUserId = ref("1234");
@@ -242,6 +243,7 @@ export function useChatLogic(options = {}) {
    */
   function toggleChatMode(isAuto) {
     // console.log("toggleChatMode:", isAuto);
+    skipNextStatusCheck = true;        
     const command = isAuto ? "/auto" : "/manual";
     // console.log("Отправляем команду:", command);
     sendMessage({ content: command });
@@ -349,7 +351,11 @@ export function useChatLogic(options = {}) {
             const transformed = await transformChatMessages(data.messages);
             messages.value = transformed;
             messagesLoaded.value = true;
-            scheduleStatusCheck();
+            if (!skipNextStatusCheck) {
+              scheduleStatusCheck();
+            } else {
+              skipNextStatusCheck = false;         // сбросили однократный запрет
+            }
 
             if (data.remaining_time) {
               startCountdown(data.remaining_time);
@@ -372,7 +378,11 @@ export function useChatLogic(options = {}) {
           {
             const [transformed] = await transformChatMessages([data]);
             $event("new_message_arrived", transformed);
-            scheduleStatusCheck();
+            if (!skipNextStatusCheck) {
+              scheduleStatusCheck();
+            } else {
+              skipNextStatusCheck = false;         // сбросили однократный запрет
+            }
 
             // УБРАНО повторное status_check после каждого сообщения
 
