@@ -105,7 +105,7 @@ export function useChatLogic(options = {}) {
     // const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
     const currentLocale = "en";
     const results = [];
-
+    if (!apiMessages) return results;
     for (let [index, msg] of apiMessages?.entries()) {
       const contentString = typeof msg.message === "string" ? msg.message : "";
 
