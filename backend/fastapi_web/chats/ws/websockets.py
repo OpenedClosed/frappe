@@ -115,6 +115,8 @@ async def validate_session(manager, client_id: str, chat_id: str,
     """Проверяет, соответствует ли текущая сессия чата."""
     stored_chat_id = await redis_db.get(redis_session_key)
     stored_chat_id = stored_chat_id.decode("utf-8") if stored_chat_id else None
+    print('='*100)
+    print(stored_chat_id, chat_id)
 
     if not (stored_chat_id == chat_id or is_superuser):
         logging.info("Session validation failed.")

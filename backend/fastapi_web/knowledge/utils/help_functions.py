@@ -1,21 +1,36 @@
 """Вспомогательные функции приложения Знания."""
 import base64
+import hashlib
 import io
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional, Union
+from copy import deepcopy
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import aiofiles
 import docx
+import httpx
 import openpyxl
 import pdfplumber
+from bs4 import BeautifulSoup
 from fastapi import HTTPException, UploadFile
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from chats.db.mongo.schemas import ChatMessage
 from db.mongo.db_init import mongo_db
+from db.redis.db_init import redis_db
 from gemini_base.gemini_init import gemini_client
+# from knowledge.db.mongo.schemas import ContextEntry
+from infra import settings
+from knowledge.db.mongo.enums import ContextPurpose
+from knowledge.db.mongo.schemas import ContextEntry, KnowledgeBase
 from knowledge.utils.prompts import AI_PROMPTS
 from openai_base.openai_init import openai_client
+
+# from chats.utils.help_functions import get_knowledge_base
+from .knowledge_base import KNOWLEDGE_BASE
 
 # ==============================
 # БЛОК: Функции сравнения и слияния
@@ -74,6 +89,20 @@ def deep_merge(original: dict, patch: dict) -> dict:
 
     return result
 
+def merge_external_structures(
+    main_kb: Dict[str, Any],
+    externals: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Возвращает **новую** базу знаний, где все внешние кусочки
+    «накатываются» поверх основной.
+    Приоритет: externals[0] … externals[-1] → main_kb.
+    """
+    merged = deepcopy(main_kb)
+    for ext in externals:
+        merged = deep_merge(merged, ext)
+    return merged
+
 
 # ==============================
 # БЛОК: Генерация патч-запроса
@@ -94,30 +123,34 @@ async def analyze_update_snippets_via_gpt(
     user_blocks: List[Dict[str, Any]],
     user_info: str,
     knowledge_base: Dict[str, Any],
+    bot_context_prompt: str = "",
     ai_model: str = "gpt-4o",
 ) -> Dict[str, Any]:
-    """Определяет релевантные топики, подтемы и вопросы в базе знаний по запросу пользователя."""
-    kb_structure = {}
-    for topic_name, topic_data in knowledge_base.items():
-        kb_structure[topic_name] = {
+    """
+    Определяет релевантные темы, подтемы и вопросы в базе знаний по запросу пользователя.
+    Шпаргалка для бота (bot_context_prompt) вставляется в system prompt.
+    """
+    kb_structure = {
+        topic_name: {
             "subtopics": {
                 sub_name: {
-                    "questions": list(
-                        sub_data.get(
-                            "questions",
-                            {}).keys())}
+                    "questions": list(sub_data.get("questions", {}).keys())
+                }
                 for sub_name, sub_data in topic_data.get("subtopics", {}).items()
             }
         }
+        for topic_name, topic_data in knowledge_base.items()
+    }
 
     system_prompt = AI_PROMPTS["analyze_update_snippets_prompt"].format(
-        kb_full_structure=json.dumps(kb_structure, ensure_ascii=False)
+        kb_full_structure=json.dumps(kb_structure, ensure_ascii=False),
+        bot_snippets_text=bot_context_prompt
     )
 
     messages = build_messages_for_model(
         system_prompt=system_prompt,
         messages_data=user_blocks,
-        user_message="",
+        user_message="",  # ⬅️ теперь не дублируем bot_prompt
         model=ai_model
     )
 
@@ -128,15 +161,14 @@ async def analyze_update_snippets_via_gpt(
         raw_content = response.choices[0].message.content.strip()
     elif real_model.startswith("gemini"):
         response = await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
-        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
-        )
+        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip()
     else:
         response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
         raw_content = response.choices[0].message.content.strip()
 
     result = _extract_json_from_gpt(raw_content)
-    normalized = normalize_snippets_structure(result)
-    return {"topics": normalized}
+    return {"topics": normalize_snippets_structure(result)}
+
 
 
 def normalize_snippets_structure(
@@ -337,32 +369,83 @@ async def generate_patch_body_via_gpt(
     knowledge_base: Dict[str, Any],
     ai_model: str = "gpt-4o",
 ) -> Dict[str, Any]:
-    """Формирует патч-JSON для обновления базы знаний, извлекая релевантные сниппеты."""
-    snippets = await analyze_update_snippets_via_gpt(user_blocks, user_info, knowledge_base, ai_model)
+    """
+    Формирует патч-JSON для обновления базы знаний.
+    Учитывает:
+    - релевантные фрагменты из базы знаний;
+    - шпаргалки из контекста (назначение: bot/both);
+    - (но НЕ учитывает внешние структуры при генерации патча).
+    """
+    kb_doc, kb_model = await get_knowledge_base()
+
+    # 2. Получаем шпаргалку (bot context)
+    _, bot_prompt = await collect_bot_context_snippets(kb_model.context)
+
+    # 3. Поиск релевантных тем на основе текущей БЗ и user_blocks
+    snippets = await analyze_update_snippets_via_gpt(
+        user_blocks=user_blocks,
+        user_info=user_info,
+        knowledge_base=knowledge_base,
+        bot_context_prompt=bot_prompt,
+        ai_model=ai_model,
+    )
     snippets_list = snippets.get("topics", [])
-    kb_snippets_text = await extract_knowledge_with_structure(topics=snippets_list, knowledge_base=knowledge_base)
 
+    # 4. Извлекаем куски знаний по темам (только из основной БЗ)
+    kb_snippets_text = await extract_knowledge_with_structure(
+        topics=snippets_list,
+        knowledge_base=knowledge_base
+    )
+
+    # 5. Финальный system prompt
     system_prompt = AI_PROMPTS["patch_body_prompt"].format(
-        kb_snippets_text=kb_snippets_text)
-    messages = build_messages_for_model(
-        system_prompt, user_blocks, "", ai_model)
+        bot_snippets_text=bot_prompt,         # ⬅️ шпаргалка встроена
+        kb_snippets_text=kb_snippets_text
+    )
 
+    # 6. Собираем сообщения
+    messages = build_messages_for_model(
+        system_prompt=system_prompt,
+        messages_data=user_blocks,
+        user_message="",  # ⬅️ bot_prompt уже в system_prompt
+        model=ai_model
+    )
+
+    # 7. Запрос к LLM
     client, real_model = pick_model_and_client(ai_model)
 
     if real_model.startswith("gpt"):
-        response = await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
+        response = await client.chat.completions.create(
+            model=real_model, messages=messages, temperature=0.1
+        )
         raw_content = response.choices[0].message.content.strip()
     elif real_model.startswith("gemini"):
-        response = await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
-        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
+        response = await client.chat_generate(
+            model=real_model, messages=messages, temperature=0.1
         )
+        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip()
     else:
-        response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
+        response = await openai_client.chat.completions.create(
+            model="gpt-4o", messages=messages, temperature=0.1
+        )
         raw_content = response.choices[0].message.content.strip()
 
-    patch_result = _extract_json_from_gpt(raw_content)
-    return patch_result
+    return _extract_json_from_gpt(raw_content)
 
+async def get_knowledge_base() -> Dict[str, dict]:
+    """Получает базу знаний."""
+    document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
+    if not document:
+        raise HTTPException(404, "Knowledge base not found.")
+    document.pop("_id", None)
+    print(document)
+    if document["knowledge_base"] is not None:
+        kb_doc = document["knowledge_base"]
+        kb_model = KnowledgeBase(**kb_doc)
+    else:
+        kb_doc = KNOWLEDGE_BASE
+        kb_model = None
+    return kb_doc, kb_model
 
 # ==============================
 # БЛОК: Функции парсинга PDF, DOCX, XLSX =====
@@ -466,3 +549,178 @@ async def build_gpt_message_blocks(
             })
 
     return blocks
+
+
+# ==============================
+# БЛОК: Функции работы с контекстом
+# ==============================
+
+
+async def generate_kb_structure_via_gpt(
+    raw_text: str,
+    ai_model: str = "gpt-4o"
+) -> Dict[str, any]:
+    """
+    Отдаёт GPT‑модели «голый» текст и получает
+    валидный JSON по иерархии Topic → subtopics → questions.
+    """
+    system_prompt = AI_PROMPTS["kb_structure_prompt"]
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": raw_text}
+    ]
+
+    client, real_model = pick_model_and_client(ai_model)
+    if real_model.startswith("gpt"):
+        resp = await client.chat.completions.create(
+            model=real_model, messages=messages, temperature=0.1
+        )
+        raw = resp.choices[0].message.content.strip()
+    elif real_model.startswith("gemini"):
+        resp = await client.chat_generate(
+            model=real_model, messages=messages, temperature=0.1
+        )
+        raw = resp["candidates"][0]["content"]["parts"][0]["text"].strip()
+    else:
+        resp = await client.chat.completions.create(
+            model="gpt-4o", messages=messages, temperature=0.1
+        )
+        raw = resp.choices[0].message.content.strip()
+
+    return _extract_json_from_gpt(raw)
+
+
+async def wrap_upload_file(path: Path) -> UploadFile:
+    """Считывает файл с диска и возвращает UploadFile для `parse_file()`."""
+    async with aiofiles.open(path, "rb") as f:
+        data = await f.read()
+    return StarletteUploadFile(filename=path.name, file=io.BytesIO(data))
+
+
+async def parse_url(url: str, timeout: int = 10) -> str:
+    """Скачивает страницу и извлекает видимый текст."""
+    async with httpx.AsyncClient(
+        timeout=timeout,
+        follow_redirects=True,
+        headers={"User-Agent": "Mozilla/5.0 (knowledge-context-bot)"}
+    ) as client:
+        r = await client.get(url)
+        r.raise_for_status()
+
+    soup = BeautifulSoup(r.text, "lxml")
+    for tag in soup(["script", "style", "noscript", "header", "footer", "form"]):
+        tag.decompose()
+
+    text = soup.get_text(separator="\n")
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
+
+
+async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
+    """
+    Возвращает текст страницы, используя Redis‑кэш.
+
+    Ключ: `url_cache:<sha1(url)>`.
+    """
+    redis_key = f"url_cache:{hashlib.sha1(url.encode()).hexdigest()}"
+    cached = await redis_db.get(redis_key)
+    if cached:
+        return cached
+
+    parsed = await parse_url(url)
+    await redis_db.set(redis_key, parsed, ex=ttl)
+    return parsed
+
+async def parse_file_from_path(path: Path) -> str:
+    """Извлекает текст из файла на диске через ваш `parse_file()`."""
+    upload = await wrap_upload_file(path)
+    parsed = await parse_file(upload) or ""
+    return parsed
+
+
+async def invalidate_url_cache(url: str):
+    """Удаляет кэш конкретного URL."""
+    redis_key = f"url_cache:{hashlib.sha1(url.encode()).hexdigest()}"
+    await redis_db.delete(redis_key)
+
+
+
+
+async def get_context_entry_content(entry: ContextEntry) -> str:
+    """
+    Получить актуальный текст из ContextEntry.
+    Для URL — с кешем, для FILE — без кеша.
+    """
+    if entry.type == entry.type.TEXT:
+        return entry.text or ""
+
+    if entry.type == entry.type.FILE and entry.file_path:
+        return await parse_file(entry.file_path) or ""
+
+    if entry.type == entry.type.URL and entry.url:
+        content = await cache_url_snapshot(str(entry.url))
+        entry.snapshot_text = content
+        return content
+
+    return ""
+
+
+async def build_kb_structure_from_context_entry(entry: ContextEntry, ai_model: str = "gpt-4o") -> dict:
+    """
+    Преобразует содержимое ContextEntry в структуру БЗ (топик ➝ подтема ➝ Q/A).
+    """
+    raw = await get_context_entry_content(entry)
+    return await generate_kb_structure_via_gpt(raw, ai_model)
+
+
+async def collect_bot_context_snippets(entries: List[ContextEntry]) -> Tuple[List[str], str]:
+    """
+    Собирает текстовые фрагменты контекста с purpose = bot или both.
+    Возвращает:
+    - список текстов;
+    - строку промпта с описанием и фрагментами.
+    """
+    result = []
+    for entry in entries:
+        if entry.purpose in {ContextPurpose.BOT, ContextPurpose.BOTH}:
+            content = await get_context_entry_content(entry)
+            if content:
+                result.append(content.strip())
+
+    prompt_text = (
+        "The following text fragments are contextual references for the assistant.\n"
+        "They serve as **background knowledge** and may be used to enhance responses,\n"
+        "but should NOT be copied directly into structured outputs.\n\n"
+    )
+    full_prompt = prompt_text + "\n\n".join(result)
+    print("Пытаемся получить котекст для бота")
+    return result, full_prompt
+
+
+async def collect_kb_structures_from_context(entries: List[ContextEntry], ai_model: str = "gpt-4o") -> Tuple[List[Dict], str]:
+    """
+    Собирает мини-структуры БЗ из всех подходящих записей контекста.
+    Возвращает:
+    - список словарей (структура как в KnowledgeBase);
+    - строку промпта с описанием и вставленными структурами.
+    """
+    structures = []
+    blocks = []
+
+    for entry in entries:
+        if entry.purpose in {ContextPurpose.KB, ContextPurpose.BOTH}:
+            struct = await build_kb_structure_from_context_entry(entry, ai_model=ai_model)
+            if struct:
+                structures.append(struct)
+                blocks.append(
+                    f"From: **{entry.title}**\n"
+                    f"```json\n{json.dumps(struct, indent=2, ensure_ascii=False)}\n```"
+                )
+
+    prompt_text = (
+        "The following structured knowledge blocks are extracted from source content\n"
+        "and intended to be integrated into the main knowledge base.\n"
+        "Use them as-is or adapt them to fit existing structure.\n\n"
+    )
+    full_prompt = prompt_text + "\n\n".join(blocks)
+    print("Пытаемся получить мини БЗ")
+    return structures, full_prompt

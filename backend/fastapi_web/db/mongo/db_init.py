@@ -12,6 +12,7 @@ async def mongo_db_on_startapp():
     """При старте для MongoDB."""
     mongo_db.chats.create_index([("chat_id", 1)])
     kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
+    print(f"База знаний {'найдена' if kb_doc else 'не найдена'}")
     if not kb_doc:
         kb = {
             "app_name": "main",

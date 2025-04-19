@@ -16,6 +16,9 @@ MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR = BASE_DIR / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
+CONTEXT_PATH = BASE_DIR / "files/context"
+CONTEXT_PATH.mkdir(parents=True, exist_ok=True)
+
 SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
 
 # Хост и протокол
@@ -55,6 +58,7 @@ FLOOD_TIMEOUTS = {
     "manual": timedelta(seconds=3),
     "automatic": timedelta(seconds=10),
 }
+CONTEXT_TTL = timedelta(days=1)
 # FLOOD_TIMEOUTS = {
 #     "manual": timedelta(seconds=0),
 #     "automatic": timedelta(seconds=0),

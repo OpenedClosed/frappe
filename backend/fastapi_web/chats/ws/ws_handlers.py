@@ -13,21 +13,24 @@ import httpx
 import requests
 from pydantic import ValidationError
 
-from users.db.mongo.enums import RoleEnum
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
 from gemini_base.gemini_init import gemini_client
 from infra import settings
 from knowledge.utils.help_functions import (build_messages_for_model,
+                                            collect_kb_structures_from_context, get_knowledge_base,
+                                            merge_external_structures,
                                             pick_model_and_client)
 from openai_base.openai_init import openai_client
+from users.db.mongo.enums import RoleEnum
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
-from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage, ChatReadInfo,
-                                ChatSession, GptEvaluation)
-from ..utils.help_functions import (clean_markdown, find_last_bot_message, get_bot_context,
-                                    get_knowledge_base, get_weather_by_address,
+from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
+                                ChatReadInfo, ChatSession, GptEvaluation)
+from ..utils.help_functions import (clean_markdown, find_last_bot_message,
+                                    get_bot_context,
+                                    get_weather_by_address,
                                     send_message_to_bot,
                                     split_text_into_chunks)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
@@ -955,13 +958,31 @@ async def process_user_query_after_brief(
         async with gpt_lock:
             if not user_data:
                 user_data = {}
+
+            # Извлекаем бриф
             brief_info = extract_brief_info(chat_session)
             user_data["brief_info"] = brief_info
-            chat_history = chat_session.messages[-25:]
-            knowledge_base = await get_knowledge_base()
 
+            chat_history = chat_session.messages[-25:]
+
+            # Основная БЗ
+            print('1')
+            knowledge_base, knowledge_base_model = await get_knowledge_base()
+            print('2')
+
+            # 👇 Собираем внешние структуры (мини-БЗ)
+            external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
+            print('3')
+
+            # 👇 Объединяем основную базу с мини-базами
+            print(knowledge_base)
+            print(external_structs)
+            merged_kb = merge_external_structures(knowledge_base, external_structs)
+            print('4')
+
+            # 👇 Отправляем в GPT определение релевантных тем
             gpt_data = await determine_topics_via_gpt(
-                user_msg.message, user_data, knowledge_base
+                user_msg.message, user_data, merged_kb
             )
 
             user_msg.gpt_evaluation = GptEvaluation(
@@ -970,10 +991,12 @@ async def process_user_query_after_brief(
                 out_of_scope=gpt_data.get("out_of_scope", False),
                 consultant_call=gpt_data.get("consultant_call", False)
             )
+
             await _update_gpt_evaluation_in_db(
                 chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation
             )
 
+            # Ответ от ИИ
             ai_msg = await _build_ai_response(
                 manager=manager,
                 chat_session=chat_session,
@@ -996,8 +1019,7 @@ async def process_user_query_after_brief(
         return None
 
     except Exception as e:
-        logging.error(
-            f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+        logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
         bot_context = await get_bot_context()
         ai_text = bot_context.get("fallback_ai_error_message", {}).get(
             user_language, "The assistant is currently unavailable."
@@ -1009,6 +1031,7 @@ async def process_user_query_after_brief(
         if ai_msg:
             await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
         return None
+
 
 
 async def generate_ai_answer(
@@ -1275,7 +1298,7 @@ async def extract_knowledge(
     Если ничего не найдено, возвращается {"topics": []}.
     """
     if not knowledge_base:
-        knowledge_base = await get_knowledge_base()
+        knowledge_base, _ = await get_knowledge_base()
 
     extracted_data = {"topics": []}
 

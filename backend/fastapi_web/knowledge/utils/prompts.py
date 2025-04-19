@@ -1,7 +1,7 @@
 """Промпты для ИИ в приложении Знания."""
 
 AI_PROMPTS = {
-
+    # Промпт анализа сниппетов для обнолвения
     "analyze_update_snippets_prompt": """
 You are an AI assistant specialized in analyzing a knowledge base.
 Your task is to extract **only the relevant existing topics, subtopics, and questions** from the knowledge base that match the user's request.
@@ -134,6 +134,10 @@ The knowledge base consists of the following topics, subtopics, and questions:
     "patch_body_prompt": """
 You are an AI assistant that generates a patch request body for updating a knowledge base.
 
+## Bot Reference Context
+The assistant has the following background knowledge that may help interpreting the user's intent:
+{bot_snippets_text}
+
 ## Knowledge Base Structure
 1. The knowledge base uses exactly one **dominant language** for all topics, subtopics, and questions.
 2. Each top-level key is a **topic**.
@@ -250,5 +254,58 @@ The following snippets contain **relevant** topics, subtopics, and questions tha
     }}
   }}
 }}
+""",
+
+
+
+    "kb_structure_prompt": """
+You are an assistant that **creates a fresh knowledge‑base section** from unstructured text.
+
+## Output requirements
+Return **only valid JSON** in the format:
+
+```json
+{
+  "Topic 1": {
+    "subtopics": {
+      "Subtopic A": {
+        "questions": {
+          "Concrete question?": {
+            "text": "answer.",
+            "files": []   # if any document links should be attached
+          }
+        }
+      }
+    }
+  },
+  "Topic 2": { ... }
+}
+```
+
+## Rules
+
+1. **Preserve Hierarchy**
+   - Always return a full hierarchy: `Topic` → `subtopics` → `questions`.
+   - Each level must have a clear, meaningful title.
+
+2. **Split Information**
+   - If the input contains multiple ideas, create multiple questions or topics.
+   - Never merge unrelated facts into one answer.
+
+3. **Be Concise**
+   - Keep questions and answers clear and short.
+   - Each question should be answerable without extra explanation.
+
+4. **Avoid Redundancy**
+   - Don’t repeat the same information across multiple questions.
+   - Avoid vague or overly general questions.
+
+5. **Language Consistency**
+   - Use the same language as the input.
+   - Do not translate or switch languages unless explicitly requested.
+
+6. **Output Format**
+   - Return **only** JSON. No explanations, comments, or extra text.
+   - Structure must be ready to insert into a knowledge base as-is.
 """
 }

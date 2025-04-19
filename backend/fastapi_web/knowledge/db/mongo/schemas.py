@@ -2,14 +2,47 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
-from db.mongo.base.schemas import BaseValidatedModel, Photo
+from db.mongo.base.schemas import BaseValidatedModel, IdModel, Photo
+# from knowledge.utils.help_functions import (cache_url_snapshot,
+#                                             generate_kb_structure_via_gpt,
+#                                             parse_file)
 
 from .enums import (AIModelEnum, BotColorEnum, CommunicationStyleEnum,
-                    ForbiddenTopicsEnum, FunctionalityEnum,
-                    PersonalityTraitsEnum, TargetActionEnum)
+                    ContextPurpose, ContextType, ForbiddenTopicsEnum,
+                    FunctionalityEnum, PersonalityTraitsEnum, TargetActionEnum)
 
+# ==============================
+# БЛОК: Контекст
+# ==============================
+
+
+class ContextEntry(BaseModel):
+    """
+    Универсальная единица контекста.
+
+    • `purpose` — куда потом пойдёт эта информация  
+    • `get_content()` — возвращает актуальный текст  
+      – ссылки кэшируются в Redis, файлы парсятся каждый раз (без кэша)
+    • `to_kb_structure()` — превращает сырой текст в структуру,
+      совместимую с `KnowledgeBase` (топик‑>подтема‑>Q/A)
+    """
+    type: ContextType
+    purpose: ContextPurpose = ContextPurpose.NONE
+    title: str
+
+    text: Optional[str]      = None     # для TEXT
+    file_path: Optional[str] = None     # для FILE
+    url: Optional[HttpUrl]   = None     # для URL
+    snapshot_text: Optional[str] = None # кэш только для URL
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ==============================
+# БЛОК: База знаний
+# ==============================
 
 class Answer(BaseModel):
     """Ответ на вопрос, содержащий текст и файлы."""
@@ -30,8 +63,9 @@ class Topic(BaseModel):
 class KnowledgeBase(BaseModel):
     """База знаний с темами, краткими вопросами и датой обновления."""
     app_name: Optional[str] = None
-    knowledge_base: Dict[str, Topic]
+    knowledge_base: Dict[str, Topic] = Field(default_factory=dict)
     brief_questions: Dict[str, str] = Field(default_factory=dict)
+    context: Optional[List[ContextEntry]] = Field(default_factory=list)
     update_date: datetime = Field(default_factory=datetime.now)
 
 
