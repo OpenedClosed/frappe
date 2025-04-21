@@ -171,7 +171,12 @@ async def get_bot_info(
 # ==============================
 
 
-@knowledge_base_router.post("/context_entity", response_model=ContextEntry, status_code=201)
+# ───────────────────────── CREATE ──────────────────────────
+@knowledge_base_router.post(
+    "/context_entity",
+    response_model=ContextEntry,
+    status_code=201
+)
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def create_context_entity(
@@ -183,66 +188,59 @@ async def create_context_entity(
     text: Optional[str] = Form(None),
     url: Optional[HttpUrl] = Form(None),
     file: UploadFile = File(None),
-    Authorize: AuthJWT = Depends()
+    Authorize: AuthJWT = Depends(),
 ):
-    """
-    Создание записи контекста.
-    """
-    kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-    if not kb_doc:
-        raise HTTPException(404, "Knowledge base not found")
-    kb_doc.pop("_id", None)
-    kb = KnowledgeBase(**kb_doc)
+    kb_doc, _ = await get_knowledge_base()
+    kb_doc.setdefault("context", [])
 
-    if type == ContextType.TEXT:
+    # ——— единственное место, где используем Pydantic‑модель  ———
+    if type is ContextType.TEXT:
         if not text:
-            raise HTTPException(422, detail="Параметр 'text' обязателен")
+            raise HTTPException(422, "Параметр 'text' обязателен")
         entry = ContextEntry(
             type=type,
             purpose=purpose,
             title=title or text[:80],
-            text=text
+            text=text,
         )
 
-    elif type == ContextType.URL:
+    elif type is ContextType.URL:
         if not url:
-            raise HTTPException(422, detail="Параметр 'url' обязателен")
-        snapshot = await cache_url_snapshot(str(url))
+            raise HTTPException(422, "Параметр 'url' обязателен")
         entry = ContextEntry(
             type=type,
             purpose=purpose,
             title=title or str(url),
             url=url,
-            snapshot_text=snapshot
+            snapshot_text=await cache_url_snapshot(str(url)),
         )
 
-    elif type == ContextType.FILE:
+    elif type is ContextType.FILE:
         if not file:
-            raise HTTPException(422, detail="Файл обязателен")
+            raise HTTPException(422, "Файл обязателен")
         uid = uuid4().hex
         dst_dir = Path(settings.CONTEXT_PATH) / uid
         dst_dir.mkdir(parents=True, exist_ok=True)
         dst_path = dst_dir / file.filename
-
         async with aiofiles.open(dst_path, "wb") as f:
             await f.write(await file.read())
-
         entry = ContextEntry(
             type=type,
             purpose=purpose,
             title=title or file.filename,
-            file_path=str(dst_path)
+            file_path=str(dst_path),
         )
-
     else:
-        raise HTTPException(422, detail=f"Неизвестный тип контекста: {type}")
+        raise HTTPException(422, f"Неизвестный тип: {type}")
 
-    kb.context.append(entry)
-    kb.update_date = datetime.utcnow()
-    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb.model_dump(), upsert=True)
+    kb_doc["context"].append(entry.model_dump(mode="python"))
+    kb_doc["update_date"] = datetime.utcnow()
+    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
 
-    return entry
+    return entry                     # FastAPI выдаст как ContextEntry
 
+
+# ───────────────────────── DELETE ─────────────────────────
 @knowledge_base_router.delete("/context_entity/{ctx_id}", status_code=204)
 @jwt_required()
 @permission_required(AdminPanelPermission)
@@ -250,14 +248,11 @@ async def delete_context_entity(
     request: Request,
     response: Response,
     ctx_id: str,
-    Authorize: AuthJWT = Depends()
+    Authorize: AuthJWT = Depends(),
 ):
-    """
-    Удалить запись контекста по ID.
-    """
     kb_doc, _ = await get_knowledge_base()
 
-    before = len(kb_doc["context"])
+    before = len(kb_doc.get("context", []))
     kb_doc["context"] = [c for c in kb_doc["context"] if str(c.get("id")) != ctx_id]
     if len(kb_doc["context"]) == before:
         raise HTTPException(404, "Context entry not found")
@@ -266,38 +261,36 @@ async def delete_context_entity(
     await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
 
 
-
+# ───────────────────────── GET ALL ────────────────────────
 @knowledge_base_router.get("/context_entity", response_model=List[ContextEntry])
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def get_all_context(
     request: Request,
     response: Response,
-    Authorize: AuthJWT = Depends()
+    Authorize: AuthJWT = Depends(),
 ):
-    """
-    Получить все записи контекста.
-    """
-    kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-    if not kb_doc:
-        raise HTTPException(404, "Knowledge base not found")
+    kb_doc, _ = await get_knowledge_base()
+    print(kb_doc["context"])
 
     updated = False
     for ctx in kb_doc.get("context", []):
         if ctx["type"] == ContextType.URL and not ctx.get("snapshot_text"):
             ctx["snapshot_text"] = await cache_url_snapshot(str(ctx["url"]))
             updated = True
-
     if updated:
         kb_doc["update_date"] = datetime.utcnow()
         await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
 
-    print('+'*100)
-    print(kb_doc.get("context", []))
-    return kb_doc.get("context", [])
+    print("отданные id", [doc["id"] for doc in kb_doc["context"]])
+    return kb_doc["context"]       # <- raw list; FastAPI валидирует
 
 
-@knowledge_base_router.patch("/context_entity/{ctx_id}/purpose", response_model=ContextEntry)
+# ───────────────────────── PATCH purpose ───────────────────
+@knowledge_base_router.patch(
+    "/context_entity/{ctx_id}/purpose",
+    response_model=ContextEntry
+)
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def update_context_purpose(
@@ -305,23 +298,17 @@ async def update_context_purpose(
     response: Response,
     ctx_id: str,
     new_purpose: ContextPurpose = Form(...),
-    Authorize: AuthJWT = Depends()
+    Authorize: AuthJWT = Depends(),
 ):
-    """
-    Изменить назначение (purpose) записи контекста.
-    """
     kb_doc, _ = await get_knowledge_base()
-    print('='*100)
-    print(kb_doc)
-    print(ctx_id)
-    print(kb_doc["context"][0]["id"])
+    print("полученный id", ctx_id)
 
-    found = next((c for c in kb_doc["context"] if str(c.get("id")) == ctx_id), None)
-    if not found:
+    entry = next((c for c in kb_doc["context"] if str(c.get("id")) == ctx_id), None)
+    if not entry:
         raise HTTPException(404, "Context entry not found")
 
-    found["purpose"] = new_purpose.value
+    entry["purpose"] = new_purpose.value
     kb_doc["update_date"] = datetime.utcnow()
     await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
 
-    return ContextEntry(**found)
+    return entry                    # <- raw dict; FastAPI валидирует
