@@ -216,6 +216,7 @@ function formatTimeDifferenceEU(dateStr) {
 /* ② rebuild rooms + messages when data and transformFn are ready */
 const transformFn = computed(() => chatLogic.value?.transformChatMessages);
 function buildRooms(chats, consultantId) {
+  console.log("buildRooms", chats); // For debugging: log chat data
   const sourceAvatars = {
     Internal: "/avatars/telegram.png",
     Instagram: "/avatars/insta.png",
