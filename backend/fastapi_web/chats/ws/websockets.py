@@ -70,7 +70,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     if not await validate_session(manager, client_id, chat_id, redis_session_key, is_superuser):
         return
 
-    if not await handle_get_messages(manager, chat_id, redis_session_key, user_data):
+    if not await handle_get_messages(manager=manager, chat_id=chat_id, redis_key_session=redis_session_key, user_data=user_data, data={}):
         await start_brief(chat_session, manager, redis_session_key, user_language)
 
     try:

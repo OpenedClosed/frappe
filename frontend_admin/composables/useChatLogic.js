@@ -293,7 +293,7 @@ export function useChatLogic(options = {}) {
       // Запрашиваем начальное состояние (однократно)
       if (websocket.value && websocket.value.readyState === WebSocket.OPEN) {
         websocket.value?.send(JSON.stringify({ type: "status_check" }));
-        websocket.value?.send(JSON.stringify({ type: "get_messages" }));
+        websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true })); 
       }
     };
 
