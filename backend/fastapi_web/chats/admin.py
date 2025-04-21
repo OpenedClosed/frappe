@@ -123,18 +123,19 @@ class ChatMessageInline(InlineAdmin):
 
     async def get_read_by_display(self, obj: dict) -> str:
        
-        chat_id = obj.get("chat_id")
+        # chat_id = obj.get("chat_id")
         message_id = obj.get("id")
         sender_id = obj.get("sender_id")
+        chat_data = await self.get_root_document(message_id)
         print("get_read_by_display")
         print("-"*100)
-        print("chat_id:", chat_id)
+        print("chat_data:", chat_data)
         print("message_id:", message_id)
         print("-"*100)
-        if not chat_id or not message_id:
+
+        if not chat_data or not message_id:
             return json.dumps([], ensure_ascii=False)
 
-        chat_data = await mongo_db.chats.find_one({"chat_id": chat_id}, {"read_state": 1, "messages": 1})
         print("-"*100)
         print("chat_data:", chat_data)
         print("-"*100)
