@@ -249,7 +249,7 @@ function buildRooms(chats, consultantId) {
           timestamp: formatDateEU(chat.created_at),
         }
       : { content: "", senderId: consultantUser._id };
-
+        console.log("lastMessage", chat.messages); // For debugging: log last message data
     return {
       avatar: sourceAvatars[sourceName] || "/avatars/default.png",
       roomId: chat.chat_id,

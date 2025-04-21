@@ -333,6 +333,9 @@ async def handle_get_messages(
 ) -> bool:
     """Отдаёт историю чата и, при наличии with_enter=True, фиксирует прочтение текущим клиентом."""
     chat_data: Dict[str, Any] | None = await mongo_db.chats.find_one({"chat_id": chat_id})
+    print("-"*100)
+    print("data:", data)
+    print("-"*100)
     if not chat_data:
         await manager.broadcast(custom_json_dumps({
             "type": "get_messages",
@@ -392,17 +395,21 @@ async def handle_get_messages(
 
     for m in messages:
         own = m.get("sender_id") == client_id
-        if not own:
-            m["read_by"] = []
-            enriched.append(m)
-            continue
+        # if not own:
+        #     m["read_by"] = []
+        #     enriched.append(m)
+        #     continue
 
         readers = [
             ri.client_id
             for ri in read_state
             if idx.get(ri.last_read_msg, -1) >= idx[m["id"]]
-            and ri.client_id != m.get("sender_id")
+            # and ri.client_id != m.get("sender_id")
         ]
+        print("-"*100)
+        print("own:", own)
+        print("readers:", readers)
+        print("-"*100)
         m["read_by"] = readers
         enriched.append(m)
 
@@ -412,6 +419,9 @@ async def handle_get_messages(
         "messages": enriched,
         "remaining_time": remaining
     }))
+    print("-"*100)
+    print("enriched:", enriched)
+    print("-"*100)
     return enriched
 
 

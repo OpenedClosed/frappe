@@ -122,14 +122,22 @@ class ChatMessageInline(InlineAdmin):
         return json.dumps(status, ensure_ascii=False)
 
     async def get_read_by_display(self, obj: dict) -> str:
+       
         chat_id = obj.get("chat_id")
         message_id = obj.get("id")
         sender_id = obj.get("sender_id")
-
+        print("get_read_by_display")
+        print("-"*100)
+        print("chat_id:", chat_id)
+        print("message_id:", message_id)
+        print("-"*100)
         if not chat_id or not message_id:
             return json.dumps([], ensure_ascii=False)
 
         chat_data = await mongo_db.chats.find_one({"chat_id": chat_id}, {"read_state": 1, "messages": 1})
+        print("-"*100)
+        print("chat_data:", chat_data)
+        print("-"*100)
         if not chat_data:
             return json.dumps([], ensure_ascii=False)
 
@@ -139,12 +147,18 @@ class ChatMessageInline(InlineAdmin):
         msg_idx = idx_map.get(message_id, -1)
 
         readers = []
+        print("-"*100)
+        print("read_state:", read_state)
+        print("-"*100)
         for ri in read_state:
             last_read = ri.get("last_read_msg")
             reader_id = ri.get("client_id")
-            if reader_id and reader_id != sender_id:
+            if reader_id:
                 if idx_map.get(last_read, -1) >= msg_idx:
                     readers.append(reader_id)
+            # if reader_id and reader_id != sender_id:
+            #     if idx_map.get(last_read, -1) >= msg_idx:
+            #         readers.append(reader_id)
 
         return json.dumps(readers, ensure_ascii=False)
 
