@@ -333,9 +333,6 @@ async def handle_get_messages(
 ) -> bool:
     """Отдаёт историю чата и, при наличии with_enter=True, фиксирует прочтение текущим клиентом."""
     chat_data: Dict[str, Any] | None = await mongo_db.chats.find_one({"chat_id": chat_id})
-    print("-"*100)
-    print("data:", data)
-    print("-"*100)
     if not chat_data:
         await manager.broadcast(custom_json_dumps({
             "type": "get_messages",
@@ -406,10 +403,6 @@ async def handle_get_messages(
             if idx.get(ri.last_read_msg, -1) >= idx[m["id"]]
             # and ri.client_id != m.get("sender_id")
         ]
-        print("-"*100)
-        print("own:", own)
-        print("readers:", readers)
-        print("-"*100)
         m["read_by"] = readers
         enriched.append(m)
 
@@ -419,9 +412,6 @@ async def handle_get_messages(
         "messages": enriched,
         "remaining_time": remaining
     }))
-    print("-"*100)
-    print("enriched:", enriched)
-    print("-"*100)
     return enriched
 
 
@@ -979,19 +969,11 @@ async def process_user_query_after_brief(
             chat_history = chat_session.messages[-25:]
 
             # Основная БЗ
-            print('1')
             knowledge_base, knowledge_base_model = await get_knowledge_base()
-            print('2')
 
             # 👇 Собираем внешние структуры (мини-БЗ)
             external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
-            print('3')
-
-            # 👇 Объединяем основную базу с мини-базами
-            print(knowledge_base)
-            print(external_structs)
             merged_kb = merge_external_structures(knowledge_base, external_structs)
-            print('4')
 
             # 👇 Отправляем в GPT определение релевантных тем
             gpt_data = await determine_topics_via_gpt(

@@ -122,23 +122,13 @@ class ChatMessageInline(InlineAdmin):
         return json.dumps(status, ensure_ascii=False)
 
     async def get_read_by_display(self, obj: dict) -> str:
-       
-        # chat_id = obj.get("chat_id")
         message_id = obj.get("id")
         sender_id = obj.get("sender_id")
         chat_data = await self.get_root_document(message_id)
-        print("get_read_by_display")
-        print("-"*100)
-        print("chat_data:", chat_data)
-        print("message_id:", message_id)
-        print("-"*100)
 
         if not chat_data or not message_id:
             return json.dumps([], ensure_ascii=False)
 
-        print("-"*100)
-        print("chat_data:", chat_data)
-        print("-"*100)
         if not chat_data:
             return json.dumps([], ensure_ascii=False)
 
@@ -148,9 +138,6 @@ class ChatMessageInline(InlineAdmin):
         msg_idx = idx_map.get(message_id, -1)
 
         readers = []
-        print("-"*100)
-        print("read_state:", read_state)
-        print("-"*100)
         for ri in read_state:
             last_read = ri.get("last_read_msg")
             reader_id = ri.get("client_id")
@@ -308,8 +295,6 @@ class ChatSessionAdmin(BaseAdmin):
         """Список чатов, у которых есть сообщения."""
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
-        # print('-'*100)
-        # print(await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user=current_user))
         return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user=current_user)
 
     async def get_status_display(self, obj: dict) -> str:

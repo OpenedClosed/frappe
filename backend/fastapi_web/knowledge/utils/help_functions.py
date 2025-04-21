@@ -438,7 +438,6 @@ async def get_knowledge_base() -> Dict[str, dict]:
     if not document:
         raise HTTPException(404, "Knowledge base not found.")
     document.pop("_id", None)
-    print(document)
     if document["knowledge_base"] is not None:
         kb_doc = document["knowledge_base"]
         kb_model = KnowledgeBase(**kb_doc)
@@ -692,7 +691,6 @@ async def collect_bot_context_snippets(entries: List[ContextEntry]) -> Tuple[Lis
         "but should NOT be copied directly into structured outputs.\n\n"
     )
     full_prompt = prompt_text + "\n\n".join(result)
-    print("Пытаемся получить котекст для бота")
     return result, full_prompt
 
 
@@ -722,5 +720,4 @@ async def collect_kb_structures_from_context(entries: List[ContextEntry], ai_mod
         "Use them as-is or adapt them to fit existing structure.\n\n"
     )
     full_prompt = prompt_text + "\n\n".join(blocks)
-    print("Пытаемся получить мини БЗ")
     return structures, full_prompt

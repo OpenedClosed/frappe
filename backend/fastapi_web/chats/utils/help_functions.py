@@ -184,8 +184,6 @@ async def handle_chat_creation(
         if chat_data := await mongo_db.chats.find_one({"chat_id": chat_id_from_redis}):
             remaining_time = max(0, settings.CHAT_TIMEOUT.total_seconds() -
                                  (datetime.utcnow() - chat_data["last_activity"]).total_seconds())
-            print('!1'*100)
-            print(chat_data["chat_id"])
             return {
                 "message": "Chat session is active.",
                 "chat_id": chat_data["chat_id"],
@@ -199,8 +197,6 @@ async def handle_chat_creation(
     if chat_source != ChatSource.INTERNAL and (chat_data := await mongo_db.chats.find_one({"client.client_id": client_id})):
         chat_session = ChatSession(**chat_data)
         await redis_db.set(redis_key, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
-        print('!2'*100)
-        print(chat_session.chat_id)
         return {
             "message": "Chat session restored from MongoDB.",
             "chat_id": chat_session.chat_id,
@@ -227,9 +223,6 @@ async def handle_chat_creation(
 
     await mongo_db.chats.insert_one(chat_session.dict())
     await redis_db.set(redis_key, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
-
-    print('!3'*100)
-    print(chat_id)
 
     return {
         "message": "New chat session created.",

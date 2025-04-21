@@ -156,6 +156,7 @@ async def generate_patch(
 async def get_bot_info(
     request: Request,
     response: Response,
+    Authorize: AuthJWT = Depends()
 ) -> Dict[str, Any]:
     """Возвращает безопасную информацию о боте, включая его основные настройки и используемую модель AI."""
     bot_context = await get_bot_context()
@@ -174,12 +175,15 @@ async def get_bot_info(
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def create_context_entity(
+    request: Request,
+    response: Response,
     type: ContextType = Form(...),
     purpose: ContextPurpose = Form(ContextPurpose.NONE),
     title: Optional[str] = Form(None),
     text: Optional[str] = Form(None),
     url: Optional[HttpUrl] = Form(None),
-    file: UploadFile = File(None)
+    file: UploadFile = File(None),
+    Authorize: AuthJWT = Depends()
 ):
     """
     Создание записи контекста.
@@ -242,7 +246,12 @@ async def create_context_entity(
 @knowledge_base_router.delete("/context_entity/{ctx_id}", status_code=204)
 @jwt_required()
 @permission_required(AdminPanelPermission)
-async def delete_context_entity(ctx_id: str):
+async def delete_context_entity(
+    request: Request,
+    response: Response,
+    ctx_id: str,
+    Authorize: AuthJWT = Depends()
+):
     """
     Удалить запись контекста по ID.
     """
@@ -264,7 +273,11 @@ async def delete_context_entity(ctx_id: str):
 @knowledge_base_router.get("/context_entity", response_model=List[ContextEntry])
 @jwt_required()
 @permission_required(AdminPanelPermission)
-async def get_all_context():
+async def get_all_context(
+    request: Request,
+    response: Response,
+    Authorize: AuthJWT = Depends()
+):
     """
     Получить все записи контекста.
     """
@@ -290,8 +303,11 @@ async def get_all_context():
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def update_context_purpose(
+    request: Request,
+    response: Response,
     ctx_id: str,
-    new_purpose: ContextPurpose = Form(...)
+    new_purpose: ContextPurpose = Form(...),
+    Authorize: AuthJWT = Depends()
 ):
     """
     Изменить назначение (purpose) записи контекста.
