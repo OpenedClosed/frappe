@@ -11,26 +11,25 @@ from typing import Any, Dict, List, Optional, Union
 
 import httpx
 import requests
-from pydantic import ValidationError
-
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
 from gemini_base.gemini_init import gemini_client
 from infra import settings
 from knowledge.utils.help_functions import (build_messages_for_model,
-                                            collect_kb_structures_from_context, get_knowledge_base,
+                                            collect_kb_structures_from_context,
+                                            get_knowledge_base,
                                             merge_external_structures,
                                             pick_model_and_client)
 from openai_base.openai_init import openai_client
+from pydantic import ValidationError
 from users.db.mongo.enums import RoleEnum
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
                                 ChatReadInfo, ChatSession, GptEvaluation)
 from ..utils.help_functions import (clean_markdown, find_last_bot_message,
-                                    get_bot_context,
-                                    get_weather_by_address,
+                                    get_bot_context, get_weather_by_address,
                                     send_message_to_bot,
                                     split_text_into_chunks)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
@@ -125,7 +124,7 @@ async def save_message_to_db(
     chat_session.last_activity = new_msg.timestamp
     chat_session.messages.append(new_msg)
     update_data = {
-        "$push": {"messages": new_msg.model_dump()},
+        "$push": {"messages": new_msg.model_dump(mode="python")},
         "$set": {"last_activity": new_msg.timestamp}
     }
     await mongo_db.chats.update_one({"chat_id": chat_session.chat_id}, update_data, upsert=True)
@@ -384,7 +383,7 @@ async def handle_get_messages(
         if modified:
             await mongo_db.chats.update_one(
                 {"chat_id": chat_id},
-                {"$set": {"read_state": [ri.model_dump() for ri in read_state]}}
+                {"$set": {"read_state": [ri.model_dump(mode="python") for ri in read_state]}}
             )
 
     idx = {m["id"]: i for i, m in enumerate(messages)}
@@ -775,7 +774,7 @@ async def process_brief_question(
     )
     await mongo_db.chats.update_one(
         {"chat_id": chat_session.chat_id},
-        {"$push": {"brief_answers": ans.model_dump()}}
+        {"$push": {"brief_answers": ans.model_dump(mode="python")}}
     )
 
     updated_data = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
@@ -824,7 +823,7 @@ async def fill_remaining_brief_questions(
         )
         await mongo_db.chats.update_one(
             {"chat_id": chat_id},
-            {"$push": {"brief_answers": empty.model_dump()}}
+            {"$push": {"brief_answers": empty.model_dump(mode="python")}}
         )
 
 
@@ -970,6 +969,7 @@ async def process_user_query_after_brief(
 
             # Основная БЗ
             kb_doc, knowledge_base_model = await get_knowledge_base()
+        
             knowledge_base = kb_doc["knowledge_base"]
 
             # 👇 Собираем внешние структуры (мини-БЗ)
@@ -1198,7 +1198,7 @@ async def _build_ai_response(
             user_language, None)
         session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
         if session_doc:
-            await send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump())
+            await send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump(mode="python"))
 
         return ChatMessage(
             message=redirect_msg,
@@ -1293,9 +1293,17 @@ async def extract_knowledge(
     }
     Если ничего не найдено, возвращается {"topics": []}.
     """
+    print('???')
+    print(knowledge_base)
     if not knowledge_base:
-        kb_doc, _ = await get_knowledge_base()
+        kb_doc, knowledge_base_model = await get_knowledge_base()
+    
         knowledge_base = kb_doc["knowledge_base"]
+
+        # 👇 Собираем внешние структуры (мини-БЗ)
+        external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
+        merged_kb = merge_external_structures(knowledge_base, external_structs)
+        knowledge_base = merged_kb
 
     extracted_data = {"topics": []}
 

@@ -99,7 +99,7 @@ async def apply_knowledge_base(
     new_data.update_date = now
     new_data.app_name = "main"
 
-    new_doc = new_data.model_dump()
+    new_doc = new_data.model_dump(mode="python")
     old_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"}) or {}
 
     old_doc.pop("_id", None)
@@ -186,7 +186,7 @@ async def create_context_entity(
     purpose: ContextPurpose = Form(ContextPurpose.NONE),
     title: Optional[str] = Form(None),
     text: Optional[str] = Form(None),
-    url: Optional[HttpUrl] = Form(None),
+    url: Optional[str] = Form(None),
     file: UploadFile = File(None),
     Authorize: AuthJWT = Depends(),
 ):
@@ -298,7 +298,7 @@ async def update_context_purpose(
     Authorize: AuthJWT = Depends(),
 ):
     kb_doc, _ = await get_knowledge_base()
-    print("полученный id", ctx_id)
+    # print("полученный id", ctx_id)
 
     entry = next((c for c in kb_doc["context"] if str(c.get("id")) == ctx_id), None)
     if not entry:

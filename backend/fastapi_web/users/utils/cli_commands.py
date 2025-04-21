@@ -1,7 +1,6 @@
 """Быстраые команды приложения."""
 import asyncclick as aclick
 import click
-
 from db.mongo.db_init import mongo_db
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User
@@ -37,7 +36,7 @@ async def create_admin_cli():
         role=RoleEnum.SUPERADMIN
     )
     user.set_password()
-    await mongo_db["users"].insert_one(user.model_dump())
+    await mongo_db["users"].insert_one(user.model_dump(mode="python"))
     click.echo("Superadmin user was successfully created!")
 
 if __name__ == "__main__":

@@ -34,8 +34,9 @@ class ContextEntry(IdModel):
 
     text: Optional[str]      = None     # для TEXT
     file_path: Optional[str] = None     # для FILE
-    url: Optional[HttpUrl]   = None     # для URL
+    url: Optional[str]   = None     # для URL
     snapshot_text: Optional[str] = None # кэш только для URL
+    kb_structure: Optional[dict] = None
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

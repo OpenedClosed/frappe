@@ -100,8 +100,13 @@ def merge_external_structures(
     Приоритет: externals[0] … externals[-1] → main_kb.
     """
     merged = deepcopy(main_kb)
+    # print('+'*100)
+    # print(externals)
+    # print(main_kb)
     for ext in externals:
         merged = deep_merge(merged, ext)
+    # print(merged)
+    # print('+'*100)
     return merged
 
 
@@ -161,7 +166,7 @@ async def analyze_update_snippets_via_gpt(
             await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
         ).choices[0].message.content.strip()
 
-    print('сниппеты', raw_content)
+    # print('сниппеты', raw_content)
     return {"topics": normalize_snippets_structure(_extract_json_from_gpt(raw_content))}
 
 
@@ -482,7 +487,7 @@ async def generate_patch_body_via_gpt(
             await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
         ).choices[0].message.content.strip()
 
-    print('патч', raw_content)
+    # print('патч', raw_content)
 
     return _extract_json_from_gpt(raw_content)
 
@@ -700,31 +705,75 @@ async def invalidate_url_cache(url: str):
 
 
 
-async def get_context_entry_content(entry: ContextEntry) -> str:
+async def get_context_entry_content(entry: ContextEntry, ai_model: str = "gpt-4o") -> str:
     """
-    Получить актуальный текст из ContextEntry.
-    Для URL — с кешем, для FILE — без кеша.
+    Возвращает актуальный текст из ContextEntry.
+    • URL  → кэшируем snapshot и генерируем kb_structure (если ещё нет)
+    • FILE → читаем с диска через parse_file_from_path()
+    • TEXT → как есть
     """
-    if entry.type == entry.type.TEXT:
+    if entry.type is ContextType.TEXT:
         return entry.text or ""
 
-    if entry.type == entry.type.FILE and entry.file_path:
-        return await parse_file(entry.file_path) or ""
+    if entry.type is ContextType.FILE and entry.file_path:
+        return await parse_file_from_path(entry.file_path) or ""
 
-    if entry.type == entry.type.URL and entry.url:
-        content = await cache_url_snapshot(str(entry.url))
-        entry.snapshot_text = content
+    if entry.type is ContextType.URL and entry.url:
+        update_fields = {}
+        content = entry.snapshot_text
+
+        if not content:
+            content = await cache_url_snapshot(str(entry.url))
+            entry.snapshot_text = content
+            update_fields["context.$.snapshot_text"] = content
+
+        if not getattr(entry, "kb_structure", None):
+            struct = await generate_kb_structure_via_gpt(content, ai_model)
+            entry.kb_structure = struct
+            update_fields["context.$.kb_structure"] = struct
+
+        if update_fields:
+            print(entry.id)
+            result = await mongo_db.knowledge_collection.update_one(
+                {"app_name": "main", "context.id": entry.id},
+                {"$set": update_fields}
+            )
+            print(f"[Mongo] Обновлено: matched={result.matched_count}, modified={result.modified_count}")
+
         return content
 
     return ""
 
 
-async def build_kb_structure_from_context_entry(entry: ContextEntry, ai_model: str = "gpt-4o") -> dict:
+
+
+
+async def build_kb_structure_from_context_entry(
+    entry: ContextEntry,
+    ai_model: str = "gpt-4o"
+) -> dict:
     """
-    Преобразует содержимое ContextEntry в структуру БЗ (топик ➝ подтема ➝ Q/A).
+    Возвращает готовую структуру БЗ для entry.
+    Если уже есть entry.kb_structure – берём её, иначе генерируем и сохраняем.
     """
-    raw = await get_context_entry_content(entry)
-    return await generate_kb_structure_via_gpt(raw, ai_model)
+    if getattr(entry, "kb_structure", None):
+        return entry.kb_structure
+
+    raw = await get_context_entry_content(entry, ai_model=ai_model)
+    raw = raw if isinstance(raw, str) else str(raw)
+
+    struct = await generate_kb_structure_via_gpt(raw, ai_model)
+    entry.kb_structure = struct
+
+    result = await mongo_db.knowledge_collection.update_one(
+        {"app_name": "main", "context.id": entry.id},
+        {"$set": {"context.$.kb_structure": struct}},
+    )
+    print(f"[Mongo] КБ-структура добавлена: matched={result.matched_count}, modified={result.modified_count}")
+
+    return struct
+
+
 
 
 async def collect_bot_context_snippets(entries: List[ContextEntry]) -> Tuple[List[str], str]:
@@ -736,7 +785,7 @@ async def collect_bot_context_snippets(entries: List[ContextEntry]) -> Tuple[Lis
     """
     result = []
     for entry in entries:
-        if entry.purpose in {ContextPurpose.BOT, ContextPurpose.BOTH}:
+        if entry.purpose in {ContextPurpose.KB, ContextPurpose.BOTH}:
             content = await get_context_entry_content(entry)
             if content:
                 result.append(content.strip())
@@ -759,11 +808,15 @@ async def collect_kb_structures_from_context(entries: List[ContextEntry], ai_mod
     """
     structures = []
     blocks = []
+    print('here')
 
     for entry in entries:
-        if entry.purpose in {ContextPurpose.KB, ContextPurpose.BOTH}:
+        print("ID", entry.id)
+        if entry.purpose in {ContextPurpose.BOT, ContextPurpose.BOTH}:
+            print('тут')
             struct = await build_kb_structure_from_context_entry(entry, ai_model=ai_model)
             if struct:
+                print('?')
                 structures.append(struct)
                 blocks.append(
                     f"From: **{entry.title}**\n"
@@ -776,4 +829,5 @@ async def collect_kb_structures_from_context(entries: List[ContextEntry], ai_mod
         "Use them as-is or adapt them to fit existing structure.\n\n"
     )
     full_prompt = prompt_text + "\n\n".join(blocks)
+    # print(structures)
     return structures, full_prompt
