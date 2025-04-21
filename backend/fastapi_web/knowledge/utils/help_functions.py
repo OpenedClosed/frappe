@@ -439,7 +439,8 @@ async def get_knowledge_base() -> Dict[str, dict]:
         raise HTTPException(404, "Knowledge base not found.")
     document.pop("_id", None)
     if document["knowledge_base"] is not None:
-        kb_doc = document["knowledge_base"]
+        # kb_doc = document["knowledge_base"]
+        kb_doc = document
         kb_model = KnowledgeBase(**kb_doc)
     else:
         kb_doc = KNOWLEDGE_BASE

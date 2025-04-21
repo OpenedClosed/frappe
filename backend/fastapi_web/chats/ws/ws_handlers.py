@@ -969,7 +969,8 @@ async def process_user_query_after_brief(
             chat_history = chat_session.messages[-25:]
 
             # Основная БЗ
-            knowledge_base, knowledge_base_model = await get_knowledge_base()
+            kb_doc, knowledge_base_model = await get_knowledge_base()
+            knowledge_base = kb_doc["knowledge_base"]
 
             # 👇 Собираем внешние структуры (мини-БЗ)
             external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
@@ -1293,7 +1294,8 @@ async def extract_knowledge(
     Если ничего не найдено, возвращается {"topics": []}.
     """
     if not knowledge_base:
-        knowledge_base, _ = await get_knowledge_base()
+        kb_doc, _ = await get_knowledge_base()
+        knowledge_base = kb_doc["knowledge_base"]
 
     extracted_data = {"topics": []}
 

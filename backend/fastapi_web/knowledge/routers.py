@@ -23,7 +23,7 @@ from .db.mongo.schemas import (ContextEntry, KnowledgeBase,
 from .utils.help_functions import (build_gpt_message_blocks,
                                    cache_url_snapshot, deep_merge,
                                    diff_with_tags, generate_patch_body_via_gpt,
-                                   get_knowledge_full_document)
+                                   get_knowledge_full_document, get_knowledge_base)
 
 knowledge_base_router = APIRouter()
 
@@ -255,19 +255,16 @@ async def delete_context_entity(
     """
     Удалить запись контекста по ID.
     """
-    kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-    if not kb_doc:
-        raise HTTPException(404, "Knowledge base not found")
-    kb_doc.pop("_id", None)
-    kb = KnowledgeBase(**kb_doc)
+    kb_doc, _ = await get_knowledge_base()
 
-    before = len(kb.context)
-    kb.context = [c for c in kb.context if str(c.id) != ctx_id]
-    if len(kb.context) == before:
+    before = len(kb_doc["context"])
+    kb_doc["context"] = [c for c in kb_doc["context"] if str(c.get("id")) != ctx_id]
+    if len(kb_doc["context"]) == before:
         raise HTTPException(404, "Context entry not found")
 
-    kb.update_date = datetime.utcnow()
-    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb.model_dump())
+    kb_doc["update_date"] = datetime.utcnow()
+    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
+
 
 
 @knowledge_base_router.get("/context_entity", response_model=List[ContextEntry])
@@ -284,20 +281,21 @@ async def get_all_context(
     kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
     if not kb_doc:
         raise HTTPException(404, "Knowledge base not found")
-    kb_doc.pop("_id", None)
-    kb = KnowledgeBase(**kb_doc)
 
     updated = False
-    for ctx in kb.context:
-        if ctx.type == ContextType.URL and not ctx.snapshot_text:
-            ctx.snapshot_text = await cache_url_snapshot(str(ctx.url))
+    for ctx in kb_doc.get("context", []):
+        if ctx["type"] == ContextType.URL and not ctx.get("snapshot_text"):
+            ctx["snapshot_text"] = await cache_url_snapshot(str(ctx["url"]))
             updated = True
 
     if updated:
-        kb.update_date = datetime.utcnow()
-        await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb.model_dump())
+        kb_doc["update_date"] = datetime.utcnow()
+        await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
 
-    return kb.context
+    print('+'*100)
+    print(kb_doc.get("context", []))
+    return kb_doc.get("context", [])
+
 
 @knowledge_base_router.patch("/context_entity/{ctx_id}/purpose", response_model=ContextEntry)
 @jwt_required()
@@ -312,18 +310,18 @@ async def update_context_purpose(
     """
     Изменить назначение (purpose) записи контекста.
     """
-    kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-    if not kb_doc:
-        raise HTTPException(404, "Knowledge base not found")
-    kb_doc.pop("_id", None)
-    kb = KnowledgeBase(**kb_doc)
+    kb_doc, _ = await get_knowledge_base()
+    print('='*100)
+    print(kb_doc)
+    print(ctx_id)
+    print(kb_doc["context"][0]["id"])
 
-    entry = next((c for c in kb.context if str(c.id) == ctx_id), None)
-    if not entry:
+    found = next((c for c in kb_doc["context"] if str(c.get("id")) == ctx_id), None)
+    if not found:
         raise HTTPException(404, "Context entry not found")
 
-    entry.purpose = new_purpose
-    kb.update_date = datetime.utcnow()
-    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb.model_dump())
+    found["purpose"] = new_purpose.value
+    kb_doc["update_date"] = datetime.utcnow()
+    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
 
-    return entry
+    return ContextEntry(**found)
