@@ -219,7 +219,7 @@ The following snippets contain **relevant** topics, subtopics, and questions tha
    - **If necessary, create a "Miscellaneous" topic** for unstructured content rather than failing the request.
    - The system **must always return a valid structured JSON patch**, even if the input is highly unusual.
 
-9. **Output Format**
+9. **Output Format** (THE MOST IMPORTANT RULE!!! NO STRING ONLY JSON)
    - Return **only valid JSON** that represents the patch. No extra commentary or text.
    - Example patch (generic placeholders):
 ```json

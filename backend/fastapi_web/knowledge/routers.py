@@ -281,9 +281,7 @@ async def get_all_context(
     if updated:
         kb_doc["update_date"] = datetime.utcnow()
         await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
-    print(kb_doc["context"])
-    print("отданные id", [doc["id"] for doc in kb_doc["context"]])
-    return kb_doc["context"]       # <- raw list; FastAPI валидирует
+    return kb_doc["context"]
 
 
 # ───────────────────────── PATCH purpose ───────────────────
@@ -310,4 +308,4 @@ async def update_context_purpose(
     kb_doc["update_date"] = datetime.utcnow()
     await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
 
-    return entry                    # <- raw dict; FastAPI валидирует
+    return entry

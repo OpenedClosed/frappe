@@ -3,6 +3,7 @@ import base64
 import hashlib
 import io
 import json
+import mimetypes
 import os
 import re
 from copy import deepcopy
@@ -24,7 +25,7 @@ from db.redis.db_init import redis_db
 from gemini_base.gemini_init import gemini_client
 # from knowledge.db.mongo.schemas import ContextEntry
 from infra import settings
-from knowledge.db.mongo.enums import ContextPurpose
+from knowledge.db.mongo.enums import ContextPurpose, ContextType
 from knowledge.db.mongo.schemas import ContextEntry, KnowledgeBase
 from knowledge.utils.prompts import AI_PROMPTS
 from openai_base.openai_init import openai_client
@@ -120,54 +121,49 @@ def _extract_json_from_gpt(raw_content: str) -> dict:
 
 
 async def analyze_update_snippets_via_gpt(
-    user_blocks: List[Dict[str, Any]],
+    user_blocks: list[dict],
     user_info: str,
-    knowledge_base: Dict[str, Any],
+    knowledge_base: dict,
     bot_context_prompt: str = "",
     ai_model: str = "gpt-4o",
-) -> Dict[str, Any]:
-    """
-    Определяет релевантные темы, подтемы и вопросы в базе знаний по запросу пользователя.
-    Шпаргалка для бота (bot_context_prompt) вставляется в system prompt.
-    """
-    kb_structure = {
-        topic_name: {
-            "subtopics": {
-                sub_name: {
-                    "questions": list(sub_data.get("questions", {}).keys())
-                }
-                for sub_name, sub_data in topic_data.get("subtopics", {}).items()
-            }
-        }
-        for topic_name, topic_data in knowledge_base.items()
-    }
+) -> dict:
+    kb_doc, kb_model = await get_knowledge_base()
+    ctx_blocks = await collect_context_blocks(kb_model.context)
+    # print(ctx_blocks)
 
-    system_prompt = AI_PROMPTS["analyze_update_snippets_prompt"].format(
-        kb_full_structure=json.dumps(kb_structure, ensure_ascii=False),
-        bot_snippets_text=bot_context_prompt
-    )
-
+    # формируем messages: сначала system‑prompt, потом контекст,
+    # а затем реальные user_blocks
     messages = build_messages_for_model(
-        system_prompt=system_prompt,
-        messages_data=user_blocks,
-        user_message="",  # ⬅️ теперь не дублируем bot_prompt
-        model=ai_model
+        system_prompt=AI_PROMPTS["analyze_update_snippets_prompt"].format(
+            kb_full_structure=json.dumps({
+                t: {"subtopics": {s: {"questions": list(sub["questions"])}
+                                  for s, sub in topic["subtopics"].items()}}
+                for t, topic in knowledge_base.items()
+            }, ensure_ascii=False),
+            bot_snippets_text=bot_context_prompt
+        ),
+        messages_data=ctx_blocks + user_blocks,   # ← контекст‑файлы добавлены
+        user_message="",
+        model=ai_model,
     )
 
     client, real_model = pick_model_and_client(ai_model)
-
     if real_model.startswith("gpt"):
-        response = await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
-        raw_content = response.choices[0].message.content.strip()
+        raw_content = (
+            await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
+        ).choices[0].message.content.strip()
     elif real_model.startswith("gemini"):
-        response = await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
-        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip()
+        raw_content = (
+            await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
+        )["candidates"][0]["content"]["parts"][0]["text"].strip()
     else:
-        response = await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
-        raw_content = response.choices[0].message.content.strip()
+        raw_content = (
+            await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
+        ).choices[0].message.content.strip()
 
-    result = _extract_json_from_gpt(raw_content)
-    return {"topics": normalize_snippets_structure(result)}
+    print('сниппеты', raw_content)
+    return {"topics": normalize_snippets_structure(_extract_json_from_gpt(raw_content))}
+
 
 
 
@@ -298,6 +294,7 @@ def build_messages_for_model(
             "content": system_prompt
         })
 
+
     for msg in messages_data:
         if isinstance(msg, ChatMessage):
             sender_role = extract_english_value(msg.sender_role.value)
@@ -348,6 +345,72 @@ def build_messages_for_model(
     return messages
 
 
+IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+
+
+import base64, mimetypes, aiofiles, os, io
+from pathlib import Path
+from typing import List, Dict, Any
+
+IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+DOC_EXT = {".pdf", ".docx", ".xlsx", ".xls"}
+
+# --- простая обёртка: читаем файл по пути и переиспользуем parse_* ----------
+async def parse_file_from_path(path: str) -> str:
+    ext = Path(path).suffix.lower()
+    if ext not in DOC_EXT:
+        return ""
+    async with aiofiles.open(path, "rb") as f:
+        fake_upload = UploadFile(filename=os.path.basename(path), file=io.BytesIO(await f.read()))
+    return await parse_file(fake_upload) or ""
+
+
+async def collect_context_blocks(ctx_list: List[ContextEntry]) -> List[Dict[str, Any]]:
+    """
+    Превращает ContextEntry (purpose = bot / both / kb) в блоки для LLM:
+      • TEXT / URL         → {"sender_role": "Context", "text": "..."}
+      • FILE‑image         → {"sender_role": "Context", "image_url": {...}}
+      • FILE‑doc (pdf, xls)→ как текст после parse_file_from_path()
+    """
+    blocks: List[Dict[str, Any]] = []
+
+    ALLOWED_PURPOSES = {ContextPurpose.BOT, ContextPurpose.BOTH, ContextPurpose.KB}
+
+    for entry in ctx_list:
+        if entry.purpose not in ALLOWED_PURPOSES:
+            continue
+
+        # --- TEXT ----------------------------------------------------------
+        if entry.type == ContextType.TEXT and entry.text:
+            blocks.append({"sender_role": "Context", "text": entry.text})
+
+        # --- URL -----------------------------------------------------------
+        elif entry.type == ContextType.URL and entry.url:
+            text = entry.snapshot_text or await cache_url_snapshot(str(entry.url))
+            blocks.append({"sender_role": "Context", "text": text})
+
+        # --- FILE ----------------------------------------------------------
+        elif entry.type == ContextType.FILE and entry.file_path:
+            ext = Path(entry.file_path).suffix.lower()
+
+            if ext in IMG_EXT:                       # картинка -> base64
+                mime = mimetypes.guess_type(entry.file_path)[0] or "image/jpeg"
+                async with aiofiles.open(entry.file_path, "rb") as f:
+                    b64 = base64.b64encode(await f.read()).decode()
+                blocks.append({
+                    "sender_role": "Context",
+                    "image_url": {"url": f"data:{mime};base64,{b64}"}
+                })
+
+            elif ext in DOC_EXT:                     # doc/pdf/excel -> текст
+                text = await parse_file_from_path(entry.file_path)
+                if text:
+                    blocks.append({"sender_role": "Context", "text": text})
+
+    return blocks
+
+
+
 def extract_english_value(value: Any) -> Any:
     """Пытается извлечь английскую версию строк из JSON. Возвращает исходное значение при ошибках."""
     if isinstance(value, str):
@@ -364,24 +427,20 @@ def extract_english_value(value: Any) -> Any:
 
 
 async def generate_patch_body_via_gpt(
-    user_blocks: List[Dict[str, Any]],
+    user_blocks: list[dict],
     user_info: str,
-    knowledge_base: Dict[str, Any],
+    knowledge_base: dict,
     ai_model: str = "gpt-4o",
-) -> Dict[str, Any]:
-    """
-    Формирует патч-JSON для обновления базы знаний.
-    Учитывает:
-    - релевантные фрагменты из базы знаний;
-    - шпаргалки из контекста (назначение: bot/both);
-    - (но НЕ учитывает внешние структуры при генерации патча).
-    """
+) -> dict:
+
     kb_doc, kb_model = await get_knowledge_base()
+    ctx_blocks = await collect_context_blocks(kb_model.context)   # ← файлы/тексты
 
-    # 2. Получаем шпаргалку (bot context)
+    # 2. шпаргалка
     _, bot_prompt = await collect_bot_context_snippets(kb_model.context)
+    
 
-    # 3. Поиск релевантных тем на основе текущей БЗ и user_blocks
+    # 3. поиск релевантных тем (использует ctx_blocks внутри)
     snippets = await analyze_update_snippets_via_gpt(
         user_blocks=user_blocks,
         user_info=user_info,
@@ -389,48 +448,44 @@ async def generate_patch_body_via_gpt(
         bot_context_prompt=bot_prompt,
         ai_model=ai_model,
     )
-    snippets_list = snippets.get("topics", [])
 
-    # 4. Извлекаем куски знаний по темам (только из основной БЗ)
     kb_snippets_text = await extract_knowledge_with_structure(
-        topics=snippets_list,
-        knowledge_base=knowledge_base
+        topics=snippets.get("topics", []),
+        knowledge_base=knowledge_base,
     )
 
-    # 5. Финальный system prompt
     system_prompt = AI_PROMPTS["patch_body_prompt"].format(
-        bot_snippets_text=bot_prompt,         # ⬅️ шпаргалка встроена
-        kb_snippets_text=kb_snippets_text
+        bot_snippets_text=bot_prompt,
+        kb_snippets_text=kb_snippets_text,
     )
 
-    # 6. Собираем сообщения
     messages = build_messages_for_model(
         system_prompt=system_prompt,
-        messages_data=user_blocks,
-        user_message="",  # ⬅️ bot_prompt уже в system_prompt
-        model=ai_model
+        messages_data=ctx_blocks + user_blocks,  # ← контекст‑файлы добавлены
+        user_message="",
+        model=ai_model,
     )
+    # print(system_prompt)
+    # print(ai_model)
 
-    # 7. Запрос к LLM
     client, real_model = pick_model_and_client(ai_model)
-
     if real_model.startswith("gpt"):
-        response = await client.chat.completions.create(
-            model=real_model, messages=messages, temperature=0.1
-        )
-        raw_content = response.choices[0].message.content.strip()
+        raw_content = (
+            await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
+        ).choices[0].message.content.strip()
     elif real_model.startswith("gemini"):
-        response = await client.chat_generate(
-            model=real_model, messages=messages, temperature=0.1
-        )
-        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip()
+        raw_content = (
+            await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
+        )["candidates"][0]["content"]["parts"][0]["text"].strip()
     else:
-        response = await openai_client.chat.completions.create(
-            model="gpt-4o", messages=messages, temperature=0.1
-        )
-        raw_content = response.choices[0].message.content.strip()
+        raw_content = (
+            await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
+        ).choices[0].message.content.strip()
+
+    print('патч', raw_content)
 
     return _extract_json_from_gpt(raw_content)
+
 
 async def get_knowledge_base() -> Dict[str, dict]:
     """Получает базу знаний."""
@@ -691,7 +746,7 @@ async def collect_bot_context_snippets(entries: List[ContextEntry]) -> Tuple[Lis
         "They serve as **background knowledge** and may be used to enhance responses,\n"
         "but should NOT be copied directly into structured outputs.\n\n"
     )
-    full_prompt = prompt_text + "\n\n".join(result)
+    full_prompt = "=" * 30 + prompt_text + "\n\n".join(result if result else ["Нет дополнительного контекста."]) + "=" * 30
     return result, full_prompt
 
 
