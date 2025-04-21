@@ -48,8 +48,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     client_id = await get_client_id(websocket, chat_id, is_superuser)
     generated_id = await generate_client_id(websocket)
     id_to_connect = (
-        "admin_pass" if is_superuser and (generated_id == client_id)
-        else generated_id if is_superuser
+        generated_id if is_superuser
         else client_id
     )
     print("ID", client_id, generated_id)

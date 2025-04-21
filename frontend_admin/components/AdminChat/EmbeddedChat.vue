@@ -1,25 +1,25 @@
 <!-- ~/components/ChatPanel.vue -->
 <template>
-  <div class="flex flex-col h-[80vh] max-h-[80vh] ">
+  <div class="flex flex-col h-[80vh] max-h-[80vh]">
     <Toast class="max-w-[18rem] md:max-w-full" />
 
     <div class="flex items-center gap-3 m-2">
       <!-- “All” label -->
-      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-        All
-      </span>
+      <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> All </span>
 
       <!-- InputSwitch (PrimeVue) -->
-      <InputSwitch v-model="unreadOnly" onLabel="Unread" offLabel="All" onIcon="pi pi-envelope-open"
-        offIcon="pi pi-inbox" class="h-6 w-11 shrink-0 cursor-pointer outline-none
-             transition-colors duration-200" />
+      <InputSwitch
+        v-model="unreadOnly"
+        onLabel="Unread"
+        offLabel="All"
+        onIcon="pi pi-envelope-open"
+        offIcon="pi pi-inbox"
+        class="h-6 w-11 shrink-0 cursor-pointer outline-none transition-colors duration-200"
+      />
 
       <!-- “Unread” label -->
-      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-        Unread
-      </span>
+      <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> Unread </span>
     </div>
-
 
     <vue-advanced-chat
       :height="'80vh'"
@@ -107,10 +107,9 @@ const activeUserId = ref(null);
 const activeStartDate = ref(null);
 const panelMessages = computed(() => messagesMap.value[activeRoomId.value] || []);
 
-
 function clearRoomName(room) {
-  const clean = room.roomName.replace(/^🔴\s*/, '')            // strip a previous badge
-  return clean 
+  const clean = room.roomName.replace(/^🔴\s*/, ""); // strip a previous badge
+  return clean;
 }
 
 /* ── Chat logic instance (re‑created on room switch) ───────── */
@@ -212,7 +211,6 @@ function formatTimeDifferenceEU(dateStr) {
   return `Started ${diffDays} days, ${diffHours} hours, ${diffMinutes} minutes ago`;
 }
 
-
 /* ② rebuild rooms + messages when data and transformFn are ready */
 const transformFn = computed(() => chatLogic.value?.transformChatMessages);
 function buildRooms(chats, consultantId) {
@@ -249,15 +247,16 @@ function buildRooms(chats, consultantId) {
           timestamp: formatDateEU(chat.created_at),
         }
       : { content: "", senderId: consultantUser._id };
-        console.log("lastMessage", chat.messages); // For debugging: log last message data
+    console.log("lastMessage", chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0); // For debugging: log last message data
+    const seen = chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0 || false;
     return {
       avatar: sourceAvatars[sourceName] || "/avatars/default.png",
       roomId: chat.chat_id,
-      roomName: `🔴 ${client.id}` || `Chat ${idx + 1}`,
+      roomName: `${seen ? "" : "🔴"} ${client.id}` || `Chat ${idx + 1}`,
       users: [clientUser, consultantUser],
       lastMessage,
       typingUsers: [],
-      seen: false,
+      seen: seen,
     };
   });
 }
