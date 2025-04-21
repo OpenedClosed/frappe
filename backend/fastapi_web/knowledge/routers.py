@@ -262,7 +262,7 @@ async def delete_context_entity(
 
 
 # ───────────────────────── GET ALL ────────────────────────
-@knowledge_base_router.get("/context_entity", response_model=List[ContextEntry])
+@knowledge_base_router.get("/context_entity", )
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def get_all_context(
@@ -271,7 +271,7 @@ async def get_all_context(
     Authorize: AuthJWT = Depends(),
 ):
     kb_doc, _ = await get_knowledge_base()
-    print(kb_doc["context"])
+
 
     updated = False
     for ctx in kb_doc.get("context", []):
@@ -281,7 +281,7 @@ async def get_all_context(
     if updated:
         kb_doc["update_date"] = datetime.utcnow()
         await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
-
+    print(kb_doc["context"])
     print("отданные id", [doc["id"] for doc in kb_doc["context"]])
     return kb_doc["context"]       # <- raw list; FastAPI валидирует
 
@@ -289,7 +289,6 @@ async def get_all_context(
 # ───────────────────────── PATCH purpose ───────────────────
 @knowledge_base_router.patch(
     "/context_entity/{ctx_id}/purpose",
-    response_model=ContextEntry
 )
 @jwt_required()
 @permission_required(AdminPanelPermission)

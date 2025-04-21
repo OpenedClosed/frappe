@@ -554,7 +554,7 @@ async function onPurposeChange (ctx, newPurpose) {
   try {
     const form = new FormData()
     form.append('new_purpose', newPurpose)
-    await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx._id}/purpose`, form)
+    await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/purpose`, form)
     showSuccess('Purpose updated')
   } catch (_) {
     ctx.purpose = prev                  // откат при ошибке
@@ -580,6 +580,7 @@ function typeIcon(t) {
 async function fetchContextUnits() {
   try {
     const { data } = await useNuxtApp().$api.get("/api/knowledge/context_entity");
+    console.log("contextList= ", data);
     contextList.value = data;
   } catch (_) {
     showError("Cannot load context");
