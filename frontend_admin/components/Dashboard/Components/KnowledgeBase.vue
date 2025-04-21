@@ -41,13 +41,25 @@
                 <!-- CONTEXT UNITS SECTION -->
                 <label class="font-bold mb-2">Context units</label>
 
-                <!-- список -->
                 <ul class="flex flex-col gap-2 max-h-40 overflow-y-auto mb-4">
-                  <li v-for="ctx in contextList" :key="ctx.id" class="p-2 border rounded flex justify-between items-center">
-                    <div class="flex items-center gap-2">
+                  <li v-for="ctx in contextList" :key="ctx.id" class="p-2 border rounded flex items-center justify-between gap-3">
+                    <!-- иконка + заголовок -->
+                    <div class="flex items-center gap-2 flex-1">
                       <i :class="typeIcon(ctx.type)"></i>
-                      <span>{{ ctx.title }}</span>
+                      <span class="truncate">{{ ctx.title }}</span>
                     </div>
+
+                    <!-- DROPDOWN PURPOSE -->
+                    <Dropdown
+                      v-model="ctx.purpose"
+                      :options="contextPurposes"
+                      optionLabel="label"
+                      optionValue="value"
+                      class="p-dropdown-sm w-24"
+                      @change="(e) => onPurposeChange(ctx, e.value)"
+                    />
+
+                    <!-- delete -->
                     <Button
                       icon="pi pi-trash"
                       class="p-button-rounded p-button-text p-button-danger p-button-sm"
@@ -517,6 +529,14 @@ const contextTypes = [
   { label: "Link", value: "url" },
 ];
 
+const contextPurposes = [
+  { label: 'None',  value: 'none' },
+  { label: 'Bot',   value: 'bot'  },
+  { label: 'KB',    value: 'kb'   },
+  { label: 'Both',  value: 'both' }
+]
+
+
 // данные формы добавления
 const newCtx = reactive({
   type: "", // 'TEXT' | 'FILE' | 'URL'
@@ -525,6 +545,22 @@ const newCtx = reactive({
   url: "",
   file: null,
 });
+
+/* ---------- смена purpose ---------- */
+async function onPurposeChange (ctx, newPurpose) {
+  const prev = ctx.purpose              // на случай отката
+  ctx.purpose = newPurpose
+
+  try {
+    const form = new FormData()
+    form.append('new_purpose', newPurpose)
+    await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx._id}/purpose`, form)
+    showSuccess('Purpose updated')
+  } catch (_) {
+    ctx.purpose = prev                  // откат при ошибке
+    showError('Purpose not updated')
+  }
+}
 
 onMounted(fetchContextUnits);
 
@@ -566,18 +602,17 @@ const canSubmitContext = computed(() => {
   return false;
 });
 
-
 async function submitContext() {
   try {
     const form = new FormData();
     form.append("type", newCtx.type);
-    form.append("purpose", "NONE");
+    form.append("purpose", "none");
     if (newCtx.title) form.append("title", newCtx.title);
 
     if (newCtx.type === "text") form.append("text", newCtx.text);
     if (newCtx.type === "url") form.append("url", newCtx.url);
     if (newCtx.type === "file" && newCtx.file) form.append("file", newCtx.file, newCtx.file.name);
-    
+
     console.log("form= ", ...form);
     await useNuxtApp().$api.post("/api/knowledge/context_entity", form);
     showSuccess("Context added");
