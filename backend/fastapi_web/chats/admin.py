@@ -259,6 +259,8 @@ class ChatSessionAdmin(BaseAdmin):
         """Список чатов, у которых есть сообщения."""
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
+        # print('-'*100)
+        # print(await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user=current_user))
         return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user=current_user)
 
     async def get_status_display(self, obj: dict) -> str:
