@@ -37,9 +37,17 @@ class ChatMessageInline(InlineAdmin):
         "message",
         "sender_role",
         "timestamp",
-        "confidence_status"]
-    list_display = ["message", "sender_role", "timestamp", "confidence_status"]
-    computed_fields = ["confidence_status"]
+        "confidence_status",
+        "read_by_display"
+    ]
+    list_display = [
+        "message",
+        "sender_role",
+        "timestamp",
+        "confidence_status",
+        "read_by_display"
+    ]
+    computed_fields = ["confidence_status", "read_by_display"]
     read_only_fields = ["timestamp"]
 
     field_titles = {
@@ -59,6 +67,9 @@ class ChatMessageInline(InlineAdmin):
             "en": "Confidence Status", "pl": "Poziom pewności",
             "uk": "Рівень впевненості", "ru": "Уровень уверенности"
         },
+        "read_by_display": {
+            "en": "Read By", "ru": "Прочитано кем"
+        },
     }
 
     async def get_queryset(
@@ -68,7 +79,6 @@ class ChatMessageInline(InlineAdmin):
         order: int = 1,
         current_user: Optional[dict] = None,
     ) -> List[dict]:
-        """Возвращает отфильтрованный и отсортированный список сообщений."""
         filters = filters or {}
         sort_by = sort_by or self.detect_id_field()
 
@@ -79,12 +89,6 @@ class ChatMessageInline(InlineAdmin):
             current_user=current_user
         )
 
-        # (опциональный фильтр по роли или другим условиям — можно раскомментировать)
-        # messages = [
-        #     msg for msg in messages
-        #     if msg.get("sender_role") == SenderRole.CLIENT
-        # ]
-
         if sort_by:
             reverse = (order == -1)
             messages.sort(key=lambda x: x.get(sort_by), reverse=reverse)
@@ -92,7 +96,6 @@ class ChatMessageInline(InlineAdmin):
         return [await self.format_document(msg) for msg in messages]
 
     async def get_confidence_status(self, obj: dict) -> str:
-        """Возвращает статус уверенности в формате JSON (en/ru)."""
         evaluation = obj.get("gpt_evaluation", {})
 
         status = {
@@ -117,6 +120,34 @@ class ChatMessageInline(InlineAdmin):
                 status = {"en": "Low Confidence", "ru": "Низкая уверенность"}
 
         return json.dumps(status, ensure_ascii=False)
+
+    async def get_read_by_display(self, obj: dict) -> str:
+        chat_id = obj.get("chat_id")
+        message_id = obj.get("id")
+        sender_id = obj.get("sender_id")
+
+        if not chat_id or not message_id:
+            return json.dumps([], ensure_ascii=False)
+
+        chat_data = await mongo_db.chats.find_one({"chat_id": chat_id}, {"read_state": 1, "messages": 1})
+        if not chat_data:
+            return json.dumps([], ensure_ascii=False)
+
+        read_state = chat_data.get("read_state", [])
+        messages = chat_data.get("messages", [])
+        idx_map = {m["id"]: i for i, m in enumerate(messages)}
+        msg_idx = idx_map.get(message_id, -1)
+
+        readers = []
+        for ri in read_state:
+            last_read = ri.get("last_read_msg")
+            reader_id = ri.get("client_id")
+            if reader_id and reader_id != sender_id:
+                if idx_map.get(last_read, -1) >= msg_idx:
+                    readers.append(reader_id)
+
+        return json.dumps(readers, ensure_ascii=False)
+
 
 
 class ClientInline(InlineAdmin):
@@ -207,7 +238,7 @@ class ChatSessionAdmin(BaseAdmin):
         "created_at", "admin_marker"
     ]
 
-    detail_fields = list_display.copy()
+    detail_fields = list_display + ["read_state"]
     computed_fields = [
         "client_id_display", "client_source_display",
         "status_display", "duration_display"
@@ -242,6 +273,9 @@ class ChatSessionAdmin(BaseAdmin):
         "admin_marker": {
             "en": "Admin Marker", "ru": "Админская метка"
         },
+        "read_state": {
+            "en": "Read Status", "ru": "Прочитано кем"
+        }
     }
 
     inlines = {
