@@ -79,7 +79,7 @@ async def handle_message(
                 gpt_lock, user_data
             )
     elif handler == handle_get_messages:
-        await handler(manager, chat_id, redis_session_key, user_data)
+        await handler(manager, chat_id, redis_session_key, data, user_data)
     elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
         await handler(typing_manager, chat_id, client_id, manager)
     else:
@@ -328,9 +328,10 @@ async def handle_get_messages(
     manager,
     chat_id: str,
     redis_key_session: str,
+    data: dict,
     user_data: dict
 ) -> bool:
-    """Отдаёт историю чата и фиксирует прочтение текущим клиентом."""
+    """Отдаёт историю чата и, при наличии with_enter=True, фиксирует прочтение текущим клиентом."""
     chat_data: Dict[str, Any] | None = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
         await manager.broadcast(custom_json_dumps({
@@ -363,27 +364,28 @@ async def handle_get_messages(
     now = datetime.utcnow()
     modified = False
 
-    for ri in read_state:
-        if ri.client_id == client_id:
-            if ri.last_read_msg != last_id:
-                ri.last_read_msg = last_id
-                ri.last_read_at = now
-                modified = True
-            break
-    else:
-        read_state.append(ChatReadInfo(
-            client_id=client_id,
-            user_id=user_id,
-            last_read_msg=last_id,
-            last_read_at=now
-        ))
-        modified = True
+    if data.get("with_enter"):
+        for ri in read_state:
+            if ri.client_id == client_id:
+                if ri.last_read_msg != last_id:
+                    ri.last_read_msg = last_id
+                    ri.last_read_at = now
+                    modified = True
+                break
+        else:
+            read_state.append(ChatReadInfo(
+                client_id=client_id,
+                user_id=user_id,
+                last_read_msg=last_id,
+                last_read_at=now
+            ))
+            modified = True
 
-    if modified:
-        await mongo_db.chats.update_one(
-            {"chat_id": chat_id},
-            {"$set": {"read_state": [ri.model_dump() for ri in read_state]}}
-        )
+        if modified:
+            await mongo_db.chats.update_one(
+                {"chat_id": chat_id},
+                {"$set": {"read_state": [ri.model_dump() for ri in read_state]}}
+            )
 
     idx = {m["id"]: i for i, m in enumerate(messages)}
     enriched: List[dict] = []
@@ -411,6 +413,7 @@ async def handle_get_messages(
         "remaining_time": remaining
     }))
     return enriched
+
 
 
 
