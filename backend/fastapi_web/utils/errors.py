@@ -30,6 +30,9 @@ async def validation_exception_handler(
     """Обработка исключения при запросе."""
     errors = {}
     for e in exc.errors():
+        print('-' * 20)
+        print('error:',e)
+        print('-' * 20)
         loc = e['loc']
         current = errors
         for key in loc[:-1]:

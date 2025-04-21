@@ -25,7 +25,7 @@
               <!-- TEXTAREA -->
               <Textarea id="promptTextArea" rows="15" class="w-full min-h-[150px]" required v-model="promptText" />
               <!-- NEW FILE UPLOADER -->
-              <FileUpload
+              <!-- <FileUpload
                 name="files"
                 multiple
                 :customUpload="true"
@@ -36,8 +36,83 @@
                 @remove="onRemove"
                 class="p-button-outlined"
               >
-              </FileUpload>
+              </FileUpload> -->
+              <div>
+                <!-- CONTEXT UNITS SECTION -->
+                <label class="font-bold mb-2">Context units</label>
 
+                <!-- список -->
+                <ul class="flex flex-col gap-2 max-h-40 overflow-y-auto mb-4">
+                  <li v-for="ctx in contextList" :key="ctx.id" class="p-2 border rounded flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                      <i :class="typeIcon(ctx.type)"></i>
+                      <span>{{ ctx.title }}</span>
+                    </div>
+                    <Button
+                      icon="pi pi-trash"
+                      class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                      @click="deleteContext(ctx.id)"
+                    />
+                  </li>
+                </ul>
+
+                <!-- кнопка добавления -->
+                <Button label="Add context" icon="pi pi-plus" class="p-button-success p-button-sm w-full mb-4" @click="openContextDialog" />
+
+                <!-- ================= Dialog ================= -->
+                <Dialog v-model:visible="showContextDialog" header="Add context" :modal="true" :closable="true" :style="{ width: '40vw' }">
+                  <div class="flex flex-col gap-3">
+                    <!-- тип -->
+                    <Dropdown
+                      v-model="newCtx.type"
+                      :options="contextTypes"
+                      optionLabel="label"
+                      optionValue="value"
+                      class="w-full"
+                      placeholder="Select type"
+                    />
+
+                    <!-- необязательный заголовок -->
+                    <InputText v-model="newCtx.title" class="w-full" placeholder="Title (optional)" />
+
+                    <!-- динамическое поле по типу -->
+                    <Textarea
+                      v-if="newCtx.type === 'text'"
+                      v-model="newCtx.text"
+                      rows="5"
+                      class="w-full"
+                      placeholder="Paste the text here"
+                    />
+
+                    <InputText v-else-if="newCtx.type === 'url'" v-model="newCtx.url" class="w-full" placeholder="https://example.com" />
+
+                    <div v-else-if="newCtx.type === 'file'">
+                      <FileUpload
+                        name="file"
+                        :customUpload="true"
+                        :auto="false"
+                        :showUploadButton="false"
+                        :showCancelButton="false"
+                        accept="image/*,application/pdf,application/zip"
+                        @select="onCtxFileSelect"
+                      />
+                      <p v-if="newCtx.file" class="text-sm mt-2">{{ newCtx.file.name }} — {{ newCtx.file.size }} bytes</p>
+                    </div>
+
+                    <!-- кнопки -->
+                    <div class="flex justify-end gap-2 mt-4">
+                      <Button label="Cancel" class="p-button-text" @click="showContextDialog = false" />
+                      <Button
+                        label="Add"
+                        icon="pi pi-check"
+                        class="p-button-success"
+                        :disabled="!canSubmitContext"
+                        @click="submitContext"
+                      />
+                    </div>
+                  </div>
+                </Dialog>
+              </div>
               <!-- {{ selectedFiles }} -->
 
               <!-- GENERATE SMART CHANGE BUTTON -->
@@ -60,11 +135,7 @@
               </Button>
 
               <!-- Button to open test chat -->
-              <Button
-                label="Open test chat"
-                class="p-button-sm p-button-info w-full"
-                @click="showDialog = true"
-              />
+              <Button label="Open test chat" class="p-button-sm p-button-info w-full" @click="showDialog = true" />
               <Dialog
                 v-model:visible="showDialog"
                 :modal="true"
@@ -105,35 +176,19 @@
 
             <!-- Read-only display if not editing -->
             <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
-              <div
-                v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base"
-                :key="topicName"
-                class="mb-6"
-              >
+              <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6">
                 <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                 <div v-if="topicValue.subtopics">
-                  <div
-                    v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
-                    :key="subtopicName"
-                    class="ml-4 mb-4"
-                  >
+                  <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
                     <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
                     <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                      <li
-                        v-for="(qObj, questionKey) in subtopicValue.questions"
-                        :key="questionKey"
-                        class="mb-4"
-                      >
+                      <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
                         <div>
                           <span class="font-semibold">{{ questionKey }}: </span>
                           <span> {{ qObj.text }}</span>
                         </div>
                         <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
-                          <div
-                            v-for="(fileLink, fileIndex) in qObj.files"
-                            :key="fileIndex"
-                            class="mb-1"
-                          >
+                          <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
                             <ImageLink :fileLink="fileLink" />
                           </div>
                         </div>
@@ -161,17 +216,8 @@
                     @blur="renameTopic(topicName, $event.target.value)"
                     @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
                   />
-                  <Button
-                    icon="pi pi-minus"
-                    class="p-button-danger p-button-sm mr-2"
-                    @click="removeTopic(topicName)"
-                  />
-                  <Button
-                    label="Add subtopic"
-                    icon="pi pi-plus"
-                    class="p-button-success p-button-sm"
-                    @click="addSubtopic(topicName)"
-                  />
+                  <Button icon="pi pi-minus" class="p-button-danger p-button-sm mr-2" @click="removeTopic(topicName)" />
+                  <Button label="Add subtopic" icon="pi pi-plus" class="p-button-success p-button-sm" @click="addSubtopic(topicName)" />
                 </div>
                 <!-- Subtopics and questions -->
                 <div
@@ -189,11 +235,7 @@
                       @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
                       @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
                     />
-                    <Button
-                      icon="pi pi-minus"
-                      class="p-button-danger p-button-sm mr-2"
-                      @click="removeSubtopic(topicName, subtopicName)"
-                    />
+                    <Button icon="pi pi-minus" class="p-button-danger p-button-sm mr-2" @click="removeSubtopic(topicName, subtopicName)" />
                     <Button
                       label="Add question"
                       icon="pi pi-plus"
@@ -236,11 +278,7 @@
                       <!-- LINKS / FILES -->
                       <label class="font-semibold">Links / Files:</label>
                       <ul class="mb-2">
-                        <li
-                          v-for="(fileLink, fileIndex) in questionObj.files"
-                          :key="fileIndex"
-                          class="flex items-center gap-2 mb-1"
-                        >
+                        <li v-for="(fileLink, fileIndex) in questionObj.files" :key="fileIndex" class="flex items-center gap-2 mb-1">
                           <input
                             v-model="questionObj.files[fileIndex]"
                             type="text"
@@ -256,16 +294,11 @@
                       <div v-if="localFiles.length" class="mt-4">
                         <h3>Selected files:</h3>
                         <ul>
-                          <li
-                            v-for="(file, idx) in localFiles"
-                            :key="idx"
-                          >
-                            {{ file.name }} - {{ file.size }} bytes
-                          </li>
+                          <li v-for="(file, idx) in localFiles" :key="idx">{{ file.name }} - {{ file.size }} bytes</li>
                         </ul>
                       </div>
 
-                     <Button
+                      <Button
                         label="Add link"
                         icon="pi pi-plus"
                         class="p-button-success p-button-sm"
@@ -318,35 +351,19 @@
           >
             <h2 class="text-lg font-bold mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">Knowledge base (read-only)</h2>
             <div class="flex-1 overflow-y-auto">
-              <div
-                v-for="(topicValue, topicName) in readonlyData.knowledge_base"
-                :key="topicName"
-                class="mb-6"
-              >
+              <div v-for="(topicValue, topicName) in readonlyData.knowledge_base" :key="topicName" class="mb-6">
                 <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                 <div v-if="topicValue.subtopics">
-                  <div
-                    v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
-                    :key="subtopicName"
-                    class="ml-4 mb-4"
-                  >
+                  <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
                     <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
                     <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                      <li
-                        v-for="(qObj, questionKey) in subtopicValue.questions"
-                        :key="questionKey"
-                        class="mb-4"
-                      >
+                      <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
                         <div>
                           <span class="font-semibold">{{ questionKey }}: </span>
                           <span> {{ qObj.text }}</span>
                         </div>
                         <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
-                          <div
-                            v-for="(fileLink, fileIndex) in qObj.files"
-                            :key="fileIndex"
-                            class="mb-1"
-                          >
+                          <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
                             <ImageLink :fileLink="fileLink" />
                           </div>
                         </div>
@@ -358,40 +375,18 @@
             </div>
             <div class="flex gap-2">
               <!-- Export Button -->
-              <Button
-                label="Export JSON"
-                icon="pi pi-download"
-                class="p-button-sm p-button-info"
-                @click="exportData"
-              />
+              <Button label="Export JSON" icon="pi pi-download" class="p-button-sm p-button-info" @click="exportData" />
               <!-- Import Button -->
-              <Button
-                label="Import JSON"
-                icon="pi pi-upload"
-                class="p-button-sm p-button-primary"
-                @click="triggerFileInput"
-              />
+              <Button label="Import JSON" icon="pi pi-upload" class="p-button-sm p-button-primary" @click="triggerFileInput" />
               <!-- Hidden File Input -->
-              <input
-                type="file"
-                class="hidden"
-                ref="fileInput"
-                @change="importData"
-                accept=".json"
-              />
+              <input type="file" class="hidden" ref="fileInput" @change="importData" accept=".json" />
             </div>
           </div>
         </div>
       </div>
     </div>
     <!-- INSTRUCTIONS DIALOG -->
-    <Dialog
-      v-model:visible="showInstructions"
-      :header="'How to use this tool?'"
-      :modal="true"
-      :closable="true"
-      :style="{ width: '50vw' }"
-    >
+    <Dialog v-model:visible="showInstructions" :header="'How to use this tool?'" :modal="true" :closable="true" :style="{ width: '50vw' }">
       <div class="wysiwyg">
         <p>Добро пожаловать в руководство по использованию инструмента для работы с базой знаний. Вот несколько рекомендаций:</p>
         <ul>
@@ -485,7 +480,6 @@
   </div>
 </template>
 
-
 <script setup>
 import { ref } from "vue";
 // import Textarea from 'primevue/textarea';
@@ -493,7 +487,7 @@ import { ref } from "vue";
 import cloneDeep from "lodash/cloneDeep";
 import ImageLink from "./ImageLink.vue";
 import { useI18n } from "vue-i18n"; // Добавляем i18n
-import SaveChangesDialog from './SaveChangesDialog.vue';
+import SaveChangesDialog from "./SaveChangesDialog.vue";
 
 const { t } = useI18n(); // Получаем функцию перевода
 const toast = useToast();
@@ -513,6 +507,98 @@ const aiModels = ref([
   { label: "gemini-2.0-flash", value: "gemini-2.0-flash" },
 ]);
 
+/* ---------- контекст ---------- */
+const contextList = ref([]); // список
+const showContextDialog = ref(false); // диалог
+
+const contextTypes = [
+  { label: "Text", value: "text" },
+  { label: "File / Photo", value: "file" },
+  { label: "Link", value: "url" },
+];
+
+// данные формы добавления
+const newCtx = reactive({
+  type: "", // 'TEXT' | 'FILE' | 'URL'
+  title: "",
+  text: "",
+  url: "",
+  file: null,
+});
+
+onMounted(fetchContextUnits);
+
+/* ---------- helpers ---------- */
+
+function typeIcon(t) {
+  return (
+    {
+      text: "pi pi-align-left",
+      file: "pi pi-file",
+      url: "pi pi-link",
+    }[t] || "pi pi-question"
+  );
+}
+
+/* ---------- API ----------- */
+async function fetchContextUnits() {
+  try {
+    const { data } = await useNuxtApp().$api.get("/api/knowledge/context_entity");
+    contextList.value = data;
+  } catch (_) {
+    showError("Cannot load context");
+  }
+}
+
+function openContextDialog() {
+  Object.assign(newCtx, { type: "", title: "", text: "", url: "", file: null });
+  showContextDialog.value = true;
+}
+
+function onCtxFileSelect(e) {
+  newCtx.file = e.files[0] || null;
+}
+
+const canSubmitContext = computed(() => {
+  if (newCtx.type === "text") return newCtx.text.trim();
+  if (newCtx.type === "url") return newCtx.url.trim();
+  if (newCtx.type === "file") return newCtx.file;
+  return false;
+});
+
+
+async function submitContext() {
+  try {
+    const form = new FormData();
+    form.append("type", newCtx.type);
+    form.append("purpose", "NONE");
+    if (newCtx.title) form.append("title", newCtx.title);
+
+    if (newCtx.type === "text") form.append("text", newCtx.text);
+    if (newCtx.type === "url") form.append("url", newCtx.url);
+    if (newCtx.type === "file" && newCtx.file) form.append("file", newCtx.file, newCtx.file.name);
+    
+    console.log("form= ", ...form);
+    await useNuxtApp().$api.post("/api/knowledge/context_entity", form);
+    showSuccess("Context added");
+    showContextDialog.value = false;
+    fetchContextUnits();
+  } catch (_) {
+    showError("Context not added");
+  }
+}
+
+async function deleteContext(id) {
+  if (!confirm("Delete context unit?")) return;
+  try {
+    await useNuxtApp().$api.delete(`/api/knowledge/context_entity/${id}`);
+    contextList.value = contextList.value.filter((c) => c.id !== id);
+    showSuccess("Context deleted");
+  } catch (_) {
+    showError("Context not deleted");
+  }
+}
+
 function showSuccess(message) {
   toast.add({ severity: "success", summary: "Success", detail: message, life: 3000 });
 }
@@ -521,7 +607,6 @@ function showSuccess(message) {
 function showError(message) {
   toast.add({ severity: "error", summary: "Error", detail: message, life: 3000 });
 }
-
 
 // This runs whenever user selects new files.
 function onSelect(event) {
@@ -624,10 +709,10 @@ function renameQuestion(topicName, subtopicName, oldQuestion, newQuestion) {
   // Move entire object { text, files } to the new key
   subtopic.questions[newQuestion] = subtopic.questions[oldQuestion];
   delete subtopic.questions[oldQuestion];
-  
+
   const originalName = questionRenamingMap.value.get(oldQuestion) || oldQuestion;
-  questionRenamingMap.value.delete(oldQuestion); 
-  questionRenamingMap.value.set(newQuestion, originalName); 
+  questionRenamingMap.value.delete(oldQuestion);
+  questionRenamingMap.value.set(newQuestion, originalName);
 }
 
 /**
@@ -715,7 +800,6 @@ function addTopic() {
   showSuccess("Topic added successfully");
 }
 
-
 // Удалить тему
 function removeTopic(topicName) {
   if (confirm(t("knowledgeBase.removeTopic", { topicName }))) {
@@ -730,25 +814,25 @@ function removeTopic(topicName) {
 
 function countDeletedItemsFromTopic(topicName) {
   const originalTopic = readonlyData.value.knowledge_base?.[topicName];
-    const currentTopic = knowledgeBaseData.value.knowledge_base[topicName];
-    
-    if (originalTopic) {
-      deletedItemsCount.value++;
+  const currentTopic = knowledgeBaseData.value.knowledge_base[topicName];
 
-      for (const subtopic in originalTopic.subtopics || {}) {
-        if (currentTopic?.subtopics?.[subtopic]) {
-          deletedItemsCount.value++;
-          const originalQuestions = originalTopic.subtopics[subtopic].questions || {};
-          const currentQuestions = currentTopic.subtopics[subtopic].questions || {};
+  if (originalTopic) {
+    deletedItemsCount.value++;
 
-          for (const question in originalQuestions) {
-            if (currentQuestions[question]) {
-              deletedItemsCount.value++;
-            }
+    for (const subtopic in originalTopic.subtopics || {}) {
+      if (currentTopic?.subtopics?.[subtopic]) {
+        deletedItemsCount.value++;
+        const originalQuestions = originalTopic.subtopics[subtopic].questions || {};
+        const currentQuestions = currentTopic.subtopics[subtopic].questions || {};
+
+        for (const question in originalQuestions) {
+          if (currentQuestions[question]) {
+            deletedItemsCount.value++;
           }
         }
       }
     }
+  }
 }
 
 function addSubtopic(topicName) {
@@ -783,7 +867,6 @@ function addSubtopic(topicName) {
   showSuccess("Subtopic added successfully");
 }
 
-
 // Удалить подтему
 function removeSubtopic(topicName, subtopicName) {
   if (confirm(t("knowledgeBase.removeSubtopic", { subtopicName, topicName }))) {
@@ -802,7 +885,7 @@ function removeSubtopic(topicName, subtopicName) {
 function countDeletedItemsFromSubtopic(topicName, subtopicName, topic) {
   const originalSubtopic = readonlyData.value.knowledge_base?.[topicName]?.subtopics?.[subtopicName];
   const currentSubtopic = topic.subtopics[subtopicName];
-  
+
   if (originalSubtopic) {
     deletedItemsCount.value++;
     const originalQuestions = originalSubtopic.questions || {};
@@ -824,7 +907,7 @@ function addQuestion(topicName, subtopicName) {
   if (!subtopic.questions) {
     subtopic.questions = {};
   }
-  
+
   let baseName = "New Question";
   let index = 1;
   let newName = baseName;
@@ -860,12 +943,12 @@ function addQuestionFile(topicName, subtopicName, question) {
   }
   // For a new empty link, push an empty string "" or some default text
   questionObj.files.push("");
-  
+
   nextTick(() => {
     const escapedTopicName = CSS.escape(topicName);
     const escapedSubtopicName = CSS.escape(subtopicName);
     const escapedQuestion = CSS.escape(question);
-    
+
     const inputs = document.querySelectorAll(`#question-${escapedTopicName}-${escapedSubtopicName}-${escapedQuestion} input[type="text"]`);
     const lastInput = inputs[inputs.length - 1];
     if (lastInput) {
@@ -873,7 +956,7 @@ function addQuestionFile(topicName, subtopicName, question) {
       lastInput.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   });
-  
+
   showSuccess("File added successfully");
 }
 
@@ -1073,7 +1156,7 @@ function clearPlayground() {
 function countDeletedItems() {
   const readonlyBase = readonlyData.value.knowledge_base;
   let totalDeleted = 0;
-  
+
   for (const topic in readonlyBase) {
     totalDeleted++;
     const subtopics = readonlyBase[topic].subtopics || {};
@@ -1083,17 +1166,19 @@ function countDeletedItems() {
       totalDeleted += Object.keys(questions).length;
     }
   }
-  
+
   deletedItemsCount.value = totalDeleted;
 }
 
 function savePlayground() {
-  calculateChanges(); 
+  calculateChanges();
   showSaveChangesDialog.value = true;
 }
 
 function rejectPlayground() {
-  const confirmation = confirm(`Reject playground?\n\nChanges in the playground will be discarded.\nThis action will NOT affect the knowledge base.`);
+  const confirmation = confirm(
+    `Reject playground?\n\nChanges in the playground will be discarded.\nThis action will NOT affect the knowledge base.`
+  );
   if (!confirmation) return;
 
   isEditMode.value = false;
@@ -1129,7 +1214,7 @@ onUnmounted(() => {
 });
 
 function saveChanges() {
-  calculateChanges(); 
+  calculateChanges();
   showSaveChangesDialog.value = true;
 }
 async function generatePatch() {
@@ -1166,19 +1251,19 @@ async function generatePatch() {
 }
 
 /** ======================== Методы для ПЕРЕИМЕНОВАНИЯ ======================== **/
- 
+
 // Переименовать тему
 function renameTopic(oldName, newName) {
   if (!newName || newName === oldName) return;
 
   knowledgeBaseData.value.knowledge_base[newName] = {
-    ...knowledgeBaseData.value.knowledge_base[oldName]
+    ...knowledgeBaseData.value.knowledge_base[oldName],
   };
   delete knowledgeBaseData.value.knowledge_base[oldName];
 
   const originalName = renamingMap.value.get(oldName) || oldName;
-  renamingMap.value.delete(oldName); 
-  renamingMap.value.set(newName, originalName); 
+  renamingMap.value.delete(oldName);
+  renamingMap.value.set(newName, originalName);
 }
 
 // Переименовать подтему
@@ -1189,10 +1274,10 @@ function renameSubtopic(topicName, oldSubtopicName, newSubtopicName) {
 
   topic.subtopics[newSubtopicName] = topic.subtopics[oldSubtopicName];
   delete topic.subtopics[oldSubtopicName];
-  
+
   const originalName = subtopicRenamingMap.value.get(oldSubtopicName) || oldSubtopicName;
   subtopicRenamingMap.value.delete(oldSubtopicName);
-  subtopicRenamingMap.value.set(newSubtopicName, originalName); 
+  subtopicRenamingMap.value.set(newSubtopicName, originalName);
 }
 
 const showSaveChangesDialog = ref(false);
@@ -1211,7 +1296,7 @@ function clearVariables() {
   addedItems.value = {};
   changedItems.value = {};
   hasChanges.value = false;
-  
+
   renamingMap.value.clear();
   subtopicRenamingMap.value.clear();
   questionRenamingMap.value.clear();
@@ -1223,40 +1308,40 @@ function calculateChanges() {
   const result = { added: 0, changed: 0, deleted: 0 };
   const added = {};
   const changed = {};
-  
+
   for (const topic in current) {
     const currentSubtopics = current[topic]?.subtopics || {};
 
     //if key doesn't exist, it can be new or changed topic
     if (!original[topic]) {
       const currentTopic = renamingMap.value.get(topic);
-      if (currentTopic && !currentTopic?.includes('New Topic')) {
+      if (currentTopic && !currentTopic?.includes("New Topic")) {
         result.changed++;
         changed[topic] = {
           _changed: true,
-          subtopics: {}
+          subtopics: {},
         };
       } else {
         result.added++;
-        added[topic] = { 
+        added[topic] = {
           subtopics: {},
-          _new: true
+          _new: true,
         };
-        
+
         // Count and add all subtopics and questions inside new topic
         for (const subtopic in currentSubtopics) {
           result.added++;
-          added[topic].subtopics[subtopic] = { 
+          added[topic].subtopics[subtopic] = {
             questions: {},
-            _new: true 
+            _new: true,
           };
-          
+
           const questions = currentSubtopics[subtopic]?.questions || {};
           for (const question in questions) {
             result.added++;
             added[topic].subtopics[subtopic].questions[question] = {
               ...questions[question],
-              _new: true 
+              _new: true,
             };
           }
         }
@@ -1266,15 +1351,14 @@ function calculateChanges() {
 
     const originalTopicName = renamingMap.value.get(topic) || topic;
     const originalSubtopics = original[originalTopicName]?.subtopics || {};
-    
+
     for (const subtopic in currentSubtopics) {
       const currentQuestions = currentSubtopics[subtopic]?.questions || {};
 
       if (!originalSubtopics[subtopic]) {
-
         const currentSubtopic = subtopicRenamingMap.value.get(subtopic);
 
-        if (currentSubtopic && !currentSubtopic?.includes('New Subtopic')) {
+        if (currentSubtopic && !currentSubtopic?.includes("New Subtopic")) {
           result.changed++;
           if (!changed[topic]) {
             changed[topic] = { subtopics: {} };
@@ -1282,28 +1366,28 @@ function calculateChanges() {
           if (!changed[topic].subtopics[subtopic]) {
             changed[topic].subtopics[subtopic] = {
               _changed: true,
-              questions: {}
+              questions: {},
             };
           }
         } else {
-          result.added++; 
-          
+          result.added++;
+
           if (!added[topic]) {
             added[topic] = { subtopics: {} };
           }
-          
+
           added[topic].subtopics[subtopic] = {
             questions: {},
-            _new: true  
+            _new: true,
           };
-          
+
           // Add and count all questions inside new subtopic
           const questions = currentSubtopics[subtopic]?.questions || {};
           for (const question in questions) {
             result.added++;
             added[topic].subtopics[subtopic].questions[question] = {
               ...questions[question],
-              _new: true
+              _new: true,
             };
           }
           continue;
@@ -1316,15 +1400,15 @@ function calculateChanges() {
       // For each question in existing subtopic
       for (const qstn in currentQuestions) {
         const question = questionRenamingMap.value.get(qstn) || qstn;
-        
+
         if (!originalQuestions[question]) {
           const currentQuestion = questionRenamingMap.value.get(qstn);
 
-          if (currentQuestion && !currentQuestion?.includes('New Question')) {
+          if (currentQuestion && !currentQuestion?.includes("New Question")) {
             result.changed++;
 
             const currentQuestion = currentQuestions[question];
-            
+
             if (!changed[topic]) {
               changed[topic] = { subtopics: {} };
             }
@@ -1333,11 +1417,11 @@ function calculateChanges() {
             }
             changed[topic].subtopics[subtopic].questions[qstn] = {
               ...currentQuestion,
-              _changed: true
+              _changed: true,
             };
           } else {
-            result.added++; 
-            
+            result.added++;
+
             if (!added[topic]) {
               added[topic] = { subtopics: {} };
             }
@@ -1346,13 +1430,12 @@ function calculateChanges() {
             }
             added[topic].subtopics[subtopic].questions[qstn] = {
               ...currentQuestions[qstn],
-              _new: true 
+              _new: true,
             };
           }
-        } 
-        else if (JSON.stringify(currentQuestions[question]) !== JSON.stringify(originalQuestions[question])) {
+        } else if (JSON.stringify(currentQuestions[question]) !== JSON.stringify(originalQuestions[question])) {
           result.changed++;
-          
+
           if (!changed[topic]) {
             changed[topic] = { subtopics: {} };
           }
@@ -1377,7 +1460,7 @@ function calculateChanges() {
               _changed: question !== qstn,
             };
 
-            if (currentQuestion.text !== originalQuestion.text || currentQuestion.files.join('') !== originalQuestion.files.join('')) {
+            if (currentQuestion.text !== originalQuestion.text || currentQuestion.files.join("") !== originalQuestion.files.join("")) {
               result.changed++;
             }
           }
@@ -1387,7 +1470,7 @@ function calculateChanges() {
   }
 
   result.deleted = deletedItemsCount.value;
-  
+
   changes.value = result;
   addedItems.value = added;
   changedItems.value = changed;
@@ -1413,13 +1496,13 @@ function getDeletedItems() {
             questions: Object.entries(subtopicData.questions || {}).reduce((qAcc, [questionKey, questionData]) => {
               qAcc[questionKey] = {
                 ...questionData,
-                _deleted: true
+                _deleted: true,
               };
               return qAcc;
-            }, {})
+            }, {}),
           };
           return acc;
-        }, {})
+        }, {}),
       };
       continue;
     }
@@ -1438,10 +1521,10 @@ function getDeletedItems() {
           questions: Object.entries(originalSubtopics[subtopic].questions || {}).reduce((acc, [questionKey, questionData]) => {
             acc[questionKey] = {
               ...questionData,
-              _deleted: true
+              _deleted: true,
             };
             return acc;
-          }, {})
+          }, {}),
         };
         hasDeletedItems = true;
         continue;
@@ -1456,7 +1539,7 @@ function getDeletedItems() {
         if (!currentQuestions[question]) {
           deletedQuestions[question] = {
             ...originalQuestions[question],
-            _deleted: true
+            _deleted: true,
           };
           hasDeletedQuestions = true;
         }
@@ -1464,7 +1547,7 @@ function getDeletedItems() {
 
       if (hasDeletedQuestions) {
         topicDeleted.subtopics[subtopic] = {
-          questions: deletedQuestions
+          questions: deletedQuestions,
         };
         hasDeletedItems = true;
       }
