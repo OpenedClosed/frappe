@@ -530,12 +530,11 @@ const contextTypes = [
 ];
 
 const contextPurposes = [
-  { label: 'None',  value: 'none' },
-  { label: 'Bot',   value: 'bot'  },
-  { label: 'KB',    value: 'kb'   },
-  { label: 'Both',  value: 'both' }
-]
-
+  { label: "None", value: "none" },
+  { label: "Bot", value: "bot" },
+  { label: "KB", value: "kb" },
+  { label: "Both", value: "both" },
+];
 
 // данные формы добавления
 const newCtx = reactive({
@@ -547,18 +546,18 @@ const newCtx = reactive({
 });
 
 /* ---------- смена purpose ---------- */
-async function onPurposeChange (ctx, newPurpose) {
-  const prev = ctx.purpose              // на случай отката
-  ctx.purpose = newPurpose
+async function onPurposeChange(ctx, newPurpose) {
+  const prev = ctx.purpose; // на случай отката
+  ctx.purpose = newPurpose;
 
   try {
-    const form = new FormData()
-    form.append('new_purpose', newPurpose)
-    await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/purpose`, form)
-    showSuccess('Purpose updated')
+    const form = new FormData();
+    form.append("new_purpose", newPurpose);
+    await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/purpose`, form);
+    showSuccess("Purpose updated");
   } catch (_) {
-    ctx.purpose = prev                  // откат при ошибке
-    showError('Purpose not updated')
+    ctx.purpose = prev; // откат при ошибке
+    showError("Purpose not updated");
   }
 }
 
