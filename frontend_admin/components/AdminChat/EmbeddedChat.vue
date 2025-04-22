@@ -40,6 +40,7 @@
       }'
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
+
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
       :rooms-loaded="roomsLoaded"
       @fetch-more-rooms="loadMoreChats"
@@ -127,10 +128,12 @@ function clearRoomName(room) {
 const chatLogic = shallowRef(null);
 function initChatLogic(chat_id) {
   if (!chat_id) return;
-  chatLogic.value?.destroy?.(); // optional cleanup
-  chatLogic.value = null;
+  if (chat_id === chatLogic.value?.activeRoomId?.value) return;
+
+  chatLogic.value?.destroy?.();
   chatLogic.value = useChatLogic({});
 }
+
 
 /* ── NEW: helper to decide if a room is unread for you ───── */
 function isRoomUnread(room) {
@@ -161,23 +164,22 @@ function markRoomAsSeen(roomId) {
   console.log(" rooms.value[i]", rooms.value[i]); // For debugging: log all rooms
 }
 
-watch(activeRoomId, (id) => {
-  // console.log("activeRoomId", id); // For debugging: log active room ID changes
-  currentChatId.value = id; // 👈 update the global state
+watch(activeRoomId, (id, prev) => {
+  if (id === prev) return; // если id не изменился, ничего не делаем
+
+  currentChatId.value = id;
   initChatLogic(id);
-  initializeWebSocket.value?.(id); // initialize WebSocket connection
-  // 🔥 Find the selected room
-  const activeRoom = rooms.value.find((r) => r.roomId === id);
-  markRoomAsSeen(id); // 👈 NEW
-  console.log("rooms", rooms.value); // For debugging: log all rooms
-  console.log("activeRoom", activeRoom); // For debugging: log active room data
-  if (activeRoom) {
-    // Assume client user is always the first one (customize as needed)
-    const clientUser = activeRoom.users.find((u) => u._id === "1234");
-    activeUserId.value = activeRoom?.roomName || null;
-    activeStartDate.value = activeRoom?.lastMessage?.timestamp || null;
+  initializeWebSocket.value?.(id);
+
+  const idx = rooms.value.findIndex((r) => r.roomId === id);
+  if (idx !== -1) {
+    const room = rooms.value[idx];
+    rooms.value[idx] = { ...room, seen: true, roomName: clearRoomName(room) };
+    activeUserId.value = room?.roomName || null;
+    activeStartDate.value = room?.lastMessage?.timestamp || null;
   }
-});
+})
+
 
 function loadMoreChats() {
   console.log("loadMoreChats"); // For debugging: log load more chats action

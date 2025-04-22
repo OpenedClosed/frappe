@@ -498,14 +498,18 @@ export function useChatLogic(options = {}) {
   // ⟵⟵⟵  добавляем функцию‑чистильщик
   function destroy() {
     if (websocket.value) {
+      websocket.value.onopen = null;
+      websocket.value.onmessage = null;
+      websocket.value.onerror = null;
       websocket.value.onclose = null;
-      websocket.value.close();
+      websocket.value.close(1000, "Switching room");
       websocket.value = null;
     }
     if (countdownInterval) clearInterval(countdownInterval);
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
   }
+  
 
   // ---------------- Возвращаемые переменные и методы ----------------
 
