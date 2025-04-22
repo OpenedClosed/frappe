@@ -45,7 +45,7 @@
       <div v-else-if="currentEntity === 'chat_sessions' && !currentId"
         class="flex w-full flex-col min-w-0 justify-start items-center">
 
-          <EmbeddedChat class="w-full" v-if="filteredTableData.length>0"  :id="filteredTableData[0]?.chat_id" :chatsData="filteredTableData" />
+          <EmbeddedChat class="w-full" v-if="chatRows.length>0"  :id="chatRows[0]?.chat_id" :chatsData="chatRows" />
 
       </div>
       <!-- <div
@@ -521,6 +521,9 @@ const filteredTableData = computed(() => {
   return data;
 });
 
+const chatRows = computed(() =>
+  filteredTableData.value.filter(row => !row._isBlank && row.chat_id)
+);
 // ------------------ Filtering & Dialogs ------------------
 const showFilterDialog = () => {
   showFilter.value = true;
