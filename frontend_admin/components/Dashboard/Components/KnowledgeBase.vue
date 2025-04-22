@@ -1145,7 +1145,8 @@ async function updatePlayground(data) {
     const response = await useNuxtApp().$api.patch("/api/knowledge/knowledge_base", patchData);
 
     knowledgeBaseData.value.knowledge_base = response.data.knowledge.knowledge_base;
-
+    calculateChanges();
+    hasChanges.value = true;
     console.log("Успешное обновление базы знаний:", response.data);
     isEditMode.value = false;
     showSuccess("Playground updated successfully");

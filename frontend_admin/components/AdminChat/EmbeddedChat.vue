@@ -47,12 +47,18 @@
       <div slot="room-header-avatar">
         <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
       </div>
-      <div slot="room-header-info">
-        <div class="flex flex-col">
-          <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">User id: {{ activeUserId }}</h2>
-          <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
-        </div>
-      </div>
+      <div slot="room-header-info" class="flex-1"> <!-- 🔥 Added flex-1 here -->
+  <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
+    <div class="flex flex-col">
+      <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">User id: {{ activeUserId }}</h2>
+      <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+    </div>
+    <div class="flex flex-row justify-center items-center gap-1">
+      Source: 
+      <p class="text-sm">{{ currentRoomSource }}</p>
+    </div>
+  </div>
+</div>
     </vue-advanced-chat>
   </div>
 </template>
@@ -186,7 +192,7 @@ function formatDateEU(isoDateStr) {
   if (!isoDateStr) return "";
 
   // If input has no "Z" at end, add it to force UTC parsing
-  const normalizedStr = isoDateStr.endsWith('Z') ? isoDateStr : isoDateStr + 'Z';
+  const normalizedStr = isoDateStr.endsWith("Z") ? isoDateStr : isoDateStr + "Z";
 
   const date = new Date(normalizedStr);
 
@@ -264,9 +270,15 @@ function buildRooms(chats, consultantId) {
       lastMessage,
       typingUsers: [],
       seen: seen,
+      sourceName: sourceName,
     };
   });
 }
+
+const currentRoomSource = computed(() => {
+  return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
+});
+
 watch(
   () => props.chatsData,
   async () => {
