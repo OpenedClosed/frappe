@@ -82,6 +82,11 @@ const props = defineProps({
   user_id: { type: String, default: "" },
   chatsData: { type: Array, default: () => [] },
 });
+
+const chatRows = computed(() =>
+  props.chatsData.filter(row => !row._isBlank && row.chat_id)
+);
+
 defineEmits(["close-chat"]);
 
 watch(props, () => {
@@ -180,11 +185,9 @@ function loadMoreChats() {
   // This could be an API call or any other logic to fetch more chat data
 }
 
-/* ① initialize as early as possible –
-      if a single :id is passed
-      or once the first chat appears in props.chatsData */
+
 watchEffect(() => {
-  const firstChatId = props.chatsData[0]?.chat_id;
+  const firstChatId = chatRows.value[0]?.chat_id;
   initChatLogic(props.id || firstChatId);
   initializeWebSocket.value?.(firstChatId); // initialize WebSocket connection
 });
@@ -279,20 +282,22 @@ const currentRoomSource = computed(() => {
   return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
 });
 
+
+
 watch(
-  () => props.chatsData,
+  () => chatRows.value,
   async () => {
-    if (!props.chatsData.length || !transformFn.value) return;
+    if (!chatRows.value.length || !transformFn.value) return;
 
     // Build the messages map
     const newMap = {};
-    for (const chat of props.chatsData) {
+    for (const chat of chatRows.value) {
       newMap[chat.chat_id] = (await transformFn.value(chat.messages)) || [];
     }
     messagesMap.value = newMap;
 
     // Use the helper to build rooms
-    rooms.value = buildRooms(props.chatsData, currentUserId.value);
+    rooms.value = buildRooms(chatRows.value, currentUserId.value);
     console.log("rooms", rooms.value);
     /* Pick first room if nothing selected yet */
     if (!rooms.value.find((r) => r.roomId === activeRoomId.value)) {
