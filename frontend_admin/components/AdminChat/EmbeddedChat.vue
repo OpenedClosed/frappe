@@ -183,7 +183,13 @@ watchEffect(() => {
   initializeWebSocket.value?.(firstChatId); // initialize WebSocket connection
 });
 function formatDateEU(isoDateStr) {
-  const date = new Date(isoDateStr);
+  if (!isoDateStr) return "";
+
+  // If input has no "Z" at end, add it to force UTC parsing
+  const normalizedStr = isoDateStr.endsWith('Z') ? isoDateStr : isoDateStr + 'Z';
+
+  const date = new Date(normalizedStr);
+
   return new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "2-digit",
@@ -192,6 +198,7 @@ function formatDateEU(isoDateStr) {
     minute: "2-digit",
   }).format(date);
 }
+
 function formatTimeDifferenceEU(dateStr) {
   if (!dateStr) return "No date provided";
   const now = new Date();
