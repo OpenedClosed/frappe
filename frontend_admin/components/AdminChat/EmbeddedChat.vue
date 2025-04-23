@@ -19,7 +19,7 @@
 
       <!-- “Unread” label -->
       <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> Unread </span>
-    </div> 
+    </div>
 
     <vue-advanced-chat
       :height="'80vh'"
@@ -40,7 +40,6 @@
       }'
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
-
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
       :rooms-loaded="roomsLoaded"
       @fetch-more-rooms="loadMoreChats"
@@ -48,18 +47,19 @@
       <div slot="room-header-avatar">
         <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
       </div>
-      <div slot="room-header-info" class="flex-1"> <!-- 🔥 Added flex-1 here -->
-  <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
-    <div class="flex flex-col">
-      <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">User id: {{ activeUserId }}</h2>
-      <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
-    </div>
-    <div class="flex flex-row justify-center items-center gap-1">
-      Source: 
-      <p class="text-sm">{{ currentRoomSource }}</p>
-    </div>
-  </div>
-</div>
+      <div slot="room-header-info" class="flex-1">
+        <!-- 🔥 Added flex-1 here -->
+        <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
+          <div class="flex flex-col">
+            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">User id: {{ activeUserId }}</h2>
+            <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+          </div>
+          <div class="flex flex-row justify-center items-center gap-1">
+            Source:
+            <p class="text-sm">{{ currentRoomSource }}</p>
+          </div>
+        </div>
+      </div>
     </vue-advanced-chat>
   </div>
 </template>
@@ -84,9 +84,7 @@ const props = defineProps({
   chatsData: { type: Array, default: () => [] },
 });
 
-const chatRows = computed(() =>
-  props.chatsData.filter(row => !row._isBlank && row.chat_id)
-);
+const chatRows = computed(() => props.chatsData.filter((row) => !row._isBlank && row.chat_id));
 
 defineEmits(["close-chat"]);
 
@@ -94,12 +92,7 @@ watch(props, () => {
   console.log("props", props); // For debugging: log props changes (e.g. close chat on user_id change)
 });
 
-function getChatId(data) {
-  console.log("getChatId", data?.detail?.[0]?.room?.roomId); // For debugging: log chat ID retrieval
-  if (data?.detail?.[0]?.room?.roomId) {
-    activeRoomId.value = data.detail[0].room.roomId;
-  }
-}
+
 /* ── expose refs coming from useChatLogic ──────────────────── */
 const isMobile = computed(() => chatLogic.value?.isMobile);
 // const currentUserId = computed(() => chatLogic.value?.currentUserId);
@@ -119,6 +112,30 @@ const activeUserId = ref(null);
 const activeStartDate = ref(null);
 const panelMessages = computed(() => messagesMap.value[activeRoomId.value] || []);
 
+function getChatId(data) {
+  console.log("getChatId", data?.detail?.[0]?.room?.roomId); // For debugging: log chat ID retrieval
+  if (data?.detail?.[0]?.room?.roomId) {
+    activeRoomId.value = data.detail[0].room.roomId;
+
+    if (currentChatId.value === activeRoomId.value) {
+      console.log("Already in the same chat, no need to reinitialize.");
+      return;
+    }
+
+    currentChatId.value = activeRoomId.value;
+    initChatLogic(activeRoomId.value);
+    initializeWebSocket.value?.(activeRoomId.value);
+
+    const idx = rooms.value.findIndex((r) => r.roomId === activeRoomId.value);
+    if (idx !== -1) {
+      const room = rooms.value[idx];
+      rooms.value[idx] = { ...room, seen: true, roomName: clearRoomName(room) };
+      activeUserId.value = room?.roomName || null;
+      activeStartDate.value = room?.lastMessage?.timestamp || null;
+    }
+  }
+}
+
 function clearRoomName(room) {
   const clean = room.roomName.replace(/^🔴\s*/, ""); // strip a previous badge
   return clean;
@@ -128,12 +145,11 @@ function clearRoomName(room) {
 const chatLogic = shallowRef(null);
 function initChatLogic(chat_id) {
   if (!chat_id) return;
-  if (chat_id === chatLogic.value?.activeRoomId?.value) return;
+  if (chat_id === activeRoomId?.value) return;
 
-  chatLogic.value?.destroy?.();
+  // chatLogic.value?.destroy?.();
   chatLogic.value = useChatLogic({});
 }
-
 
 /* ── NEW: helper to decide if a room is unread for you ───── */
 function isRoomUnread(room) {
@@ -143,7 +159,7 @@ function isRoomUnread(room) {
 const displayedRooms = ref([]);
 
 watch([unreadOnly, rooms], (newVal) => {
-  console.log("unreadOnly changed to:", newVal); // Log the change for debugging
+  // console.log("unreadOnly changed to:", newVal); // Log the change for debugging
   let filteredRooms = rooms.value;
   if (unreadOnly.value) {
     // Filter for unread rooms
@@ -164,21 +180,6 @@ function markRoomAsSeen(roomId) {
   console.log(" rooms.value[i]", rooms.value[i]); // For debugging: log all rooms
 }
 
-watch(activeRoomId, (id, prev) => {
-  if (id === prev) return; // если id не изменился, ничего не делаем
-
-  currentChatId.value = id;
-  initChatLogic(id);
-  initializeWebSocket.value?.(id);
-
-  const idx = rooms.value.findIndex((r) => r.roomId === id);
-  if (idx !== -1) {
-    const room = rooms.value[idx];
-    rooms.value[idx] = { ...room, seen: true, roomName: clearRoomName(room) };
-    activeUserId.value = room?.roomName || null;
-    activeStartDate.value = room?.lastMessage?.timestamp || null;
-  }
-})
 
 
 function loadMoreChats() {
@@ -186,7 +187,6 @@ function loadMoreChats() {
   // Implement your logic to load more chats here
   // This could be an API call or any other logic to fetch more chat data
 }
-
 
 watchEffect(() => {
   const firstChatId = chatRows.value[0]?.chat_id;
@@ -283,8 +283,6 @@ function buildRooms(chats, consultantId) {
 const currentRoomSource = computed(() => {
   return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
 });
-
-
 
 watch(
   () => chatRows.value,

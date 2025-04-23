@@ -52,7 +52,7 @@ export function useChatLogic(options = {}) {
 
   // WebSocket-соединение и chatId
   const websocket = ref(null);
-  const currenChatId = ref("");
+
 
   // Текстовые сообщения для vue-advanced-chat (i18n)
   const textMessagesObject = computed(() => ({
@@ -276,14 +276,16 @@ export function useChatLogic(options = {}) {
   const token = useCookie("access_token");
   const { $event, $listen } = useNuxtApp();
   // УБРАНА throttle и прочие повторные вызовы, оставляем простую функцию
-  function initializeWebSocket(chatId) {
-    if (!token.value) {
+  function initializeWebSocket() {
+    if (!token.value && currentChatId.value) {
+      console.error("Токен доступа отсутствует. WebSocket не инициализирован.");
       return;
     }
+
     // Определяем схему (ws для localhost, wss для prod)
     const wsUrl = `${window.location.hostname === "localhost" ? "ws" : "wss"}://${
       window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname
-    }/ws/${chatId}/?token=${token.value}`;
+    }/ws/${currentChatId.value}/?token=${token.value}`;
 
     console.log("Инициализация WebSocket по адресу:", wsUrl);
     websocket.value = new WebSocket(wsUrl);
@@ -292,6 +294,11 @@ export function useChatLogic(options = {}) {
       console.log("WebSocket открыт.");
       // Запрашиваем начальное состояние (однократно)
       if (websocket.value && websocket.value.readyState === WebSocket.OPEN) {
+        console.log("---------------------------------------------------------------------------");
+        console.log("Отправляем запрос на получение сообщений и проверку статуса.", currentChatId.value);
+        console.log("currentChatId.value", currentChatId.value);
+        console.log("currentChatId.value", currentChatId.value);
+        console.log("---------------------------------------------------------------------------");
         websocket.value?.send(JSON.stringify({ type: "status_check" }));
         websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true })); 
       }
@@ -331,6 +338,7 @@ export function useChatLogic(options = {}) {
 
         case "get_messages":
           {
+            console.log("data.messages:", data.messages);
             const transformed = await transformChatMessages(data.messages);
             messages.value = transformed;
             messagesLoaded.value = true;
@@ -406,26 +414,7 @@ export function useChatLogic(options = {}) {
    * Обновление чата (просим новый currentChatId.value, очищаем сообщения).
    */
   async function refreshChat() {
-    // try {
-    //   if (response.data) {
-    //     // toast.add({
-    //     //   severity: "success",
-    //     //   summary: t("additionalMessages.chatRefreshed"),
-    //     //   detail: t("additionalMessages.chatRefreshedSuccessfully"),
-    //     //   life: 3000,
-    //     // });
-    //     messages.value = [];
-    //     currenChatId.value = currentChatId.value;
-    //     // initializeWebSocket(currentChatId.value);
-    //   }
-    // } catch (error) {
-    //   // toast.add({
-    //   //   severity: "error",
-    //   //   summary: t("additionalMessages.error"),
-    //   //   detail: t("additionalMessages.failedToRefreshChat"),
-    //   //   life: 3000,
-    //   // });
-    // }
+
   }
 
   /**
@@ -458,14 +447,7 @@ export function useChatLogic(options = {}) {
 
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     isIphone.value = /iPhone/i.test(ua);
-
-    // Получаем начальный currentChatId.value с бэкенда
-    const chatData = await useAsyncData("chatData", getChatData);
-    if (chatData.data && chatData.data.value) {
-      currenChatId.value = currentChatId.value;
-      initializeWebSocket(currentChatId.value);
-    }
-
+     
     // Настройки для Telegram (если нужно)
     if (window.Telegram && isTelegram) {
       let tg = window.Telegram.WebApp;
