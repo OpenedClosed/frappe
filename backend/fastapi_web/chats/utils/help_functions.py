@@ -15,7 +15,7 @@ from pymongo import DESCENDING
 from telegram_bot.infra import settings as bot_settings
 
 from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
-from chats.db.mongo.schemas import ChatMessage, ChatSession, Client
+from chats.db.mongo.schemas import ChatMessage, ChatReadInfo, ChatSession, Client
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
@@ -230,6 +230,46 @@ async def handle_chat_creation(
         "client_id": client_id,
         "status": ChatStatus.IN_PROGRESS.value,
     }
+
+
+async def update_read_state_for_client(chat_id: str, client_id: str, user_id: Optional[str], last_read_msg: str) -> bool:
+    """Обновляет read_state для клиента в чате, если это необходимо."""
+    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
+    if not chat_data:
+        return False
+
+    read_state_raw = chat_data.get("read_state", [])
+    read_state: List[ChatReadInfo] = [
+        ChatReadInfo(**ri) if isinstance(ri, dict) else ri
+        for ri in read_state_raw
+    ]
+
+    now = datetime.utcnow()
+    modified = False
+
+    for ri in read_state:
+        if ri.client_id == client_id:
+            if ri.last_read_msg != last_read_msg:
+                ri.last_read_msg = last_read_msg
+                ri.last_read_at = now
+                modified = True
+            break
+    else:
+        read_state.append(ChatReadInfo(
+            client_id=client_id,
+            user_id=user_id,
+            last_read_msg=last_read_msg,
+            last_read_at=now
+        ))
+        modified = True
+
+    if modified:
+        await mongo_db.chats.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"read_state": [ri.model_dump(mode="python") for ri in read_state]}}
+        )
+
+    return modified
 
 
 # async def get_knowledge_base() -> Dict[str, dict]:

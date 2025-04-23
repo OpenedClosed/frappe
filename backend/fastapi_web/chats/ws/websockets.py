@@ -24,14 +24,6 @@ from .ws_helpers import (get_typing_manager, get_ws_manager, gpt_task_manager, c
 
 import inspect
 
-def print_all_connections():
-    print("\n🧠 [DEBUG] Текущее состояние соединений:\n" + "-"*70)
-    for chat_id, manager in chat_managers.items():
-        print(f"🔹 Чат: {chat_id} | Менеджер id={id(manager)}")
-        for user_id, ws in manager.active_connections.items():
-            print(f"   └─ 👤 client_id={user_id} | ws id={id(ws)} | статус={ws.client_state}")
-    print("-"*70 + "\n")
-
 
 # ==============================
 # Основной WebSocket эндпоинт
@@ -41,8 +33,8 @@ def print_all_connections():
 @app.websocket("/ws/{chat_id}/")
 async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     """WebSocket соединение для чата."""
-    print("="*100)
-    print("Начало работы с чатом:", chat_id)
+    # print("="*100)
+    # print("Начало работы с чатом:", chat_id)
     user_data = {}
     user=None
     user_id = await websocket_jwt_required(websocket)
@@ -65,7 +57,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     user_data["client_id"] = client_id
 
     await manager.connect(websocket, client_id)
-    print_all_connections()
+    # print_all_connections()
 
     user_language = determine_language(
         websocket.headers.get("accept-language", "en")
@@ -147,3 +139,11 @@ async def load_chat_session(manager, client_id: str,
     except ValidationError:
         await broadcast_error(manager, client_id, chat_id, "Invalid chat data.")
         return None
+
+def print_all_connections():
+    print("\n🧠 [DEBUG] Текущее состояние соединений:\n" + "-"*70)
+    for chat_id, manager in chat_managers.items():
+        print(f"🔹 Чат: {chat_id} | Менеджер id={id(manager)}")
+        for user_id, ws in manager.active_connections.items():
+            print(f"   └─ 👤 client_id={user_id} | ws id={id(ws)} | статус={ws.client_state}")
+    print("-"*70 + "\n")

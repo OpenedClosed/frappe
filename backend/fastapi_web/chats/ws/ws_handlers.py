@@ -31,7 +31,7 @@ from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
 from ..utils.help_functions import (clean_markdown, find_last_bot_message,
                                     get_bot_context, get_weather_by_address,
                                     send_message_to_bot,
-                                    split_text_into_chunks)
+                                    split_text_into_chunks, update_read_state_for_client)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
@@ -163,6 +163,13 @@ async def save_and_broadcast_new_message(
         redis_key_session,
         chat_session.chat_id,
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
+    )
+    print('Обновляем статус прочтения')
+    await update_read_state_for_client(
+        chat_id=chat_session.chat_id,
+        client_id=new_msg.sender_id,
+        user_id=None,  # можно передать если знаешь user_id
+        last_read_msg=new_msg.id
     )
     message = clean_markdown(new_msg.message)
     chunks = split_text_into_chunks(message)
