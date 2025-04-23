@@ -65,18 +65,37 @@ class ConnectionManager:
         else:
             logging.info(f"ℹ️ Нет активного соединения для {user_id}, ничего не отключено.")
 
+    # async def _safe_send(self, websocket: WebSocket, user_id: str, message: str) -> None:
+    #     try:
+    #         await websocket.send_text(message)
+    #     except RuntimeError as e:
+    #         if "Cannot call" in str(e):
+    #             logging.warning(f"⚠️ Попытка отправки в закрытый сокет {user_id} (ws id={id(websocket)})")
+    #         else:
+    #             logging.error(f"❌ Ошибка при отправке сообщения {user_id}: {e}")
+    #         await self.disconnect(user_id)
+    #     except Exception as e:
+    #         logging.error(f"❌ Неизвестная ошибка при отправке {user_id}: {e}")
+    #         await self.disconnect(user_id)
+
     async def _safe_send(self, websocket: WebSocket, user_id: str, message: str) -> None:
         try:
             await websocket.send_text(message)
         except RuntimeError as e:
-            if "Cannot call" in str(e):
-                logging.warning(f"⚠️ Попытка отправки в закрытый сокет {user_id} (ws id={id(websocket)})")
+            if "call 'accept' first" in str(e) or "not connected" in str(e).lower():
+                logging.warning(f"⚠️ [send] Висячее соединение: user_id={user_id} | ws id={id(websocket)} | manager id={id(self)}. Закрываем.")
+                try:
+                    await websocket.close()
+                except Exception as close_err:
+                    logging.warning(f"⚠️ [send] Ошибка при закрытии висячего WebSocket: {close_err}")
+                await self.disconnect(user_id)  # Убираем из активных
             else:
-                logging.error(f"❌ Ошибка при отправке сообщения {user_id}: {e}")
-            await self.disconnect(user_id)
+                logging.error(f"❌ [send] Ошибка при отправке данных: {e}")
+                await self.disconnect(user_id)
         except Exception as e:
-            logging.error(f"❌ Неизвестная ошибка при отправке {user_id}: {e}")
+            logging.error(f"❌ [send] Неизвестная ошибка при отправке {user_id}: {e}")
             await self.disconnect(user_id)
+
 
     async def send_personal_message(self, message: str, user_id: str) -> None:
         websocket = self.active_connections.get(user_id)
