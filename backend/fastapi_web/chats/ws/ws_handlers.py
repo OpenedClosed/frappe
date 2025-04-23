@@ -159,18 +159,20 @@ async def save_and_broadcast_new_message(
     """Сохраняет сообщение, отправляет в чат и Redis, и отправляет в интеграции."""
     await save_message_to_db(chat_session, new_msg)
     await broadcast_message(manager, chat_session, new_msg)
-    await redis_db.set(
-        redis_key_session,
-        chat_session.chat_id,
-        ex=int(settings.CHAT_TIMEOUT.total_seconds())
-    )
+    await redis_db.set(redis_key_session, "1", ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+    # await redis_db.set(
+    #     redis_key_session,
+    #     chat_session.chat_id,
+    #     ex=int(settings.CHAT_TIMEOUT.total_seconds())
+    # )
     print('Обновляем статус прочтения')
-    await update_read_state_for_client(
-        chat_id=chat_session.chat_id,
-        client_id=new_msg.sender_id,
-        user_id=None,  # можно передать если знаешь user_id
-        last_read_msg=new_msg.id
-    )
+    if new_msg.sender_role != SenderRole.AI:
+        await update_read_state_for_client(
+            chat_id=chat_session.chat_id,
+            client_id=new_msg.sender_id,
+            user_id=None,  # можно передать если знаешь user_id
+            last_read_msg=new_msg.id
+        )
     message = clean_markdown(new_msg.message)
     chunks = split_text_into_chunks(message)
 
@@ -340,10 +342,6 @@ async def handle_get_messages(
     """Отдаёт историю чата и, при наличии with_enter=True, фиксирует прочтение текущим клиентом."""
     chat_data: Dict[str, Any] | None = await mongo_db.chats.find_one({"chat_id": chat_id})
 
-    # print("="*100)
-    # print("chat_id", chat_data.get("chat_id"))
-    # print("with_enter", data.get("with_enter"))
-
     if not chat_data:
         await manager.broadcast(custom_json_dumps({
             "type": "get_messages",
@@ -366,56 +364,32 @@ async def handle_get_messages(
     last_id = messages[-1]["id"]
     client_id = user_data["client_id"]
     user_id = user_data.get("user_id")
+
+    # ✅ Обновляем read_state при входе
+    if data.get("with_enter"):
+        await update_read_state_for_client(
+            chat_id=chat_id,
+            client_id=client_id,
+            user_id=user_id,
+            last_read_msg=last_id
+        )
+
+    # Получаем актуальное read_state
+    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})  # снова, чтобы взять актуальный read_state
     read_state_raw = chat_data.get("read_state", [])
     read_state: List[ChatReadInfo] = [
         ChatReadInfo(**ri) if isinstance(ri, dict) else ri
         for ri in read_state_raw
     ]
 
-    now = datetime.utcnow()
-    modified = False
-
-    if data.get("with_enter"):
-        # print("Зашли сюда с with_enter")
-        for ri in read_state:
-            # print("ri:", ri)
-            if ri.client_id == client_id:
-                # print("==", ri.client_id == client_id)
-                if ri.last_read_msg != last_id:
-                    ri.last_read_msg = last_id
-                    ri.last_read_at = now
-                    modified = True
-                break
-        else:
-            read_state.append(ChatReadInfo(
-                client_id=client_id,
-                user_id=user_id,
-                last_read_msg=last_id,
-                last_read_at=now
-            ))
-            modified = True
-
-        if modified:
-            await mongo_db.chats.update_one(
-                {"chat_id": chat_id},
-                {"$set": {"read_state": [ri.model_dump(mode="python") for ri in read_state]}}
-            )
-
     idx = {m["id"]: i for i, m in enumerate(messages)}
     enriched: List[dict] = []
 
     for m in messages:
-        own = m.get("sender_id") == client_id
-        # if not own:
-        #     m["read_by"] = []
-        #     enriched.append(m)
-        #     continue
-
         readers = [
             ri.client_id
             for ri in read_state
             if idx.get(ri.last_read_msg, -1) >= idx[m["id"]]
-            # and ri.client_id != m.get("sender_id")
         ]
         m["read_by"] = readers
         enriched.append(m)
@@ -427,8 +401,8 @@ async def handle_get_messages(
         "remaining_time": remaining
     }))
 
-    # print("="*100)
     return enriched
+
 
 
 
@@ -574,7 +548,8 @@ async def validate_chat_status(manager: ConnectionManager, client_id: str, chat_
         return False
 
     if ttl_value < 0 and chat_session.messages:
-        await redis_db.set(redis_key_session, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+        await redis_db.set(redis_key_session, "1", ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+        # await redis_db.set(redis_key_session, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
     return True
 
@@ -1310,8 +1285,6 @@ async def extract_knowledge(
     }
     Если ничего не найдено, возвращается {"topics": []}.
     """
-    print('???')
-    print(knowledge_base)
     if not knowledge_base:
         kb_doc, knowledge_base_model = await get_knowledge_base()
     

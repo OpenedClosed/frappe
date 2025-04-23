@@ -16,7 +16,7 @@ from users.db.mongo.enums import RoleEnum
 from users.utils.help_functions import get_user_by_id
 
 from ..db.mongo.schemas import ChatSession
-from ..utils.help_functions import (determine_language, generate_client_id, 
+from ..utils.help_functions import (determine_language, generate_client_id, get_active_chats_for_client, 
                                     get_client_id)
 from .ws_helpers import (get_typing_manager, get_ws_manager, gpt_task_manager, chat_managers,
                          websocket_jwt_required)
@@ -62,14 +62,14 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     user_language = determine_language(
         websocket.headers.get("accept-language", "en")
     )
-    redis_session_key = f"chat:{client_id}"
+    redis_session_key = f"chat:session:{chat_id}"
     redis_flood_key = f"flood:{client_id}"
 
     chat_session = await load_chat_session(manager, client_id, chat_id)
     if not chat_session:
         return
 
-    if not await validate_session(manager, client_id, chat_id, redis_session_key, is_superuser):
+    if not await validate_session(manager, client_id, chat_id, is_superuser):
         return
 
     if not await handle_get_messages(manager=manager, chat_id=chat_id, redis_key_session=redis_session_key, user_data=user_data, data={}):
@@ -114,15 +114,24 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
 # ==============================
 
 
-async def validate_session(manager, client_id: str, chat_id: str,
-                           redis_session_key: str, is_superuser: bool) -> bool:
-    """Проверяет, соответствует ли текущая сессия чата."""
-    stored_chat_id = await redis_db.get(redis_session_key)
-    stored_chat_id = stored_chat_id.decode("utf-8") if stored_chat_id else None
-    if not (stored_chat_id == chat_id or is_superuser):
-        logging.info("Session validation failed.")
+async def validate_session(
+    manager,
+    client_id: str,
+    chat_id: str,
+    is_superuser: bool
+) -> bool:
+    """Проверяет, что чат активен у клиента. Суперпользователи проходят без проверок."""
+    if is_superuser:
+        return True
+
+    active_chats = await get_active_chats_for_client(client_id)
+    active_chat_ids = {chat["chat_id"] for chat, _ in active_chats}
+
+    if chat_id not in active_chat_ids:
+        logging.info(f"❌ Session validation failed for client_id={client_id}, chat_id={chat_id}")
         await manager.disconnect(client_id)
         return False
+
     return True
 
 

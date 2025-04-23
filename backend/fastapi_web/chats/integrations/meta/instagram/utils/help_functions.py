@@ -87,7 +87,7 @@ async def process_instagram_message(
         "external_id": external_id
     }
 
-    redis_session_key = f"chat:{client_id}"
+    redis_session_key = f"chat:session:{chat_id}"
     redis_flood_key = f"flood:{client_id}"
 
     user_data = {

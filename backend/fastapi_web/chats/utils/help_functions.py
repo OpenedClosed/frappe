@@ -7,7 +7,7 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import httpx
 from fastapi import HTTPException, Request, WebSocket
@@ -152,6 +152,41 @@ async def send_message_to_bot(chat_id: str, chat_session: dict) -> None:
             logging.info(f"Message not sent! Error: {response.text}")
 
 
+async def get_all_chats_for_client(client_id: str) -> List[dict]:
+    """Получает все чаты конкретного клиента из MongoDB."""
+    return [chat async for chat in mongo_db.chats.find({"client.client_id": client_id})]
+
+
+async def get_active_chats_for_client(client_id: str) -> List[Tuple[dict, int]]:
+    """Возвращает отсортированный список активных чатов клиента (chat_data, ttl)."""
+    all_chats = await get_all_chats_for_client(client_id)
+    active_chats = []
+
+    for chat in all_chats:
+        chat_id = chat["chat_id"]
+        redis_key = f"chat:session:{chat_id}"
+        ttl = await redis_db.ttl(redis_key)
+        if ttl > 0:
+            active_chats.append((chat, ttl))
+
+    # Сортировка по дате создания (новые первыми)
+    active_chats.sort(key=lambda x: x[0]["created_at"], reverse=True)
+    return active_chats
+
+async def serialize_active_chat(chat_data: dict, ttl: int) -> Dict[str, Any]:
+    """
+    Унифицированная сериализация данных активного чата в API-ответ.
+    """
+    return {
+        "message": "Chat session is active.",
+        "chat_id": chat_data["chat_id"],
+        "client_id": chat_data["client"]["client_id"],
+        "created_at": chat_data["created_at"],
+        "last_activity": chat_data["last_activity"],
+        "remaining_time": ttl,
+        "status": ChatSession(**chat_data).compute_status(ttl).value,
+    }
+
 async def handle_chat_creation(
     mode: Optional[str] = None,
     chat_source: ChatSource = ChatSource.INTERNAL,
@@ -168,41 +203,34 @@ async def handle_chat_creation(
         request, chat_source=chat_source, external_id=client_external_id
     ) if request else f"{chat_source.value}_{client_external_id}"
 
-    redis_key = f"chat:{client_id}"
+    active_chats = await get_active_chats_for_client(client_id)
 
-    if mode == "new" and (old_chat_id := await redis_db.get(redis_key)):
-        old_chat_id = old_chat_id.decode()
-        if chat_data := await mongo_db.chats.find_one({"chat_id": old_chat_id}):
+    if mode != "new" and active_chats:
+        chat_data, ttl = active_chats[0]
+        return await serialize_active_chat(chat_data, ttl)
+
+    if mode == "new":
+        for chat_data, _ in active_chats:
             await mongo_db.chats.update_one(
-                {"chat_id": old_chat_id},
+                {"chat_id": chat_data["chat_id"]},
                 {"$set": {"closed_by_request": True, "last_activity": datetime.utcnow()}}
             )
-        await redis_db.delete(redis_key)
+        # 🔕 НЕ удаляем ключ Redis — пусть истечёт естественно
 
-    if chat_id_from_redis := await redis_db.get(redis_key):
-        chat_id_from_redis = chat_id_from_redis.decode()
-        if chat_data := await mongo_db.chats.find_one({"chat_id": chat_id_from_redis}):
-            remaining_time = max(0, settings.CHAT_TIMEOUT.total_seconds() -
-                                 (datetime.utcnow() - chat_data["last_activity"]).total_seconds())
+    if chat_source != ChatSource.INTERNAL:
+        if chat_data := await mongo_db.chats.find_one({"client.client_id": client_id}):
+            chat_session = ChatSession(**chat_data)
+            await redis_db.set(
+                f"chat:session:{chat_session.chat_id}",
+                "1",
+                ex=int(settings.CHAT_TIMEOUT.total_seconds())
+            )
             return {
-                "message": "Chat session is active.",
-                "chat_id": chat_data["chat_id"],
+                "message": "Chat session restored from MongoDB.",
+                "chat_id": chat_session.chat_id,
                 "client_id": client_id,
-                "created_at": chat_data["created_at"],
-                "last_activity": chat_data["last_activity"],
-                "remaining_time": remaining_time,
-                "status": ChatSession(**chat_data).compute_status(remaining_time).value,
+                "status": chat_session.compute_status(settings.CHAT_TIMEOUT.total_seconds()).value,
             }
-
-    if chat_source != ChatSource.INTERNAL and (chat_data := await mongo_db.chats.find_one({"client.client_id": client_id})):
-        chat_session = ChatSession(**chat_data)
-        await redis_db.set(redis_key, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
-        return {
-            "message": "Chat session restored from MongoDB.",
-            "chat_id": chat_session.chat_id,
-            "client_id": client_id,
-            "status": chat_session.compute_status(settings.CHAT_TIMEOUT.total_seconds()).value,
-        }
 
     client = Client(
         client_id=client_id,
@@ -222,7 +250,11 @@ async def handle_chat_creation(
     )
 
     await mongo_db.chats.insert_one(chat_session.dict())
-    await redis_db.set(redis_key, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+    await redis_db.set(
+        f"chat:session:{chat_id}",
+        "1",
+        ex=int(settings.CHAT_TIMEOUT.total_seconds())
+    )
 
     return {
         "message": "New chat session created.",
@@ -230,6 +262,7 @@ async def handle_chat_creation(
         "client_id": client_id,
         "status": ChatStatus.IN_PROGRESS.value,
     }
+
 
 
 async def update_read_state_for_client(chat_id: str, client_id: str, user_id: Optional[str], last_read_msg: str) -> bool:
