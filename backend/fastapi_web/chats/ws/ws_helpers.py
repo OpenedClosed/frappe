@@ -24,13 +24,22 @@ class ConnectionManager:
         self.active_connections: Dict[str, WebSocket] = {}
 
     async def connect(self, websocket: WebSocket, user_id: str) -> None:
-        """Принимает соединение веб-сокета."""
+        """Принимает соединение веб-сокета, закрывая предыдущее (если есть)."""
         try:
+            old_ws = self.active_connections.get(user_id)
+            if old_ws and old_ws.client_state == WebSocketState.CONNECTED:
+                logging.info(f"🔁 Заменяем старое соединение для {user_id} (ws id={id(old_ws)})")
+                try:
+                    await old_ws.close()
+                except Exception as e:
+                    logging.warning(f"⚠️ Ошибка при закрытии старого WebSocket {user_id}: {e}")
+
             await websocket.accept()
             self.active_connections[user_id] = websocket
-            logging.info(f"WebSocket подключён: {user_id}")
+            logging.info(f"✅ WebSocket подключён: {user_id} | ws id={id(websocket)}")
+
         except Exception as e:
-            logging.error(f"Ошибка при подключении WebSocket {user_id}: {e}")
+            logging.error(f"❌ Ошибка при подключении WebSocket {user_id}: {e}")
 
     async def disconnect(self, user_id: str) -> None:
         """Отключает пользователя и закрывает соединение, если оно активно."""
@@ -38,9 +47,11 @@ class ConnectionManager:
         if websocket and websocket.client_state == WebSocketState.CONNECTED:
             try:
                 await websocket.close()
-                logging.info(f"WebSocket отключён: {user_id}")
+                logging.info(f"🔌 WebSocket отключён: {user_id}")
             except Exception as e:
-                logging.error(f"Ошибка при закрытии WebSocket {user_id}: {e}")
+                logging.error(f"❌ Ошибка при закрытии WebSocket {user_id}: {e}")
+        else:
+            logging.info(f"ℹ️ Нет активного соединения для {user_id}, ничего не отключено.")
 
     async def send_personal_message(self, message: str, user_id: str) -> None:
         """Отправляет сообщение конкретному пользователю."""
@@ -48,30 +59,38 @@ class ConnectionManager:
         if websocket and websocket.client_state == WebSocketState.CONNECTED:
             try:
                 await websocket.send_text(message)
-            except Exception as e:
-                logging.error(f"Ошибка при отправке сообщения {user_id}: {e}")
+            except RuntimeError as e:
+                if "Cannot call" in str(e):
+                    logging.warning(f"⚠️ Попытка отправки в уже закрытый сокет {user_id} (ws id={id(websocket)})")
+                else:
+                    logging.error(f"❌ Ошибка при отправке сообщения {user_id}: {e}")
                 await self.disconnect(user_id)
+            except Exception as e:
+                logging.error(f"❌ Неизвестная ошибка при отправке {user_id}: {e}")
+                await self.disconnect(user_id)
+        else:
+            logging.warning(f"⚠️ Соединение не активно или не найдено для {user_id}, сообщение не отправлено.")
 
     async def broadcast(self, message: str) -> None:
         """Разослать сообщение всем подключенным пользователям."""
         active_connections_copy = list(self.active_connections.items())
 
-        disconnected_users = [
-            user_id
-            for user_id, ws in active_connections_copy
-            if ws.client_state != WebSocketState.CONNECTED
-        ]
-        for user_id in disconnected_users:
-            await self.disconnect(user_id)
-
-        active_connections_copy = list(self.active_connections.items())
         for user_id, websocket in active_connections_copy:
             if websocket.client_state == WebSocketState.CONNECTED:
                 try:
                     await websocket.send_text(message)
-                except Exception as e:
-                    logging.error(f"Ошибка при рассылке {user_id}: {e}")
+                except RuntimeError as e:
+                    if "Cannot call" in str(e):
+                        logging.warning(f"⚠️ Попытка рассылки в закрытый сокет {user_id} (ws id={id(websocket)})")
+                    else:
+                        logging.error(f"❌ Ошибка при рассылке {user_id}: {e}")
                     await self.disconnect(user_id)
+                except Exception as e:
+                    logging.error(f"❌ Неизвестная ошибка при рассылке {user_id}: {e}")
+                    await self.disconnect(user_id)
+            else:
+                await self.disconnect(user_id)
+
 
 
 class TypingManager:

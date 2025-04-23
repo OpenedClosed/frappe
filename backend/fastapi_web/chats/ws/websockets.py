@@ -16,10 +16,22 @@ from users.db.mongo.enums import RoleEnum
 from users.utils.help_functions import get_user_by_id
 
 from ..db.mongo.schemas import ChatSession
-from ..utils.help_functions import (determine_language, generate_client_id,
+from ..utils.help_functions import (determine_language, generate_client_id, 
                                     get_client_id)
-from .ws_helpers import (get_typing_manager, get_ws_manager, gpt_task_manager,
+from .ws_helpers import (get_typing_manager, get_ws_manager, gpt_task_manager, chat_managers,
                          websocket_jwt_required)
+
+
+import inspect
+
+def print_all_connections():
+    print("\n🧠 [DEBUG] Текущее состояние соединений:\n" + "-"*70)
+    for chat_id, manager in chat_managers.items():
+        print(f"🔹 Чат: {chat_id} | Менеджер id={id(manager)}")
+        for user_id, ws in manager.active_connections.items():
+            print(f"   └─ 👤 client_id={user_id} | ws id={id(ws)} | статус={ws.client_state}")
+    print("-"*70 + "\n")
+
 
 # ==============================
 # Основной WebSocket эндпоинт
@@ -50,16 +62,10 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     typing_manager = await get_typing_manager(chat_id)
 
     client_id = await get_client_id(websocket, chat_id, is_superuser)
-    # if is_superuser:
-    #     client_id = "test_admin"
-    # generated_id = await generate_client_id(websocket)
-    # id_to_connect = (
-    #     generated_id if is_superuser
-    #     else client_id
-    # )
     user_data["client_id"] = client_id
 
     await manager.connect(websocket, client_id)
+    print_all_connections()
 
     user_language = determine_language(
         websocket.headers.get("accept-language", "en")
