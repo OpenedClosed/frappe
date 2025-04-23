@@ -369,7 +369,7 @@ function findEntityConfig(data, groupKey, entityKey) {
 
 // Add near your other refs
 const currentPage = ref(1);
-const pageSize = ref(30);
+const pageSize = ref(12);
 const totalRecords = ref(0);
 
 // ------------------ Table Data Fetching & Display ------------------
@@ -397,10 +397,8 @@ const fetchTableData = async () => {
   isLoading.value = true;
   try {
 
-    let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
-    const response = await useNuxtApp().$api.get(
-      `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`
-    );
+    let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/?order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
+    const response = await useNuxtApp().$api.get(url);
 
     let data = response.data.data ? response.data.data : response.data; // То, что вернёт бекенд
     console.log("MainData response.data =", response.data);

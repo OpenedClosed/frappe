@@ -733,7 +733,6 @@ async def get_context_entry_content(entry: ContextEntry, ai_model: str = "gpt-4o
             update_fields["context.$.kb_structure"] = struct
 
         if update_fields:
-            print(entry.id)
             result = await mongo_db.knowledge_collection.update_one(
                 {"app_name": "main", "context.id": entry.id},
                 {"$set": update_fields}
@@ -808,15 +807,11 @@ async def collect_kb_structures_from_context(entries: List[ContextEntry], ai_mod
     """
     structures = []
     blocks = []
-    print('here')
 
     for entry in entries:
-        print("ID", entry.id)
         if entry.purpose in {ContextPurpose.BOT, ContextPurpose.BOTH}:
-            print('тут')
             struct = await build_kb_structure_from_context_entry(entry, ai_model=ai_model)
             if struct:
-                print('?')
                 structures.append(struct)
                 blocks.append(
                     f"From: **{entry.title}**\n"

@@ -253,8 +253,8 @@ async def delete_context_entity(
     kb_doc, _ = await get_knowledge_base()
 
     before = len(kb_doc.get("context", []))
-    kb_doc["context"] = [c for c in kb_doc["context"] if str(c.get("id")) != ctx_id]
-    if len(kb_doc["context"]) == before:
+    kb_doc["context"] = [c for c in kb_doc.get("context", []) if str(c.get("id")) != ctx_id]
+    if len(kb_doc.get("context", [])) == before:
         raise HTTPException(404, "Context entry not found")
 
     kb_doc["update_date"] = datetime.utcnow()
@@ -281,7 +281,7 @@ async def get_all_context(
     if updated:
         kb_doc["update_date"] = datetime.utcnow()
         await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
-    return kb_doc["context"]
+    return kb_doc.get("context", [])
 
 
 # ───────────────────────── PATCH purpose ───────────────────
@@ -300,7 +300,7 @@ async def update_context_purpose(
     kb_doc, _ = await get_knowledge_base()
     # print("полученный id", ctx_id)
 
-    entry = next((c for c in kb_doc["context"] if str(c.get("id")) == ctx_id), None)
+    entry = next((c for c in kb_doc.get("context", []) if str(c.get("id")) == ctx_id), None)
     if not entry:
         raise HTTPException(404, "Context entry not found")
 
