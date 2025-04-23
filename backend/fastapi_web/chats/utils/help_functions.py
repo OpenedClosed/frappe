@@ -15,7 +15,7 @@ from pymongo import DESCENDING
 from telegram_bot.infra import settings as bot_settings
 
 from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
-from chats.db.mongo.schemas import ChatMessage, ChatSession, Client
+from chats.db.mongo.schemas import ChatMessage, ChatReadInfo, ChatSession, Client
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
@@ -29,6 +29,9 @@ from knowledge.db.mongo.mapping import (COMMUNICATION_STYLE_DETAILS,
 from knowledge.db.mongo.schemas import BotSettings
 
 from .knowledge_base import KNOWLEDGE_BASE
+
+# KnowledgeBase
+
 
 # ===== Основные функции для работы с сессией чата =====
 
@@ -194,7 +197,6 @@ async def handle_chat_creation(
     if chat_source != ChatSource.INTERNAL and (chat_data := await mongo_db.chats.find_one({"client.client_id": client_id})):
         chat_session = ChatSession(**chat_data)
         await redis_db.set(redis_key, chat_session.chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
-
         return {
             "message": "Chat session restored from MongoDB.",
             "chat_id": chat_session.chat_id,
@@ -230,13 +232,55 @@ async def handle_chat_creation(
     }
 
 
-async def get_knowledge_base() -> Dict[str, dict]:
-    """Получает базу знаний."""
-    document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-    if not document:
-        raise HTTPException(404, "Knowledge base not found.")
-    document.pop("_id", None)
-    return document["knowledge_base"] if document["knowledge_base"] else KNOWLEDGE_BASE
+async def update_read_state_for_client(chat_id: str, client_id: str, user_id: Optional[str], last_read_msg: str) -> bool:
+    """Обновляет read_state для клиента в чате, если это необходимо."""
+    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
+    if not chat_data:
+        return False
+
+    read_state_raw = chat_data.get("read_state", [])
+    read_state: List[ChatReadInfo] = [
+        ChatReadInfo(**ri) if isinstance(ri, dict) else ri
+        for ri in read_state_raw
+    ]
+
+    now = datetime.utcnow()
+    modified = False
+
+    for ri in read_state:
+        if ri.client_id == client_id:
+            if ri.last_read_msg != last_read_msg:
+                ri.last_read_msg = last_read_msg
+                ri.last_read_at = now
+                modified = True
+            break
+    else:
+        read_state.append(ChatReadInfo(
+            client_id=client_id,
+            user_id=user_id,
+            last_read_msg=last_read_msg,
+            last_read_at=now
+        ))
+        modified = True
+
+    if modified:
+        await mongo_db.chats.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"read_state": [ri.model_dump(mode="python") for ri in read_state]}}
+        )
+
+    return modified
+
+
+# async def get_knowledge_base() -> Dict[str, dict]:
+#     """Получает базу знаний."""
+#     document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
+#     if not document:
+#         raise HTTPException(404, "Knowledge base not found.")
+#     document.pop("_id", None)
+#     kb_doc = document["knowledge_base"] if document["knowledge_base"] else KNOWLEDGE_BASE
+#     kb_model = KnowledgeBase(**kb_doc)
+#     return kb_doc, kb_model
 
 
 # ===== Контекст для ИИ помощника =====
@@ -538,6 +582,7 @@ def split_text_into_chunks(text, max_length=998) -> List[str]:
 
 
 import re
+
 
 def clean_markdown(text: str) -> str:
     """

@@ -5,29 +5,29 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from utils.errors import (general_exception_handler,
-                          validation_exception_handler)
-from users.routers import user_router
-from personal_account.routes_generator import generate_base_account_routes
-from knowledge.routers import knowledge_base_router
-from infra.middlewares import BasicAuthMiddleware
-from infra import settings
-from db.mongo.db_init import mongo_db_on_startapp
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRouter
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+
+from basic.routers import basic_router
+from chats.integrations.meta.instagram.instagram import instagram_router
+from chats.integrations.meta.whatsapp.whatsapp import whatsapp_router
+from chats.routers import chat_router
+from crud_core.registry import account_registry, admin_registry
 from crud_core.routes_generator import (auto_discover_modules,
                                         generate_base_routes,
                                         get_routes_by_apps)
-from crud_core.registry import account_registry, admin_registry
-from chats.routers import chat_router
-from chats.integrations.meta.whatsapp.whatsapp import whatsapp_router
-from chats.integrations.meta.instagram.instagram import instagram_router
-from basic.routers import basic_router
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.routing import APIRouter
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.exceptions import RequestValidationError
-from fastapi import FastAPI
-
+from db.mongo.db_init import mongo_db_on_startapp
+from infra import settings
+from infra.middlewares import BasicAuthMiddleware
+from knowledge.routers import knowledge_base_router
+from personal_account.routes_generator import generate_base_account_routes
+from users.routers import user_router
+from utils.errors import (general_exception_handler,
+                          validation_exception_handler)
 
 logging.basicConfig(
     level=logging.INFO,

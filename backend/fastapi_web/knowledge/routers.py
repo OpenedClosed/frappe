@@ -1,24 +1,36 @@
 """Обработчики маршрутов приложения Знания."""
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
+
+import aiofiles
+from fastapi import (APIRouter, Depends, File, Form, HTTPException, Request,
+                     Response, UploadFile)
+from fastapi_jwt_auth import AuthJWT
+from pydantic import HttpUrl, ValidationError
 
 from auth.utils.help_functions import jwt_required, permission_required
 from chats.utils.help_functions import get_bot_context
 from crud_core.permissions import AdminPanelPermission
 from db.mongo.db_init import mongo_db
-from fastapi import (APIRouter, Depends, File, Form, HTTPException, Request,
-                     Response, UploadFile)
-from fastapi_jwt_auth import AuthJWT
-from pydantic import ValidationError
+from infra import settings
+from knowledge.db.mongo.enums import ContextPurpose, ContextType
 
-from .db.mongo.schemas import (KnowledgeBase, PatchKnowledgeRequest,
-                               UpdateResponse)
-from .utils.help_functions import (build_gpt_message_blocks, deep_merge,
+from .db.mongo.schemas import (ContextEntry, KnowledgeBase,
+                               PatchKnowledgeRequest, UpdateResponse)
+from .utils.help_functions import (build_gpt_message_blocks,
+                                   cache_url_snapshot, deep_merge,
                                    diff_with_tags, generate_patch_body_via_gpt,
-                                   get_knowledge_full_document)
+                                   get_knowledge_full_document, get_knowledge_base)
 
 knowledge_base_router = APIRouter()
+
+
+# ==============================
+# БЛОК: База знаний
+# ==============================
 
 
 @knowledge_base_router.get("/knowledge_base", response_model=KnowledgeBase)
@@ -87,7 +99,7 @@ async def apply_knowledge_base(
     new_data.update_date = now
     new_data.app_name = "main"
 
-    new_doc = new_data.model_dump()
+    new_doc = new_data.model_dump(mode="python")
     old_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"}) or {}
 
     old_doc.pop("_id", None)
@@ -134,13 +146,166 @@ async def generate_patch(
     return patch_body
 
 
+# ==============================
+# БЛОК: Настройки бота
+# ==============================
+
+
+
 @knowledge_base_router.get("/bot_info", response_model=Dict[str, Any])
 async def get_bot_info(
     request: Request,
     response: Response,
+    Authorize: AuthJWT = Depends()
 ) -> Dict[str, Any]:
     """Возвращает безопасную информацию о боте, включая его основные настройки и используемую модель AI."""
     bot_context = await get_bot_context()
     safe_fields = {"app_name", "bot_name", "avatar", "ai_model"}
     return {key: value for key, value in bot_context.items()
             if key in safe_fields}
+
+
+
+# ==============================
+# БЛОК: Работа с контекстом
+# ==============================
+
+
+# ───────────────────────── CREATE ──────────────────────────
+@knowledge_base_router.post(
+    "/context_entity",
+    response_model=ContextEntry,
+    status_code=201
+)
+@jwt_required()
+@permission_required(AdminPanelPermission)
+async def create_context_entity(
+    request: Request,
+    response: Response,
+    type: ContextType = Form(...),
+    purpose: ContextPurpose = Form(ContextPurpose.NONE),
+    title: Optional[str] = Form(None),
+    text: Optional[str] = Form(None),
+    url: Optional[str] = Form(None),
+    file: UploadFile = File(None),
+    Authorize: AuthJWT = Depends(),
+):
+    kb_doc, _ = await get_knowledge_base()
+    kb_doc.setdefault("context", [])
+
+    # ——— единственное место, где используем Pydantic‑модель  ———
+    if type is ContextType.TEXT:
+        if not text:
+            raise HTTPException(422, "Параметр 'text' обязателен")
+        entry = ContextEntry(
+            type=type,
+            purpose=purpose,
+            title=title or text[:80],
+            text=text,
+        )
+
+    elif type is ContextType.URL:
+        if not url:
+            raise HTTPException(422, "Параметр 'url' обязателен")
+        entry = ContextEntry(
+            type=type,
+            purpose=purpose,
+            title=title or str(url),
+            url=url,
+            snapshot_text=await cache_url_snapshot(str(url)),
+        )
+
+    elif type is ContextType.FILE:
+        if not file:
+            raise HTTPException(422, "Файл обязателен")
+        uid = uuid4().hex
+        dst_dir = Path(settings.CONTEXT_PATH) / uid
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        dst_path = dst_dir / file.filename
+        async with aiofiles.open(dst_path, "wb") as f:
+            await f.write(await file.read())
+        entry = ContextEntry(
+            type=type,
+            purpose=purpose,
+            title=title or file.filename,
+            file_path=str(dst_path),
+        )
+    else:
+        raise HTTPException(422, f"Неизвестный тип: {type}")
+
+    kb_doc["context"].append(entry.model_dump(mode="python"))
+    kb_doc["update_date"] = datetime.utcnow()
+    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
+
+    return entry                     # FastAPI выдаст как ContextEntry
+
+
+# ───────────────────────── DELETE ─────────────────────────
+@knowledge_base_router.delete("/context_entity/{ctx_id}", status_code=204)
+@jwt_required()
+@permission_required(AdminPanelPermission)
+async def delete_context_entity(
+    request: Request,
+    response: Response,
+    ctx_id: str,
+    Authorize: AuthJWT = Depends(),
+):
+    kb_doc, _ = await get_knowledge_base()
+
+    before = len(kb_doc.get("context", []))
+    kb_doc["context"] = [c for c in kb_doc["context"] if str(c.get("id")) != ctx_id]
+    if len(kb_doc["context"]) == before:
+        raise HTTPException(404, "Context entry not found")
+
+    kb_doc["update_date"] = datetime.utcnow()
+    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
+
+
+# ───────────────────────── GET ALL ────────────────────────
+@knowledge_base_router.get("/context_entity", )
+@jwt_required()
+@permission_required(AdminPanelPermission)
+async def get_all_context(
+    request: Request,
+    response: Response,
+    Authorize: AuthJWT = Depends(),
+):
+    kb_doc, _ = await get_knowledge_base()
+
+
+    updated = False
+    for ctx in kb_doc.get("context", []):
+        if ctx["type"] == ContextType.URL and not ctx.get("snapshot_text"):
+            ctx["snapshot_text"] = await cache_url_snapshot(str(ctx["url"]))
+            updated = True
+    if updated:
+        kb_doc["update_date"] = datetime.utcnow()
+        await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
+    return kb_doc["context"]
+
+
+# ───────────────────────── PATCH purpose ───────────────────
+@knowledge_base_router.patch(
+    "/context_entity/{ctx_id}/purpose",
+)
+@jwt_required()
+@permission_required(AdminPanelPermission)
+async def update_context_purpose(
+    request: Request,
+    response: Response,
+    ctx_id: str,
+    new_purpose: ContextPurpose = Form(...),
+    Authorize: AuthJWT = Depends(),
+):
+    kb_doc, _ = await get_knowledge_base()
+    # print("полученный id", ctx_id)
+
+    entry = next((c for c in kb_doc["context"] if str(c.get("id")) == ctx_id), None)
+    if not entry:
+        raise HTTPException(404, "Context entry not found")
+
+    entry["purpose"] = new_purpose.value
+    kb_doc["update_date"] = datetime.utcnow()
+    await mongo_db.knowledge_collection.replace_one({"app_name": "main"}, kb_doc)
+
+    return entry

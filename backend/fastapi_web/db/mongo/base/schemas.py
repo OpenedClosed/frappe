@@ -18,9 +18,13 @@ logger = logging.getLogger(__name__)
 
 class IdModel(BaseModel):
     """Базовая модель с MongoDB `_id`."""
+    # id: Optional[str] = Field(
+    #     default_factory=lambda: str(
+    #         ObjectId()), alias="_id")
+
     id: Optional[str] = Field(
         default_factory=lambda: str(
-            ObjectId()), alias="_id")
+            ObjectId()))
 
     class Config:
         """Настройки модели."""

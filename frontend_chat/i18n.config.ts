@@ -1,8 +1,8 @@
 // filepath: /Users/sergeisander/Documents/HotelsAiHub/frontend_chat/i18n.config.ts
-import en from './locales/en.json';
-import ru from './locales/ru.json';
-import uk from './locales/uk.json';
-import pl from './locales/pl.json';
+import en from "./locales/en.json";
+import ru from "./locales/ru.json";
+import uk from "./locales/uk.json";
+import pl from "./locales/pl.json";
 
 export default defineI18nConfig(() => {
   let userLang = "en";
@@ -20,7 +20,7 @@ export default defineI18nConfig(() => {
     uk,
     pl,
   };
-  console.log('messages', messages);
+  console.log("messages", messages);
 
   return {
     legacy: false,

@@ -1,12 +1,8 @@
 <script setup>
-import { navigateTo } from 'nuxt/app';
+  import { navigateTo } from "nuxt/app";
 
-navigateTo('/chats/telegram-chat');
-
-
+  navigateTo("/chats/telegram-chat");
 </script>
 <template>
-    <div class="Main">
- 
-    </div>
+  <div class="Main"></div>
 </template>

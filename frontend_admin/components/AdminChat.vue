@@ -1,5 +1,5 @@
 <template>
-    <div v-if="currentPageName === 'admin'" class="chat-overlay-container">
+    <div v-if="currentPageName === 'admin' && currentGroup === 'knowledge-base'" class="chat-overlay-container">
         <!-- Chat toggle button (always visible) -->
 
         <Button icon="pi pi-comments" :label="openLabel" class="chat-toggle-button text-white" @click="toggleChat" />
@@ -17,6 +17,8 @@
 <script setup>
 import { useI18n } from "#imports";
 import { ref, computed, onMounted, onUnmounted } from "vue";
+const route = useRoute();
+const currentGroup = computed(() => route.params.group); // :group
 const { currentPageName } = usePageState()
 // Reactive variable to store the current window width
 const windowWidth = ref(window.innerWidth);

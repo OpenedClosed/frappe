@@ -1,33 +1,33 @@
 <template>
-    <div class="commands-background">
-      <!-- Кнопка, при нажатии на которую идёт запрос на сервер -->
-      <!-- <Button label="Получить команды" class="p-button-outlined" @click="toggleCommands" /> -->
-  
-      <!-- Блок с кнопками команд (ChoiceButtons) -->
-      <ChoiceButtons
-        v-if="showCommands"
-        :choiceOptions="commands.map((cmd) => [cmd.command, cmd.command])"
-        :handleChoiceClick="onCommandClick"
-      />
-    </div>
-  </template>
-  
-  <script setup>
+  <div class="commands-background">
+    <!-- Кнопка, при нажатии на которую идёт запрос на сервер -->
+    <!-- <Button label="Получить команды" class="p-button-outlined" @click="toggleCommands" /> -->
+
+    <!-- Блок с кнопками команд (ChoiceButtons) -->
+    <ChoiceButtons
+      v-if="showCommands"
+      :choiceOptions="commands.map((cmd) => [cmd.command, cmd.command])"
+      :handleChoiceClick="onCommandClick"
+    />
+  </div>
+</template>
+
+<script setup>
   import { ref } from "vue";
   import { useNuxtApp } from "#app";
   import ChoiceButtons from "./ChoiceButtons.vue"; // <-- Скорректируйте путь к файлу
   import { useChatLogic } from "~/composables/useChatLogic";
   const showCommands = ref(false);
   const commands = ref([]);
-  
+
   // Получаем доступ к вашему кастомному API через Nuxt
   const { $api } = useNuxtApp();
   const { $event, $listen } = useNuxtApp();
-  
+
   $listen("show-commands", async () => {
     toggleCommands();
   });
-  
+
   /**
    * Тоггл: если команды не загружены и блок скрыт — грузим и показываем,
    * иначе прячем.
@@ -53,7 +53,7 @@
       showCommands.value = false;
     }
   }
-  
+
   /**
    * Обработка клика по кнопке команды
    * @param {string} command
@@ -64,19 +64,18 @@
     $event("command-clicked", command);
     showCommands.value = false;
   }
-  </script>
-  
-  <style>
+</script>
+
+<style>
   .commands-background {
     font-family: "Quicksand", sans-serif;
     overflow: hidden;
     background-color: #f8f9fa;
   }
-  
+
   @media (prefers-color-scheme: dark) {
     .commands-background {
       background-color: #131415 !important;
     }
   }
-  
-  </style>
+</style>

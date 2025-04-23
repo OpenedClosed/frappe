@@ -18,9 +18,7 @@ export default defineNuxtConfig({
         { "http-equiv": "X-UA-Compatible", content: "IE=edge" },
         // { property: "og:image", content: "/banner-main.png" },
       ],
-      script: [
-        { src: "https://telegram.org/js/telegram-web-app.js" },
-      ],
+      script: [{ src: "https://telegram.org/js/telegram-web-app.js" }],
       link: [
         {
           rel: "preconnect",
@@ -97,12 +95,12 @@ export default defineNuxtConfig({
 
   nitro: {
     routeRules: {
-      '/chat': { headers: { 'X-Frame-Options': 'ALLOWALL' } },
+      "/chat": { headers: { "X-Frame-Options": "ALLOWALL" } },
     },
   },
 
   routeRules: {
-    '/scripts/**': { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    "/scripts/**": { headers: { "Cache-Control": "no-store, max-age=0" } },
   },
 
   devtools: { enabled: true },

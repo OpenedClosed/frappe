@@ -273,6 +273,7 @@ def generate_base_routes(registry: BaseRegistry):
                         order=order,
                         current_user=user_doc
                     )
+
                 else:
                     return await instance.list(
                         sort_by=sort_by,

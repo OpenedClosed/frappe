@@ -1,5 +1,5 @@
 import axios from "axios";
-import { defineNuxtPlugin, navigateTo, useCookie } from "nuxt/app";
+import { defineNuxtPlugin, useCookie } from "nuxt/app";
 import { ref } from "vue";
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -8,8 +8,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   if (window.location.hostname === "localhost") {
     defaultUrl = "http://localhost:8000/";
   } else {
-    defaultUrl =
-      window.location.protocol + "//" + window.location.hostname + "/";
+    defaultUrl = window.location.protocol + "//" + window.location.hostname + "/";
   }
 
   const api = axios.create({
@@ -43,7 +42,6 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   setupHeaders();
 
-
   // ----- Request Interceptor -----
   api.interceptors.request.use(
     async (config) => {
@@ -73,12 +71,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     async (error) => {
       const originalRequest = error.config;
 
-      if (
-        error.response &&
-        error.response.status === 401 &&
-        first_time.value &&
-        !originalRequest._retry
-      ) {
+      if (error.response && error.response.status === 401 && first_time.value && !originalRequest._retry) {
         originalRequest._retry = true;
         first_time.value = false;
 
@@ -91,7 +84,6 @@ export default defineNuxtPlugin((nuxtApp) => {
           const myString = response.data.access_token;
 
           if (myString) {
-            
             api.defaults.headers.common["Authorization"] = `Bearer ${myString}`;
             // Update the Authorization header for the retried request
             originalRequest.headers["Authorization"] = `Bearer ${myString}`;

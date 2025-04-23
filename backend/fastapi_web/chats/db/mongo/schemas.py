@@ -35,10 +35,17 @@ class BriefAnswer(IdModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
+# class Sender(BaseValidatedIdModel):
+#     """Сообщение в чате."""
+#     client_id: str
+#     sender_role: SenderRole
+
 class ChatMessage(BaseValidatedIdModel):
     """Сообщение в чате."""
     message: str
+    # sender: Sender
     sender_role: SenderRole
+    sender_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     choice_options: Optional[List] = None
     choice_strict: bool = False
@@ -56,6 +63,13 @@ class Client(IdModel):
     metadata: Dict[str, Any] = {}
 
 
+class ChatReadInfo(BaseValidatedModel):
+    """Отметка о том, до какого сообщения дочитал конкретный участник."""
+    client_id: str
+    user_id: Optional[str] = None
+    last_read_msg: str
+    last_read_at: datetime = Field(default_factory=datetime.utcnow)
+
 class ChatSession(BaseValidatedModel):
     """Чат-сессия."""
 
@@ -71,6 +85,7 @@ class ChatSession(BaseValidatedModel):
     brief_answers: List[BriefAnswer] = []
     closed_by_request: Optional[bool] = False
     admin_marker: bool = False
+    read_state: Optional[List[ChatReadInfo]] = Field(default_factory=list)
 
     def get_client_id(self) -> str:
         """Возвращает `client_id` или `external_id`, если он указан."""
@@ -112,3 +127,16 @@ class ChatSession(BaseValidatedModel):
             if self.messages[-1].sender_role == SenderRole.CONSULTANT
             else ChatStatus.CLOSED_WITHOUT_RESPONSE
         )
+    
+    def is_read_by_any_staff(self, staff_ids: set[str]) -> bool:
+        """Проверяет, прочитан ли чат хотя бы одним из указанных staff-пользователей."""
+        if not self.messages or not self.read_state:
+            return False
+
+        last_msg_id = self.messages[-1].id
+
+        return any(
+            ri.user_id in staff_ids and ri.last_read_msg == last_msg_id
+            for ri in self.read_state if ri.user_id
+        )
+

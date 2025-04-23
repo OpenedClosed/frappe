@@ -1,12 +1,12 @@
-import mitt from 'mitt'
-import { defineNuxtPlugin } from 'nuxt/app'
+import mitt from "mitt";
+import { defineNuxtPlugin } from "nuxt/app";
 
 export default defineNuxtPlugin(() => {
-  const emitter = mitt()
+  const emitter = mitt();
   return {
     provide: {
       event: emitter.emit,
-      listen: emitter.on
-    }
-  }
-})
+      listen: emitter.on,
+    },
+  };
+});

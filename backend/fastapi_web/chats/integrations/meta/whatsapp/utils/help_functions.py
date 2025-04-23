@@ -5,10 +5,10 @@ from chats.db.mongo.enums import ChatSource, SenderRole
 from chats.db.mongo.schemas import ChatSession
 from chats.routers import handle_chat_creation
 from chats.ws.ws_handlers import handle_message
-from chats.ws.ws_helpers import get_typing_manager, get_ws_manager
+from chats.ws.ws_helpers import (get_typing_manager, get_ws_manager,
+                                 gpt_task_manager)
 from db.mongo.db_init import mongo_db
 
-from chats.ws.ws_helpers import gpt_task_manager
 
 def parse_whatsapp_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     """

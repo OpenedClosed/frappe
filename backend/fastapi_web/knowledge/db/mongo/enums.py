@@ -5,6 +5,20 @@ from enum import Enum
 from db.mongo.base.enums import BaseJsonEnumMixin
 
 
+class ContextType(str, Enum):
+    """Тип сохранённого контекста."""
+    TEXT = "text"
+    FILE = "file"
+    URL = "url"
+
+
+class ContextPurpose(str, Enum):
+    """Для чего будет использоваться запись контекста."""
+    NONE = "none"       # просто хранится
+    BOT = "bot"        # шпаргалка для бота (учесть при ответах)
+    KB = "kb"         # исходный материал для переноса в БЗ
+    BOTH = "both"       # и то, и другое
+
 class CommunicationStyleEnum(BaseJsonEnumMixin, str, Enum):
     """Стиль общения ИИ-бота"""
     CASUAL = json.dumps({"en": "Casual", "ru": "Неформальный"})

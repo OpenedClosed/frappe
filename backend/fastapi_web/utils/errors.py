@@ -25,20 +25,37 @@ class FieldValidationError(Exception):
         return error
 
 
-async def validation_exception_handler(
-        request: Request, exc: RequestValidationError):
-    """Обработка исключения при запросе."""
+# async def validation_exception_handler(
+#         request: Request, exc: RequestValidationError):
+#     """Обработка исключения при запросе."""
+#     errors = {}
+#     for e in exc.errors():
+#         loc = e['loc']
+#         current = errors
+#         for key in loc[:-1]:
+#             current = current.setdefault(key, {})
+#         current[loc[-1]] = str(e['ctx']['error'] if e.get('ctx') else e['msg'])
+
+#     return JSONResponse(
+#         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={
+#             "errors": errors}
+#     )
+
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Обработка исключения при валидации запроса."""
     errors = {}
     for e in exc.errors():
         loc = e['loc']
         current = errors
         for key in loc[:-1]:
-            current = current.setdefault(key, {})
-        current[loc[-1]] = str(e['ctx']['error'] if e.get('ctx') else e['msg'])
+            current = current.setdefault(str(key), {})
+        # Используем максимально безопасный способ получения текста ошибки
+        message = e.get("ctx", {}).get("error") or e.get("msg", "Invalid input")
+        current[str(loc[-1])] = message
 
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={
-            "errors": errors}
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"errors": errors}
     )
 
 

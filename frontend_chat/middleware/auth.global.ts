@@ -4,7 +4,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const { currentLanguage } = useLanguageState();
 
   currentUrl.value =
-    window.location.hostname === "localhost" ? "http://localhost:8000" : `${window.location.protocol}//${window.location.hostname}`;
+    window.location.hostname === "localhost"
+      ? "http://localhost:8000"
+      : `${window.location.protocol}//${window.location.hostname}`;
 
   const refresh_token = useCookie("refresh_token");
   const token = useCookie("access_token");
