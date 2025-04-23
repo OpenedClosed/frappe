@@ -53,7 +53,6 @@ export function useChatLogic(options = {}) {
   // WebSocket-соединение и chatId
   const websocket = ref(null);
 
-
   // Текстовые сообщения для vue-advanced-chat (i18n)
   const textMessagesObject = computed(() => ({
     SEARCH: "Search",
@@ -101,15 +100,17 @@ export function useChatLogic(options = {}) {
   /**
    * Преобразовать сообщения API в формат для компонента чата (vue-advanced-chat).
    */
-  async function transformChatMessages(apiMessages) {
-    chatMessages.value = [];
+  async function transformChatMessages(apiMessages, isInitial = false) {
+    if (isInitial) {
+      chatMessages.value = [];
+    }
     // const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
     const currentLocale = "en";
     const results = [];
     if (!apiMessages) return results;
     for (let [index, msg] of apiMessages?.entries()) {
       const contentString = typeof msg.message === "string" ? msg.message : "";
-      console.log('msg', msg);
+      console.log("msg", msg);
 
       // Attached files (if link preview exists)
       let files = null;
@@ -303,7 +304,7 @@ export function useChatLogic(options = {}) {
         console.log("currentChatId.value", currentChatId.value);
         console.log("---------------------------------------------------------------------------");
         websocket.value?.send(JSON.stringify({ type: "status_check" }));
-        websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true })); 
+        websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true }));
       }
     };
 
@@ -342,7 +343,7 @@ export function useChatLogic(options = {}) {
         case "get_messages":
           {
             console.log("data.messages:", data.messages);
-            const transformed = await transformChatMessages(data.messages);
+            const transformed = await transformChatMessages(data.messages,true);
             chatMessages.value = transformed;
             messagesLoaded.value = true;
             if (data.remaining_time) {
@@ -362,8 +363,10 @@ export function useChatLogic(options = {}) {
 
         case "new_message":
           {
+            console.log("Получено новое сообщение:", data);
             const [transformed] = await transformChatMessages([data]);
-            $event("new_message_arrived", transformed);
+            // $event("new_message_arrived", transformed);
+            chatMessages.value = [...chatMessages.value, transformed];
 
             // УБРАНО повторное status_check после каждого сообщения
 
@@ -416,9 +419,7 @@ export function useChatLogic(options = {}) {
   /**
    * Обновление чата (просим новый currentChatId.value, очищаем сообщения).
    */
-  async function refreshChat() {
-
-  }
+  async function refreshChat() {}
 
   /**
    * Первичная загрузка chatId с бэкенда.
@@ -441,7 +442,6 @@ export function useChatLogic(options = {}) {
     // Можно оставить пустым, чтобы не было автопереподключений или повторных запросов
   }
 
-
   // ---------------- Жизненный цикл ----------------
 
   onMounted(async () => {
@@ -450,14 +450,6 @@ export function useChatLogic(options = {}) {
 
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     isIphone.value = /iPhone/i.test(ua);
-     
-    // Настройки для Telegram (если нужно)
-    if (window.Telegram && isTelegram) {
-      let tg = window.Telegram.WebApp;
-      tg.expand();
-      tg.isVerticalSwipesEnabled = false;
-      tg.enableClosingConfirmation();
-    }
 
     // Следим за фокусом окна (без автоповторов)
     window.addEventListener("focus", handleFocus);
@@ -494,7 +486,6 @@ export function useChatLogic(options = {}) {
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
   }
-  
 
   // ---------------- Возвращаемые переменные и методы ----------------
 

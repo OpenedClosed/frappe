@@ -283,10 +283,10 @@ watch([chatRows], async ([rows]) => {
   }
 });
 /* ── external events ───────────────────────────────────────── */
-$listen("new_message_arrived", (msg) => {
-  if (!msg || !messagesMap.value[activeRoomId.value]) return;
-  messagesMap.value[activeRoomId.value].push(msg);
-});
+// $listen("new_message_arrived", (msg) => {
+//   if (!msg || !messagesMap.value[activeRoomId.value]) return;
+//   messagesMap.value[activeRoomId.value].push(msg);
+// });
 
 /* ── tidy up on unmount ───────────────────────────────────── */
 onBeforeUnmount(() => chatLogic.value?.destroy?.());
