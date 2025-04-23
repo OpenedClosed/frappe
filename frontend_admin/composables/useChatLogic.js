@@ -53,7 +53,6 @@ export function useChatLogic(options = {}) {
   // WebSocket-соединение и chatId
   const websocket = ref(null);
 
-
   // Текстовые сообщения для vue-advanced-chat (i18n)
   const textMessagesObject = computed(() => ({
     SEARCH: "Search",
@@ -300,7 +299,7 @@ export function useChatLogic(options = {}) {
         console.log("currentChatId.value", currentChatId.value);
         console.log("---------------------------------------------------------------------------");
         websocket.value?.send(JSON.stringify({ type: "status_check" }));
-        websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true })); 
+        websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true }));
       }
     };
 
@@ -413,9 +412,7 @@ export function useChatLogic(options = {}) {
   /**
    * Обновление чата (просим новый currentChatId.value, очищаем сообщения).
    */
-  async function refreshChat() {
-
-  }
+  async function refreshChat() {}
 
   /**
    * Первичная загрузка chatId с бэкенда.
@@ -438,44 +435,66 @@ export function useChatLogic(options = {}) {
     // Можно оставить пустым, чтобы не было автопереподключений или повторных запросов
   }
 
-
   // ---------------- Жизненный цикл ----------------
 
-  onMounted(async () => {
+  // onMounted(async () => {
+  //   checkScreenSize();
+  //   window.addEventListener("resize", checkScreenSize);
+
+  //   const ua = navigator.userAgent || navigator.vendor || window.opera;
+  //   isIphone.value = /iPhone/i.test(ua);
+
+  //   // Настройки для Telegram (если нужно)
+  //   if (window.Telegram && isTelegram) {
+  //     let tg = window.Telegram.WebApp;
+  //     tg.expand();
+  //     tg.isVerticalSwipesEnabled = false;
+  //     tg.enableClosingConfirmation();
+  //   }
+
+  //   // Следим за фокусом окна (без автоповторов)
+  //   window.addEventListener("focus", handleFocus);
+  // });
+
+  // onBeforeUnmount(() => {
+  //   // Закрываем сокет, очищаем обработчики
+  //   if (websocket.value) {
+  //     websocket.value.onclose = null;
+  //     websocket.value.close();
+  //     websocket.value = null;
+  //   }
+
+  //   // Останавливаем countdown
+  //   if (countdownInterval) {
+  //     clearInterval(countdownInterval);
+  //   }
+
+  //   window.removeEventListener("focus", handleFocus);
+  //   window.removeEventListener("resize", checkScreenSize);
+  // });
+
+  function mount() {
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
 
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     isIphone.value = /iPhone/i.test(ua);
-     
-    // Настройки для Telegram (если нужно)
+
     if (window.Telegram && isTelegram) {
-      let tg = window.Telegram.WebApp;
+      const tg = window.Telegram.WebApp;
       tg.expand();
       tg.isVerticalSwipesEnabled = false;
       tg.enableClosingConfirmation();
     }
 
-    // Следим за фокусом окна (без автоповторов)
     window.addEventListener("focus", handleFocus);
-  });
+  }
 
-  onBeforeUnmount(() => {
-    // Закрываем сокет, очищаем обработчики
-    if (websocket.value) {
-      websocket.value.onclose = null;
-      websocket.value.close();
-      websocket.value = null;
-    }
-
-    // Останавливаем countdown
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-    }
-
+  function unmount() {
+    if (countdownInterval) clearInterval(countdownInterval);
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
-  });
+  }
 
   // ⟵⟵⟵  добавляем функцию‑чистильщик
   function destroy() {
@@ -491,7 +510,6 @@ export function useChatLogic(options = {}) {
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
   }
-  
 
   // ---------------- Возвращаемые переменные и методы ----------------
 
@@ -518,6 +536,8 @@ export function useChatLogic(options = {}) {
     refreshChat,
     updateMessages,
     transformChatMessages,
+    mount,
+    unmount,
     destroy,
     initializeWebSocket,
   };

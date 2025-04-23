@@ -3,6 +3,7 @@
   <div class="flex flex-col h-[80vh] max-h-[80vh]">
     <Toast class="max-w-[18rem] md:max-w-full" />
 
+    {{ panelMessages }}
     <div class="flex items-center gap-3 m-2">
       <!-- “All” label -->
       <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> All </span>
@@ -110,14 +111,18 @@ const activeRoomId = ref(null);
 const activeUsername = ref(null);
 const activeUserId = ref(null);
 const activeStartDate = ref(null);
-const panelMessages = computed(() => messagesMap.value[activeRoomId.value] || []);
+const panelMessages = computed(() => {
+  const live = chatLogic.value?.messages?.value;
+  return live && live.length ? live : messagesMap.value[activeRoomId.value] || [];
+});
+
 
 function getChatId(data) {
   console.log("getChatId", data?.detail?.[0]?.room?.roomId); // For debugging: log chat ID retrieval
   if (data?.detail?.[0]?.room?.roomId) {
     activeRoomId.value = data.detail[0].room.roomId;
 
-    if (currentChatId.value === activeRoomId.value) {
+    if (currentChatId.value === data?.detail?.[0]?.room?.roomId) {
       console.log("Already in the same chat, no need to reinitialize.");
       return;
     }
@@ -145,12 +150,16 @@ function clearRoomName(room) {
 const chatLogic = shallowRef(null);
 function initChatLogic(chat_id) {
   if (!chat_id) return;
-  if (chat_id === activeRoomId?.value) return;
 
+  // если комната та же, ничего не делаем
+  if (chatLogic.value && chatLogic.value.chatId === chat_id) return;
+
+  // закрываем старую логику и сокет
   // chatLogic.value?.destroy?.();
-  chatLogic.value = useChatLogic({});
-}
 
+  // создаём новую и сразу открываем сокет внутри самого хука
+  chatLogic.value = useChatLogic({ chatId: chat_id });
+}
 /* ── NEW: helper to decide if a room is unread for you ───── */
 function isRoomUnread(room) {
   // Very simple rule: last message isn’t from the consultant
@@ -182,17 +191,13 @@ function markRoomAsSeen(roomId) {
 
 
 
-function loadMoreChats() {
-  console.log("loadMoreChats"); // For debugging: log load more chats action
-  // Implement your logic to load more chats here
-  // This could be an API call or any other logic to fetch more chat data
-}
 
+/* ── убираем дублирующий вызов из watchEffect ── */
 watchEffect(() => {
   const firstChatId = chatRows.value[0]?.chat_id;
   initChatLogic(props.id || firstChatId);
-  initializeWebSocket.value?.(firstChatId); // initialize WebSocket connection
 });
+
 function formatDateEU(isoDateStr) {
   if (!isoDateStr) return "";
 
@@ -313,7 +318,14 @@ $listen("new_message_arrived", (msg) => {
 });
 
 /* ── tidy up on unmount ───────────────────────────────────── */
-onBeforeUnmount(() => chatLogic.value?.destroy?.());
+onMounted(() => {
+  chatLogic.value?.mount?.();
+});
+
+onBeforeUnmount(() => {
+  chatLogic.value?.unmount?.();
+  chatLogic.value?.destroy?.();
+});
 </script>
 
 <style scoped>
