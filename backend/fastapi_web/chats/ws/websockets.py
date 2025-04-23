@@ -29,6 +29,8 @@ from .ws_helpers import (get_typing_manager, get_ws_manager, gpt_task_manager,
 @app.websocket("/ws/{chat_id}/")
 async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     """WebSocket соединение для чата."""
+    print("="*100)
+    print("Начало работы с чатом:", chat_id)
     user_data = {}
     user=None
     user_id = await websocket_jwt_required(websocket)
@@ -41,19 +43,23 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
             logging.warning(f"Cannot load user from JWT: {e}")
 
     is_superuser = user and user.role in [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    print("Админ?:", is_superuser)
+
 
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)
 
     client_id = await get_client_id(websocket, chat_id, is_superuser)
-    generated_id = await generate_client_id(websocket)
-    id_to_connect = (
-        generated_id if is_superuser
-        else client_id
-    )
+    # if is_superuser:
+    #     client_id = "test_admin"
+    # generated_id = await generate_client_id(websocket)
+    # id_to_connect = (
+    #     generated_id if is_superuser
+    #     else client_id
+    # )
     user_data["client_id"] = client_id
 
-    await manager.connect(websocket, id_to_connect)
+    await manager.connect(websocket, client_id)
 
     user_language = determine_language(
         websocket.headers.get("accept-language", "en")
@@ -72,10 +78,12 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
         await start_brief(chat_session, manager, redis_session_key, user_language)
 
     try:
+        print(f"Статус сокета:", websocket.client_state)
         while websocket.client_state == WebSocketState.CONNECTED:
             data = await websocket.receive_json()
 
             gpt_lock = gpt_task_manager.get_lock(chat_id)
+            print(f"Идет обработка сообщения типа {data.get('type')} в чате:", chat_id)
 
             asyncio.create_task(
                 handle_message(

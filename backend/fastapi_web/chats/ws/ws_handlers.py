@@ -332,6 +332,11 @@ async def handle_get_messages(
 ) -> bool:
     """Отдаёт историю чата и, при наличии with_enter=True, фиксирует прочтение текущим клиентом."""
     chat_data: Dict[str, Any] | None = await mongo_db.chats.find_one({"chat_id": chat_id})
+
+    # print("="*100)
+    # print("chat_id", chat_data.get("chat_id"))
+    # print("with_enter", data.get("with_enter"))
+
     if not chat_data:
         await manager.broadcast(custom_json_dumps({
             "type": "get_messages",
@@ -364,8 +369,11 @@ async def handle_get_messages(
     modified = False
 
     if data.get("with_enter"):
+        # print("Зашли сюда с with_enter")
         for ri in read_state:
+            # print("ri:", ri)
             if ri.client_id == client_id:
+                # print("==", ri.client_id == client_id)
                 if ri.last_read_msg != last_id:
                     ri.last_read_msg = last_id
                     ri.last_read_at = now
@@ -411,6 +419,8 @@ async def handle_get_messages(
         "messages": enriched,
         "remaining_time": remaining
     }))
+
+    # print("="*100)
     return enriched
 
 
