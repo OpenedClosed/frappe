@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 // import { useI18n } from "vue-i18n";
 // import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
-const { isAutoMode, currentChatId } = useChatState();
+const { isAutoMode, currentChatId, chatMessages } = useChatState();
 
 import { debounce } from "lodash";
 
@@ -38,7 +38,7 @@ export function useChatLogic(options = {}) {
   ];
 
   // Список сообщений и статус загрузки
-  const messages = ref([]);
+
   const messagesLoaded = ref(false);
 
   // Настройки выбора опций
@@ -52,6 +52,7 @@ export function useChatLogic(options = {}) {
 
   // WebSocket-соединение и chatId
   const websocket = ref(null);
+
 
   // Текстовые сообщения для vue-advanced-chat (i18n)
   const textMessagesObject = computed(() => ({
@@ -101,12 +102,14 @@ export function useChatLogic(options = {}) {
    * Преобразовать сообщения API в формат для компонента чата (vue-advanced-chat).
    */
   async function transformChatMessages(apiMessages) {
+    chatMessages.value = [];
     // const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
     const currentLocale = "en";
     const results = [];
     if (!apiMessages) return results;
     for (let [index, msg] of apiMessages?.entries()) {
       const contentString = typeof msg.message === "string" ? msg.message : "";
+      console.log('msg', msg);
 
       // Attached files (if link preview exists)
       let files = null;
@@ -159,13 +162,14 @@ export function useChatLogic(options = {}) {
       // Determine senderId and username
       let senderId;
       let username;
+      console.log("roleEn", roleEn);
       if (roleEn === "Client") {
         senderId = "1234";
         username = "Client";
-      } else if (roleEn === "ai" || roleEn === "AI Assistant") {
+      } else if (roleEn === "AI Assistant") {
         senderId = "4321";
         username = "AI Assistant";
-      } else if (roleEn === "consultant" || roleEn === "Consultant") {
+      } else if (roleEn === "Consultant") {
         senderId = "4321";
         username = "Consultant";
       } else {
@@ -262,7 +266,7 @@ export function useChatLogic(options = {}) {
    * Добавление нового сообщения в локальный массив (прихват по событию).
    */
   function updateMessages(newMessage) {
-    messages.value = [...messages.value, newMessage];
+    chatMessages.value = [...chatMessages.value, newMessage];
   }
 
   /**
@@ -299,7 +303,7 @@ export function useChatLogic(options = {}) {
         console.log("currentChatId.value", currentChatId.value);
         console.log("---------------------------------------------------------------------------");
         websocket.value?.send(JSON.stringify({ type: "status_check" }));
-        websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true }));
+        websocket.value?.send(JSON.stringify({ type: "get_messages", with_enter: true })); 
       }
     };
 
@@ -339,7 +343,7 @@ export function useChatLogic(options = {}) {
           {
             console.log("data.messages:", data.messages);
             const transformed = await transformChatMessages(data.messages);
-            messages.value = transformed;
+            chatMessages.value = transformed;
             messagesLoaded.value = true;
             if (data.remaining_time) {
               startCountdown(data.remaining_time);
@@ -412,7 +416,9 @@ export function useChatLogic(options = {}) {
   /**
    * Обновление чата (просим новый currentChatId.value, очищаем сообщения).
    */
-  async function refreshChat() {}
+  async function refreshChat() {
+
+  }
 
   /**
    * Первичная загрузка chatId с бэкенда.
@@ -435,66 +441,44 @@ export function useChatLogic(options = {}) {
     // Можно оставить пустым, чтобы не было автопереподключений или повторных запросов
   }
 
+
   // ---------------- Жизненный цикл ----------------
 
-  // onMounted(async () => {
-  //   checkScreenSize();
-  //   window.addEventListener("resize", checkScreenSize);
-
-  //   const ua = navigator.userAgent || navigator.vendor || window.opera;
-  //   isIphone.value = /iPhone/i.test(ua);
-
-  //   // Настройки для Telegram (если нужно)
-  //   if (window.Telegram && isTelegram) {
-  //     let tg = window.Telegram.WebApp;
-  //     tg.expand();
-  //     tg.isVerticalSwipesEnabled = false;
-  //     tg.enableClosingConfirmation();
-  //   }
-
-  //   // Следим за фокусом окна (без автоповторов)
-  //   window.addEventListener("focus", handleFocus);
-  // });
-
-  // onBeforeUnmount(() => {
-  //   // Закрываем сокет, очищаем обработчики
-  //   if (websocket.value) {
-  //     websocket.value.onclose = null;
-  //     websocket.value.close();
-  //     websocket.value = null;
-  //   }
-
-  //   // Останавливаем countdown
-  //   if (countdownInterval) {
-  //     clearInterval(countdownInterval);
-  //   }
-
-  //   window.removeEventListener("focus", handleFocus);
-  //   window.removeEventListener("resize", checkScreenSize);
-  // });
-
-  function mount() {
+  onMounted(async () => {
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
 
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     isIphone.value = /iPhone/i.test(ua);
-
+     
+    // Настройки для Telegram (если нужно)
     if (window.Telegram && isTelegram) {
-      const tg = window.Telegram.WebApp;
+      let tg = window.Telegram.WebApp;
       tg.expand();
       tg.isVerticalSwipesEnabled = false;
       tg.enableClosingConfirmation();
     }
 
+    // Следим за фокусом окна (без автоповторов)
     window.addEventListener("focus", handleFocus);
-  }
+  });
 
-  function unmount() {
-    if (countdownInterval) clearInterval(countdownInterval);
+  onBeforeUnmount(() => {
+    // Закрываем сокет, очищаем обработчики
+    if (websocket.value) {
+      websocket.value.onclose = null;
+      websocket.value.close();
+      websocket.value = null;
+    }
+
+    // Останавливаем countdown
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
-  }
+  });
 
   // ⟵⟵⟵  добавляем функцию‑чистильщик
   function destroy() {
@@ -510,6 +494,7 @@ export function useChatLogic(options = {}) {
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("resize", checkScreenSize);
   }
+  
 
   // ---------------- Возвращаемые переменные и методы ----------------
 
@@ -520,7 +505,6 @@ export function useChatLogic(options = {}) {
     isIphone,
     currentUserId,
     activeRoomId,
-    messages,
     messagesLoaded,
     choiceOptions,
     isChoiceStrict,
@@ -536,8 +520,6 @@ export function useChatLogic(options = {}) {
     refreshChat,
     updateMessages,
     transformChatMessages,
-    mount,
-    unmount,
     destroy,
     initializeWebSocket,
   };

@@ -2,8 +2,6 @@
 <template>
   <div class="flex flex-col h-[80vh] max-h-[80vh]">
     <Toast class="max-w-[18rem] md:max-w-full" />
-
-    {{ panelMessages }}
     <div class="flex items-center gap-3 m-2">
       <!-- “All” label -->
       <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> All </span>
@@ -26,7 +24,7 @@
       :height="'80vh'"
       :current-user-id="currentUserId"
       :rooms="JSON.stringify(displayedRooms)"
-      :messages="JSON.stringify(panelMessages)"
+      :messages="JSON.stringify(chatMessages)"
       :messages-loaded="true"
       :selected-room-id="activeRoomId"
       :single-room="false"
@@ -71,7 +69,7 @@ import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount } from "
 import { register } from "vue-advanced-chat";
 import Toast from "primevue/toast";
 import { useChatLogic } from "~/composables/useChatLogic";
-const { isAutoMode, currentChatId } = useChatState();
+const { isAutoMode, currentChatId,chatMessages } = useChatState();
 
 register();
 const colorMode = useColorMode();
@@ -111,10 +109,6 @@ const activeRoomId = ref(null);
 const activeUsername = ref(null);
 const activeUserId = ref(null);
 const activeStartDate = ref(null);
-const panelMessages = computed(() => {
-  const live = chatLogic.value?.messages?.value;
-  return live && live.length ? live : messagesMap.value[activeRoomId.value] || [];
-});
 
 
 function getChatId(data) {
@@ -122,7 +116,7 @@ function getChatId(data) {
   if (data?.detail?.[0]?.room?.roomId) {
     activeRoomId.value = data.detail[0].room.roomId;
 
-    if (currentChatId.value === data?.detail?.[0]?.room?.roomId) {
+    if (currentChatId.value === activeRoomId.value) {
       console.log("Already in the same chat, no need to reinitialize.");
       return;
     }
@@ -160,11 +154,8 @@ function initChatLogic(chat_id) {
   // создаём новую и сразу открываем сокет внутри самого хука
   chatLogic.value = useChatLogic({ chatId: chat_id });
 }
-/* ── NEW: helper to decide if a room is unread for you ───── */
-function isRoomUnread(room) {
-  // Very simple rule: last message isn’t from the consultant
-  return room.lastMessage && room.lastMessage.senderId !== currentUserId.value;
-}
+
+
 const displayedRooms = ref([]);
 
 watch([unreadOnly, rooms], (newVal) => {
@@ -177,26 +168,21 @@ watch([unreadOnly, rooms], (newVal) => {
   displayedRooms.value = filteredRooms;
 });
 
-function markRoomAsSeen(roomId) {
-  console.log("markRoomAsSeen", roomId); // For debugging: log room ID to be marked as seen
-  const i = rooms.value.findIndex((r) => r.roomId === roomId);
-  if (i !== -1) {
-    // Spread forces Vue to emit a reactive change
-    rooms.value[i] = { ...rooms.value[i], seen: true, roomName: clearRoomName(rooms.value[i]) };
-  }
-  console.log("rooms.value[i].seen", rooms.value[i].seen); // For debugging: log seen status
-  console.log("Index", i); // For debugging: log seen status
-  console.log(" rooms.value[i]", rooms.value[i]); // For debugging: log all rooms
-}
 
 
 
 
-/* ── убираем дублирующий вызов из watchEffect ── */
-watchEffect(() => {
-  const firstChatId = chatRows.value[0]?.chat_id;
-  initChatLogic(props.id || firstChatId);
-});
+/* ── initialise the very first chat only once ─────────────── */
+const stopInitWatcher = watch(
+  chatRows,
+  (rows) => {
+    console.log('INIT WATCHER', rows); // For debugging: log chat rows
+    if (!rows.length) return;          // nothing to do yet
+    initChatLogic(rows[0].chat_id);    // kick-start the logic
+    stopInitWatcher();                 // detach the watcher → runs only once
+  },
+  { immediate: true }                  // fire immediately on mount
+);
 
 function formatDateEU(isoDateStr) {
   if (!isoDateStr) return "";
@@ -234,8 +220,6 @@ function formatTimeDifferenceEU(dateStr) {
   return `Started ${diffDays} days, ${diffHours} hours, ${diffMinutes} minutes ago`;
 }
 
-/* ② rebuild rooms + messages when data and transformFn are ready */
-const transformFn = computed(() => chatLogic.value?.transformChatMessages);
 function buildRooms(chats, consultantId) {
   console.log("buildRooms", chats); // For debugging: log chat data
   const sourceAvatars = {
@@ -289,28 +273,15 @@ const currentRoomSource = computed(() => {
   return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
 });
 
-watch(
-  () => chatRows.value,
-  async () => {
-    if (!chatRows.value.length || !transformFn.value) return;
+watch([chatRows], async ([rows]) => {
+  if (!rows.length) return;
 
-    // Build the messages map
-    const newMap = {};
-    for (const chat of chatRows.value) {
-      newMap[chat.chat_id] = (await transformFn.value(chat.messages)) || [];
-    }
-    messagesMap.value = newMap;
+  rooms.value = buildRooms(rows, currentUserId.value);
 
-    // Use the helper to build rooms
-    rooms.value = buildRooms(chatRows.value, currentUserId.value);
-    console.log("rooms", rooms.value);
-    /* Pick first room if nothing selected yet */
-    if (!rooms.value.find((r) => r.roomId === activeRoomId.value)) {
-      activeRoomId.value = rooms.value[0]?.roomId ?? null;
-    }
+  if (!rooms.value.find(r => r.roomId === activeRoomId.value)) {
+    activeRoomId.value = rooms.value[0]?.roomId ?? null;
   }
-);
-
+});
 /* ── external events ───────────────────────────────────────── */
 $listen("new_message_arrived", (msg) => {
   if (!msg || !messagesMap.value[activeRoomId.value]) return;
@@ -318,14 +289,7 @@ $listen("new_message_arrived", (msg) => {
 });
 
 /* ── tidy up on unmount ───────────────────────────────────── */
-onMounted(() => {
-  chatLogic.value?.mount?.();
-});
-
-onBeforeUnmount(() => {
-  chatLogic.value?.unmount?.();
-  chatLogic.value?.destroy?.();
-});
+onBeforeUnmount(() => chatLogic.value?.destroy?.());
 </script>
 
 <style scoped>
