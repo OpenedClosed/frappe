@@ -134,41 +134,58 @@ async def analyze_update_snippets_via_gpt(
 ) -> dict:
     kb_doc, kb_model = await get_knowledge_base()
     ctx_blocks = await collect_context_blocks(kb_model.context)
-    # print(ctx_blocks)
 
-    # формируем messages: сначала system‑prompt, потом контекст,
-    # а затем реальные user_blocks
-    messages = build_messages_for_model(
-        system_prompt=AI_PROMPTS["analyze_update_snippets_prompt"].format(
-            kb_full_structure=json.dumps({
-                t: {"subtopics": {s: {"questions": list(sub["questions"])}
-                                  for s, sub in topic["subtopics"].items()}}
-                for t, topic in knowledge_base.items()
-            }, ensure_ascii=False),
-            bot_snippets_text=bot_context_prompt
-        ),
-        messages_data=ctx_blocks + user_blocks,   # ← контекст‑файлы добавлены
+    system_prompt_text = AI_PROMPTS["analyze_update_snippets_prompt"].format(
+        kb_full_structure=json.dumps({
+            t: {"subtopics": {
+                s: {"questions": list(sub["questions"])}
+                for s, sub in topic["subtopics"].items()
+            }}
+            for t, topic in knowledge_base.items()
+        }, ensure_ascii=False),
+        bot_snippets_text=bot_context_prompt
+    )
+
+    msg_bundle = build_messages_for_model(
+        system_prompt=system_prompt_text,
+        messages_data=ctx_blocks + user_blocks,
         user_message="",
         model=ai_model,
     )
 
     client, real_model = pick_model_and_client(ai_model)
+
     if real_model.startswith("gpt"):
         raw_content = (
-            await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
+            await client.chat.completions.create(
+                model=real_model,
+                messages=msg_bundle["messages"],
+                temperature=0.1
+            )
         ).choices[0].message.content.strip()
+
     elif real_model.startswith("gemini"):
         raw_content = (
-            await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
+            await client.chat_generate(
+                model=real_model,
+                messages=msg_bundle["messages"],
+                temperature=0.1,
+                system_instruction=msg_bundle.get("system_instruction")
+            )
         )["candidates"][0]["content"]["parts"][0]["text"].strip()
+
     else:
         raw_content = (
-            await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
+            await openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=msg_bundle["messages"],
+                temperature=0.1
+            )
         ).choices[0].message.content.strip()
 
-    # print('сниппеты', raw_content)
-    return {"topics": normalize_snippets_structure(_extract_json_from_gpt(raw_content))}
-
+    return {
+        "topics": normalize_snippets_structure(_extract_json_from_gpt(raw_content))
+    }
 
 
 
@@ -289,16 +306,19 @@ def build_messages_for_model(
     messages_data: Union[List[ChatMessage], List[Dict[str, Any]]],
     user_message: str,
     model: str
-) -> List[Dict[str, Any]]:
-    """Генерирует список `messages` в правильном формате для OpenAI (GPT) и Gemini."""
+) -> Dict[str, Any]:
+    """Генерирует список `messages` и опциональный `system_instruction`."""
     messages = []
+    system_instruction = None
 
     if system_prompt:
-        messages.append({
-            "role": "system" if model.startswith("gpt") else "user",
-            "content": system_prompt
-        })
-
+        if model.startswith("gpt"):
+            messages.append({
+                "role": "system",
+                "content": system_prompt
+            })
+        elif model.startswith("gemini"):
+            system_instruction = system_prompt  # важно: отдельно, не в messages
 
     for msg in messages_data:
         if isinstance(msg, ChatMessage):
@@ -319,15 +339,16 @@ def build_messages_for_model(
             structured_content.append({"type": "text", "text": content})
         elif isinstance(content, dict):
             if "text" in content:
-                structured_content.append(
-                    {"type": "text", "text": content["text"]})
+                structured_content.append({"type": "text", "text": content["text"]})
             elif "image_url" in content:
-                structured_content.append(
-                    {"type": "image_url", "image_url": content["image_url"]})
+                structured_content.append({
+                    "type": "image_url",
+                    "image_url": content["image_url"]
+                })
+
         if structured_content:
             if model.startswith("gpt"):
                 messages.append({"role": role, "content": structured_content})
-
             elif model.startswith("gemini"):
                 gemini_parts = []
                 for block in structured_content:
@@ -337,17 +358,23 @@ def build_messages_for_model(
                         gemini_parts.append({
                             "inline_data": {
                                 "mime_type": "image/jpeg",
-                                # Base64-кодирование
                                 "data": block["image_url"]["url"].split(",")[1]
                             }
                         })
                 if gemini_parts:
                     messages.append({"role": role, "parts": gemini_parts})
 
-    if user_message.strip() and not structured_content:
-        messages.append({"role": "user", "content": user_message})
+    if user_message.strip():
+        if model.startswith("gpt"):
+            messages.append({"role": "user", "content": user_message})
+        elif model.startswith("gemini"):
+            messages.append({"role": "user", "parts": [{"text": user_message}]})
 
-    return messages
+    return {
+        "messages": messages,
+        "system_instruction": system_instruction
+    }
+
 
 
 IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
@@ -464,28 +491,43 @@ async def generate_patch_body_via_gpt(
         kb_snippets_text=kb_snippets_text,
     )
 
-    messages = build_messages_for_model(
+    msg_bundle = build_messages_for_model(
         system_prompt=system_prompt,
-        messages_data=ctx_blocks + user_blocks,  # ← контекст‑файлы добавлены
+        messages_data=ctx_blocks + user_blocks,
         user_message="",
         model=ai_model,
     )
-    # print(system_prompt)
-    # print(ai_model)
 
     client, real_model = pick_model_and_client(ai_model)
+
     if real_model.startswith("gpt"):
         raw_content = (
-            await client.chat.completions.create(model=real_model, messages=messages, temperature=0.1)
+            await client.chat.completions.create(
+                model=real_model,
+                messages=msg_bundle["messages"],
+                temperature=0.1
+            )
         ).choices[0].message.content.strip()
+
     elif real_model.startswith("gemini"):
         raw_content = (
-            await client.chat_generate(model=real_model, messages=messages, temperature=0.1)
+            await client.chat_generate(
+                model=real_model,
+                messages=msg_bundle["messages"],
+                temperature=0.1,
+                system_instruction=msg_bundle.get("system_instruction")
+            )
         )["candidates"][0]["content"]["parts"][0]["text"].strip()
+
     else:
         raw_content = (
-            await openai_client.chat.completions.create(model="gpt-4o", messages=messages, temperature=0.1)
+            await openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=msg_bundle["messages"],
+                temperature=0.1
+            )
         ).choices[0].message.content.strip()
+
 
     # print('патч', raw_content)
 

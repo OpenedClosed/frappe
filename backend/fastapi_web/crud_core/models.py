@@ -291,7 +291,7 @@ class BaseCrudCore:
         if not created_raw:
             raise HTTPException(500, "Failed to retrieve created object.")
 
-        return await self.c(created_raw, current_user)
+        return await self.format_document(created_raw, current_user)
 
     async def update(self, object_id: str, data: dict,
                      current_user: Optional[BaseModel] = None) -> dict:

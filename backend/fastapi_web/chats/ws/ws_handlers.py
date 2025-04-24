@@ -1033,7 +1033,7 @@ async def process_user_query_after_brief(
         return None
 
 
-async def determine_topics_via_gpt(
+async def  determine_topics_via_gpt(
     user_message: str,
     user_info: dict,
     knowledge_base: Dict[str, Any]
@@ -1373,22 +1373,17 @@ async def generate_ai_answer(
     chosen_model = bot_context["ai_model"]
     chosen_temp = bot_context["temperature"]
 
+    print('===== SNIPPETS =====\n', snippets)
+
     weather_info = {
         "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
     }
 
-    # print("="*100)
-    # print(snippets)
-    # print("="*100)
-
     system_prompt = _assemble_system_prompt(
-        bot_context, snippets, user_info, user_language, weather_info)
-    
-    print("="*100)
-    print(system_prompt)
-    print("="*100)
+        bot_context, snippets, user_info, user_language, weather_info
+    )
 
-    messages = build_messages_for_model(
+    msg_bundle = build_messages_for_model(
         system_prompt=system_prompt,
         messages_data=chat_history,
         user_message=user_message,
@@ -1399,8 +1394,36 @@ async def generate_ai_answer(
     await _simulate_delay()
 
     client, real_model = pick_model_and_client(chosen_model)
+
     try:
-        ai_text = await _generate_model_response(client, real_model, messages, chosen_temp)
+        if real_model.startswith("gpt"):
+            ai_text = (
+                await client.chat.completions.create(
+                    model=real_model,
+                    messages=msg_bundle["messages"],
+                    temperature=chosen_temp
+                )
+            ).choices[0].message.content.strip()
+
+        elif real_model.startswith("gemini"):
+            ai_text = (
+                await client.chat_generate(
+                    model=real_model,
+                    messages=msg_bundle["messages"],
+                    temperature=chosen_temp,
+                    system_instruction=msg_bundle.get("system_instruction")
+                )
+            )["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+        else:
+            ai_text = (
+                await openai_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=msg_bundle["messages"],
+                    temperature=chosen_temp
+                )
+            ).choices[0].message.content.strip()
+
     except Exception as e:
         logging.error(f"AI generation failed: {e}")
         ai_text = bot_context.get("fallback_ai_error_message", {}).get(
@@ -1413,6 +1436,7 @@ async def generate_ai_answer(
         return _try_parse_json(ai_text)
 
     return ai_text
+
 
 
 def _assemble_system_prompt(
