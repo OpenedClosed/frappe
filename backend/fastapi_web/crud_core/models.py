@@ -792,7 +792,7 @@ class BaseCrud(BaseCrudCore):
             i += 1
             # print("итерация", i)
             # print(raw_doc["_id"])
-            if str(raw_doc["_id"]) == "ь":
+            if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
                 # print("нашли урода")
                 # print(len(str(raw_doc)))
                 continue
