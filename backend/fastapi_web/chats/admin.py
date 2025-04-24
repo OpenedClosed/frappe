@@ -1,4 +1,5 @@
 """Админ-панель приложения Чаты."""
+import asyncio
 import json
 from datetime import datetime
 from typing import List, Optional
@@ -47,7 +48,10 @@ class ChatMessageInline(InlineAdmin):
         "confidence_status",
         "read_by_display"
     ]
-    computed_fields = ["confidence_status", "read_by_display"]
+    computed_fields = [
+        "confidence_status",
+        "read_by_display"
+    ]
     read_only_fields = ["timestamp"]
 
     field_titles = {
@@ -95,7 +99,12 @@ class ChatMessageInline(InlineAdmin):
             reverse = (order == -1)
             messages.sort(key=lambda x: x.get(sort_by), reverse=reverse)
 
-        return [await self.format_document(msg) for msg in messages]
+        return await asyncio.gather(*[
+            self.format_document(msg, current_user)
+            for msg in messages
+        ])
+
+        # return [await self.format_document(msg) for msg in messages]
 
     async def get_confidence_status(self, obj: dict) -> str:
         evaluation = obj.get("gpt_evaluation", {})
@@ -123,19 +132,47 @@ class ChatMessageInline(InlineAdmin):
 
         return json.dumps(status, ensure_ascii=False)
 
+    # async def get_read_by_display(self, obj: dict) -> str:
+    #     message_id = obj.get("id")
+    #     sender_id = obj.get("sender_id")
+    #     chat_data = await self.get_root_document(message_id)
+
+    #     if not chat_data or not message_id:
+    #         return json.dumps([], ensure_ascii=False)
+
+    #     if not chat_data:
+    #         return json.dumps([], ensure_ascii=False)
+
+    #     read_state = chat_data.get("read_state", [])
+    #     messages = chat_data.get("messages", [])
+    #     idx_map = {m["id"]: i for i, m in enumerate(messages)}
+    #     msg_idx = idx_map.get(message_id, -1)
+
+    #     readers = []
+    #     for ri in read_state:
+    #         last_read = ri.get("last_read_msg")
+    #         reader_id = ri.get("client_id")
+    #         if reader_id:
+    #             if idx_map.get(last_read, -1) >= msg_idx:
+    #                 readers.append(reader_id)
+    #         # if reader_id and reader_id != sender_id:
+    #         #     if idx_map.get(last_read, -1) >= msg_idx:
+    #         #         readers.append(reader_id)
+
+    #     return json.dumps(readers, ensure_ascii=False)
+
     async def get_read_by_display(self, obj: dict) -> str:
+        parent = getattr(self, "parent_document", None)
+        print("="*100)
+        print(parent["_id"])
+        print("="*100)
+        if not parent:
+
+            return json.dumps([], ensure_ascii=False)
+
         message_id = obj.get("id")
-        sender_id = obj.get("sender_id")
-        chat_data = await self.get_root_document(message_id)
-
-        if not chat_data or not message_id:
-            return json.dumps([], ensure_ascii=False)
-
-        if not chat_data:
-            return json.dumps([], ensure_ascii=False)
-
-        read_state = chat_data.get("read_state", [])
-        messages = chat_data.get("messages", [])
+        read_state = parent.get("read_state", [])
+        messages = parent.get("messages", [])
         idx_map = {m["id"]: i for i, m in enumerate(messages)}
         msg_idx = idx_map.get(message_id, -1)
 
@@ -143,15 +180,10 @@ class ChatMessageInline(InlineAdmin):
         for ri in read_state:
             last_read = ri.get("last_read_msg")
             reader_id = ri.get("client_id")
-            if reader_id:
-                if idx_map.get(last_read, -1) >= msg_idx:
-                    readers.append(reader_id)
-            # if reader_id and reader_id != sender_id:
-            #     if idx_map.get(last_read, -1) >= msg_idx:
-            #         readers.append(reader_id)
+            if reader_id and idx_map.get(last_read, -1) >= msg_idx:
+                readers.append(reader_id)
 
         return json.dumps(readers, ensure_ascii=False)
-
 
 
 class ClientInline(InlineAdmin):

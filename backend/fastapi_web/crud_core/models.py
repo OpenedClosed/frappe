@@ -1,4 +1,5 @@
 """Базовые сущности панели приложения ядро CRUD создания."""
+import asyncio
 import json
 import logging
 from enum import Enum
@@ -290,7 +291,7 @@ class BaseCrudCore:
         if not created_raw:
             raise HTTPException(500, "Failed to retrieve created object.")
 
-        return await self.format_document(created_raw, current_user)
+        return await self.c(created_raw, current_user)
 
     async def update(self, object_id: str, data: dict,
                      current_user: Optional[BaseModel] = None) -> dict:
@@ -432,16 +433,37 @@ class BaseCrudCore:
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
-    async def get_inlines(self, doc: dict,
-                          current_user: Optional[dict] = None) -> dict:
-        """
-        Возвращает данные инлайнов из документа (учитывая, что каждый инлайн сам умеет фильтровать,
-        если у него есть permission_class и используется current_user).
-        """
+    # async def get_inlines(self, doc: dict,
+    #                       current_user: Optional[dict] = None) -> dict:
+    #     """
+    #     Возвращает данные инлайнов из документа (учитывая, что каждый инлайн сам умеет фильтровать,
+    #     если у него есть permission_class и используется current_user).
+    #     """
+    #     inl_data = {}
+    #     try:
+    #         for field, inline_cls in self.inlines.items():
+    #             inline_inst = inline_cls(self.db)
+    #             parent_id = doc.get("_id")
+    #             if not parent_id:
+    #                 inl_data[field] = []
+    #                 continue
+
+    #             found = await inline_inst.get_queryset(filters={"_id": parent_id}, current_user=current_user)
+    #             inl_data[field] = [
+    #                 await inline_inst.format_document(child, current_user)
+    #                 if "id" not in child else child
+    #                 for child in found
+    #             ]
+    #         return inl_data
+    #     except Exception as e:
+    #         raise HTTPException(400, detail=str(e))
+
+    async def get_inlines(self, doc: dict, current_user: Optional[dict] = None) -> dict:
         inl_data = {}
         try:
             for field, inline_cls in self.inlines.items():
                 inline_inst = inline_cls(self.db)
+                inline_inst.parent_document = doc  # сохраняем родительский документ
                 parent_id = doc.get("_id")
                 if not parent_id:
                     inl_data[field] = []
@@ -456,6 +478,7 @@ class BaseCrudCore:
             return inl_data
         except Exception as e:
             raise HTTPException(400, detail=str(e))
+
 
     async def format_document(self, doc: dict,
                               current_user: Optional[dict] = None) -> dict:
@@ -495,6 +518,7 @@ class BaseCrudCore:
         result.update(await self.get_inlines(doc, current_user))
 
         return result
+        
 
     async def validate_data(self, data: dict, partial: bool = False) -> dict:
         """Валидирует данные (без инлайнов), декодируя JSON-строки."""
@@ -628,6 +652,7 @@ class InlineCrud(BaseCrudCore):
 
     collection_name: str = ""
     dot_field_path: str = ""
+    parent_document: dict = None 
 
     def __init__(self, db: AsyncIOMotorDatabase):
         """Инициализирует коллекцию и базовый класс."""
@@ -643,6 +668,40 @@ class InlineCrud(BaseCrudCore):
             doc = doc[part]
         return doc
 
+    # async def get_queryset(
+    #     self,
+    #     filters: Optional[dict] = None,
+    #     sort_by: Optional[str] = "id",
+    #     order: int = 1,
+    #     page: Optional[int] = None,
+    #     page_size: Optional[int] = None,
+    #     current_user: Optional[dict] = None
+    # ) -> List[dict]:
+    #     """
+    #     Получает список вложенных объектов (массив или словарь) из dot_field_path
+    #     у родительских документов, прошедших фильтр permission_class + filters.
+    #     """
+    #     self.check_crud_enabled(
+    #         "read")
+    #     self.permission_class.check("read", current_user, None)
+
+    #     base_filter = await self.permission_class.get_base_filter(current_user)
+    #     query = {**(filters or {}), **base_filter}
+
+    #     cursor = self.db.find(query)
+    #     results = []
+
+    #     async for parent_doc in cursor:
+    #         nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
+    #         if isinstance(nested_data, list):
+    #             results.extend(nested_data)
+    #         elif isinstance(nested_data, dict):
+    #             results.append(nested_data)
+
+    #     if sort_by:
+    #         results.sort(key=lambda x: x.get(sort_by), reverse=(order == -1))
+    #     return results
+
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
@@ -653,19 +712,22 @@ class InlineCrud(BaseCrudCore):
         current_user: Optional[dict] = None
     ) -> List[dict]:
         """
-        Получает список вложенных объектов (массив или словарь) из dot_field_path
-        у родительских документов, прошедших фильтр permission_class + filters.
+        Получает список вложенных объектов из dot_field_path внутри родительских документов,
+        прошедших фильтр. Форматирует все вложенные документы параллельно.
         """
-        self.check_crud_enabled(
-            "read")
-        self.permission_class.check("read", current_user, None)
+        self.check_crud_enabled("read")
+        self.permission_class.check("read", current_user)
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         query = {**(filters or {}), **base_filter}
 
+        # Если точно знаем, что фильтр по _id (один родитель) — ускорим
+        limit = 1 if "_id" in query else 0
         cursor = self.db.find(query)
-        results = []
+        if limit:
+            cursor = cursor.limit(limit)
 
+        results = []
         async for parent_doc in cursor:
             nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
             if isinstance(nested_data, list):
@@ -675,7 +737,12 @@ class InlineCrud(BaseCrudCore):
 
         if sort_by:
             results.sort(key=lambda x: x.get(sort_by), reverse=(order == -1))
-        return results
+
+        return await asyncio.gather(*[
+            self.format_document(item, current_user)
+            for item in results
+        ])
+
 
     async def get(
         self,
@@ -858,6 +925,54 @@ class BaseCrud(BaseCrudCore):
     #         objs.append(await self.format_document(raw_doc, current_user))
     #     return objs
 
+    # async def get_queryset(
+    #     self,
+    #     filters: Optional[dict] = None,
+    #     sort_by: Optional[str] = None,
+    #     order: int = 1,
+    #     page: Optional[int] = None,
+    #     page_size: Optional[int] = None,
+    #     current_user: Optional[dict] = None,
+    #     format: bool = True
+    # ) -> List[dict]:
+    #     """Возвращает список документов, учитывая фильтры, права и сортировку."""
+    #     print('=1=')
+    #     self.check_crud_enabled("read")
+    #     print('=2=')
+    #     self.permission_class.check("read", current_user)
+    #     print('=3=')
+
+    #     base_filter = await self.permission_class.get_base_filter(current_user)
+    #     print('=4=')
+    #     query = {**(filters or {}), **base_filter}
+    #     print('=5=')
+
+    #     sort_field = sort_by or self.detect_id_field()
+    #     print('=6=')
+    #     cursor = self.db.find(query).sort(sort_field, order)
+
+    #     if page is not None and page_size is not None:
+    #         skip_count = (page - 1) * page_size
+    #         cursor = cursor.skip(skip_count).limit(page_size)
+
+    #     print('=7=')
+    #     objs = []
+    #     print('=8=')
+    #     i = 0
+    #     async for raw_doc in cursor:
+    #         i += 1
+    #         print("итерация", i)
+    #         if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
+    #             print("⚠️ Пропущен проблемный документ")
+    #             continue
+
+    #         if format:
+    #             # continue
+    #             objs.append(await self.format_document(raw_doc, current_user))
+    #         else:
+    #             objs.append(raw_doc)
+    #     return objs
+
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
@@ -868,39 +983,31 @@ class BaseCrud(BaseCrudCore):
         current_user: Optional[dict] = None,
         format: bool = True
     ) -> List[dict]:
-        """Возвращает список документов, учитывая фильтры, права и сортировку."""
-        print('=1=')
         self.check_crud_enabled("read")
-        print('=2=')
         self.permission_class.check("read", current_user)
-        print('=3=')
 
         base_filter = await self.permission_class.get_base_filter(current_user)
-        print('=4=')
         query = {**(filters or {}), **base_filter}
-        print('=5=')
 
         sort_field = sort_by or self.detect_id_field()
-        print('=6=')
         cursor = self.db.find(query).sort(sort_field, order)
 
         if page is not None and page_size is not None:
             skip_count = (page - 1) * page_size
             cursor = cursor.skip(skip_count).limit(page_size)
 
-        print('=7=')
-        objs = []
-        print('=8=')
-        i = 0
+        raw_docs = []
         async for raw_doc in cursor:
-            i += 1
-            print("итерация", i)
             if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
                 print("⚠️ Пропущен проблемный документ")
                 continue
+            raw_docs.append(raw_doc)
 
-            if format:
-                objs.append(await self.format_document(raw_doc, current_user))
-            else:
-                objs.append(raw_doc)
-        return objs
+        if not format:
+            return raw_docs
+
+        # ⚡ Параллельное форматирование
+        return await asyncio.gather(*[
+            self.format_document(doc, current_user)
+            for doc in raw_docs
+        ])
