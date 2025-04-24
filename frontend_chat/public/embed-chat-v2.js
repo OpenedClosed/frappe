@@ -13,6 +13,9 @@
       iframe.style.height = "100vh";
       iframe.style.border = "none";
       iframe.style.zIndex = "9999";
+      iframe.style.background = 'transparent';
+      iframe.allowTransparency = "true";      // legacy but harmless
+
   
       // Append the iframe when the DOM is ready
       document.body.appendChild(iframe);
