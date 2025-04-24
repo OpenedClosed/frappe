@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from db.mongo.base.schemas import (BaseValidatedIdModel, BaseValidatedModel,
                                    IdModel)
@@ -53,6 +53,14 @@ class ChatMessage(BaseValidatedIdModel):
     reply_to: Optional[str] = None
     external_id: Optional[str] = None
     files: Optional[List[str]] = None
+
+    @field_validator("message")
+    @classmethod
+    def validate_length(cls, v: str, info: ValidationInfo) -> str:
+        MAX_MESSAGE_LENGTH = 10000
+        if len(v) > MAX_MESSAGE_LENGTH:
+            raise ValueError(f"Сообщение превышает допустимую длину {MAX_MESSAGE_LENGTH} символов.")
+        return v
 
 
 class Client(IdModel):

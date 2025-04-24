@@ -45,7 +45,7 @@
       <div v-else-if="currentEntity === 'chat_sessions' && !currentId"
         class="flex w-full flex-col min-w-0 justify-start items-center">
 
-          <EmbeddedChat class="w-full" v-if="filteredTableData.length>0"  :id="filteredTableData[0]?.chat_id" :chatsData="filteredTableData" />
+          <EmbeddedChat class="w-full" v-if="filteredTableData.length>0"  :id="filteredTableData[0]?.chat_id" :chatsData="filteredTableData" :totalRecords="totalRecords" @page="changeCurrentPage" :isRoomsLoading="isLoading"/>
 
       </div>
       <!-- <div
@@ -160,6 +160,12 @@ const onClickCreate = () => {
   // Переходим на: /${currentPageName.value}/..../..../id
   navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
 };
+
+function changeCurrentPage(page) {
+  currentPage.value = page + 1;
+  console.log("page =",  currentPage.value);
+  fetchTableData();
+}
 // ------------------ Data Fetching ------------------
 /**
  * Fetch adminData from /${currentPageName.value}/info
@@ -397,7 +403,8 @@ const fetchTableData = async () => {
   isLoading.value = true;
   try {
 
-    let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/?page_size=30&order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
+    // let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/?page_size=30&order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
+    let url = `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`
     const response = await useNuxtApp().$api.get(url);
 
     let data = response.data.data ? response.data.data : response.data; // То, что вернёт бекенд
