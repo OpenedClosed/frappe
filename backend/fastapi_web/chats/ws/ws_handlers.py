@@ -944,6 +944,95 @@ async def handle_superuser_message(
 # БЛОК: AI-логика (GPT)
 # ==============================
 
+# async def process_user_query_after_brief(
+#     manager: Any,
+#     chat_id: str,
+#     user_msg: ChatMessage,
+#     chat_session: ChatSession,
+#     redis_key_session: str,
+#     user_language: str,
+#     typing_manager: TypingManager,
+#     gpt_lock: Lock,
+#     user_data: dict
+# ) -> Optional[ChatMessage]:
+#     """
+#     Обрабатывает пользовательский запрос после брифа, используя GPT-логику.
+#     Выполняется строго последовательно с помощью gpt_lock.
+#     Может быть отменена, если пришло новое сообщение.
+#     """
+#     try:
+#         async with gpt_lock:
+#             if not user_data:
+#                 user_data = {}
+
+#             # Извлекаем бриф
+#             brief_info = extract_brief_info(chat_session)
+#             user_data["brief_info"] = brief_info
+
+#             chat_history = chat_session.messages[-25:]
+
+#             # Основная БЗ
+#             kb_doc, knowledge_base_model = await get_knowledge_base()
+        
+#             knowledge_base = kb_doc["knowledge_base"]
+
+#             # 👇 Собираем внешние структуры (мини-БЗ)
+#             external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
+#             merged_kb = merge_external_structures(knowledge_base, external_structs)
+
+#             # 👇 Отправляем в GPT определение релевантных тем
+#             gpt_data = await determine_topics_via_gpt(
+#                 user_msg.message, user_data, merged_kb
+#             )
+
+#             user_msg.gpt_evaluation = GptEvaluation(
+#                 topics=gpt_data.get("topics", []),
+#                 confidence=gpt_data.get("confidence", 0.0),
+#                 out_of_scope=gpt_data.get("out_of_scope", False),
+#                 consultant_call=gpt_data.get("consultant_call", False)
+#             )
+
+#             await _update_gpt_evaluation_in_db(
+#                 chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation
+#             )
+
+#             # Ответ от ИИ
+#             ai_msg = await _build_ai_response(
+#                 manager=manager,
+#                 chat_session=chat_session,
+#                 user_msg=user_msg,
+#                 user_data=user_data,
+#                 chat_history=chat_history,
+#                 redis_key_session=redis_key_session,
+#                 user_language=user_language,
+#                 typing_manager=typing_manager,
+#                 chat_id=chat_id
+#             )
+
+#             if ai_msg:
+#                 await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+
+#             return ai_msg
+
+#     except asyncio.CancelledError:
+#         print(f"[GPT] Задача GPT для чата {chat_id} отменена.")
+#         return None
+
+#     except Exception as e:
+#         logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+#         bot_context = await get_bot_context()
+#         ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+#             user_language, "The assistant is currently unavailable."
+#         )
+#         ai_msg = ChatMessage(
+#             message=ai_text,
+#             sender_role=SenderRole.AI,
+#         )
+#         if ai_msg:
+#             await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+#         return None
+
+
 async def process_user_query_after_brief(
     manager: Any,
     chat_id: str,
@@ -956,7 +1045,7 @@ async def process_user_query_after_brief(
     user_data: dict
 ) -> Optional[ChatMessage]:
     """
-    Обрабатывает пользовательский запрос после брифа, используя GPT-логику.
+    Обрабатывает пользовательский запрос после брифа, используя двухшаговую GPT-логику.
     Выполняется строго последовательно с помощью gpt_lock.
     Может быть отменена, если пришло новое сообщение.
     """
@@ -971,20 +1060,23 @@ async def process_user_query_after_brief(
 
             chat_history = chat_session.messages[-25:]
 
-            # Основная БЗ
+            # Получаем актуальную базу знаний
             kb_doc, knowledge_base_model = await get_knowledge_base()
-        
             knowledge_base = kb_doc["knowledge_base"]
 
-            # 👇 Собираем внешние структуры (мини-БЗ)
+            # Дополняем внешними структурами
             external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
             merged_kb = merge_external_structures(knowledge_base, external_structs)
 
-            # 👇 Отправляем в GPT определение релевантных тем
+            # 🔥 Новый двухшаговый анализ: темы + параметры
             gpt_data = await determine_topics_via_gpt(
-                user_msg.message, user_data, merged_kb
+                user_message=user_msg.message,
+                user_info=user_data,
+                knowledge_base=merged_kb,
+                chat_history=chat_history
             )
 
+            # Записываем результат оценки GPT в сообщение
             user_msg.gpt_evaluation = GptEvaluation(
                 topics=gpt_data.get("topics", []),
                 confidence=gpt_data.get("confidence", 0.0),
@@ -992,11 +1084,14 @@ async def process_user_query_after_brief(
                 consultant_call=gpt_data.get("consultant_call", False)
             )
 
+            # Обновляем запись в базе
             await _update_gpt_evaluation_in_db(
-                chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation
+                chat_session.chat_id,
+                user_msg.id,
+                user_msg.gpt_evaluation
             )
 
-            # Ответ от ИИ
+            # Строим ответ от ИИ
             ai_msg = await _build_ai_response(
                 manager=manager,
                 chat_session=chat_session,
@@ -1021,69 +1116,190 @@ async def process_user_query_after_brief(
     except Exception as e:
         logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
         bot_context = await get_bot_context()
-        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
+        fallback_text = bot_context.get("fallback_ai_error_message", {}).get(
             user_language, "The assistant is currently unavailable."
         )
-        ai_msg = ChatMessage(
-            message=ai_text,
+        fallback_msg = ChatMessage(
+            message=fallback_text,
             sender_role=SenderRole.AI,
         )
-        if ai_msg:
-            await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
+        if fallback_msg:
+            await save_and_broadcast_new_message(manager, chat_session, fallback_msg, redis_key_session)
         return None
 
 
-async def  determine_topics_via_gpt(
+
+# async def  determine_topics_via_gpt(
+#     user_message: str,
+#     user_info: dict,
+#     knowledge_base: Dict[str, Any]
+# ) -> Dict[str, Any]:
+#     """
+#     Обращается к GPT для определения тематики,
+#     вычисления confidence, out_of_scope и consultant_call.
+#     """
+#     try:
+#         kb_description = _build_kb_description(knowledge_base)
+#         bot_context = await get_bot_context()
+#         app_description = bot_context["app_description"]
+#         forbidden_topics = bot_context["forbidden_topics"]
+
+#         system_prompt = AI_PROMPTS["system_topics_prompt"].format(
+#             user_info=user_info,
+#             kb_description=kb_description,
+#             app_description=app_description,
+#             forbidden_topics=forbidden_topics,
+#         )
+
+#         messages = [
+#             {"role": "model", "content": system_prompt.strip()},
+#             {"role": "user", "content": user_message.strip()}
+#         ]
+#         response = await gemini_client.chat_generate(
+#             model="gemini-2.0-flash",
+#             messages=messages,
+#             temperature=0.1
+#         )
+#         raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
+#         )
+#         match = re.search(r"\{.*\}", raw_content, re.DOTALL)
+
+#         if not match:
+#             return {"topics": [], "confidence": 0.0,
+#                     "out_of_scope": False, "consultant_call": False}
+
+#         json_text = match.group(0).replace("None", "null")
+
+#         result = json.loads(json_text)
+#         return {
+#             "topics": result.get("topics", []),
+#             "confidence": result.get("confidence", 0.0),
+#             "out_of_scope": result.get("out_of_scope", False),
+#             "consultant_call": result.get("consultant_call", False)
+#         }
+#     except json.JSONDecodeError:
+#         return {"topics": [], "confidence": 0.0,
+#                 "out_of_scope": False, "consultant_call": False}
+
+
+async def determine_topics_via_gpt(
     user_message: str,
     user_info: dict,
-    knowledge_base: Dict[str, Any]
+    knowledge_base: Dict[str, Any],
+    chat_history: list[ChatMessage] = None,
+    model_name: str = "gemini-2.0-flash",
+    history_tail: int = 5,
 ) -> Dict[str, Any]:
     """
-    Обращается к GPT для определения тематики,
-    вычисления confidence, out_of_scope и consultant_call.
+    Двухэтапный анализ:
+    1. Определение тем и confidence.
+    2. Выявление out_of_scope и consultant_call на основе сниппетов и истории.
     """
-    try:
-        kb_description = _build_kb_description(knowledge_base)
-        bot_context = await get_bot_context()
-        app_description = bot_context["app_description"]
-        forbidden_topics = bot_context["forbidden_topics"]
+    bot_context = await get_bot_context()
 
-        system_prompt = AI_PROMPTS["system_topics_prompt"].format(
-            user_info=user_info,
-            kb_description=kb_description,
-            app_description=app_description,
-            forbidden_topics=forbidden_topics,
-        )
+    topics_data = await _detect_topics_gpt(
+        user_message=user_message,
+        user_info=user_info,
+        knowledge_base=knowledge_base,
+        model_name=model_name,
+        bot_context=bot_context
+    )
 
-        messages = [
-            {"role": "model", "content": system_prompt.strip()},
-            {"role": "user", "content": user_message.strip()}
-        ]
-        response = await gemini_client.chat_generate(
-            model="gemini-2.0-flash",
-            messages=messages,
-            temperature=0.1
-        )
-        raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
-        )
-        match = re.search(r"\{.*\}", raw_content, re.DOTALL)
+    outcome_data = await _detect_outcome_gpt(
+        user_message=user_message,
+        topics=topics_data.get("topics", []),
+        knowledge_base=knowledge_base,
+        chat_history=chat_history,
+        model_name=model_name,
+        history_tail=history_tail,
+        bot_context=bot_context
+    )
 
-        if not match:
-            return {"topics": [], "confidence": 0.0,
-                    "out_of_scope": False, "consultant_call": False}
+    return {
+        "topics": topics_data.get("topics", []),
+        "confidence": topics_data.get("confidence", 0.0),
+        "out_of_scope": outcome_data.get("out_of_scope", False),
+        "consultant_call": outcome_data.get("consultant_call", False)
+    }
 
-        json_text = match.group(0).replace("None", "null")
 
-        result = json.loads(json_text)
-        return {
-            "topics": result.get("topics", []),
-            "confidence": result.get("confidence", 0.0),
-            "out_of_scope": result.get("out_of_scope", False),
-            "consultant_call": result.get("consultant_call", False)
-        }
-    except json.JSONDecodeError:
-        return {"topics": [], "confidence": 0.0,
-                "out_of_scope": False, "consultant_call": False}
+async def _detect_topics_gpt(
+    user_message: str,
+    user_info: dict,
+    knowledge_base: Dict[str, Any],
+    model_name: str,
+    bot_context: dict
+) -> Dict[str, Any]:
+    kb_description = _build_kb_description(knowledge_base)
+
+    system_prompt = AI_PROMPTS["system_topics_prompt"].format(
+        user_info=user_info,
+        kb_description=kb_description,
+        app_description=bot_context["app_description"],
+    )
+
+    response = await gemini_client.chat_generate(
+        model=model_name,
+        messages=[
+            {"role": "user", "parts": [{"text": system_prompt}]},
+            {"role": "user", "parts": [{"text": user_message}]}
+        ],
+        temperature=0.1,
+        system_instruction=system_prompt
+    )
+
+    raw = response["candidates"][0]["content"]["parts"][0]["text"]
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
+    result = json.loads(match.group(0).replace("None", "null")) if match else {}
+    print('===== TOPICS =====\n', result)
+
+    return {
+        "topics": result.get("topics", []),
+        "confidence": result.get("confidence", 0.0)
+    }
+
+
+async def _detect_outcome_gpt(
+    user_message: str,
+    topics: List[Dict[str, Any]],
+    knowledge_base: Dict[str, Any],
+    chat_history: list[ChatMessage],
+    model_name: str,
+    history_tail: int,
+    bot_context: dict
+) -> Dict[str, bool]:
+    forbidden_topics = bot_context.get("forbidden_topics", [])
+
+    snippets = await extract_knowledge(topics, user_message, knowledge_base)
+    last_messages = chat_history[-history_tail:] if chat_history else []
+
+    history_text = "\n".join(f"- {m.sender_role.value}: {m.message}" for m in last_messages)
+
+    prompt = AI_PROMPTS["system_outcome_analysis_prompt"].format(
+        forbidden_topics=json.dumps(forbidden_topics, ensure_ascii=False),
+        snippets=json.dumps(snippets, ensure_ascii=False),
+        chat_history=history_text
+    )
+
+    response = await gemini_client.chat_generate(
+        model=model_name,
+        messages=[{"role": "user", "parts": [{"text": prompt}]}],
+        temperature=0.1,
+        system_instruction=prompt
+    )
+
+    raw = response["candidates"][0]["content"]["parts"][0]["text"]
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
+    result = json.loads(match.group(0)) if match else {}
+    print('===== OUTCOME_STATUS =====\n', result)
+
+    return {
+        "out_of_scope": result.get("out_of_scope", False),
+        "consultant_call": result.get("consultant_call", False)
+    }
+
+
+
 
 
 # ==============================
@@ -1373,7 +1589,7 @@ async def generate_ai_answer(
     chosen_model = bot_context["ai_model"]
     chosen_temp = bot_context["temperature"]
 
-    print('===== SNIPPETS =====\n', snippets)
+    # print('===== SNIPPETS =====\n', snippets)
 
     weather_info = {
         "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
