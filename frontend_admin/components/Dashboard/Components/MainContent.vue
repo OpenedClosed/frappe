@@ -397,7 +397,7 @@ const fetchTableData = async () => {
   isLoading.value = true;
   try {
 
-    let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/?order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
+    let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/?page_size=30&order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
     const response = await useNuxtApp().$api.get(url);
 
     let data = response.data.data ? response.data.data : response.data; // То, что вернёт бекенд
