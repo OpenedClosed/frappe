@@ -22,6 +22,7 @@ export const useLanguageState = () => {
 
 export function useChatState() {
   const isAutoMode = useState("isAutoMode", () => true);
+  const messagesLoaded = useState("messagesLoaded", () => false);
   const currentChatId = useState("currentChatId", () => '');
   const chatMessages = useState("chatMessages", () => []);
 
@@ -29,6 +30,7 @@ export function useChatState() {
     isAutoMode,
     currentChatId,
     chatMessages,
+    messagesLoaded,
   };
 }
 

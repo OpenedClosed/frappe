@@ -25,7 +25,7 @@
       :current-user-id="currentUserId"
       :rooms="JSON.stringify(displayedRooms)"
       :messages="JSON.stringify(chatMessages)"
-      :messages-loaded="true"
+      :messages-loaded="messagesLoaded"
       :selected-room-id="activeRoomId"
       :single-room="false"
       :show-input-options="false"
@@ -33,6 +33,8 @@
       :show-files="false"
       :show-add-room="false"
       :theme="colorMode.preference"
+      :custom-search-room-enabled="true"
+      
       auto-scroll='{
         "send": { "new": true, "newAfterScrollUp": true },
         "receive": { "new": true, "newAfterScrollUp": true }
@@ -40,8 +42,9 @@
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
-      :rooms-loaded="roomsLoaded"
+      :rooms-loaded="isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
+      @search-room="console.log('search-room', $event)"
     >
       <div slot="room-header-avatar">
         <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
@@ -60,6 +63,8 @@
         </div>
       </div>
     </vue-advanced-chat>
+    <!-- ⬇️ add this right after the closing </vue-advanced-chat> tag -->
+    <Paginator :rows="20" :totalRecords="totalRecords"  class="mt-2 self-center" @page="onPageChange" />
   </div>
 </template>
 
@@ -69,7 +74,7 @@ import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount } from "
 import { register } from "vue-advanced-chat";
 import Toast from "primevue/toast";
 import { useChatLogic } from "~/composables/useChatLogic";
-const { isAutoMode, currentChatId,chatMessages } = useChatState();
+const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 
 register();
 const colorMode = useColorMode();
@@ -80,17 +85,22 @@ const unreadOnly = ref(false); // false → “All”, true → “Unread”
 /* ── props / emits ─────────────────────────────────────────── */
 const props = defineProps({
   user_id: { type: String, default: "" },
+  totalRecords: { type: Number, default: 0 },
   chatsData: { type: Array, default: () => [] },
+  isRoomsLoading: { type: Boolean, default: false },
 });
 
 const chatRows = computed(() => props.chatsData.filter((row) => !row._isBlank && row.chat_id));
 
-defineEmits(["close-chat"]);
+const emit = defineEmits(["close-chat", "page"]);
+
+function onPageChange(e) {
+  emit("page", e.page);
+}
 
 watch(props, () => {
   console.log("props", props); // For debugging: log props changes (e.g. close chat on user_id change)
 });
-
 
 /* ── expose refs coming from useChatLogic ──────────────────── */
 const isMobile = computed(() => chatLogic.value?.isMobile);
@@ -109,7 +119,6 @@ const activeRoomId = ref(null);
 const activeUsername = ref(null);
 const activeUserId = ref(null);
 const activeStartDate = ref(null);
-
 
 function getChatId(data) {
   console.log("getChatId", data?.detail?.[0]?.room?.roomId); // For debugging: log chat ID retrieval
@@ -155,7 +164,6 @@ function initChatLogic(chat_id) {
   chatLogic.value = useChatLogic({ chatId: chat_id });
 }
 
-
 const displayedRooms = ref([]);
 
 watch([unreadOnly, rooms], (newVal) => {
@@ -168,20 +176,16 @@ watch([unreadOnly, rooms], (newVal) => {
   displayedRooms.value = filteredRooms;
 });
 
-
-
-
-
 /* ── initialise the very first chat only once ─────────────── */
 const stopInitWatcher = watch(
   chatRows,
   (rows) => {
-    console.log('INIT WATCHER', rows); // For debugging: log chat rows
-    if (!rows.length) return;          // nothing to do yet
-    initChatLogic(rows[0].chat_id);    // kick-start the logic
-    stopInitWatcher();                 // detach the watcher → runs only once
+    console.log("INIT WATCHER", rows); // For debugging: log chat rows
+    if (!rows.length) return; // nothing to do yet
+    initChatLogic(rows[0].chat_id); // kick-start the logic
+    stopInitWatcher(); // detach the watcher → runs only once
   },
-  { immediate: true }                  // fire immediately on mount
+  { immediate: true } // fire immediately on mount
 );
 
 function formatDateEU(isoDateStr) {
@@ -278,7 +282,7 @@ watch([chatRows], async ([rows]) => {
 
   rooms.value = buildRooms(rows, currentUserId.value);
 
-  if (!rooms.value.find(r => r.roomId === activeRoomId.value)) {
+  if (!rooms.value.find((r) => r.roomId === activeRoomId.value)) {
     activeRoomId.value = rooms.value[0]?.roomId ?? null;
   }
 });

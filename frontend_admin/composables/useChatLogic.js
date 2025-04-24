@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 // import { useI18n } from "vue-i18n";
 // import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
-const { isAutoMode, currentChatId, chatMessages } = useChatState();
+const { isAutoMode, currentChatId, chatMessages,messagesLoaded } = useChatState();
 
 import { debounce } from "lodash";
 
@@ -39,7 +39,7 @@ export function useChatLogic(options = {}) {
 
   // Список сообщений и статус загрузки
 
-  const messagesLoaded = ref(false);
+
 
   // Настройки выбора опций
   const choiceOptions = ref([]);
@@ -367,7 +367,7 @@ export function useChatLogic(options = {}) {
             const [transformed] = await transformChatMessages([data]);
             // $event("new_message_arrived", transformed);
             chatMessages.value = [...chatMessages.value, transformed];
-
+            messagesLoaded.value = true;
             // УБРАНО повторное status_check после каждого сообщения
 
             // Обновляем choiceOptions, если пришли
