@@ -33,8 +33,6 @@
       :show-files="false"
       :show-add-room="false"
       :theme="colorMode.preference"
-      :custom-search-room-enabled="true"
-      
       auto-scroll='{
         "send": { "new": true, "newAfterScrollUp": true },
         "receive": { "new": true, "newAfterScrollUp": true }
@@ -44,7 +42,7 @@
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
       :rooms-loaded="isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
-      @search-room="console.log('search-room', $event)"
+
     >
       <div slot="room-header-avatar">
         <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
@@ -62,9 +60,14 @@
           </div>
         </div>
       </div>
+      <div v-if="isRoomsLoading" slot="rooms-list-search">
+        <div class="flex items-center justify-center py-5">
+          <LoaderSmall  />
+        </div>
+      </div>
     </vue-advanced-chat>
     <!-- ⬇️ add this right after the closing </vue-advanced-chat> tag -->
-    <Paginator :rows="20" :totalRecords="totalRecords"  class="mt-2 self-center" @page="onPageChange" />
+    <Paginator :rows="20" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" />
   </div>
 </template>
 
@@ -74,6 +77,8 @@ import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount } from "
 import { register } from "vue-advanced-chat";
 import Toast from "primevue/toast";
 import { useChatLogic } from "~/composables/useChatLogic";
+import LoaderOverlay from "../LoaderOverlay.vue";
+import LoaderSmall from "../LoaderSmall.vue";
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 
 register();
