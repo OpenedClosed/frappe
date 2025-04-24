@@ -60,9 +60,13 @@
           </div>
         </div>
       </div>
-      <div v-if="isRoomsLoading" slot="rooms-list-search">
-        <div class="flex items-center justify-center py-5">
-          <LoaderSmall  />
+      <div slot="rooms-list-search">
+        <div v-if="isRoomsLoading" class="flex items-center justify-center py-5">
+          <LoaderSmall   />
+
+        </div>
+        <div v-else class="h-[65px]">
+          
         </div>
       </div>
     </vue-advanced-chat>
