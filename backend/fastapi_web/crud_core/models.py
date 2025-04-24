@@ -112,15 +112,23 @@ class BaseCrudCore:
         """
         Возвращает список документов с учётом фильтра (filters) и прав (permission_class).
         """
+        print('-1-')
         base_filter = await self.permission_class.get_base_filter(current_user)
+        print('-2-')
         query = {**(filters or {}), **base_filter}
+        print('-3-')
 
         sort_field = sort_by or self.detect_id_field()
+        print('-4-')
         cursor = self.db.find(query).sort(sort_field, order)
+        print('-5-')
 
         objs = []
+        print('-6-')
         async for raw_doc in cursor:
+            print('-7-')
             objs.append(await self.format_document(raw_doc, current_user))
+            print('-8-')
         return objs
 
     async def list(
@@ -134,7 +142,9 @@ class BaseCrudCore:
         Возвращает список документов (без пагинации).
         Пример вызова: crud_instance.list(current_user=user).
         """
+        print('зашли в списки')
         self.check_permission("read", current_user)
+        print('проверили права')
 
         return await self.get_queryset(filters, sort_by, order, current_user)
 
@@ -150,6 +160,7 @@ class BaseCrudCore:
         """
         Возвращает список документов с пагинацией и метаданными.
         """
+
         self.check_permission("read", current_user)
 
         all_docs = await self.get_queryset(filters, sort_by, order, current_user)
@@ -757,16 +768,36 @@ class BaseCrud(BaseCrudCore):
         current_user: Optional[dict] = None
     ) -> List[dict]:
         """Возвращает список документов, учитывая фильтры, права и сортировку."""
+        print('=1=')
         self.check_crud_enabled("read")
+        print('=2=')
         self.permission_class.check("read", current_user)
+        print('=3=')
 
         base_filter = await self.permission_class.get_base_filter(current_user)
+        print('=4=')
         query = {**(filters or {}), **base_filter}
+        print('=5=')
 
         sort_field = sort_by or self.detect_id_field()
+        print('=6=')
         cursor = self.db.find(query).sort(sort_field, order)
+        print('=7=')
 
         objs = []
+        print('=8=')
+        # page_size = 20
+        i = 0
         async for raw_doc in cursor:
+            i += 1
+            # print("итерация", i)
+            # print(raw_doc["_id"])
+            if str(raw_doc["_id"]) == "ь":
+                # print("нашли урода")
+                # print(len(str(raw_doc)))
+                continue
+
+            # if len(objs) >= page_size:
+            #     break 
             objs.append(await self.format_document(raw_doc, current_user))
         return objs

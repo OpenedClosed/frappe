@@ -106,6 +106,15 @@ TRANSLATIONS = {
             "uk": "Невірна відповідь. Потрібно вибрати з: {choices}.",
             "zh": "无效的答案。必须从以下选项中选择：{choices}。",
             "es": "Respuesta inválida. Debes elegir entre: {choices}."
+        },
+        "message_too_long": {
+            "en": "Message is too long. Please shorten it.",
+            "ru": "Сообщение слишком длинное. Пожалуйста, сократите его.",
+            "ar": "الرسالة طويلة جدًا. الرجاء تقصيرها.",
+            "pl": "Wiadomość jest zbyt długa. Skróć ją.",
+            "uk": "Повідомлення надто довге. Скоротіть його.",
+            "zh": "消息太长。请缩短。",
+            "es": "El mensaje es demasiado largo. Por favor, acórtalo."
         }
     },
     "attention": {

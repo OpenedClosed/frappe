@@ -284,6 +284,10 @@ def generate_base_routes(registry: BaseRegistry):
 
                 else:
                     print("2")
+                    print(sort_by)
+                    print(order)
+                    print(user_doc)
+                    print("???")
                     print(await instance.list(
                         sort_by=sort_by,
                         order=order,

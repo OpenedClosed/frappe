@@ -35,6 +35,7 @@ logging.basicConfig(
 )
 
 app = FastAPI()
+app.router.redirect_slashes = False
 
 base_api_router = APIRouter(prefix="/api")
 
@@ -50,6 +51,7 @@ async def print_routes():
 async def on_startup():
     """Действия при запуске приложения."""
     from chats.ws import websockets as _
+    print(settings.MONGO_DB_NAME)
     await auto_discover_modules("admin")
     await auto_discover_modules("account")
     await mongo_db_on_startapp()

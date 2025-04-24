@@ -444,13 +444,23 @@ async def handle_new_message(
     if not msg_text.strip():
         return
 
-    new_msg = ChatMessage(
-        message=msg_text,
-        sender_role=SenderRole.CLIENT,
-        sender_id=client_id,
-        reply_to=reply_to,
-        external_id=external_id
-    )
+    try:
+        new_msg = ChatMessage(
+            message=msg_text,
+            sender_role=SenderRole.CLIENT,
+            sender_id=client_id,
+            reply_to=reply_to,
+            external_id=external_id
+        )
+    except ValidationError as e:
+        await broadcast_error(
+            manager,
+            client_id,
+            chat_id,
+            get_translation("errors", "message_too_long", user_language)
+        )
+        return
+
 
     if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
         return
@@ -707,26 +717,28 @@ async def start_brief(
     chat_session: ChatSession,
     manager: ConnectionManager,
     redis_key_session: str,
-    user_language: str
+    user_language: str,
 ) -> None:
     """
     Инициализирует бриф:
-    - При первом сообщении от бота отправляется приветствие.
-    - Если есть вопросы брифа, задаём первый вопрос.
+    - Блокируем двойную отправку приветствия через Redis-флаг.
+    - Проверяем, что в чате ещё нет сообщений.
     """
-    if len(chat_session.messages) == 0:
-        bot_context = await get_bot_context()
-        hello_text = bot_context.get(
-            "welcome_message", "Hello!").get(
-            user_language, None)
-        if isinstance(hello_text, str):
-            msg = ChatMessage(message=hello_text, sender_role=SenderRole.AI)
-            await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
+    welcome_flag_key = f"chat:welcome:{chat_session.chat_id}"
 
-        question = chat_session.get_current_question(BRIEF_QUESTIONS)
-        if not question:
-            return
+    # Проверка на метку + длину сообщений
+    if len(chat_session.messages) > 0 or not await redis_db.set(welcome_flag_key, "1", ex=60, nx=True):
+        return  # Приветствие уже было или только что отправляется другим потоком
 
+    bot_context = await get_bot_context()
+    hello_text = bot_context.get("welcome_message", "Hello!").get(user_language, None)
+
+    if isinstance(hello_text, str):
+        msg = ChatMessage(message=hello_text, sender_role=SenderRole.AI)
+        await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
+
+    question = chat_session.get_current_question(BRIEF_QUESTIONS)
+    if question:
         await ask_brief_question(manager, chat_session, question, redis_key_session, user_language)
 
 
@@ -1019,60 +1031,6 @@ async def process_user_query_after_brief(
         if ai_msg:
             await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
         return None
-
-
-
-async def generate_ai_answer(
-    user_message: str,
-    snippets: List[str],
-    user_info: str,
-    chat_history: List[ChatMessage],
-    user_language: str,
-    typing_manager: TypingManager,
-    chat_id: str,
-    manager: ConnectionManager,
-    style: str = "confident",
-    return_json: bool = False,
-) -> Union[str, Dict[str, Any]]:
-    """
-    Генерирует ответ от AI, учитывая историю чата, язык пользователя,
-    сниппеты знаний и настройки бота из MongoDB.
-    """
-    bot_context = await get_bot_context()
-    chosen_model = bot_context["ai_model"]
-    chosen_temp = bot_context["temperature"]
-
-    weather_info = {
-        "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
-    }
-
-    system_prompt = _assemble_system_prompt(
-        bot_context, snippets, user_info, user_language, weather_info)
-    messages = build_messages_for_model(
-        system_prompt=system_prompt,
-        messages_data=chat_history,
-        user_message=user_message,
-        model=chosen_model
-    )
-
-    await typing_manager.add_typing(chat_id, "ai_bot", manager)
-    await _simulate_delay()
-
-    client, real_model = pick_model_and_client(chosen_model)
-    try:
-        ai_text = await _generate_model_response(client, real_model, messages, chosen_temp)
-    except Exception as e:
-        logging.error(f"AI generation failed: {e}")
-        ai_text = bot_context.get("fallback_ai_error_message", {}).get(
-            user_language, "The assistant is currently unavailable."
-        )
-
-    await typing_manager.remove_typing(chat_id, "ai_bot", manager)
-
-    if return_json:
-        return _try_parse_json(ai_text)
-
-    return ai_text
 
 
 async def determine_topics_via_gpt(
@@ -1419,8 +1377,17 @@ async def generate_ai_answer(
         "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
     }
 
+    # print("="*100)
+    # print(snippets)
+    # print("="*100)
+
     system_prompt = _assemble_system_prompt(
         bot_context, snippets, user_info, user_language, weather_info)
+    
+    print("="*100)
+    print(system_prompt)
+    print("="*100)
+
     messages = build_messages_for_model(
         system_prompt=system_prompt,
         messages_data=chat_history,
