@@ -107,10 +107,13 @@ class BaseCrudCore:
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
-        current_user: Optional[BaseModel] = None
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        current_user: Optional[BaseModel] = None,
+        format: bool = True  # <- по умолчанию применяем format_document
     ) -> List[dict]:
         """
-        Возвращает список документов с учётом фильтра (filters) и прав (permission_class).
+        Возвращает список документов с учётом фильтрации, прав доступа, пагинации и форматирования.
         """
         print('-1-')
         base_filter = await self.permission_class.get_base_filter(current_user)
@@ -121,20 +124,30 @@ class BaseCrudCore:
         sort_field = sort_by or self.detect_id_field()
         print('-4-')
         cursor = self.db.find(query).sort(sort_field, order)
-        print('-5-')
 
+        if page is not None and page_size is not None:
+            skip_count = (page - 1) * page_size
+            cursor = cursor.skip(skip_count).limit(page_size)
+
+        print('-5-')
         objs = []
         print('-6-')
         async for raw_doc in cursor:
             print('-7-')
-            objs.append(await self.format_document(raw_doc, current_user))
+            if format:
+                objs.append(await self.format_document(raw_doc, current_user))
+            else:
+                objs.append(raw_doc)
             print('-8-')
         return objs
+
 
     async def list(
         self,
         sort_by: Optional[str] = None,
         order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
         filters: Optional[dict] = None,
         current_user: Optional[BaseModel] = None
     ) -> List[dict]:
@@ -146,7 +159,38 @@ class BaseCrudCore:
         self.check_permission("read", current_user)
         print('проверили права')
 
-        return await self.get_queryset(filters, sort_by, order, current_user)
+        return await self.get_queryset(filters=filters, sort_by=sort_by, order=order, page=page, page_size=page_size, current_user=current_user)
+
+    # async def list_with_meta(
+    #     self,
+    #     page: int = 1,
+    #     page_size: int = 100,
+    #     sort_by: Optional[str] = None,
+    #     order: int = 1,
+    #     filters: Optional[dict] = None,
+    #     current_user: Optional[BaseModel] = None
+    # ) -> dict:
+    #     """
+    #     Возвращает список документов с пагинацией и метаданными.
+    #     """
+
+    #     self.check_permission("read", current_user)
+
+    #     all_docs = await self.get_queryset(filters, sort_by, order, current_user)
+    #     total_count = len(all_docs)
+    #     total_pages = (total_count + page_size - 1) // page_size
+    #     start_idx = (page - 1) * page_size
+    #     end_idx = start_idx + page_size
+
+    #     return {
+    #         "data": all_docs[start_idx:end_idx],
+    #         "meta": {
+    #             "page": page,
+    #             "page_size": page_size,
+    #             "total_count": total_count,
+    #             "total_pages": total_pages,
+    #         }
+    #     }
 
     async def list_with_meta(
         self,
@@ -160,17 +204,26 @@ class BaseCrudCore:
         """
         Возвращает список документов с пагинацией и метаданными.
         """
-
         self.check_permission("read", current_user)
 
-        all_docs = await self.get_queryset(filters, sort_by, order, current_user)
-        total_count = len(all_docs)
+        # Считаем только total (отдельно, быстро)
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        query = {**(filters or {}), **base_filter}
+        total_count = await self.db.count_documents(query)
         total_pages = (total_count + page_size - 1) // page_size
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
+
+        # Получаем только нужную страницу, без format_document
+        raw_docs = await self.get_queryset(
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            page=page,
+            page_size=page_size,
+            current_user=current_user
+        )
 
         return {
-            "data": all_docs[start_idx:end_idx],
+            "data": raw_docs,
             "meta": {
                 "page": page,
                 "page_size": page_size,
@@ -178,6 +231,7 @@ class BaseCrudCore:
                 "total_pages": total_pages,
             }
         }
+
 
     async def get(
         self,
@@ -594,6 +648,8 @@ class InlineCrud(BaseCrudCore):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = "id",
         order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
         current_user: Optional[dict] = None
     ) -> List[dict]:
         """
@@ -760,12 +816,57 @@ class BaseCrud(BaseCrudCore):
         super().__init__(db)
         self.db = db[self.collection_name]
 
+    # async def get_queryset(
+    #     self,
+    #     filters: Optional[dict] = None,
+    #     sort_by: Optional[str] = None,
+    #     order: int = 1,
+    #     current_user: Optional[dict] = None
+    # ) -> List[dict]:
+    #     """Возвращает список документов, учитывая фильтры, права и сортировку."""
+    #     print('=1=')
+    #     self.check_crud_enabled("read")
+    #     print('=2=')
+    #     self.permission_class.check("read", current_user)
+    #     print('=3=')
+
+    #     base_filter = await self.permission_class.get_base_filter(current_user)
+    #     print('=4=')
+    #     query = {**(filters or {}), **base_filter}
+    #     print('=5=')
+
+    #     sort_field = sort_by or self.detect_id_field()
+    #     print('=6=')
+    #     cursor = self.db.find(query).sort(sort_field, order)
+    #     print('=7=')
+
+    #     objs = []
+    #     print('=8=')
+    #     # page_size = 20
+    #     i = 0
+    #     async for raw_doc in cursor:
+    #         i += 1
+    #         print("итерация", i)
+    #         # print(raw_doc["_id"])
+    #         if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
+    #             # print("нашли урода")
+    #             # print(len(str(raw_doc)))
+    #             continue
+
+    #         # if len(objs) >= page_size:
+    #         #     break 
+    #         objs.append(await self.format_document(raw_doc, current_user))
+    #     return objs
+
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
-        current_user: Optional[dict] = None
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        current_user: Optional[dict] = None,
+        format: bool = True
     ) -> List[dict]:
         """Возвращает список документов, учитывая фильтры, права и сортировку."""
         print('=1=')
@@ -782,22 +883,24 @@ class BaseCrud(BaseCrudCore):
         sort_field = sort_by or self.detect_id_field()
         print('=6=')
         cursor = self.db.find(query).sort(sort_field, order)
-        print('=7=')
 
+        if page is not None and page_size is not None:
+            skip_count = (page - 1) * page_size
+            cursor = cursor.skip(skip_count).limit(page_size)
+
+        print('=7=')
         objs = []
         print('=8=')
-        # page_size = 20
         i = 0
         async for raw_doc in cursor:
             i += 1
-            # print("итерация", i)
-            # print(raw_doc["_id"])
+            print("итерация", i)
             if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
-                # print("нашли урода")
-                # print(len(str(raw_doc)))
+                print("⚠️ Пропущен проблемный документ")
                 continue
 
-            # if len(objs) >= page_size:
-            #     break 
-            objs.append(await self.format_document(raw_doc, current_user))
+            if format:
+                objs.append(await self.format_document(raw_doc, current_user))
+            else:
+                objs.append(raw_doc)
         return objs

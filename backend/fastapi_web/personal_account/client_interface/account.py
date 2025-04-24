@@ -1062,6 +1062,8 @@ class BonusProgramAccount(BaseAccount):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
         current_user=None
     ) -> List[dict]:
         """

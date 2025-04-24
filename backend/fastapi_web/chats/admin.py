@@ -77,6 +77,8 @@ class ChatMessageInline(InlineAdmin):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
         current_user: Optional[dict] = None,
     ) -> List[dict]:
         filters = filters or {}
@@ -192,6 +194,8 @@ class ClientInline(InlineAdmin):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
         current_user: Optional[dict] = None
     ) -> List[dict]:
         """Возвращает список уникальных клиентов."""
@@ -200,6 +204,8 @@ class ClientInline(InlineAdmin):
             filters=filters,
             sort_by=sort_by,
             order=order,
+            page=page,
+            page_size=page_size,
             current_user=current_user
         )
 
@@ -290,12 +296,14 @@ class ChatSessionAdmin(BaseAdmin):
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
         current_user: Optional[dict] = None
     ) -> List[dict]:
         """Список чатов, у которых есть сообщения."""
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
-        return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, current_user=current_user)
+        return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, page=page, page_size=page_size, current_user=current_user)
 
     async def get_status_display(self, obj: dict) -> str:
         """Статус чата (в виде JSON строки с переводами)."""

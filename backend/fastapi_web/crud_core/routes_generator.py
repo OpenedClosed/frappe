@@ -266,14 +266,14 @@ def generate_base_routes(registry: BaseRegistry):
                     return item
 
                 if has_page_in_query and has_page_size_in_query:
-                    print("1")
-                    print(await instance.list_with_meta(
-                        page=page,
-                        page_size=page_size,
-                        sort_by=sort_by,
-                        order=order,
-                        current_user=user_doc
-                    ))
+                    # print("1")
+                    # print(await instance.list_with_meta(
+                    #     page=page,
+                    #     page_size=page_size,
+                    #     sort_by=sort_by,
+                    #     order=order,
+                    #     current_user=user_doc
+                    # ))
                     return await instance.list_with_meta(
                         page=page,
                         page_size=page_size,
@@ -283,16 +283,16 @@ def generate_base_routes(registry: BaseRegistry):
                     )
 
                 else:
-                    print("2")
-                    print(sort_by)
-                    print(order)
-                    print(user_doc)
-                    print("???")
-                    print(await instance.list(
-                        sort_by=sort_by,
-                        order=order,
-                        current_user=user_doc
-                    ))
+                    # print("2")
+                    # print(sort_by)
+                    # print(order)
+                    # print(user_doc)
+                    # print("???")
+                    # print(await instance.list(
+                    #     sort_by=sort_by,
+                    #     order=order,
+                    #     current_user=user_doc
+                    # ))
                     return await instance.list(
                         sort_by=sort_by,
                         order=order,
