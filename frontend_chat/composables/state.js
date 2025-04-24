@@ -26,8 +26,15 @@ export const useHeaderState = () => {
 
 export function useChatState() {
   const isAutoMode = useState("isAutoMode", () => true);
+  const messagesLoaded = useState("messagesLoaded", () => false);
+  const currentChatId = useState("currentChatId", () => '');
+  const chatMessages = useState("chatMessages", () => []);
 
   return {
     isAutoMode,
+    currentChatId,
+    chatMessages,
+    messagesLoaded,
   };
 }
+

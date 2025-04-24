@@ -1,5 +1,5 @@
 // ~/composables/useChatLogic.js
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
@@ -8,7 +8,7 @@ export function useChatLogic(options = {}) {
   const { isTelegram = false } = options; // Переключение под Telegram при необходимости
   const { t, locale } = useI18n();
   const toast = useToast();
-  const { isAutoMode } = useChatState();
+  const { isAutoMode, chatMessages } = useChatState();
 
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
@@ -35,8 +35,7 @@ let skipNextStatusCheck = false;
     },
   ];
 
-  // Список сообщений и статус загрузки
-  const messages = ref([]);
+
   const messagesLoaded = ref(false);
 
   // Настройки выбора опций
@@ -260,7 +259,7 @@ let skipNextStatusCheck = false;
    * Добавление нового сообщения в локальный массив (прихват по событию).
    */
   function updateMessages(newMessage) {
-    messages.value = [...messages.value, newMessage];
+    chatMessages.value = [...chatMessages.value, newMessage];
   }
 
   /**
@@ -349,7 +348,7 @@ let skipNextStatusCheck = false;
         case "get_messages":
           {
             const transformed = await transformChatMessages(data.messages);
-            messages.value = transformed;
+            chatMessages.value = transformed;
             messagesLoaded.value = true;
             if (!skipNextStatusCheck) {
               scheduleStatusCheck();
@@ -377,7 +376,8 @@ let skipNextStatusCheck = false;
         case "new_message":
           {
             const [transformed] = await transformChatMessages([data]);
-            $event("new_message_arrived", transformed);
+            updateMessages(transformed);
+            messagesLoaded.value = true;
             if (!skipNextStatusCheck) {
               scheduleStatusCheck();
             } else {
@@ -447,7 +447,7 @@ let skipNextStatusCheck = false;
           detail: t("additionalMessages.chatRefreshedSuccessfully"),
           life: 3000,
         });
-        messages.value = [];
+        chatMessages.value = [];
         currenChatId.value = response.data.chat_id;
         initializeWebSocket(response.data.chat_id);
       }
@@ -557,7 +557,6 @@ let skipNextStatusCheck = false;
     isIphone,
     currentUserId,
     activeRoomId,
-    messages,
     messagesLoaded,
     choiceOptions,
     isChoiceStrict,

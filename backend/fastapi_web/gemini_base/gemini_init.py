@@ -3,7 +3,7 @@ import asyncio
 import json
 import logging
 import re
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
 
@@ -51,7 +51,8 @@ class GeminiClient:
         self,
         model: str,
         messages: List[Dict[str, Any]],
-        temperature: float = 0.1
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.1,
     ) -> Dict[str, Any]:
         """
         Если последнее user-сообщение <= MAX_INPUT_TOKENS слов, делаем один запрос.
@@ -69,7 +70,7 @@ class GeminiClient:
 
         if total_input_words <= MAX_INPUT_TOKENS:
             logging.info("[GeminiClient] Input within limit, single request.")
-            single_resp = await self._chat_generate_single(model, messages, temperature)
+            single_resp = await self._chat_generate_single(model, messages, system_instruction, temperature)
             if 'error' in single_resp:
                 logging.error(f"[GeminiClient] Ошибка {single_resp['detail']}")
             answer_text = self._extract_text(single_resp)
@@ -102,7 +103,7 @@ class GeminiClient:
             }
             chunk_messages = history + [chunk_user_msg]
 
-            part_resp = await self._chat_generate_single(model, chunk_messages, temperature)
+            part_resp = await self._chat_generate_single(model, chunk_messages, system_instruction, temperature)
             if "error" in part_resp:
                 logging.error(
                     f"[GeminiClient] Error on chunk {i}: {part_resp['error']}")
@@ -145,7 +146,8 @@ class GeminiClient:
         self,
         model: str,
         messages: List[Dict[str, Any]],
-        temperature: float
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.1
     ) -> Dict[str, Any]:
         """
         Один запрос к Gemini, учитывает parts/content, retry при 429.
@@ -167,6 +169,14 @@ class GeminiClient:
             },
         }
 
+        if system_instruction:
+            payload["systemInstruction"] = {
+                "parts": [{"text": system_instruction}]
+            }
+
+
+        # print('_'*100)
+        # print(payload)
         url = self.BASE_URL.format(model=model) + f"?key={self.api_key}"
         try:
             async with self.session.post(url, json=payload, headers=self.headers) as r:

@@ -109,12 +109,26 @@ class BotSettings(BaseValidatedModel):
     # Характер и поведение
     communication_tone: CommunicationStyleEnum
     personality_traits: PersonalityTraitsEnum
-    additional_instructions: str = ""
+    additional_instructions: Optional[str] = Field(
+        default="",
+        json_schema_extra={
+            "settings": {
+                "type": "textarea",
+            }
+        }
+    )
     role: str
     target_action: List[TargetActionEnum] = Field(default_factory=list)
 
     # Темы и ограничения
-    core_principles: Optional[str] = None
+    core_principles: Optional[str] = Field(
+        default="",
+        json_schema_extra={
+            "settings": {
+                "type": "textarea",
+            }
+        }
+    )
     special_instructions: List[FunctionalityEnum] = Field(default_factory=list)
     forbidden_topics: List[ForbiddenTopicsEnum] = Field(default_factory=list)
 

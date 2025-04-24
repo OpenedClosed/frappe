@@ -1,35 +1,24 @@
 <template>
-  <!-- 
-    This div is our full-page overlay. It's positioned fixed at top-left,
-    covering 100% viewport. It has pointer-events: none, so it doesn't
-    block clicks on the underlying page unless we specifically re-enable 
-    them for elements inside (the chat button & chat panel).
-  -->
-  <div class="chat-overlay-container">
-    <!-- Chat toggle button (always visible) -->
-    <Button icon="pi pi-comments" label="Open Chat" class="chat-toggle-button text-white" @click="toggleChat" />
+<div>
+    <!-- Floating toggle -->
+    <Button
+        icon="pi pi-comments"
+        label="Open Chat"
+        class="chat-toggle-button"
+        @click="toggleChat"
+    />
 
-    <!-- Transition for smooth show/hide -->
+    <!-- Chat box -->
     <transition name="fade">
-      <!-- The actual chat box (visible only if `showChat` is true) -->
-      <div v-if="showChat" class="chat-box" :class="{ 'chat-overlay-mobile': isMobile }">
-        <!-- 
-          Optional header: close button, title, etc.
-          <div class="chat-header">
-            <h3>Live Chat</h3>
-            <Button 
-              icon="pi pi-times"
-              class="p-button-rounded p-button-text"
-              @click="toggleChat"
-            />
-          </div>
-        -->
-
-        <!-- Your chat component -->
-        <ChatComponent :is-telegram="false" @close-chat="toggleChat" />
-      </div>
+        <div
+            v-if="showChat"
+            class="chat-box"
+            :class="{ 'inset-0 w-full h-full border-0': isMobile }"
+        >
+            <ChatComponent :is-telegram="false" @close-chat="toggleChat" />
+        </div>
     </transition>
-  </div>
+</div>
 </template>
 
 <script setup>
@@ -57,6 +46,19 @@
     window.removeEventListener("resize", checkScreenSize);
   });
 </script>
+<!-- http://localhost:4000/chats/chat/index.html -->
+<style>
+html,body{
+  background:transparent!important;
+}
+#app,             /* Vue root on that page */
+.vac-container,   /* vue-advanced-chat */
+.p-panel{
+  background:transparent!important;
+  border:none;
+}
+</style>
+
 
 <style scoped>
   /* 
@@ -68,6 +70,10 @@
      - We apply pointer-events: auto to child 
        elements that should be interactive.
 */
+/* In the embedded page's CSS */
+body {
+    background-color: transparent;
+}
   .chat-overlay-container {
     position: fixed;
     top: 0;
@@ -107,7 +113,7 @@
     width: 400px;
     height: 600px;
     border: 1px solid #ccc;
-    background-color: #fff;
+    background-color: transparent; /* Set to transparent if needed */
     display: flex;
     flex-direction: column;
     z-index: 10000;

@@ -21,7 +21,7 @@
       :current-user-id="currentUserId"
       :rooms="JSON.stringify(rooms)"
       :rooms-loaded="true"
-      :messages="JSON.stringify(messages)"
+      :messages="JSON.stringify(chatMessages)"
       :messages-loaded="messagesLoaded"
       show-input-options="false"
       @focusin="handleFocus($event, true)"
@@ -62,6 +62,7 @@
 </template>
 
 <script setup>
+const { isAutoMode, chatMessages } = useChatState();
   import { defineEmits } from "vue";
   import { register } from "vue-advanced-chat";
   const colorMode = useColorMode();
@@ -99,12 +100,6 @@
     handleChoiceClick(command);
   });
 
-  $listen("new_message_arrived", async (message) => {
-    console.log("new_message:", message);
-    if (message) {
-      updateMessages(message);
-    }
-  });
   $listen("choice_options_arrived", async (options) => {
     // console.log("choice_options:", options);
     if (options) {
@@ -130,7 +125,6 @@
     isIphone,
     currentUserId,
     activeRoomId,
-    messages,
     messagesLoaded,
     choiceOptions,
     isChoiceStrict,
