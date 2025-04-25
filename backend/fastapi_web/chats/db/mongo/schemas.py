@@ -58,6 +58,7 @@ class ChatMessage(BaseValidatedIdModel):
     @classmethod
     def validate_length(cls, v: str, info: ValidationInfo) -> str:
         MAX_MESSAGE_LENGTH = 10000
+        # MAX_MESSAGE_LENGTH = 200
         if len(v) > MAX_MESSAGE_LENGTH:
             raise ValueError(f"Сообщение превышает допустимую длину {MAX_MESSAGE_LENGTH} символов.")
         return v

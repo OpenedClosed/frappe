@@ -134,6 +134,8 @@ The knowledge base consists of the following topics, subtopics, and questions:
     "patch_body_prompt": """
 You are an AI assistant that generates a patch request body for updating a knowledge base.
 
+The answer is exclusively JSON stricture and nothing else!!!
+
 ## Bot Reference Context
 The assistant has the following background knowledge that may help interpreting the user's intent:
 {bot_snippets_text}
@@ -221,6 +223,7 @@ The following snippets contain **relevant** topics, subtopics, and questions tha
 
 9. **Output Format** (THE MOST IMPORTANT RULE!!! NO STRING ONLY JSON)
    - Return **only valid JSON** that represents the patch. No extra commentary or text.
+   - The answer is exclusively JSON stricture and nothing else!!!
    - Example patch (generic placeholders):
 ```json
 {{

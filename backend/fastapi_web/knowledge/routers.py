@@ -57,7 +57,7 @@ async def patch_knowledge_base(
     """Частично обновляет базу знаний, обрабатывая _delete и валидируя структуру."""
     now = datetime.now()
 
-    old_doc = {"knowledge_base": req.base_data} if req.base_data else await mongo_db.knowledge_collection.find_one({"app_name": "main"})
+    old_doc = {"knowledge_base": req.base_data} if req.base_data is not None else await mongo_db.knowledge_collection.find_one({"app_name": "main"})
     if not old_doc:
         raise HTTPException(404, "Knowledge base not found")
 
@@ -126,7 +126,9 @@ async def generate_patch(
     Authorize: AuthJWT = Depends()
 ):
     """Генерирует тело патча для базы знаний, анализируя текст пользователя и файлы."""
-    if base_data_json:
+    print("*"*100)
+    print(base_data_json)
+    if base_data_json is not None:
         try:
             kb_data = json.loads(base_data_json)
         except json.JSONDecodeError:
@@ -135,6 +137,8 @@ async def generate_patch(
         kb_doc = await mongo_db.knowledge_collection.find_one({"app_name": "main"}) or {}
         kb_doc.pop("_id", None)
         kb_data = kb_doc.get("knowledge_base", {})
+    
+    print(kb_data)
 
     user_blocks = await build_gpt_message_blocks(user_message=user_message, files=files)
     patch_body = await generate_patch_body_via_gpt(
@@ -143,6 +147,7 @@ async def generate_patch(
         knowledge_base=kb_data,
         ai_model=ai_model
     )
+    print('patch', patch_body)
     return patch_body
 
 

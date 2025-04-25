@@ -310,9 +310,11 @@ def build_messages_for_model(
     """Генерирует список `messages` и опциональный `system_instruction`."""
     messages = []
     system_instruction = None
+    # print("system", system_prompt)
 
     if system_prompt:
         if model.startswith("gpt"):
+            print("Добавили системный промпт\n", system_prompt)
             messages.append({
                 "role": "system",
                 "content": system_prompt
@@ -334,13 +336,20 @@ def build_messages_for_model(
             "ai assistant", "assistant", "consultant"] else "user"
 
         structured_content = []
+        
+        
+        print("=============", )
 
         if isinstance(content, str):
             structured_content.append({"type": "text", "text": content})
         elif isinstance(content, dict):
+            
             if "text" in content:
+                print("text", content["text"])
                 structured_content.append({"type": "text", "text": content["text"]})
             elif "image_url" in content:
+
+                print("добавляем картинку просто")
                 structured_content.append({
                     "type": "image_url",
                     "image_url": content["image_url"]
@@ -355,6 +364,8 @@ def build_messages_for_model(
                     if block["type"] == "text":
                         gemini_parts.append({"text": block["text"]})
                     elif block["type"] == "image_url":
+
+                        print("добавляем картинку gemini")
                         gemini_parts.append({
                             "inline_data": {
                                 "mime_type": "image/jpeg",
@@ -466,6 +477,7 @@ async def generate_patch_body_via_gpt(
 ) -> dict:
 
     kb_doc, kb_model = await get_knowledge_base()
+
     ctx_blocks = await collect_context_blocks(kb_model.context)   # ← файлы/тексты
 
     # 2. шпаргалка
@@ -485,6 +497,8 @@ async def generate_patch_body_via_gpt(
         topics=snippets.get("topics", []),
         knowledge_base=knowledge_base,
     )
+    print(knowledge_base)
+    print("text", kb_snippets_text)
 
     system_prompt = AI_PROMPTS["patch_body_prompt"].format(
         bot_snippets_text=bot_prompt,
@@ -497,6 +511,9 @@ async def generate_patch_body_via_gpt(
         user_message="",
         model=ai_model,
     )
+    # print(msg_bundle["messages"])
+    # print("ctx_blocks", ctx_blocks)
+
 
     client, real_model = pick_model_and_client(ai_model)
 
@@ -529,7 +546,7 @@ async def generate_patch_body_via_gpt(
         ).choices[0].message.content.strip()
 
 
-    # print('патч', raw_content)
+    print('патч', raw_content)
 
     return _extract_json_from_gpt(raw_content)
 
@@ -694,6 +711,8 @@ async def generate_kb_structure_via_gpt(
 
 async def wrap_upload_file(path: Path) -> UploadFile:
     """Считывает файл с диска и возвращает UploadFile для `parse_file()`."""
+    print('='*100)
+    print(path.name)
     async with aiofiles.open(path, "rb") as f:
         data = await f.read()
     return StarletteUploadFile(filename=path.name, file=io.BytesIO(data))
@@ -732,11 +751,11 @@ async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
     await redis_db.set(redis_key, parsed, ex=ttl)
     return parsed
 
-async def parse_file_from_path(path: Path) -> str:
-    """Извлекает текст из файла на диске через ваш `parse_file()`."""
-    upload = await wrap_upload_file(path)
-    parsed = await parse_file(upload) or ""
-    return parsed
+# async def parse_file_from_path(path: Path) -> str:
+#     """Извлекает текст из файла на диске через ваш `parse_file()`."""
+#     upload = await wrap_upload_file(path)
+#     parsed = await parse_file(upload) or ""
+#     return parsed
 
 
 async def invalidate_url_cache(url: str):
@@ -756,8 +775,11 @@ async def get_context_entry_content(entry: ContextEntry, ai_model: str = "gpt-4o
     """
     if entry.type is ContextType.TEXT:
         return entry.text or ""
-
+    print("тип?", entry.type)
+    print("путь?", entry.file_path)
     if entry.type is ContextType.FILE and entry.file_path:
+        print("файл?", entry.type is ContextType.FILE)
+        print(await parse_file_from_path(entry.file_path))
         return await parse_file_from_path(entry.file_path) or ""
 
     if entry.type is ContextType.URL and entry.url:
@@ -799,8 +821,11 @@ async def build_kb_structure_from_context_entry(
     """
     if getattr(entry, "kb_structure", None):
         return entry.kb_structure
+    
+    
 
     raw = await get_context_entry_content(entry, ai_model=ai_model)
+
     raw = raw if isinstance(raw, str) else str(raw)
 
     struct = await generate_kb_structure_via_gpt(raw, ai_model)
@@ -825,7 +850,9 @@ async def collect_bot_context_snippets(entries: List[ContextEntry]) -> Tuple[Lis
     - строку промпта с описанием и фрагментами.
     """
     result = []
+    print('собираем сниппеты контекста')
     for entry in entries:
+        print(entry.purpose)
         if entry.purpose in {ContextPurpose.KB, ContextPurpose.BOTH}:
             content = await get_context_entry_content(entry)
             if content:
