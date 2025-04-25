@@ -67,6 +67,12 @@ SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru"}
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "change_me")
 WEATHER_API_URL = "http://api.openweathermap.org/data/2.5/weather"
 WEATHER_CACHE_LIFETIME = timedelta(hours=1)
+LOCATION_INFO = [
+    {
+        "name": "AnyLocation",
+        "address": "Chanchkhalo, Adjara, Georgia",
+    },
+]
 
 # Instagram API настройки
 INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "change_me")
