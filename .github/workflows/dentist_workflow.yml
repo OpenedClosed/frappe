@@ -200,11 +200,11 @@ jobs:
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_backup_script.sh >> ~/scripts/logs/full_backup.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_mongo_backup.sh >> ~/scripts/logs/mongo_backup.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_media_backup_script.sh >> ~/scripts/logs/media_backup.log 2>&1") | sort -u | crontab -
-            
-            sudo docker system prune -a -f
 
             # Останавливаем старые контейнеры, чистим образы
             sudo docker-compose -f ~/docker-compose.yml down --remove-orphans
+
+            sudo docker system prune -a -f
 
             # Создаём .env файл
             touch .env 
