@@ -1591,9 +1591,9 @@ async def generate_ai_answer(
 
     # print('===== SNIPPETS =====\n', snippets)
 
-    weather_info = {
-        "AnyLocation": await get_weather_by_address(address="Chanchkhalo, Adjara, Georgia"),
-    }
+    weather_info = {}
+    for weather_address in settings.LOCATION_INFO:
+        weather_info[weather_address["name"]] =  await get_weather_by_address(address=weather_address["address"])
 
     system_prompt = _assemble_system_prompt(
         bot_context, snippets, user_info, user_language, weather_info

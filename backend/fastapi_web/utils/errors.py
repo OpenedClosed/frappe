@@ -29,7 +29,6 @@ class FieldValidationError(Exception):
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Обработка исключения при валидации запроса."""
     errors = {}
-    print('+=======================')
     for e in exc.errors():
         loc = e['loc']
         current = errors

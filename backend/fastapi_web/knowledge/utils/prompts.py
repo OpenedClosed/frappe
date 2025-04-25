@@ -134,6 +134,8 @@ The knowledge base consists of the following topics, subtopics, and questions:
     "patch_body_prompt": """
 You are an AI assistant that generates a patch request body for updating a knowledge base.
 
+The answer is exclusively JSON stricture and nothing else!!!
+
 ## Bot Reference Context
 The assistant has the following background knowledge that may help interpreting the user's intent:
 {bot_snippets_text}
@@ -221,6 +223,7 @@ The following snippets contain **relevant** topics, subtopics, and questions tha
 
 9. **Output Format** (THE MOST IMPORTANT RULE!!! NO STRING ONLY JSON)
    - Return **only valid JSON** that represents the patch. No extra commentary or text.
+   - The answer is exclusively JSON stricture and nothing else!!!
    - Example patch (generic placeholders):
 ```json
 {{
@@ -264,24 +267,6 @@ You are an assistant that **creates a fresh knowledge‑base section** from unst
 ## Output requirements
 Return **only valid JSON** in the format:
 
-```json
-{
-  "Topic 1": {
-    "subtopics": {
-      "Subtopic A": {
-        "questions": {
-          "Concrete question?": {
-            "text": "answer.",
-            "files": []   # if any document links should be attached
-          }
-        }
-      }
-    }
-  },
-  "Topic 2": { ... }
-}
-```
-
 ## Rules
 
 1. **Preserve Hierarchy**
@@ -307,5 +292,54 @@ Return **only valid JSON** in the format:
 6. **Output Format**
    - Return **only** JSON. No explanations, comments, or extra text.
    - Structure must be ready to insert into a knowledge base as-is.
+
+7. **Combined Input from Text and Base64 Images Text**
+   - If the user provides both text and images, the system MUST extract and use all available information.
+   - The text from images and user input must be merged and processed together, ensuring that:
+   - Existing topics/subtopics/questions are updated based on both sources.
+   - New information from either source is added correctly.
+   - Do not prioritize one input over another; both must contribute equally to the patch.
+
+8. **Never Reject an Input (DO NOT ANSWER LIKE: "I'm unable to assist with that request.") – Always Adapt Information**
+   - If the user provides **confusing, strange, or seemingly unrelated** input, do **not** reject the request.
+   - Instead, **attempt to extract meaning and structure it logically** according to the knowledge base.
+   - If the information **does not perfectly match existing topics**, create a **new relevant category** rather than discarding it.
+   - **If necessary, create a "Miscellaneous" topic** for unstructured content rather than failing the request.
+   - The system **must always return a valid structured JSON patch**, even if the input is highly unusual.
+
+9. **Output Format** (THE MOST IMPORTANT RULE!!! NO STRING ONLY JSON)
+   - Return **only valid JSON** that represents the patch. No extra commentary or text.
+   - The answer is exclusively JSON stricture and nothing else!!!
+   - Example patch (generic placeholders):
+```json
+{{
+  "SomeTopic": {{
+    "subtopics": {{
+      "SomeSubtopic": {{
+        "questions": {{
+          "NewQuestion": {{
+            "text": "Brand new answer text here",
+            "files": []
+          }}
+        }}
+      }}
+    }}
+  }},
+  "AnotherTopic": {{
+    "subtopics": {{
+      "SomethingElse": {{
+        "questions": {{
+          "OneMoreQuestion": {{
+            "text": "Some answer",
+            "files": ["https://example.com/resource.pdf"]
+          }}
+        }}
+      }}
+    }}
+  }},
+  ...
+}}
+
+
 """
 }

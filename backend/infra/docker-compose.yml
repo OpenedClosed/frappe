@@ -16,8 +16,6 @@ services:
 
   redis:
     image: 89639339335/redis:latest
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
 
