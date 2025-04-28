@@ -11,7 +11,7 @@
           <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
             <section>
               <header
-                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark"
+                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
                   <i class="pi pi-folder-open text-2xl"></i>
@@ -34,7 +34,7 @@
 
                     <!-- добавить -->
                     <Button
-                      label="Добавить"
+                      label="Add context"
                       icon="pi pi-plus"
                       class="flex-shrink-0 px-6 py-3 text-base font-semibold bg-gray-900 border-0 rounded-lg text-white"
                       @click="openContextDialog"
@@ -127,7 +127,7 @@
             </section>
             <section>
               <header
-                class="flex items-center justify-between gap-2 px-4 py-3 border-y border-secondaryDark bg-secondaryLight dark:bg-secondaryDark"
+                class="flex items-center justify-between gap-2 px-4 py-3 border-y border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
                   <i class="pi pi-pencil text-2xl"></i>
@@ -167,253 +167,351 @@
           </div>
 
           <!-- CENTER COLUMN -->
-          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-gray-50 dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
-            <header
-              class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark"
-            >
-              <div class="flex items-center gap-2">
-                <i class="pi pi-file-edit text-2xl"></i>
-                <h2 class="font-semibold text-xl">Playground</h2>
-              </div>
-
-              <div class="flex justify-center items-center gap-4">
-                <div class="flex flex-row gap-2">
-                  <!-- Review-changes button -->
-                  <Button  class="p-button-sm flex items-center justify-center gap-2 min-w-[210px] max-h-[37px]" @click="reviewChanges">
-                    <div v-if="!isLoading" class="flex items-center gap-2">
-                      <i class="pi pi-eye"></i>
-                      <p>Review changes</p>
-
-                      <Badge v-if="changesTotal" :value="changesTotal" severity="info" class="ml-2" />
-                    </div>
-                    <LoaderSmall v-else />
-                  </Button>
-
-                  <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
-                  <Button :disabled="isLoading" icon="pi pi-trash" class="p-button-sm" @click="clearPlayground" />
-                  <Button v-if="isEditMode" label="Add topic" icon="pi pi-plus" class="p-button-sm" @click="addTopic" />
+          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+            <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
+              <header
+                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
+              >
+                <div class="flex items-center gap-2">
+                  <i class="pi pi-file-edit text-2xl"></i>
+                  <h2 class="font-semibold text-xl">Playground</h2>
                 </div>
-                <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
-              </div>
-            </header>
-            <div class="flex flex-col gap-4 p-4 h-full  overflow-y-auto">
-              <div class="flex flex-1 min-h-0 overflow-y-auto" v-if="Object.keys(knowledgeBaseData.knowledge_base).length || isEditMode">
-                <!-- Read-only display if not editing -->
-                <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
-                  <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6">
-                    <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
-                    <div v-if="topicValue.subtopics">
-                      <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
-                        <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
-                        <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                          <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
-                            <div>
-                              <span class="font-semibold">{{ questionKey }}: </span>
-                              <span> {{ qObj.text }}</span>
-                            </div>
-                            <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
-                              <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
-                                <ImageLink :fileLink="fileLink" />
+
+                <div class="flex justify-center items-center gap-4">
+                  <div class="flex flex-row gap-2">
+                    <!-- Review-changes button -->
+                    <Button class="p-button-sm flex items-center justify-center gap-2 min-w-[210px] max-h-[37px]" @click="reviewChanges">
+                      <div v-if="!isLoading" class="flex items-center gap-2">
+                        <i class="pi pi-eye"></i>
+                        <p>Review changes</p>
+
+                        <Badge v-if="changesTotal" :value="changesTotal" severity="info" class="ml-2" />
+                      </div>
+                      <LoaderSmall v-else />
+                    </Button>
+
+                    <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
+                    <Button :disabled="isLoading" icon="pi pi-trash" class="p-button-sm" @click="clearPlayground" />
+                    <Button v-if="isEditMode" label="Add topic" icon="pi pi-plus" class="p-button-sm" @click="addTopic" />
+                  </div>
+                  <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
+                </div>
+              </header>
+              <div class="flex flex-col gap-4 p-4 h-full overflow-y-auto">
+                <div class="flex flex-1 min-h-0 overflow-y-auto" v-if="Object.keys(knowledgeBaseData.knowledge_base).length || isEditMode">
+                  <!-- Read-only display if not editing -->
+                  <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
+                    <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6">
+                      <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
+                      <div v-if="topicValue.subtopics">
+                        <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
+                          <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
+                          <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
+                            <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
+                              <div>
+                                <span class="font-semibold">{{ questionKey }}: </span>
+                                <span> {{ qObj.text }}</span>
                               </div>
-                            </div>
-                          </li>
-                        </ul>
+                              <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
+                                <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
+                                  <ImageLink :fileLink="fileLink" />
+                                </div>
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- Edit mode if isEditMode -->
-                <div v-else class="flex-1 overflow-y-auto max-h-full">
-                  <div
-                    v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base"
-                    :key="topicName"
-                    :id="`topic-${topicName}`"
-                    class="mb-6"
-                  >
-                    <!-- Topic header with input and buttons -->
-                    <div class="flex items-center mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">
-                      <input
-                        class="border p-1 flex-1 mr-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
-                        :placeholder="topicName.includes('New Topic') ? topicName : ''"
-                        :value="topicName.includes('New Topic') ? '' : topicName"
-                        @blur="renameTopic(topicName, $event.target.value)"
-                        @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
-                      />
-                      <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeTopic(topicName)" />
-                      <Button label="Add subtopic" icon="pi pi-plus" class="p-button-sm" @click="addSubtopic(topicName)" />
-                    </div>
-                    <!-- Subtopics and questions -->
+                  <!-- Edit mode if isEditMode -->
+                  <div v-else class="flex-1 overflow-y-auto max-h-full">
                     <div
-                      v-if="topicValue.subtopics"
-                      v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
-                      :key="subtopicName"
-                      :id="`subtopic-${topicName}-${subtopicName}`"
-                      class="ml-4 mb-4"
+                      v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base"
+                      :key="topicName"
+                      :id="`topic-${topicName}`"
+                      class="mb-6"
                     >
-                      <div class="flex items-center mb-2">
+                      <!-- Topic header with input and buttons -->
+                      <div class="flex items-center mb-2 border-gray-400 dark:border-gray-600 pb-1">
                         <input
                           class="border p-1 flex-1 mr-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
-                          :placeholder="subtopicName.includes('New Subtopic') ? subtopicName : ''"
-                          :value="subtopicName.includes('New Subtopic') ? '' : subtopicName"
-                          @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
-                          @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
+                          :placeholder="topicName.includes('New Topic') ? topicName : ''"
+                          :value="topicName.includes('New Topic') ? '' : topicName"
+                          @blur="renameTopic(topicName, $event.target.value)"
+                          @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
                         />
-                        <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeSubtopic(topicName, subtopicName)" />
-                        <Button label="Add question" icon="pi pi-plus" class="p-button-sm" @click="addQuestion(topicName, subtopicName)" />
+                        <Button
+                          icon="pi pi-arrow-up"
+                          class="p-button-sm mr-1"
+                          :disabled="isFirstTopic(topicName)"
+                          @click="moveTopic(topicName, -1)"
+                        />
+                        <Button
+                          icon="pi pi-arrow-down"
+                          class="p-button-sm mr-2"
+                          :disabled="isLastTopic(topicName)"
+                          @click="moveTopic(topicName, 1)"
+                        />
+                        <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeTopic(topicName)" />
+                        <Button label="Add subtopic" icon="pi pi-plus" class="p-button-sm" @click="addSubtopic(topicName)" />
                       </div>
-                      <div v-if="subtopicValue.questions" class="ml-4">
-                        <div
-                          v-for="(questionObj, questionKey) in subtopicValue.questions"
-                          :key="questionKey"
-                          :id="`question-${topicName}-${subtopicName}-${questionKey}`"
-                          class="mb-4 p-2 border rounded-md dark:border-gray-600"
-                        >
-                          <!-- Row with label + remove button -->
-                          <div class="flex items-center justify-between mb-2">
-                            <label class="font-semibold">Question:</label>
-                            <Button
-                              icon="pi pi-trash"
-                              class="p-button-rounded p-button-text"
-                              @click="removeQuestion(topicName, subtopicName, questionKey)"
-                            />
-                          </div>
-
-                          <!-- QUESTION (the key) -->
-                          <Textarea
-                            :placeholder="questionKey.includes('New Question') ? questionKey : ''"
-                            :value="questionKey.includes('New Question') ? '' : questionKey"
-                            class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
-                            @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
+                      <!-- Subtopics and questions -->
+                      <div
+                        v-if="topicValue.subtopics"
+                        v-for="(subtopicValue, subtopicName) in topicValue.subtopics"
+                        :key="subtopicName"
+                        :id="`subtopic-${topicName}-${subtopicName}`"
+                        class="ml-4 mb-4"
+                      >
+                        <div class="flex items-center mb-2">
+                          <input
+                            class="border p-1 flex-1 mr-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
+                            :placeholder="subtopicName.includes('New Subtopic') ? subtopicName : ''"
+                            :value="subtopicName.includes('New Subtopic') ? '' : subtopicName"
+                            @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
+                            @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
                           />
-
-                          <!-- ANSWER TEXT -->
-                          <label class="font-semibold">Answer text:</label>
-                          <Textarea
-                            v-model="questionObj.text"
-                            class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
-                          />
-
-                          <!-- LINKS / FILES -->
-                          <label class="font-semibold">Links / Files:</label>
-                          <ul class="mb-2">
-                            <li v-for="(fileLink, fileIndex) in questionObj.files" :key="fileIndex" class="flex items-center gap-2 mb-1">
-                              <input
-                                v-model="questionObj.files[fileIndex]"
-                                type="text"
-                                class="border p-1 flex-1 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
-                              />
-                              <Button
-                                icon="pi pi-minus"
-                                class="p-button-sm"
-                                @click="removeQuestionFile(topicName, subtopicName, questionKey, fileIndex)"
-                              />
-                            </li>
-                          </ul>
-                          <div v-if="localFiles.length" class="mt-4">
-                            <h3>Selected files:</h3>
-                            <ul>
-                              <li v-for="(file, idx) in localFiles" :key="idx">{{ file.name }} - {{ file.size }} bytes</li>
-                            </ul>
-                          </div>
-
                           <Button
-                            label="Add link"
+                            icon="pi pi-arrow-up"
+                            class="p-button-sm mr-1"
+                            :disabled="isFirstSub(topicName, subtopicName)"
+                            @click="moveSub(topicName, subtopicName, -1)"
+                          />
+                          <Button
+                            icon="pi pi-arrow-down"
+                            class="p-button-sm mr-2"
+                            :disabled="isLastSub(topicName, subtopicName)"
+                            @click="moveSub(topicName, subtopicName, 1)"
+                          />
+                          <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeSubtopic(topicName, subtopicName)" />
+                          <Button
+                            label="Add question"
                             icon="pi pi-plus"
                             class="p-button-sm"
-                            @click="addQuestionFile(topicName, subtopicName, questionKey)"
+                            @click="addQuestion(topicName, subtopicName)"
                           />
+                        </div>
+                        <div v-if="subtopicValue.questions" class="ml-4">
+                          <div
+                            v-for="(questionObj, questionKey) in subtopicValue.questions"
+                            :key="questionKey"
+                            :id="`question-${topicName}-${subtopicName}-${questionKey}`"
+                            class="mb-4 p-2 border rounded-md dark:border-gray-600"
+                          >
+                            <!-- Row with label + remove button -->
+                            <div class="flex items-center justify-between mb-2">
+                              <label class="font-semibold">Question:</label>
+                              <div class="flex items-center gap-2">
+                                <Button
+                                  icon="pi pi-arrow-up"
+                                  class="p-button-text p-button-rounded p-button-sm"
+                                  :disabled="isFirstQ(topicName, subtopicName, questionKey)"
+                                  @click="moveQ(topicName, subtopicName, questionKey, -1)"
+                                />
+                                <Button
+                                  icon="pi pi-arrow-down"
+                                  class="p-button-text p-button-rounded p-button-sm"
+                                  :disabled="isLastQ(topicName, subtopicName, questionKey)"
+                                  @click="moveQ(topicName, subtopicName, questionKey, 1)"
+                                />
+                                <Button
+                                  icon="pi pi-trash"
+                                  class="p-button-rounded p-button-text"
+                                  @click="removeQuestion(topicName, subtopicName, questionKey)"
+                                />
+                              </div>
+                            </div>
+
+                            <!-- QUESTION (the key) -->
+                            <Textarea
+                              :placeholder="questionKey.includes('New Question') ? questionKey : ''"
+                              :value="questionKey.includes('New Question') ? '' : questionKey"
+                              class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
+                              @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
+                            />
+
+                            <!-- ANSWER TEXT -->
+                            <label class="font-semibold">Answer text:</label>
+                            <Textarea
+                              v-model="questionObj.text"
+                              class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
+                            />
+
+                            <!-- LINKS / FILES -->
+                            <label class="font-semibold">Links / Files:</label>
+                            <ul class="mb-2">
+                              <li v-for="(fileLink, fileIndex) in questionObj.files" :key="fileIndex" class="flex items-center gap-2 mb-1">
+                                <input
+                                  v-model="questionObj.files[fileIndex]"
+                                  type="text"
+                                  class="border p-1 flex-1 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 rounded"
+                                />
+                                <Button
+                                  icon="pi pi-minus"
+                                  class="p-button-sm"
+                                  @click="removeQuestionFile(topicName, subtopicName, questionKey, fileIndex)"
+                                />
+                              </li>
+                            </ul>
+                            <div v-if="localFiles.length" class="mt-4">
+                              <h3>Selected files:</h3>
+                              <ul>
+                                <li v-for="(file, idx) in localFiles" :key="idx">{{ file.name }} - {{ file.size }} bytes</li>
+                              </ul>
+                            </div>
+
+                            <Button
+                              label="Add link"
+                              icon="pi pi-plus"
+                              class="p-button-sm"
+                              @click="addQuestionFile(topicName, subtopicName, questionKey)"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div
-                v-if="!Object.keys(knowledgeBaseData.knowledge_base).length && !isEditMode"
-                class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center p-10"
-              >
-                <!-- иконка -->
-                <i class="pi pi-th-large text-gray-500 dark:text-gray-400 text-5xl mb-6" />
-                <!-- заголовок -->
-                <h3 class="text-2xl font-semibold text-gray-500 dark:text-gray-300 mb-2">Playground пуст</h3>
-                <!-- подпись -->
-                <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
-                  Импортируйте контент из левой панели или&nbsp;создайте новый блок
-                </p>
-                <!-- кнопка -->
-                <Button
-                  label="Создать блок"
-                  icon="pi pi-plus"
-                  class="px-10 py-3 text-lg font-semibold bg-gray-900 border-0"
-                  @click="
-                    () => {
-                      toggleEditMode();
-                      addTopic();
-                    }
-                  "
-                />
-              </div>
+                <div
+                  v-if="!Object.keys(knowledgeBaseData.knowledge_base).length && !isEditMode"
+                  class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center p-10"
+                >
+                  <!-- иконка -->
+                  <i class="pi pi-th-large text-gray-500 dark:text-gray-400 text-5xl mb-6" />
+                  <!-- заголовок -->
+                  <h3 class="text-2xl font-semibold text-gray-500 dark:text-gray-300 mb-2">Playground пуст</h3>
+                  <!-- подпись -->
+                  <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
+                    Импортируйте контент из левой панели или&nbsp;создайте новый блок
+                  </p>
+                  <!-- кнопка -->
+                  <Button
+                    label="Создать блок"
+                    icon="pi pi-plus"
+                    class="px-10 py-3 text-lg font-semibold bg-gray-900 border-0"
+                    @click="
+                      () => {
+                        toggleEditMode();
+                        addTopic();
+                      }
+                    "
+                  />
+                </div>
 
-              <!-- Save / Reject / Transfer -->
-              <div v-if="isEditMode" class="flex flex-col gap-2 my-2">
-                <Button :disabled="isLoading" label="Save workspace" icon="pi pi-save" class="p-button-sm" @click="savePlayground" />
-                <Button :disabled="isLoading" label="Reject workspace" icon="pi pi-times" class="p-button-sm" @click="rejectPlayground" />
+                <!-- Save / Reject / Transfer -->
+                <div v-if="isEditMode" class="flex flex-col gap-2 my-2">
+                  <Button :disabled="isLoading" label="Save playground" icon="pi pi-save" class="p-button-sm" @click="savePlayground" />
+                  <Button
+                    :disabled="isLoading"
+                    label="Reject playground"
+                    icon="pi pi-times"
+                    class="p-button-sm"
+                    @click="rejectPlayground"
+                  />
+                </div>
+                <div v-else class="flex flex-col gap-2 my-2">
+                  <Button
+                    :disabled="isLoading || !hasChanges"
+                    label="Transfer to database"
+                    icon="pi pi-save"
+                    class="p-button-sm"
+                    @click="saveChanges"
+                  />
+                  <Button
+                    :disabled="isLoading"
+                    label="Reject playground"
+                    icon="pi pi-times"
+                    class="p-button-sm"
+                    @click="rejectPlayground"
+                  />
+                </div>
               </div>
-              <div v-else class="flex flex-col gap-2 my-2">
-                <Button
-                  :disabled="isLoading || !hasChanges"
-                  label="Transfer to database"
-                  icon="pi pi-save"
-                  class="p-button-sm"
-                  @click="saveChanges"
-                />
-                <Button :disabled="isLoading" label="Reject workspace" icon="pi pi-times" class="p-button-sm" @click="rejectPlayground" />
-              </div>
-            </div>
+            </section>
           </div>
 
           <!-- RIGHT COLUMN (Readonly Copy) -->
-          <div
-            class="flex-0 xl:flex-1 max-h-screen p-4 flex flex-col border-2 border-primary dark:border-secondary bg-gray-50 dark:bg-gray-800 rounded-md overflow-hidden"
-          >
-            <h2 class="text-lg font-bold mb-2 border-b border-gray-400 dark:border-gray-600 pb-1">Knowledge base (read-only)</h2>
-            <div class="flex-1 overflow-y-auto">
-              <div v-for="(topicValue, topicName) in readonlyData.knowledge_base" :key="topicName" class="mb-6">
-                <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
-                <div v-if="topicValue.subtopics">
-                  <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
-                    <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
-                    <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                      <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
-                        <div>
-                          <span class="font-semibold">{{ questionKey }}: </span>
-                          <span> {{ qObj.text }}</span>
-                        </div>
-                        <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
-                          <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
-                            <ImageLink :fileLink="fileLink" />
+          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+            <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
+              <header
+                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
+              >
+                <div class="flex items-center gap-2">
+                  <i class="pi pi-folder-open text-2xl"></i>
+                  <h2 class="font-semibold text-xl">Knowledge base (read-only)</h2>
+                </div>
+                <div class="flex justify-center items-center">
+                  <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
+                </div>
+              </header>
+              <div class="flex-1 overflow-y-auto p-4">
+                <div v-for="(topicValue, topicName) in readonlyData.knowledge_base" :key="topicName" class="mb-6">
+                  <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
+                  <div v-if="topicValue.subtopics">
+                    <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
+                      <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
+                      <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
+                        <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
+                          <div>
+                            <span class="font-semibold">{{ questionKey }}: </span>
+                            <span> {{ qObj.text }}</span>
                           </div>
-                        </div>
-                      </li>
-                    </ul>
+                          <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
+                            <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
+                              <ImageLink :fileLink="fileLink" />
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="flex gap-2">
-              <!-- Export Button -->
-              <Button label="Export JSON" icon="pi pi-download" class="p-button-sm p-button-info" @click="exportData" />
-              <!-- Import Button -->
-              <Button label="Import JSON" icon="pi pi-upload" class="p-button-sm p-button-primary" @click="triggerFileInput" />
-              <!-- Hidden File Input -->
-              <input type="file" class="hidden" ref="fileInput" @change="importData" accept=".json" />
-            </div>
+              <div class="flex flex-col gap-2 p-4 my-2">
+                <Button label="Export" icon="pi pi-file-export" class="p-button-sm" @click="showExportDialog = true" />
+
+                   <AdminChat/>
+                </div>
+            </section>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 💾 Export-format picker -->
+    <Dialog v-model:visible="showExportDialog" header="Export Knowledge Base" :modal="true" :style="{ width: '25rem' }">
+      <div class="flex flex-col gap-4 pt-2">
+        <div class="flex items-center justify-center  gap-3">
+          <RadioButton  v-model="exportFormat" inputId="exp-json" value="json" />
+          <label for="exp-json" class="cursor-pointer flex-1">
+            <p class="font-semibold">JSON</p>
+            <p class="text-sm text-gray-500">Full structured data (recommended)</p>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-center gap-3">
+          <RadioButton v-model="exportFormat" inputId="exp-csv" value="csv" />
+          <label for="exp-csv" class="cursor-pointer flex-1">
+            <p class="font-semibold">CSV</p>
+            <p class="text-sm text-gray-500">Spreadsheet-compatible format</p>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-center  gap-3">
+          <RadioButton v-model="exportFormat" inputId="exp-txt" value="txt" />
+          <label for="exp-txt" class="cursor-pointer flex-1">
+            <p class="font-semibold">Plain Text</p>
+            <p class="text-sm text-gray-500">Simple human-readable format</p>
+          </label>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Cancel" class="p-button-text" @click="showExportDialog = false" />
+        <Button label="Export" icon="pi pi-download" @click="exportData(exportFormat)" />
+      </template>
+    </Dialog>
     <!-- INSTRUCTIONS DIALOG -->
     <Dialog v-model:visible="showInstructions" :header="'How to use this tool?'" :modal="true" :closable="true" :style="{ width: '50vw' }">
       <div class="wysiwyg">
@@ -468,7 +566,7 @@
         </p>
 
         <h2>Discarding Changes</h2>
-        <p>To discard the changes and revert the Playground to its original state, click <strong>"Reject workspace"</strong>.</p>
+        <p>To discard the changes and revert the Playground to its original state, click <strong>"Reject playground"</strong>.</p>
 
         <h2>Working with JSON</h2>
         <p>The following features are available:</p>
@@ -497,7 +595,7 @@
 
     <SaveChangesDialog
       v-model:visible="showSaveChangesDialog"
-      :review-only="reviewOnly" 
+      :review-only="reviewOnly"
       :is-edit-mode="isEditMode"
       :has-changes="hasChanges"
       :changes="changes"
@@ -507,6 +605,15 @@
       @save="handleConfirmChanges"
       @cancel="showSaveChangesDialog = false"
     />
+
+     <!-- Transition for smooth show/hide -->
+     <transition name="fade">
+            <!-- The actual chat box (visible only if `showChat` is true) -->
+            <div v-if="isChatOpen" class="chat-box" :class="{ 'chat-overlay-mobile': isMobile }">
+                <iframe :src="chatUrl" class="flex-1" style="border: none; z-index: 9999"></iframe>
+                <Button v-if="isMobile" @click="onClose" :label="$t('buttons.close')"></Button>
+            </div>
+        </transition>
   </div>
 </template>
 
@@ -538,7 +645,9 @@ const aiModels = ref([
   { label: "gemini-2.0-flash", value: "gemini-2.0-flash" },
 ]);
 
-const reviewOnly = ref(false); 
+import AdminChat from '~/components/AdminChat.vue';
+
+const reviewOnly = ref(false);
 /* ---------- контекст ---------- */
 const contextList = ref([]); // список
 const showContextDialog = ref(false); // диалог
@@ -586,11 +695,10 @@ onMounted(fetchContextUnits);
 const changesTotal = computed(() => changes.value.added + changes.value.changed + changes.value.deleted);
 
 function reviewChanges() {
-  calculateChanges();            // always refresh counters
-  reviewOnly.value = true;       // read-only mode
+  calculateChanges(); // always refresh counters
+  reviewOnly.value = true; // read-only mode
   showSaveChangesDialog.value = true;
 }
-
 
 /* ---------- helpers ---------- */
 
@@ -789,19 +897,6 @@ function transformToArray(questionsObj) {
   }));
 }
 
-// Export JSON data as a file
-function exportData() {
-  const jsonData = JSON.stringify(knowledgeBaseData.value.knowledge_base, null, 2);
-  const blob = new Blob([jsonData], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "knowledge_base.json";
-  a.click();
-
-  URL.revokeObjectURL(url);
-}
 
 const fileInput = ref(null);
 
@@ -1356,8 +1451,7 @@ const subtopicRenamingMap = ref(new Map());
 const questionRenamingMap = ref(new Map());
 const hasChanges = ref(false);
 
-
-watch( showSaveChangesDialog, () => {
+watch(showSaveChangesDialog, () => {
   if (!showSaveChangesDialog.value) {
     reviewOnly.value = false; // reset to edit mode
   }
@@ -1641,6 +1735,112 @@ function handleConfirmChanges() {
   } else {
     saveDatabase();
   }
+}
+
+/* ---------- generic reorder helper ---------- */
+function moveKey(obj, key, delta) {
+  const keys = Object.keys(obj);
+  const i = keys.indexOf(key);
+  const j = i + delta;
+  if (i === -1 || j < 0 || j >= keys.length) return obj; // no-op
+  keys.splice(i, 1); // remove old
+  keys.splice(j, 0, key); // insert new
+  return Object.fromEntries(keys.map((k) => [k, obj[k]]));
+}
+
+/* ---------- TOPICS ---------- */
+function moveTopic(name, delta) {
+  knowledgeBaseData.value.knowledge_base = moveKey(knowledgeBaseData.value.knowledge_base, name, delta);
+}
+function isFirstTopic(name) {
+  return Object.keys(knowledgeBaseData.value.knowledge_base)[0] === name;
+}
+function isLastTopic(name) {
+  const k = Object.keys(knowledgeBaseData.value.knowledge_base);
+  return k[k.length - 1] === name;
+}
+
+/* ---------- SUBTOPICS ---------- */
+function moveSub(topic, sub, delta) {
+  const t = knowledgeBaseData.value.knowledge_base[topic];
+  if (!t) return;
+  t.subtopics = moveKey(t.subtopics, sub, delta);
+}
+function isFirstSub(topic, sub) {
+  return Object.keys(knowledgeBaseData.value.knowledge_base[topic].subtopics)[0] === sub;
+}
+function isLastSub(topic, sub) {
+  const k = Object.keys(knowledgeBaseData.value.knowledge_base[topic].subtopics);
+  return k[k.length - 1] === sub;
+}
+
+/* ---------- QUESTIONS ---------- */
+function moveQ(topic, sub, q, delta) {
+  const qs = knowledgeBaseData.value.knowledge_base[topic]?.subtopics?.[sub]?.questions;
+  if (!qs) return;
+  knowledgeBaseData.value.knowledge_base[topic].subtopics[sub].questions = moveKey(qs, q, delta);
+}
+function isFirstQ(topic, sub, q) {
+  return Object.keys(knowledgeBaseData.value.knowledge_base[topic].subtopics[sub].questions)[0] === q;
+}
+function isLastQ(topic, sub, q) {
+  const k = Object.keys(knowledgeBaseData.value.knowledge_base[topic].subtopics[sub].questions);
+  return k[k.length - 1] === q;
+}
+
+
+
+
+const showExportDialog = ref(false)
+const exportFormat     = ref('json')  // 'json' | 'csv' | 'txt'
+
+function exportData(format = 'json') {
+  let blob
+  let filename = `knowledge_base.${format}`
+
+  if (format === 'json') {
+    blob = new Blob(
+      [JSON.stringify(knowledgeBaseData.value.knowledge_base, null, 2)],
+      { type: 'application/json' }
+    )
+  } else if (format === 'csv') {
+    const rows = []
+    for (const [topic, tVal] of Object.entries(knowledgeBaseData.value.knowledge_base)) {
+      for (const [sub, sVal] of Object.entries(tVal.subtopics || {})) {
+        for (const [q, qObj] of Object.entries(sVal.questions || {})) {
+          rows.push(
+            [topic, sub, q, (qObj.text || '').replace(/\r?\n/g, ' ')].map(csvEscape).join(',')
+          )
+        }
+      }
+    }
+    blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+  } else { // txt
+    let txt = ''
+    for (const [topic, tVal] of Object.entries(knowledgeBaseData.value.knowledge_base)) {
+      txt += `# ${topic}\n`
+      for (const [sub, sVal] of Object.entries(tVal.subtopics || {})) {
+        txt += `## ${sub}\n`
+        for (const [q, qObj] of Object.entries(sVal.questions || {})) {
+          txt += `● ${q}\n${qObj.text || ''}\n\n`
+        }
+      }
+      txt += '\n'
+    }
+    blob = new Blob([txt], { type: 'text/plain' })
+  }
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+  showExportDialog.value = false
+}
+
+function csvEscape(val) {
+  return /[",\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val
 }
 </script>
 
