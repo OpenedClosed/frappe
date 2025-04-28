@@ -33,7 +33,7 @@ def clean_unused_media_files():
     used_files = set()
 
     # 1. Проверка в knowledge_collection
-    kb_doc = sync_db.knowledge_collection.find_one({"app_name": "main"})
+    kb_doc = sync_db.knowledge_collection.find_one({"app_name": settings.APP_NAME})
     if kb_doc:
         for topic in kb_doc.get("knowledge_base", {}).values():
             for subtopic in topic.get("subtopics", {}).values():

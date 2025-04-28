@@ -17,25 +17,17 @@ from .enums import (AIModelEnum, BotColorEnum, CommunicationStyleEnum,
 # БЛОК: Контекст
 # ==============================
 
-
 class ContextEntry(IdModel):
-    """
-    Универсальная единица контекста.
+    """Универсальная единица контекста."""
 
-    • `purpose` — куда потом пойдёт эта информация  
-    • `get_content()` — возвращает актуальный текст  
-      – ссылки кэшируются в Redis, файлы парсятся каждый раз (без кэша)
-    • `to_kb_structure()` — превращает сырой текст в структуру,
-      совместимую с `KnowledgeBase` (топик‑>подтема‑>Q/A)
-    """
     type: ContextType
     purpose: ContextPurpose = ContextPurpose.NONE
     title: str
 
-    text: Optional[str]      = None     # для TEXT
-    file_path: Optional[str] = None     # для FILE
-    url: Optional[str]   = None     # для URL
-    snapshot_text: Optional[str] = None # кэш только для URL
+    text: Optional[str] = None
+    file_path: Optional[str] = None
+    url: Optional[str] = None
+    snapshot_text: Optional[str] = None
     kb_structure: Optional[dict] = None
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -46,23 +38,27 @@ class ContextEntry(IdModel):
 # ==============================
 
 class Answer(BaseModel):
-    """Ответ на вопрос, содержащий текст и файлы."""
+    """Ответ на вопрос с текстом и файлами."""
+
     text: str
     files: Optional[List[str]] = []
 
 
 class Subtopic(BaseModel):
-    """Подтема, содержащая вопросы и их ответы."""
+    """Подтема с вопросами и ответами."""
+
     questions: Dict[str, Answer]
 
 
 class Topic(BaseModel):
-    """Тема, содержащая подтемы."""
+    """Тема с подтемами."""
+
     subtopics: Dict[str, Subtopic]
 
 
 class KnowledgeBase(BaseModel):
-    """База знаний с темами, краткими вопросами и датой обновления."""
+    """База знаний с темами, вопросами и датой обновления."""
+
     app_name: Optional[str] = None
     knowledge_base: Dict[str, Topic] = Field(default_factory=dict)
     brief_questions: Dict[str, str] = Field(default_factory=dict)
@@ -71,19 +67,22 @@ class KnowledgeBase(BaseModel):
 
 
 class UpdateResponse(BaseModel):
-    """Ответ обновления базы знаний, содержащий обновленные данные и различия."""
+    """Ответ на обновление базы знаний."""
+
     knowledge: KnowledgeBase
     diff: Dict[str, Any]
 
 
 class PatchKnowledgeRequest(BaseModel):
     """Запрос на частичное обновление базы знаний."""
+
     patch_data: dict
     base_data: Optional[dict] = None
 
 
 class DetermineChangesRequest(BaseModel):
-    """Запрос на определение изменений в базе знаний по тексту пользователя."""
+    """Запрос на определение изменений по сообщению пользователя."""
+
     user_message: str
     user_info: Optional[str] = ""
     base_data: Optional[dict] = None
@@ -101,9 +100,6 @@ class BotSettings(BaseValidatedModel):
     employee_name: str
     mention_name: bool = False
     avatar: Optional[Photo] = None
-    # bot_color: BotColorEnum = {
-    #     "settings": {"type": "color_multiselect"}
-    # }
     bot_color: BotColorEnum
 
     # Характер и поведение
@@ -111,11 +107,7 @@ class BotSettings(BaseValidatedModel):
     personality_traits: PersonalityTraitsEnum
     additional_instructions: Optional[str] = Field(
         default="",
-        json_schema_extra={
-            "settings": {
-                "type": "textarea",
-            }
-        }
+        json_schema_extra={"settings": {"type": "textarea"}}
     )
     role: str
     target_action: List[TargetActionEnum] = Field(default_factory=list)
@@ -123,11 +115,7 @@ class BotSettings(BaseValidatedModel):
     # Темы и ограничения
     core_principles: Optional[str] = Field(
         default="",
-        json_schema_extra={
-            "settings": {
-                "type": "textarea",
-            }
-        }
+        json_schema_extra={"settings": {"type": "textarea"}}
     )
     special_instructions: List[FunctionalityEnum] = Field(default_factory=list)
     forbidden_topics: List[ForbiddenTopicsEnum] = Field(default_factory=list)
