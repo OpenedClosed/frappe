@@ -16,7 +16,7 @@
             </div>
         </transition>
     </div>
-   </div>
+   </div> 
 </template>
 <script setup>
 import { useI18n } from "#imports";
