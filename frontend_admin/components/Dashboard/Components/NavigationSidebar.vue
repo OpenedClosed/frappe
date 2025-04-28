@@ -1,8 +1,8 @@
 <template>
   <!-- Desktop Sidebar -->
-  <div class="flex-1 min-w-[200px] hidden xl:flex">
-    <div class="outline outline-primary dark:outline-secondary rounded-md p-2 flex flex-1 w-full">
-      <ul class="flex flex-col space-y-4 w-full">
+  <div class="flex-1 min-w-[200px] hidden xl:flex  m-4 ">
+    <div class="rounded-xl shadow-thicc p-2 flex flex-1 w-full bg-white dark:bg-secondary">
+      <ul class="flex flex-col space-y-4 py-1 w-full">
         <!-- Dynamic Navigation Items -->
         <li v-for="group in filteredNavItems" :key="group.header">
           <h3 class="text-md uppercase flex justify-start text-ellipsis items-center mb-2 px-2">

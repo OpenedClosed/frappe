@@ -18,6 +18,7 @@ module.exports = {
 
         secondary: "var(--color-secondary)",
         secondaryLight: "var(--color-secondary-light)",
+        secondaryExtraLight: "var(--color-secondary-extra-light)",
         secondaryDark: "var(--color-secondary-dark)",
 
         accent: "var(--color-accent)",
@@ -32,6 +33,9 @@ module.exports = {
       },
       fontFamily: {
         play: ['Play', 'sans-serif'],
+      },
+      boxShadow: {
+        thicc: '0 8px 12px rgba(0, 0, 0, 0.6)', // darker, tighter shadow
       },
     },
   },

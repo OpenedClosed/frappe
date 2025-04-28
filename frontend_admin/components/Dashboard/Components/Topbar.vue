@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <Menubar class="rounded-none bg-primary ">
+    <Menubar class="rounded-none bg-primary outline-none border-none">
       <template #start>
         <div class="flex flex-row items-center justify-between">
           <Button text icon="pi pi-bars" class="xl:hidden" @click="isSidebarOpen = true" aria-label="Menu" />
