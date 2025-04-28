@@ -244,6 +244,15 @@ async def llm_chat(client, model: str, messages: list[dict], system_instruction:
         temperature=0.1,
         system_instruction=system_instruction,
     )
+    print('-'*100)
+    print('*'*100)
+    print(model)
+    print('*'*100)
+    print(messages)
+    print('*'*100)
+    print(system_instruction)
+    print('*'*100)
+    print('-'*100)
     return resp["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
@@ -375,11 +384,6 @@ async def ensure_entry_processed(
     entry: ContextEntry,
     ai_model: str = settings.MODEL_DEFAULT,
 ) -> None:
-    """
-    • Делает snapshot_text   (URL, DOC, IMG)
-    • Делает kb_structure    (любой type, вне зависимости от purpose)
-    • Пишет оба поля в Mongo одним запросом, только если они появились
-    """
     updated: dict = {}
 
     # ---------- 1. SNAPSHOT ----------
@@ -389,49 +393,50 @@ async def ensure_entry_processed(
 
         elif entry.type is ContextType.FILE and entry.file_path:
             ext = Path(entry.file_path).suffix.lower()
-            if ext in DOC_EXT:                               # DOC / PDF / Excel
+            if ext in DOC_EXT:
                 entry.snapshot_text = await parse_file_from_path(entry.file_path)
-            elif ext in IMG_EXT:                             # IMAGE
+            elif ext in IMG_EXT:
                 entry.snapshot_text = f"[Image: {Path(entry.file_path).name}]"
 
         elif entry.type is ContextType.TEXT and entry.text:
             entry.snapshot_text = entry.text
 
         if entry.snapshot_text:
-            if isinstance(entry.snapshot_text, bytes):       # защита от bytes→str
+            if isinstance(entry.snapshot_text, bytes):
                 entry.snapshot_text = entry.snapshot_text.decode(errors="ignore")
             updated["context.$.snapshot_text"] = entry.snapshot_text
 
     # ---------- 2. KB-STRUCTURE ----------
     if entry.kb_structure is None:
-        # соберём контент одного entry в LLM-блоки
         blocks = await collect_context_blocks([entry])
 
-        # ▸ если это картинка, добавим инструкцию-подсказку
+        # если это картинка — добавляем спец-подсказку
         if entry.type is ContextType.FILE and entry.file_path and Path(entry.file_path).suffix.lower() in IMG_EXT:
             blocks.insert(0, {"sender_role": "user", "text": IMAGE_HINT})
 
-        if blocks:                                           # строим только если есть что отправить
-            parts = [
-                {"type": "text",  "text": b["text"]}              if "text"  in b else
-                {"type": "image_url", "image_url": b["image_url"]} for b in blocks
-            ]
+        if blocks:
             sys_prompt = AI_PROMPTS["kb_structure_prompt"]
             client, real_model = pick_model_and_client(ai_model)
 
-            msgs = (
-                [{"role": "system", "content": sys_prompt}, {"role": "user", "content": parts}]
-                if real_model.startswith("gpt") else
-                [{"role": "user", "parts": [{"text": sys_prompt}]}, {"role": "user", "parts": parts}]
+            msg_bundle = build_messages_for_model(
+                system_prompt=sys_prompt,
+                messages_data=blocks,
+                user_message="",
+                model=real_model,
             )
-            raw   = await llm_chat(client, real_model, msgs,
-                                   sys_prompt if real_model.startswith("gemini") else None)
+
+            raw = await llm_chat(
+                client,
+                real_model,
+                msg_bundle["messages"],
+                system_instruction=msg_bundle.get("system_instruction")
+            )
             struct = extract_json_from_gpt(raw)
             entry.kb_structure = struct or {}
 
             updated["context.$.kb_structure"] = entry.kb_structure
 
-            # ▸ если был IMAGE и snapshot пустой, склеиваем краткий текст из структуры
+            # если это была картинка и снапшот был [Image: ...], склеиваем краткий текст из структуры
             if (
                 entry.snapshot_text and
                 entry.snapshot_text.startswith("[Image:") and
@@ -452,6 +457,7 @@ async def ensure_entry_processed(
             {"app_name": settings.APP_NAME, "context.id": entry.id},
             {"$set": updated},
         )
+
 
 
 async def collect_context_blocks(
@@ -666,7 +672,8 @@ async def collect_bot_context_snippets(entries: List[ContextEntry]) -> Tuple[Lis
 
     prompt = (
         "The following text fragments are contextual references for the assistant.\n"
-        "They serve as **background knowledge** and may be used to enhance responses,\n"
+        "They serve as **background knowledge** and may be used\n"
+        "(If they are suitable or required by the user according to the meaning of the request.) to enhance responses,\n"
         "but should NOT be copied directly into structured outputs.\n\n"
         + ("\n\n".join(frags) if frags else "No additional context.")
         + "\n" + "=" * 30

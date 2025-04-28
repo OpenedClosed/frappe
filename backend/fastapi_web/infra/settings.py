@@ -10,7 +10,7 @@ load_dotenv(dotenv_path=Path("../infra/.env"))
 
 # Базовые настройки
 APP_NAME = "main"
-MODEL_DEFAULT = "gpt-4o"
+MODEL_DEFAULT = "gemini-2.0-flash"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_DIR = BASE_DIR / "media/images"
