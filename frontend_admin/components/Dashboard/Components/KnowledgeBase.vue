@@ -6,7 +6,7 @@
     <div class="flex flex-col flex-1 overflow-hidden">
       <!-- Main block: 3 columns -->
       <div class="flex flex-1 flex-row rounded-md overflow-hidden">
-        <div class="flex flex-col xl:flex-row flex-1 gap-8 justify-between overflow-hidden">
+        <div class="flex flex-col xl:flex-row flex-1 justify-between overflow-hidden">
           <!-- LEFT COLUMN -->
           <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
             <section>
@@ -21,45 +21,67 @@
                   <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
                 </div>
               </header>
+              <header class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark">
+                <!-- поиск -->
+                <div class="p-input-icon-left flex-1">
+                  <IconField>
+                    <InputIcon class="pi pi-search" />
+                    <InputText v-model="searchTerm" icon="pi pi-search" placeholder="Search of sources…" class="w-full" />
+                  </IconField>
+                </div>
+
+                <!-- добавить -->
+                <Button label="Add context" icon="pi pi-plus" class="" @click="openContextDialog" />
+              </header>
+
               <div class="flex flex-col gap-4 p-4 h-full">
                 <div>
-                  <div class="flex gap-3 mb-4">
-                    <!-- поиск -->
-                    <div class="p-input-icon-left flex-1">
-                      <IconField>
-                        <InputIcon class="pi pi-search" />
-                        <InputText v-model="searchTerm" icon="pi pi-search" placeholder="Search of sources…" class="w-full" />
-                      </IconField>
-                    </div>
-
-                    <!-- добавить -->
-                    <Button
-                      label="Add context"
-                      icon="pi pi-plus"
-                      class="flex-shrink-0 px-6 py-3 text-base font-semibold bg-gray-900 border-0 rounded-lg text-white"
-                      @click="openContextDialog"
-                    />
-                  </div>
-                  <ul class="flex flex-col gap-2 max-h-40 overflow-y-auto mb-4">
-                    <li v-for="ctx in contextList" :key="ctx.id" class="p-2 border rounded flex items-center justify-between gap-3">
-                      <!-- иконка + заголовок -->
-                      <div class="flex items-center gap-2 flex-1">
-                        <i :class="typeIcon(ctx.type)"></i>
-                        <span class="truncate">{{ ctx.title }}</span>
+                  <ul class="flex flex-col divide-y divide-slate-200">
+                    <li v-for="(ctx, idx) in contextList" :key="ctx.id" class="flex items-center justify-between gap-4 py-3">
+                      <!-- Иконка -->
+                      <div class="flex-shrink-0">
+                        <div class="h-12 w-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600">
+                          <i :class="typeIcon(ctx.type)" class="text-xl"></i>
+                        </div>
                       </div>
 
-                      <!-- DROPDOWN PURPOSE -->
+                      <!-- Заголовок + мета -->
+                      <div class="flex-1 flex flex-col jsustify-between items-start">
+                        <p class="font-medium text-[17px] leading-5 truncate">
+                          {{ ctx.title }}
+                        </p>
+                        <p class="text-sm text-slate-500">{{ formatDate(ctx.created_at) }} · {{ ctx.type.toUpperCase() }}</p>
+                      </div>
+
+                      <!-- Таблетка -->
+                      <!-- ▼ replace ваш <Dropdown> этим  ▼ -->
                       <Dropdown
                         v-model="ctx.purpose"
                         :options="contextPurposes"
                         optionLabel="label"
                         optionValue="value"
-                        class="p-dropdown-sm w-24"
-                        @change="(e) => onPurposeChange(ctx, e.value)"
-                      />
+                        @change="onPurposeChange(ctx, $event.value)"
+                        class="w-48"
+                      >
+                        <!-- пункт в выпадающем списке -->
+                        <template #option="slotProps">
+                          <div class="flex flex-1 justify-between items-center gap-2">
+                            <span class="flex items-center gap-2" >
+                            {{ slotProps.option.label }}
+                          </span>
+                          <i class="pi pi-info-circle" v-tooltip.right="slotProps.option.desc"></i>
+                          </div>
+                          
+                        </template>
 
-                      <!-- delete -->
-                      <Button icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm" @click="deleteContext(ctx.id)" />
+                      </Dropdown>
+
+                      <!-- Кебаб-меню -->
+                      <Button
+                        icon="pi pi-ellipsis-v"
+                        class="p-button-rounded p-button-text p-button-sm"
+                        @click="openCtxMenu(ctx, $event)"
+                      />
                     </li>
                   </ul>
 
@@ -402,7 +424,7 @@
 
                 <!-- Save / Reject / Transfer -->
                 <div v-if="isEditMode" class="flex flex-col gap-2 my-2">
-                  <Button :disabled="isLoading" label="Save playground" icon="pi pi-save" class="p-button-sm" @click="savePlayground" />
+                  <Button :disabled="isLoading" label="Save" icon="pi pi-save" class="p-button-sm" @click="savePlayground" />
                   <Button
                     :disabled="isLoading"
                     label="Reject playground"
@@ -412,20 +434,8 @@
                   />
                 </div>
                 <div v-else class="flex flex-col gap-2 my-2">
-                  <Button
-                    :disabled="isLoading || !hasChanges"
-                    label="Transfer to database"
-                    icon="pi pi-save"
-                    class="p-button-sm"
-                    @click="saveChanges"
-                  />
-                  <Button
-                    :disabled="isLoading"
-                    label="Reject playground"
-                    icon="pi pi-times"
-                    class="p-button-sm"
-                    @click="rejectPlayground"
-                  />
+                  <Button :disabled="isLoading || !hasChanges" label="Publish" icon="pi pi-save" class="p-button-sm" @click="saveChanges" />
+                  <Button :disabled="isLoading" label="Reject" icon="pi pi-times" class="p-button-sm" @click="rejectPlayground" />
                 </div>
               </div>
             </section>
@@ -471,8 +481,8 @@
               <div class="flex flex-col gap-2 p-4 my-2">
                 <Button label="Export" icon="pi pi-file-export" class="p-button-sm" @click="showExportDialog = true" />
 
-                   <AdminChat/>
-                </div>
+                <AdminChat />
+              </div>
             </section>
           </div>
         </div>
@@ -482,8 +492,8 @@
     <!-- 💾 Export-format picker -->
     <Dialog v-model:visible="showExportDialog" header="Export Knowledge Base" :modal="true" :style="{ width: '25rem' }">
       <div class="flex flex-col gap-4 pt-2">
-        <div class="flex items-center justify-center  gap-3">
-          <RadioButton  v-model="exportFormat" inputId="exp-json" value="json" />
+        <div class="flex items-center justify-center gap-3">
+          <RadioButton v-model="exportFormat" inputId="exp-json" value="json" />
           <label for="exp-json" class="cursor-pointer flex-1">
             <p class="font-semibold">JSON</p>
             <p class="text-sm text-gray-500">Full structured data (recommended)</p>
@@ -498,7 +508,7 @@
           </label>
         </div>
 
-        <div class="flex items-center justify-center  gap-3">
+        <div class="flex items-center justify-center gap-3">
           <RadioButton v-model="exportFormat" inputId="exp-txt" value="txt" />
           <label for="exp-txt" class="cursor-pointer flex-1">
             <p class="font-semibold">Plain Text</p>
@@ -605,15 +615,6 @@
       @save="handleConfirmChanges"
       @cancel="showSaveChangesDialog = false"
     />
-
-     <!-- Transition for smooth show/hide -->
-     <transition name="fade">
-            <!-- The actual chat box (visible only if `showChat` is true) -->
-            <div v-if="isChatOpen" class="chat-box" :class="{ 'chat-overlay-mobile': isMobile }">
-                <iframe :src="chatUrl" class="flex-1" style="border: none; z-index: 9999"></iframe>
-                <Button v-if="isMobile" @click="onClose" :label="$t('buttons.close')"></Button>
-            </div>
-        </transition>
   </div>
 </template>
 
@@ -645,12 +646,33 @@ const aiModels = ref([
   { label: "gemini-2.0-flash", value: "gemini-2.0-flash" },
 ]);
 
-import AdminChat from '~/components/AdminChat.vue';
+import AdminChat from "~/components/AdminChat.vue";
 
 const reviewOnly = ref(false);
 /* ---------- контекст ---------- */
 const contextList = ref([]); // список
 const showContextDialog = ref(false); // диалог
+
+const formatDate = (d) => new Intl.DateTimeFormat("ru-RU").format(new Date(d));
+
+const formatSize = (bytes) => (bytes / (1024 * 1024)).toFixed(1) + " MB";
+
+const purposeLabel = (v) => (contextPurposes.find((o) => o.value === v) || {}).label || v;
+
+const typeIcon = (t) => {
+  switch (t) {
+    case "pdf":
+      return "pi pi-file-pdf";
+    case "docx":
+      return "pi pi-file";
+    case "qa":
+      return "pi pi-question";
+    case "website":
+      return "pi pi-globe";
+    default:
+      return "pi pi-file";
+  }
+};
 
 const contextTypes = [
   { label: "Text", value: "text" },
@@ -659,10 +681,29 @@ const contextTypes = [
 ];
 
 const contextPurposes = [
-  { label: "None", value: "none" },
-  { label: "Bot", value: "bot" },
-  { label: "KB", value: "kb" },
-  { label: "Both", value: "both" },
+  {
+    label: "Don't use",
+    value: "none",
+    desc: 'The source is ignored when generating answers.',
+  },
+  {
+    label: 'Bot knowledge',
+    value: 'bot',
+    desc:
+      'Information is added to the knowledge base and influences general answers, but is not used in specific queries.',
+  },
+  {
+    label: 'Context only',
+    value: "kb",
+    desc:
+      'The source is used only to answer the specific question, and does not affect overall knowledge.',
+  },
+  {
+    label: 'Knowledge & context',
+    value: 'both',
+    desc:
+      'The source is used for both general knowledge and specific query answers.',
+  },
 ];
 
 // данные формы добавления
@@ -701,16 +742,6 @@ function reviewChanges() {
 }
 
 /* ---------- helpers ---------- */
-
-function typeIcon(t) {
-  return (
-    {
-      text: "pi pi-align-left",
-      file: "pi pi-file",
-      url: "pi pi-link",
-    }[t] || "pi pi-question"
-  );
-}
 
 /* ---------- API ----------- */
 async function fetchContextUnits() {
@@ -896,7 +927,6 @@ function transformToArray(questionsObj) {
     tempAnswer: value,
   }));
 }
-
 
 const fileInput = ref(null);
 
@@ -1788,59 +1818,52 @@ function isLastQ(topic, sub, q) {
   return k[k.length - 1] === q;
 }
 
+const showExportDialog = ref(false);
+const exportFormat = ref("json"); // 'json' | 'csv' | 'txt'
 
+function exportData(format = "json") {
+  let blob;
+  let filename = `knowledge_base.${format}`;
 
-
-const showExportDialog = ref(false)
-const exportFormat     = ref('json')  // 'json' | 'csv' | 'txt'
-
-function exportData(format = 'json') {
-  let blob
-  let filename = `knowledge_base.${format}`
-
-  if (format === 'json') {
-    blob = new Blob(
-      [JSON.stringify(knowledgeBaseData.value.knowledge_base, null, 2)],
-      { type: 'application/json' }
-    )
-  } else if (format === 'csv') {
-    const rows = []
+  if (format === "json") {
+    blob = new Blob([JSON.stringify(knowledgeBaseData.value.knowledge_base, null, 2)], { type: "application/json" });
+  } else if (format === "csv") {
+    const rows = [];
     for (const [topic, tVal] of Object.entries(knowledgeBaseData.value.knowledge_base)) {
       for (const [sub, sVal] of Object.entries(tVal.subtopics || {})) {
         for (const [q, qObj] of Object.entries(sVal.questions || {})) {
-          rows.push(
-            [topic, sub, q, (qObj.text || '').replace(/\r?\n/g, ' ')].map(csvEscape).join(',')
-          )
+          rows.push([topic, sub, q, (qObj.text || "").replace(/\r?\n/g, " ")].map(csvEscape).join(","));
         }
       }
     }
-    blob = new Blob([rows.join('\n')], { type: 'text/csv' })
-  } else { // txt
-    let txt = ''
+    blob = new Blob([rows.join("\n")], { type: "text/csv" });
+  } else {
+    // txt
+    let txt = "";
     for (const [topic, tVal] of Object.entries(knowledgeBaseData.value.knowledge_base)) {
-      txt += `# ${topic}\n`
+      txt += `# ${topic}\n`;
       for (const [sub, sVal] of Object.entries(tVal.subtopics || {})) {
-        txt += `## ${sub}\n`
+        txt += `## ${sub}\n`;
         for (const [q, qObj] of Object.entries(sVal.questions || {})) {
-          txt += `● ${q}\n${qObj.text || ''}\n\n`
+          txt += `● ${q}\n${qObj.text || ""}\n\n`;
         }
       }
-      txt += '\n'
+      txt += "\n";
     }
-    blob = new Blob([txt], { type: 'text/plain' })
+    blob = new Blob([txt], { type: "text/plain" });
   }
 
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-  showExportDialog.value = false
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+  showExportDialog.value = false;
 }
 
 function csvEscape(val) {
-  return /[",\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val
+  return /[",\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val;
 }
 </script>
 

@@ -2,7 +2,7 @@
 <template>
   <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight">
     <!-- Main Layout with Sidebar and DataTable -->
-    <div class="max-w-full flex flex-row flex-1 w-full gap-4  justify-start"
+    <div class="max-w-full flex flex-row flex-1 w-full gap-4  justify-center"
       :class="[currentPageName === 'personal_account' ? 'flex-col' : 'flex-row']">
       <!-- Navigation Sidebar Component -->
       <NavigationSidebar v-if="currentPageName === 'admin'" :navItems="navItems" />

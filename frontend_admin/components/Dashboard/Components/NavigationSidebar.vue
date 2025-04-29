@@ -1,52 +1,86 @@
 <template>
-  <!-- Desktop Sidebar -->
-  <div class="flex-1 min-w-[200px] hidden xl:flex  m-4 ">
-    <div class="rounded-xl shadow-thicc p-2 flex flex-1 w-full bg-white dark:bg-secondary">
-      <ul class="flex flex-col space-y-4 py-1 w-full">
-        <!-- Dynamic Navigation Items -->
-        <li v-for="group in filteredNavItems" :key="group.header">
-          <h3 class="text-md uppercase flex justify-start text-ellipsis items-center mb-2 px-2">
-            <i class="mr-2 flex" :class="group.icon"></i>
-            {{ group.header[currentLanguage] || group.header["en"] }}
+  <!-- ░░ Desktop sidebar ░░ -->
+  <div class="hidden xl:flex m-4 transition-all duration-300" :class="isCollapsed ? 'w-16' : 'min-w-[200px] flex-1'">
+    <div class="rounded-xl shadow-thicc p-2 flex flex-col bg-white dark:bg-secondary h-full w-full">
+      <!-- collapse / expand button -->
+      <button
+        class="p-2 self-end text-xl hover:text-primary dark:hover:text-secondary"
+        @click="isCollapsed = !isCollapsed"
+        v-tooltip.bottom="isCollapsed ? 'Expand' : 'Collapse'"
+      >
+        <i :class="isCollapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"></i>
+      </button>
+
+      <ul class="flex flex-col py-1 space-y-4 w-full overflow-y-auto">
+        <!-- dynamic groups -->
+        <li v-for="group in filteredNavItems" :key="group.header.en" class="w-full">
+          <!-- group header -->
+          <h3 v-if="!isCollapsed" class="text-md uppercase mb-2 flex items-center px-2 font-semibold">
+            <i class="mr-2" :class="group.icon"></i>
+            {{ group.header[currentLanguage] || group.header.en }}
           </h3>
-          <ul class="flex flex-col ml-4 space-y-2">
-            <li v-for="item in group.items" :key="item.name" class="flex items-center">
+
+          <!-- collapsed header separator -->
+          <div v-else class="border-t border-gray-200 dark:border-gray-700 my-3" />
+
+          <!-- nav items -->
+          <ul class="flex flex-col space-y-2" :class="isCollapsed ? 'items-center' : 'ml-4'">
+            <li v-for="item in group.items" :key="item.route">
               <RouterLink
                 :to="item.route"
-                class="flex items-center hover:text-primary dark:hover:text-secondary p-2 rounded-md"
-                :class="{ 'border-2 border-primary dark:border-secondary': isActiveRoute(item.route) }"
+                class="flex items-center rounded-md p-2 transition-colors"
+                :class="[
+                  isCollapsed ? 'justify-center' : '',
+                  isActiveRoute(item.route)
+                    ? 'border-2 border-primary dark:border-secondary'
+                    : 'hover:text-primary dark:hover:text-secondary',
+                ]"
+                v-tooltip.right="item.name[currentLanguage] || item.name.en"
               >
-                <i :class="item.iconClass" class="mr-3"></i>
-                <span class="text-sm">{{ item.name[currentLanguage] || item.name["en"] }}</span>
+                <i :class="item.iconClass"></i>
+                <span v-if="!isCollapsed" class="ml-3 text-sm truncate">
+                  {{ item.name[currentLanguage] || item.name.en }}
+                </span>
               </RouterLink>
             </li>
           </ul>
         </li>
+
+        <!-- hard-coded Admin settings -->
         <li v-if="currentPageName === 'admin'">
-          <h3 class="text-md uppercase flex justify-start text-ellipsis items-center mb-2 px-2">
-            <i class="mr-2 flex pi pi-calendar-plus"></i>
+          <h3 v-if="!isCollapsed" class="text-md uppercase mb-2 flex items-center px-2 font-semibold">
+            <i class="mr-2 pi pi-calendar-plus"></i>
             Settings
           </h3>
-          <ul class="ml-4">
+          <ul :class="isCollapsed ? 'items-center' : 'ml-4'">
             <RouterLink
               :to="`/${currentPageName}/knowledge-base`"
-              class="flex items-center hover:text-primary dark:hover:text-secondary p-2 rounded-md"
-              @click="closeSidebar"
-              :class="{ 'border-2 border-primary dark:border-secondary': isActiveRoute(`/${currentPageName}/knowledge-base`) }"
+              class="flex items-center rounded-md p-2 transition-colors"
+              :class="[
+                isCollapsed ? 'justify-center' : '',
+                isActiveRoute(`/${currentPageName}/knowledge-base`)
+                  ? 'border-2 border-primary dark:border-secondary'
+                  : 'hover:text-primary dark:hover:text-secondary',
+              ]"
+              v-tooltip.right="'Knowledge Base'"
             >
-              <i class="pi pi-book mr-3"></i>
-              <span class="text-sm">Knowledge Base</span>
+              <i class="pi pi-book"></i>
+              <span v-if="!isCollapsed" class="ml-3 text-sm">Knowledge Base</span>
             </RouterLink>
-          </ul>
-          <ul class="ml-4">
+
             <RouterLink
               :to="`/${currentPageName}/knowledge/bot_settings`"
-              class="flex items-center hover:text-primary dark:hover:text-secondary p-2 rounded-md"
-              @click="closeSidebar"
-              :class="{ 'border-2 border-primary dark:border-secondary': isActiveRoute(`/${currentPageName}/knowledge/bot_settings`) }"
+              class="flex items-center rounded-md p-2 transition-colors mt-2"
+              :class="[
+                isCollapsed ? 'justify-center' : '',
+                isActiveRoute(`/${currentPageName}/knowledge/bot_settings`)
+                  ? 'border-2 border-primary dark:border-secondary'
+                  : 'hover:text-primary dark:hover:text-secondary',
+              ]"
+              v-tooltip.right="'Bot Settings'"
             >
-              <i class="pi pi-cog mr-3"></i>
-              <span class="text-sm">Bot Settings</span>
+              <i class="pi pi-cog"></i>
+              <span v-if="!isCollapsed" class="ml-3 text-sm">Bot Settings</span>
             </RouterLink>
           </ul>
         </li>
@@ -54,6 +88,7 @@
     </div>
   </div>
 
+  <!-- ░░ Mobile drawer (unchanged) ░░ -->
   <!-- Mobile Sidebar (Drawer) -->
   <Sidebar v-model:visible="isSidebarOpen" header="Sidebar" class="!w-full md:!w-80 lg:!w-[30rem]">
     <nav class="p-4">
@@ -113,42 +148,53 @@
   </Sidebar>
 </template>
 
-
 <script setup>
-import { defineProps, defineEmits } from "vue";
+import { ref, computed, watch } from "vue";
 import Sidebar from "primevue/sidebar";
-const { currentPageName } = usePageState()
+import Tooltip from "primevue/tooltip";
+
+const { currentPageName } = usePageState();
+const { currentLanguage } = useLanguageState();
+const { isSidebarOpen } = useSidebarState();
+const route = useRoute();
+
+defineOptions({
+  directives: { Tooltip }, // PrimeVue tooltip
+});
 
 const props = defineProps({
-  navItems: {
-    type: Array,
-    required: true,
-  },
+  navItems: { type: Array, required: true },
 });
 
-watch(
-  () => props.navItems,
-  (newVal) => {
-    console.log("props.navItems", newVal);
+/* ── collapse state ── */
+const isCollapsed = ref(false);
+
+/* ── Load collapsed state from localStorage on mount ── */
+onMounted(() => {
+  const saved = localStorage.getItem("sidebar-collapsed");
+  if (saved !== null) {
+    isCollapsed.value = saved === "true"; // localStorage stores strings
   }
-);
-const filteredNavItems = computed(() => {
-  return props.navItems.filter((group) => group.header.en !== "Knowledge Base");
 });
 
-const { currentLanguage } = useLanguageState();
+/* ── Save collapsed state to localStorage on change ── */
+watch(isCollapsed, (newVal) => {
+  localStorage.setItem("sidebar-collapsed", newVal.toString());
+});
 
-const emit = defineEmits(["update:visible"]);
+/* ── filter out Knowledge Base group ── */
+const filteredNavItems = computed(() => props.navItems.filter((group) => group.header.en !== "Knowledge Base"));
 
-const { isSidebarOpen } = useSidebarState();
-
+/* ── helpers ── */
+const isActiveRoute = (path) => route.path === path;
 const closeSidebar = () => {
   isSidebarOpen.value = false;
 };
-const route = useRoute();
-const isActiveRoute = (routePath) => {
-  return route.path === routePath;
-};
+
+watch(
+  () => props.navItems,
+  (val) => console.log("navItems updated", val)
+);
 </script>
 
 <style scoped>

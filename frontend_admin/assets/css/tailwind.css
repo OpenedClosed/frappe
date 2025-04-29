@@ -32,27 +32,27 @@
   --color-black: #000000;
 } */
 :root {
-  /* Primary and Accent (no change) */
-  --color-primary: #000000;
-  --color-primary-light: #666666;
-  --color-primary-dark: #000000;
 
-  --color-accent: #000000;
+  --color-primary: #1e293b;
+  --color-primary-light: #666666;
+  --color-primary-dark: #1e293b;
+
+  --color-accent: #1e293b;
   --color-accent-dark: #333333;
 
-  /* Secondary (updated) */
-  --color-secondary: #2c2c2c; /* base */
-  --color-secondary-light: #f5f6f7; /* lighter */
-  --color-secondary-extra-light: #fafafa; /* even lighter */
-  --color-secondary-dark: #d4d6db; /* darker */
 
-  /* Neutral (no change) */
+  --color-secondary: #64748b; 
+  --color-secondary-light: #f5f6f7; 
+  --color-secondary-extra-light: #fafafa; 
+  --color-secondary-dark: #d4d6db; 
+
+
   --color-neutral: #ffffff;
   --color-neutral-dark: #6e6d6d;
   --color-neutral-light: #f9f9f9;
 
   --color-white: #ffffff;
-  --color-black: #000000;
+  --color-black: #1e293b;
 }
 
 @import url("https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap");
