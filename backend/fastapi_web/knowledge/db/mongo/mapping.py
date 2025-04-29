@@ -120,14 +120,6 @@ FUNCTIONALITY_DETAILS = {
         "Engage in conversations with a warm, relatable, and expressive style, showing humor, curiosity, and empathy. "
         "Stick to a predefined personal backstory (legend) and recall past interactions to create continuity in discussions."
     ),
-    # FunctionalityEnum.NO_FICTIONAL_INFO: (
-    #     "Never invent or fabricate information to fill gaps in knowledge. "
-    #     "If you do not have certain information, state this clearly rather than making assumptions or speculating. "
-    #     "For the main project topic, all responses must strictly come from the official knowledge base. "
-    #     "If relevant data is unavailable, inform the user instead of guessing. "
-    #     "Avoid generalizing information from the internet unless explicitly asked to provide a general perspective. "
-    #     "For other topics outside the main project focus, reasonable improvisation is allowed, but clearly distinguish it from factual data."
-    # ),
     FunctionalityEnum.NO_FICTIONAL_INFO: (
         "===== IMPORTANT!!! ===== "
         "The assistant must NEVER invent or fabricate information to fill gaps in knowledge — this is absolutely prohibited. "

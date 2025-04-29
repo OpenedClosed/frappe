@@ -1,6 +1,7 @@
 """Быстраые команды приложения."""
 import asyncclick as aclick
 import click
+
 from db.mongo.db_init import mongo_db
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User

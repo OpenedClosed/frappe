@@ -5,9 +5,6 @@ from typing import Any, Dict, List, Optional, Type
 from pydantic import BaseModel, Field, HttpUrl
 
 from db.mongo.base.schemas import BaseValidatedModel, IdModel, Photo
-# from knowledge.utils.help_functions import (cache_url_snapshot,
-#                                             generate_kb_structure_via_gpt,
-#                                             parse_file)
 
 from .enums import (AIModelEnum, BotColorEnum, CommunicationStyleEnum,
                     ContextPurpose, ContextType, ForbiddenTopicsEnum,

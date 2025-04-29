@@ -2,30 +2,27 @@
 import asyncio
 import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-import aiofiles
-from auth.utils.help_functions import jwt_required, permission_required
-from chats.utils.help_functions import get_bot_context
-from crud_core.permissions import AdminPanelPermission
-from db.mongo.db_init import mongo_db
 from fastapi import (APIRouter, Depends, File, Form, HTTPException, Request,
                      Response, UploadFile)
 from fastapi_jwt_auth import AuthJWT
+
+from auth.utils.help_functions import jwt_required, permission_required
+from chats.utils.help_functions import get_bot_context
+from crud_core.permissions import AdminPanelPermission
 from infra import settings
 from knowledge.db.mongo.enums import ContextPurpose, ContextType
-from pydantic import HttpUrl, ValidationError
 
 from .db.mongo.schemas import (ContextEntry, KnowledgeBase,
                                PatchKnowledgeRequest, UpdateResponse)
 from .utils.help_functions import (build_gpt_message_blocks,
-                                   cache_url_snapshot, deep_merge,
+                                   deep_merge,
                                    diff_with_tags, ensure_entry_processed,
                                    generate_patch_body_via_gpt,
                                    get_knowledge_base,
-                                   get_knowledge_full_document, save_kb_doc,
+                                   save_kb_doc,
                                    save_uploaded_file)
 
 knowledge_base_router = APIRouter()
@@ -86,8 +83,8 @@ async def patch_knowledge_base(
     return UpdateResponse(knowledge=validated, diff=diff)
 
 
-
-@knowledge_base_router.put("/knowledge_base/apply", response_model=UpdateResponse)
+@knowledge_base_router.put("/knowledge_base/apply",
+                           response_model=UpdateResponse)
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def apply_knowledge_base(
@@ -164,7 +161,8 @@ async def get_bot_info(
 # ==============================
 
 
-@knowledge_base_router.post("/context_entity", response_model=ContextEntry, status_code=201)
+@knowledge_base_router.post("/context_entity",
+                            response_model=ContextEntry, status_code=201)
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def create_context_entity(
@@ -182,38 +180,41 @@ async def create_context_entity(
     kb_doc, _ = await get_knowledge_base()
     kb_doc.setdefault("context", [])
 
-    # --- 1. создаём базовый объект
     if type is ContextType.TEXT:
         if not text:
             raise HTTPException(422, "Parameter 'text' is required")
-        entry = ContextEntry(type=type, purpose=purpose, title=title or text[:80], text=text)
+        entry = ContextEntry(type=type, purpose=purpose,
+                             title=title or text[:80], text=text)
 
     elif type is ContextType.URL:
         if not url:
             raise HTTPException(422, "Parameter 'url' is required")
-        entry = ContextEntry(type=type, purpose=purpose, title=title or url, url=url)
+        entry = ContextEntry(
+            type=type,
+            purpose=purpose,
+            title=title or url,
+            url=url)
 
     elif type is ContextType.FILE:
         if not file:
             raise HTTPException(422, "File required")
         uid = uuid4().hex
         dst_path = await save_uploaded_file(file, uid)
-        entry = ContextEntry(type=type, purpose=purpose, title=title or file.filename, file_path=str(dst_path))
+        entry = ContextEntry(
+            type=type,
+            purpose=purpose,
+            title=title or file.filename,
+            file_path=str(dst_path))
 
     else:
         raise HTTPException(422, f"Unknown type: {type}")
 
-    # --- 2. сразу добавляем в базу без ожидания тяжёлых обработок
     kb_doc["context"].append(entry.model_dump(mode="python"))
     kb_doc["update_date"] = datetime.utcnow()
     await save_kb_doc(kb_doc)
-
-    # --- 3. параллельно в фоне запускаем обработку snapshot/kb_structure
     asyncio.create_task(ensure_entry_processed(entry, ai_model))
 
-    # --- 4. возвращаем пользователю сразу
     return entry
-
 
 
 @knowledge_base_router.delete("/context_entity/{ctx_id}", status_code=204)
@@ -228,7 +229,11 @@ async def delete_context_entity(
     """Удаляет запись контекста по ID."""
     kb_doc, _ = await get_knowledge_base()
     before = len(kb_doc.get("context", []))
-    kb_doc["context"] = [c for c in kb_doc.get("context", []) if str(c.get("id")) != ctx_id]
+    kb_doc["context"] = [
+        c for c in kb_doc.get(
+            "context",
+            []) if str(
+            c.get("id")) != ctx_id]
 
     if len(kb_doc.get("context", [])) == before:
         raise HTTPException(404, "Context entry not found")
@@ -267,8 +272,6 @@ async def get_all_context(
     return context
 
 
-
-
 @knowledge_base_router.patch("/context_entity/{ctx_id}/purpose")
 @jwt_required()
 @permission_required(AdminPanelPermission)
@@ -281,7 +284,12 @@ async def update_context_purpose(
 ):
     """Меняет назначение записи контекста."""
     kb_doc, _ = await get_knowledge_base()
-    entry = next((c for c in kb_doc.get("context", []) if str(c.get("id")) == ctx_id), None)
+    entry = next(
+        (c for c in kb_doc.get(
+            "context",
+            []) if str(
+            c.get("id")) == ctx_id),
+        None)
 
     if not entry:
         raise HTTPException(404, "Context entry not found")

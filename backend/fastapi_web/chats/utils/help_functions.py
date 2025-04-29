@@ -15,7 +15,8 @@ from pymongo import DESCENDING
 from telegram_bot.infra import settings as bot_settings
 
 from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
-from chats.db.mongo.schemas import ChatMessage, ChatReadInfo, ChatSession, Client
+from chats.db.mongo.schemas import (ChatMessage, ChatReadInfo, ChatSession,
+                                    Client)
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
@@ -27,10 +28,6 @@ from knowledge.db.mongo.mapping import (COMMUNICATION_STYLE_DETAILS,
                                         FUNCTIONALITY_DETAILS,
                                         PERSONALITY_TRAITS_DETAILS)
 from knowledge.db.mongo.schemas import BotSettings
-
-from .knowledge_base import KNOWLEDGE_BASE
-
-# KnowledgeBase
 
 
 # ===== Основные функции для работы с сессией чата =====
@@ -67,7 +64,8 @@ async def generate_client_id(
         raise ValueError("Invalid source type. Must be Request or WebSocket.")
 
     headers = source.headers
-    client_ip = headers.get("x-forwarded-for", "").split(",")[0].strip() or source.client.host
+    client_ip = headers.get("x-forwarded-for",
+                            "").split(",")[0].strip() or source.client.host
     user_agent = headers.get("user-agent", "unknown")
 
     if "PostmanRuntime" in user_agent:
@@ -81,7 +79,8 @@ async def generate_client_id(
     return f"{chat_source_value}_{short_hash}"
 
 
-async def get_client_id(websocket: WebSocket, chat_id: str, is_superuser: bool) -> str:
+async def get_client_id(websocket: WebSocket, chat_id: str,
+                        is_superuser: bool) -> str:
     """Определяет `client_id`, связанный с чатом, в зависимости от типа пользователя."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
@@ -157,7 +156,8 @@ async def get_all_chats_for_client(client_id: str) -> List[dict]:
     return [chat async for chat in mongo_db.chats.find({"client.client_id": client_id})]
 
 
-async def get_active_chats_for_client(client_id: str) -> List[Tuple[dict, int]]:
+async def get_active_chats_for_client(
+        client_id: str) -> List[Tuple[dict, int]]:
     """Возвращает отсортированный список активных чатов клиента (chat_data, ttl)."""
     all_chats = await get_all_chats_for_client(client_id)
     active_chats = []
@@ -169,9 +169,9 @@ async def get_active_chats_for_client(client_id: str) -> List[Tuple[dict, int]]:
         if ttl > 0:
             active_chats.append((chat, ttl))
 
-    # Сортировка по дате создания (новые первыми)
     active_chats.sort(key=lambda x: x[0]["created_at"], reverse=True)
     return active_chats
+
 
 async def serialize_active_chat(chat_data: dict, ttl: int) -> Dict[str, Any]:
     """
@@ -186,6 +186,7 @@ async def serialize_active_chat(chat_data: dict, ttl: int) -> Dict[str, Any]:
         "remaining_time": ttl,
         "status": ChatSession(**chat_data).compute_status(ttl).value,
     }
+
 
 async def handle_chat_creation(
     mode: Optional[str] = None,
@@ -215,7 +216,6 @@ async def handle_chat_creation(
                 {"chat_id": chat_data["chat_id"]},
                 {"$set": {"closed_by_request": True, "last_activity": datetime.utcnow()}}
             )
-        # 🔕 НЕ удаляем ключ Redis — пусть истечёт естественно
 
     if chat_source != ChatSource.INTERNAL:
         if chat_data := await mongo_db.chats.find_one({"client.client_id": client_id}):
@@ -264,8 +264,8 @@ async def handle_chat_creation(
     }
 
 
-
-async def update_read_state_for_client(chat_id: str, client_id: str, user_id: Optional[str], last_read_msg: str) -> bool:
+async def update_read_state_for_client(
+        chat_id: str, client_id: str, user_id: Optional[str], last_read_msg: str) -> bool:
     """Обновляет read_state для клиента в чате, если это необходимо."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
@@ -299,21 +299,11 @@ async def update_read_state_for_client(chat_id: str, client_id: str, user_id: Op
     if modified:
         await mongo_db.chats.update_one(
             {"chat_id": chat_id},
-            {"$set": {"read_state": [ri.model_dump(mode="python") for ri in read_state]}}
+            {"$set": {"read_state": [ri.model_dump(
+                mode="python") for ri in read_state]}}
         )
 
     return modified
-
-
-# async def get_knowledge_base() -> Dict[str, dict]:
-#     """Получает базу знаний."""
-#     document = await mongo_db.knowledge_collection.find_one({"app_name": "main"})
-#     if not document:
-#         raise HTTPException(404, "Knowledge base not found.")
-#     document.pop("_id", None)
-#     kb_doc = document["knowledge_base"] if document["knowledge_base"] else KNOWLEDGE_BASE
-#     kb_model = KnowledgeBase(**kb_doc)
-#     return kb_doc, kb_model
 
 
 # ===== Контекст для ИИ помощника =====
@@ -581,8 +571,6 @@ def split_text_into_chunks(text, max_length=998) -> List[str]:
     Делит текст на чанки, сохраняя переносы строк, кавычки, emoji и т.д.
     Не завершает на числовых точках (1., 2., 3. и т.д.)
     """
-    # Разбиваем текст по "завершенным предложениям" (с учётом символов вроде :
-    # ; …)
     pattern = re.compile(
         r"""
         (?<!\d)                           # Исключаем цифры перед точкой: 1. 2. и т.д.
@@ -614,9 +602,6 @@ def split_text_into_chunks(text, max_length=998) -> List[str]:
     return chunks
 
 
-import re
-
-
 def clean_markdown(text: str) -> str:
     """
     Удаляет markdown-разметку и сохраняет ссылки в читаемом виде.
@@ -636,4 +621,3 @@ def clean_markdown(text: str) -> str:
     text = re.sub(r'~([^~]+)~', r'\1', text)
 
     return text.strip()
-

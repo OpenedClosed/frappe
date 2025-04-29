@@ -5,7 +5,6 @@ from chats.db.mongo.enums import ChatSource
 from chats.integrations.meta.meta import (handle_incoming_meta_messages,
                                           verify_meta_webhook)
 from chats.integrations.meta.utils.help_functions import verify_meta_signature
-from db.mongo.db_init import mongo_db
 from infra import settings
 
 from .utils.help_functions import (parse_instagram_payload,

@@ -9,7 +9,6 @@ from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 from infra import settings
 
-from .db.mongo.enums import SenderRole
 from .db.mongo.schemas import ChatMessage, ChatSession, Client
 
 
@@ -104,8 +103,6 @@ class ChatMessageInline(InlineAdmin):
             for msg in messages
         ])
 
-        # return [await self.format_document(msg) for msg in messages]
-
     async def get_confidence_status(self, obj: dict) -> str:
         evaluation = obj.get("gpt_evaluation", {})
 
@@ -132,40 +129,9 @@ class ChatMessageInline(InlineAdmin):
 
         return json.dumps(status, ensure_ascii=False)
 
-    # async def get_read_by_display(self, obj: dict) -> str:
-    #     message_id = obj.get("id")
-    #     sender_id = obj.get("sender_id")
-    #     chat_data = await self.get_root_document(message_id)
-
-    #     if not chat_data or not message_id:
-    #         return json.dumps([], ensure_ascii=False)
-
-    #     if not chat_data:
-    #         return json.dumps([], ensure_ascii=False)
-
-    #     read_state = chat_data.get("read_state", [])
-    #     messages = chat_data.get("messages", [])
-    #     idx_map = {m["id"]: i for i, m in enumerate(messages)}
-    #     msg_idx = idx_map.get(message_id, -1)
-
-    #     readers = []
-    #     for ri in read_state:
-    #         last_read = ri.get("last_read_msg")
-    #         reader_id = ri.get("client_id")
-    #         if reader_id:
-    #             if idx_map.get(last_read, -1) >= msg_idx:
-    #                 readers.append(reader_id)
-    #         # if reader_id and reader_id != sender_id:
-    #         #     if idx_map.get(last_read, -1) >= msg_idx:
-    #         #         readers.append(reader_id)
-
-    #     return json.dumps(readers, ensure_ascii=False)
 
     async def get_read_by_display(self, obj: dict) -> str:
         parent = getattr(self, "parent_document", None)
-        print("="*100)
-        print(parent["_id"])
-        print("="*100)
         if not parent:
 
             return json.dumps([], ensure_ascii=False)
@@ -241,7 +207,6 @@ class ClientInline(InlineAdmin):
             current_user=current_user
         )
 
-        # Уникальность по client_id
         unique_clients = {
             client["client_id"]: client
             for client in results if "client_id" in client

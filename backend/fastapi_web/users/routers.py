@@ -1,8 +1,6 @@
 """Обработчики маршрутов приложения Пользователи."""
-from typing import Optional
-
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi_jwt_auth import AuthJWT
 
 from auth.utils.help_functions import jwt_required

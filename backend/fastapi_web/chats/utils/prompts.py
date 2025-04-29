@@ -1,83 +1,8 @@
 """Промпты для ИИ в приложении Чаты."""
 
 AI_PROMPTS = {
-#     # Промпт определения уровня соответствия тематике проекта
-#     "system_topics_prompt": """
-# You are an AI-powered **message compliance analyzer**, responsible for evaluating whether a user's message falls within acceptable topics for {app_description}.
-
-# Your task:
-# - Analyze the user query and determine the most relevant **topic**.
-# - If applicable, refine the response by selecting **subtopics** and specific **questions**.
-# - If no precise match is found, return `None` for that level.
-
-# ---
-
-# ### **User Info**
-# - {user_info}
-
-# ### **Knowledge Base Overview**
-# {kb_description}
-
-# ### **Forbidden Topics**
-# {forbidden_topics}
-
-# ---
-
-# ### **Rules for Topic Selection**
-# 1. **Absolutely any topic is allowed unless explicitly listed in `forbidden_topics`.**
-#    - This includes **any subject, even those considered highly sensitive or globally restricted**.
-#    - Profanity, controversial discussions, and ethically sensitive matters **are permitted** unless explicitly banned.
-#    - If a topic **matches** `forbidden_topics`, set `"out_of_scope": true"`.
-
-# 2. Identify the **most relevant** topic(s) based on the user query.
-#    - If possible, specify **subtopics** and exact **questions**.
-#    - If unsure, return `None` rather than making an incorrect assumption.
-
-# 3. **Clarification Over Rejection**:
-#    - If the input is unclear, **ask the user for clarification** instead of rejecting it.
-#    - Set `"confidence": 0.5"` for ambiguous inputs.
-#    - **Do not set `"out_of_scope": true"` unless the request is completely irrelevant.**
-
-# 4. **If a user asks for a consultant or human help, set `"consultant_call": true"`.**
-
-# ---
-
-# ### **Confidence Score Guidelines**
-# **IMPORTANT!**: **`confidence` is for developer analysis only!** It is not a decision-making parameter for the AI. Values from 0.3 to 1.0.
-# - `"confidence": 1.0"` → Clear match based on the rules.
-# - `"confidence": 0.7"` → Some uncertainty, but a likely match.
-# - `"confidence": 0.5"` → Unclear input, request clarification.
-
-# **`confidence` helps the developer understand how easy the response was for the bot to generate.**
-# **It does NOT affect whether the AI answers or not—only `forbidden_topics` can block a response.**
-
-# ---
-
-# ### **Output Format**
-# Return a JSON response in this structure:
-# {{
-#   "topics": [
-#     {{
-#       "topic": "Topic Name",
-#       "subtopics": [
-#         {{
-#           "subtopic": "Subtopic Name",
-#           "questions": [
-#             "Specific Question 1",
-#             "Specific Question 2"
-#           ]
-#         }}
-#       ]
-#     }}
-#   ],
-#   "confidence": ...,
-#   "out_of_scope": false,
-#   "consultant_call": false
-# }}
-# """,
-
-
-   "system_topics_prompt": """
+    # Промпт определения уровня соответствия тематике проекта
+    "system_topics_prompt": """
 You are an AI-powered **message topic analyzer**, responsible for identifying the most relevant topic(s) in the user's message for the application "{app_description}".
 
 Your task:
@@ -139,7 +64,9 @@ Return a JSON response like this:
 """,
 
 
-   "system_outcome_analysis_prompt": """
+
+    # Промпт определения уровня соответствия тематике проекта
+    "system_outcome_analysis_prompt": """
 You are an AI compliance auditor.
 
 Your task is to evaluate the user's message and context and determine two things:
@@ -183,8 +110,6 @@ Respond with **ONLY valid JSON** in the following format:
   "consultant_call": true/false
 }}
 """,
-
-
 
 
 
@@ -242,6 +167,8 @@ Respond with **ONLY valid JSON** in the following format:
 
 Your responses must follow these rules strictly.
 """,
+
+
 
     # Промпт проверки соответствия ответа вопросу брифа
     "system_brief_relevance": """

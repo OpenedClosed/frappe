@@ -5,12 +5,13 @@ from datetime import datetime
 from typing import Dict
 
 from bson import ObjectId
+from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.responses import JSONResponse
+from fastapi_jwt_auth import AuthJWT
+
 from crud_core.registry import BaseRegistry
 from crud_core.routes_generator import generate_base_routes
 from db.mongo.db_init import mongo_db
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
-from fastapi_jwt_auth import AuthJWT
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User
 
@@ -27,7 +28,6 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
     """
     Генерирует маршруты для регистрации и авторизации.
     """
-    # router = generate_base_routes(registry)
     router = APIRouter()
 
     @router.post("/register")

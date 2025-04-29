@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseCrudCore:
-    """Базовый класс для CRUD-операций в админке и личном кабинете."""
+    """Базовый класс для CRUD-операций."""
 
     model: Type[BaseModel]
 
@@ -48,58 +48,41 @@ class BaseCrudCore:
         "create": True,
         "read": True,
         "update": True,
-        "delete": True
+        "delete": True,
     }
 
-    permission_class: BasePermission = AllowAll()
+    permission_class: BasePermission = AllowAll()  # type: ignore
 
     def __init__(self, db: AsyncIOMotorCollection) -> None:
-        """Инициализирует базовый CRUD-класс с переданной коллекцией Mongo."""
+        """Сохраняет ссылку на коллекцию MongoDB."""
         self.db = db
 
-    # --- Логика включения/отключения метода (allow_crud_actions) ---
+    # --- Контроль доступа ---
     def check_crud_enabled(self, action: str) -> None:
-        """
-        Проверяет, разрешён ли этот CRUD-метод в allow_crud_actions.
-        Если нет — выбрасываем 403.
-        """
+        """Проверяет, включено ли действие."""
         if not self.allow_crud_actions.get(action, False):
-            raise HTTPException(
-                403, f"{action.capitalize()} is disabled for this model.")
+            raise HTTPException(403, f"{action.capitalize()} is disabled for this model.")
 
-    # --- Проверка прав (на конкретный объект или без него) ---
     def check_object_permission(
-        self,
-        action: str,
-        user: Optional[BaseModel],
-        obj: Optional[dict] = None
+        self, action: str, user: Optional[BaseModel], obj: Optional[dict] = None
     ) -> None:
-        """
-        Универсальный вызов permission_class, проверяющий право на действие action.
-        Если у permission_class нет прав — выбрасываем 403.
-        """
+        """Проверяет права через permission_class."""
         self.permission_class.check(action, user, obj)
 
     def check_permission(
-        self,
-        action: str,
-        user: Optional[BaseModel],
-        obj: Optional[dict] = None
+        self, action: str, user: Optional[BaseModel], obj: Optional[dict] = None
     ) -> None:
-        """
-        Сочетает в себе check_crud_enabled + check_object_permission.
-        Одним вызовом проверяем и включён ли метод, и права пользователя.
-        """
+        """Проверяет включенность действия и права пользователя."""
         self.check_crud_enabled(action)
         self.check_object_permission(action, user, obj)
 
     # --- Вспомогательные методы ---
-    def detect_id_field(self):
-        """Определяет, какое поле служит идентификатором."""
+    def detect_id_field(self) -> str:
+        """Определяет имя поля-идентификатора."""
         return "id" if "id" in self.model.__fields__ else "_id"
 
     def get_user_field_name(self) -> str:
-        """Возвращает имя поля пользователя в зависимости от коллекции (если нужно)."""
+        """Возвращает имя поля пользователя."""
         return "_id" if self.user_collection_name == self.db.name else "user_id"
 
     # --- Основные методы ---
@@ -111,37 +94,23 @@ class BaseCrudCore:
         page: Optional[int] = None,
         page_size: Optional[int] = None,
         current_user: Optional[BaseModel] = None,
-        format: bool = True  # <- по умолчанию применяем format_document
+        format: bool = True,
     ) -> List[dict]:
-        """
-        Возвращает список документов с учётом фильтрации, прав доступа, пагинации и форматирования.
-        """
-        print('-1-')
+        """Возвращает список документов с фильтрами и пагинацией."""
         base_filter = await self.permission_class.get_base_filter(current_user)
-        print('-2-')
         query = {**(filters or {}), **base_filter}
-        print('-3-')
 
         sort_field = sort_by or self.detect_id_field()
-        print('-4-')
         cursor = self.db.find(query).sort(sort_field, order)
 
         if page is not None and page_size is not None:
             skip_count = (page - 1) * page_size
             cursor = cursor.skip(skip_count).limit(page_size)
 
-        print('-5-')
-        objs = []
-        print('-6-')
+        objs: List[dict] = []
         async for raw_doc in cursor:
-            print('-7-')
-            if format:
-                objs.append(await self.format_document(raw_doc, current_user))
-            else:
-                objs.append(raw_doc)
-            print('-8-')
+            objs.append(await self.format_document(raw_doc, current_user) if format else raw_doc)
         return objs
-
 
     async def list(
         self,
@@ -150,48 +119,18 @@ class BaseCrudCore:
         page: Optional[int] = None,
         page_size: Optional[int] = None,
         filters: Optional[dict] = None,
-        current_user: Optional[BaseModel] = None
+        current_user: Optional[BaseModel] = None,
     ) -> List[dict]:
-        """
-        Возвращает список документов (без пагинации).
-        Пример вызова: crud_instance.list(current_user=user).
-        """
-        print('зашли в списки')
+        """Возвращает документы без метаданных."""
         self.check_permission("read", current_user)
-        print('проверили права')
-
-        return await self.get_queryset(filters=filters, sort_by=sort_by, order=order, page=page, page_size=page_size, current_user=current_user)
-
-    # async def list_with_meta(
-    #     self,
-    #     page: int = 1,
-    #     page_size: int = 100,
-    #     sort_by: Optional[str] = None,
-    #     order: int = 1,
-    #     filters: Optional[dict] = None,
-    #     current_user: Optional[BaseModel] = None
-    # ) -> dict:
-    #     """
-    #     Возвращает список документов с пагинацией и метаданными.
-    #     """
-
-    #     self.check_permission("read", current_user)
-
-    #     all_docs = await self.get_queryset(filters, sort_by, order, current_user)
-    #     total_count = len(all_docs)
-    #     total_pages = (total_count + page_size - 1) // page_size
-    #     start_idx = (page - 1) * page_size
-    #     end_idx = start_idx + page_size
-
-    #     return {
-    #         "data": all_docs[start_idx:end_idx],
-    #         "meta": {
-    #             "page": page,
-    #             "page_size": page_size,
-    #             "total_count": total_count,
-    #             "total_pages": total_pages,
-    #         }
-    #     }
+        return await self.get_queryset(
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            page=page,
+            page_size=page_size,
+            current_user=current_user,
+        )
 
     async def list_with_meta(
         self,
@@ -200,27 +139,23 @@ class BaseCrudCore:
         sort_by: Optional[str] = None,
         order: int = 1,
         filters: Optional[dict] = None,
-        current_user: Optional[BaseModel] = None
+        current_user: Optional[BaseModel] = None,
     ) -> dict:
-        """
-        Возвращает список документов с пагинацией и метаданными.
-        """
+        """Возвращает документы с метаданными пагинации."""
         self.check_permission("read", current_user)
 
-        # Считаем только total (отдельно, быстро)
         base_filter = await self.permission_class.get_base_filter(current_user)
         query = {**(filters or {}), **base_filter}
         total_count = await self.db.count_documents(query)
         total_pages = (total_count + page_size - 1) // page_size
 
-        # Получаем только нужную страницу, без format_document
         raw_docs = await self.get_queryset(
             filters=filters,
             sort_by=sort_by,
             order=order,
             page=page,
             page_size=page_size,
-            current_user=current_user
+            current_user=current_user,
         )
 
         return {
@@ -230,52 +165,29 @@ class BaseCrudCore:
                 "page_size": page_size,
                 "total_count": total_count,
                 "total_pages": total_pages,
-            }
+            },
         }
 
-
-    async def get(
-        self,
-        object_id: str,
-        current_user: Optional[BaseModel] = None
-    ) -> Optional[dict]:
-        """
-        Возвращает документ по _id с учётом прав доступа и фильтра.
-        """
+    async def get(self, object_id: str, current_user: Optional[BaseModel] = None) -> Optional[dict]:
+        """Возвращает один документ по _id с учётом прав."""
         self.check_crud_enabled("read")
-        try:
-            docs = await self.get_queryset(
-                filters={"_id": ObjectId(object_id)},
-                current_user=current_user
-            )
-            obj = docs[0] if docs else None
-            if obj:
-                self.check_object_permission("read", current_user, obj)
-            return obj
-        except Exception:
-            return None
+        docs = await self.get_queryset(filters={"_id": ObjectId(object_id)}, current_user=current_user)
+        obj = docs[0] if docs else None
+        if obj:
+            self.check_object_permission("read", current_user, obj)
+        return obj
 
-    async def create(self, data: dict,
-                     current_user: Optional[BaseModel] = None) -> dict:
-        """
-        Создаёт документ, проверяя права и ограничения.
-        Автоматически добавляет user_id при необходимости.
-        """
+    async def create(self, data: dict, current_user: Optional[BaseModel] = None) -> dict:
+        """Создаёт документ с проверкой прав и ограничений."""
         self.check_permission("create", current_user)
 
         user_field = self.get_user_field_name()
 
         if self.max_instances_per_user is not None and current_user:
-            filter_by_user = {
-                user_field: str(
-                    getattr(
-                        current_user,
-                        "id",
-                        None))}
+            filter_by_user = {user_field: str(getattr(current_user, "id", None))}
             count = await self.db.count_documents(filter_by_user)
             if count >= self.max_instances_per_user:
-                raise HTTPException(
-                    403, "You have reached the maximum number of allowed instances.")
+                raise HTTPException(403, "You have reached the maximum number of allowed instances.")
 
         valid_data = await self._process_data(data=data)
         if current_user and user_field == "user_id" and "user_id" not in valid_data:
@@ -293,12 +205,10 @@ class BaseCrudCore:
 
         return await self.format_document(created_raw, current_user)
 
-    async def update(self, object_id: str, data: dict,
-                     current_user: Optional[BaseModel] = None) -> dict:
-        """
-        Обновляет объект, проверяя права на изменение.
-        Убирает вычисляемые поля перед сохранением.
-        """
+    async def update(
+        self, object_id: str, data: dict, current_user: Optional[BaseModel] = None
+    ) -> dict:
+        """Обновляет документ, исключая вычисляемые поля."""
         self.check_crud_enabled("update")
 
         obj = await self.db.find_one({"_id": ObjectId(object_id)})
@@ -322,11 +232,8 @@ class BaseCrudCore:
 
         return await self.format_document(updated_raw, current_user)
 
-    async def delete(self, object_id: str,
-                     current_user: Optional[BaseModel] = None) -> dict:
-        """
-        Удаляет объект, проверяя права доступа.
-        """
+    async def delete(self, object_id: str, current_user: Optional[BaseModel] = None) -> dict:
+        """Удаляет документ после проверки прав."""
         self.check_crud_enabled("delete")
 
         obj = await self.db.find_one({"_id": ObjectId(object_id)})
@@ -341,12 +248,9 @@ class BaseCrudCore:
 
         return {"status": "success"}
 
-    # --- Вспомогательные методы для обработки данных ---
-
-    def serialize_value(self, value):
-        """
-        Сериализует значение перед сохранением в MongoDB.
-        """
+    # --- Обработка данных ---
+    def serialize_value(self, value: Any) -> Any:
+        """Сериализует значение перед сохранением."""
         if isinstance(value, BaseModel):
             return value.dict()
         if isinstance(value, Enum):
@@ -354,624 +258,378 @@ class BaseCrudCore:
         return value
 
     async def process_inlines(
-            self, existing_doc: Optional[dict], update_data: dict, partial: bool = False) -> dict:
-        """Обрабатывает вложенные инлайны с поддержкой удаления, добавления и обновления."""
-        inline_data = {}
+        self, existing_doc: Optional[dict], update_data: dict, partial: bool = False
+    ) -> dict:
+        """Обрабатывает инлайны (добавление, обновление, удаление)."""
+        inline_data: Dict[str, Any] = {}
+
         try:
             for field, inline_cls in self.inlines.items():
-                existing_inlines = existing_doc.get(
-                    field, []) if existing_doc else []
+                existing_inlines = existing_doc.get(field, []) if existing_doc else []
 
-                if field in update_data:
-                    inline_inst = inline_cls(self.db)
-                    update_inlines = update_data.pop(field)
+                if field not in update_data:
+                    inline_data[field] = existing_inlines
+                    continue
 
-                    if not isinstance(update_inlines, list):
-                        update_inlines = [update_inlines]
+                inline_inst = inline_cls(self.db)
+                update_inlines = update_data.pop(field)
+                update_inlines = update_inlines if isinstance(update_inlines, list) else [update_inlines]
 
-                    merged_inlines = []
-                    if existing_doc:
-                        existing_by_id = {
-                            item["id"]: item for item in existing_inlines if "id" in item}
+                if existing_doc:
+                    existing_by_id = {item["id"]: item for item in existing_inlines if "id" in item}
+                    merged_inlines: List[dict] = []
 
-                        for item in update_inlines:
-                            if not isinstance(item, dict):
-                                continue
+                    for item in update_inlines:
+                        if not isinstance(item, dict):
+                            continue
 
-                            if "id" in item:
-                                if item.get("_delete", False):
-                                    existing_by_id.pop(item["id"], None)
-                                    continue
-
-                                existing_item = existing_by_id.get(
-                                    item["id"], {})
-                                merged = {**existing_item, **item}
-                                validated = await inline_inst.validate_data(merged, partial=False)
-                                final_inline = {**merged, **validated}
-
-                                if inline_inst.inlines:
-                                    sub_inlines = await inline_inst.process_inlines(existing_item, final_inline, partial=partial)
-                                    final_inline.update(sub_inlines)
-
-                                merged_inlines.append(final_inline)
+                        if "id" in item:
+                            if item.get("_delete", False):
                                 existing_by_id.pop(item["id"], None)
-                            else:
-                                validated = await inline_inst.validate_data(item, partial=False)
-                                full_validated = inline_inst.model.parse_obj(
-                                    validated).dict()
-                                final_inline = full_validated
-
-                                if inline_inst.inlines:
-                                    sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
-                                    final_inline.update(sub_inlines)
-
-                                merged_inlines.append(final_inline)
-
-                        merged_inlines.extend(existing_by_id.values())
-                        inline_data[field] = merged_inlines
-                    else:
-                        validated_items = []
-                        for item in update_inlines:
-                            if not isinstance(item, dict):
                                 continue
 
+                            existing_item = existing_by_id.get(item["id"], {})
+                            merged = {**existing_item, **item}
+                            validated = await inline_inst.validate_data(merged, partial=False)
+                            final_inline = {**merged, **validated}
+
+                            if inline_inst.inlines:
+                                sub = await inline_inst.process_inlines(existing_item, final_inline, partial=partial)
+                                final_inline.update(sub)
+
+                            merged_inlines.append(final_inline)
+                            existing_by_id.pop(item["id"], None)
+                        else:
                             validated = await inline_inst.validate_data(item, partial=False)
-                            full_validated = inline_inst.model.parse_obj(
-                                validated).dict()
+                            full_validated = inline_inst.model.parse_obj(validated).dict()
                             final_inline = full_validated
 
                             if inline_inst.inlines:
-                                sub_inlines = await inline_inst.process_inlines(None, final_inline, partial=False)
-                                final_inline.update(sub_inlines)
+                                sub = await inline_inst.process_inlines(None, final_inline, partial=False)
+                                final_inline.update(sub)
 
-                            validated_items.append(final_inline)
+                            merged_inlines.append(final_inline)
 
-                        inline_data[field] = validated_items
+                    merged_inlines.extend(existing_by_id.values())
+                    inline_data[field] = merged_inlines
                 else:
-                    inline_data[field] = existing_inlines
+                    validated_items: List[dict] = []
+                    for item in update_inlines:
+                        if not isinstance(item, dict):
+                            continue
+
+                        validated = await inline_inst.validate_data(item, partial=False)
+                        full_validated = inline_inst.model.parse_obj(validated).dict()
+                        final_inline = full_validated
+
+                        if inline_inst.inlines:
+                            sub = await inline_inst.process_inlines(None, final_inline, partial=False)
+                            final_inline.update(sub)
+
+                        validated_items.append(final_inline)
+
+                    inline_data[field] = validated_items
+
             return inline_data
+
         except Exception as e:
             raise HTTPException(400, detail=str(e))
-
-    # async def get_inlines(self, doc: dict,
-    #                       current_user: Optional[dict] = None) -> dict:
-    #     """
-    #     Возвращает данные инлайнов из документа (учитывая, что каждый инлайн сам умеет фильтровать,
-    #     если у него есть permission_class и используется current_user).
-    #     """
-    #     inl_data = {}
-    #     try:
-    #         for field, inline_cls in self.inlines.items():
-    #             inline_inst = inline_cls(self.db)
-    #             parent_id = doc.get("_id")
-    #             if not parent_id:
-    #                 inl_data[field] = []
-    #                 continue
-
-    #             found = await inline_inst.get_queryset(filters={"_id": parent_id}, current_user=current_user)
-    #             inl_data[field] = [
-    #                 await inline_inst.format_document(child, current_user)
-    #                 if "id" not in child else child
-    #                 for child in found
-    #             ]
-    #         return inl_data
-    #     except Exception as e:
-    #         raise HTTPException(400, detail=str(e))
 
     async def get_inlines(self, doc: dict, current_user: Optional[dict] = None) -> dict:
-        inl_data = {}
-        try:
-            for field, inline_cls in self.inlines.items():
-                inline_inst = inline_cls(self.db)
-                inline_inst.parent_document = doc  # сохраняем родительский документ
-                parent_id = doc.get("_id")
-                if not parent_id:
-                    inl_data[field] = []
-                    continue
+        """Возвращает отформатированные инлайны."""
+        inl_data: Dict[str, Any] = {}
+        for field, inline_cls in self.inlines.items():
+            inline_inst = inline_cls(self.db)
+            inline_inst.parent_document = doc
+            parent_id = doc.get("_id")
+            if not parent_id:
+                inl_data[field] = []
+                continue
 
-                found = await inline_inst.get_queryset(filters={"_id": parent_id}, current_user=current_user)
-                inl_data[field] = [
-                    await inline_inst.format_document(child, current_user)
-                    if "id" not in child else child
-                    for child in found
-                ]
-            return inl_data
-        except Exception as e:
-            raise HTTPException(400, detail=str(e))
+            found = await inline_inst.get_queryset(filters={"_id": parent_id}, current_user=current_user)
+            inl_data[field] = [
+                await inline_inst.format_document(child, current_user) if "id" not in child else child
+                for child in found
+            ]
+        return inl_data
 
-
-    async def format_document(self, doc: dict,
-                              current_user: Optional[dict] = None) -> dict:
-        """
-        Форматирует документ, декодируя JSON-строки, вычисляя вычисляемые поля и дополняя инлайнами.
-        Если нужны права на просмотр инлайнов — передаём current_user.
-        """
+    async def format_document(self, doc: dict, current_user: Optional[dict] = None) -> dict:
+        """Форматирует документ и добавляет вычисляемые поля с инлайнами."""
         def parse_json_recursive(value: Any) -> Any:
-            """Рекурсивно декодирует JSON-строки, если это валидный JSON."""
             if isinstance(value, str):
                 try:
-                    parsed_value = json.loads(value)
-                    if isinstance(parsed_value, (dict, list, str)):
-                        return parsed_value
+                    parsed = json.loads(value)
+                    if isinstance(parsed, (dict, list, str)):
+                        return parsed
                 except json.JSONDecodeError:
                     pass
             if isinstance(value, list):
-                return [parse_json_recursive(item) for item in value]
+                return [parse_json_recursive(i) for i in value]
             if isinstance(value, dict):
-                return {key: parse_json_recursive(
-                    val) for key, val in value.items()}
+                return {k: parse_json_recursive(v) for k, v in value.items()}
             return value
 
         fields_set = list(set(self.list_display + self.detail_fields))
-        result = {"id": str(doc.get("_id", doc.get("id")))}
+        result: Dict[str, Any] = {"id": str(doc.get("_id", doc.get("id")))}
 
         for field in fields_set:
-            value = doc.get(field)
-            result[field] = parse_json_recursive(value)
+            result[field] = parse_json_recursive(doc.get(field))
 
         for cf in self.computed_fields:
             method = getattr(self, f"get_{cf}", None)
             if method:
-                computed_value = await method(doc)
-                result[cf] = parse_json_recursive(computed_value)
+                result[cf] = parse_json_recursive(await method(doc))
 
         result.update(await self.get_inlines(doc, current_user))
-
         return result
-        
 
     async def validate_data(self, data: dict, partial: bool = False) -> dict:
-        """Валидирует данные (без инлайнов), декодируя JSON-строки."""
-
-        errors: Dict[str, Any] = {}
-        validated: dict = {}
-
+        """Валидирует данные модели (без инлайнов)."""
         def try_parse_json(value: Any) -> Any:
-            """Пытается преобразовать строку в JSON-объект."""
             if isinstance(value, str):
                 try:
-                    parsed_value = json.loads(value)
-                    if isinstance(parsed_value, dict):
-                        return parsed_value
+                    parsed = json.loads(value)
+                    if isinstance(parsed, dict):
+                        return parsed
                 except json.JSONDecodeError:
                     pass
             return value
 
+        errors: Dict[str, Any] = {}
+        validated: Dict[str, Any] = {}
+
         try:
             if partial:
                 for field, val in data.items():
-                    if field == "id" or field in self.read_only_fields:
+                    if field in ("id", *self.read_only_fields):
                         continue
-
                     if field in self.inlines:
                         validated[field] = self.serialize_value(val)
                         continue
-
                     if field in self.model.__annotations__:
                         field_type = self.model.__annotations__[field]
-                        parsed_value = try_parse_json(val)
-                        validated_field_value = self.model._validate_field_type(
-                            field, field_type, parsed_value)
-                        validated[field] = self.serialize_value(
-                            validated_field_value)
+                        parsed_val = try_parse_json(val)
+                        validated_val = self.model._validate_field_type(field, field_type, parsed_val)
+                        validated[field] = self.serialize_value(validated_val)
             else:
-                filtered_data = {
-                    k: try_parse_json(v) for k, v in data.items() if k not in self.inlines
-                }
-                obj = self.model(**filtered_data)
-                validated = {
-                    k: self.serialize_value(v) for k,
-                    v in obj.dict().items()}
+                filtered = {k: try_parse_json(v) for k, v in data.items() if k not in self.inlines}
+                obj = self.model(**filtered)
+                validated = {k: self.serialize_value(v) for k, v in obj.dict().items()}
 
         except ValidationError as e:
             for err in e.errors():
-                loc = err["loc"]
-                msg = err["msg"]
+                loc, msg = err["loc"], err["msg"]
                 ref = errors
                 for part in loc[:-1]:
                     ref = ref.setdefault(part, {})
                 ref[loc[-1]] = msg
-        except ValueError as e:
-            errors["detail"] = str(e)
 
         if errors:
-            raise HTTPException(status_code=400, detail=errors)
+            raise HTTPException(400, detail=errors)
 
         return validated
 
     async def _process_data(
-            self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False) -> dict:
-        """Обрабатывает данные, включая валидацию и мердж инлайнов."""
+        self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False
+    ) -> dict:
+        """Валидирует данные и мерджит инлайны."""
+        valid = await self.validate_data(data, partial=partial)
+        if self.inlines:
+            inline_data = await self.process_inlines(existing_obj, data, partial=partial)
+            valid.update(inline_data)
+        return valid
 
-        try:
-            valid = await self.validate_data(data, partial=partial)
-
-            if self.inlines:
-                inline_data = await self.process_inlines(existing_obj, data, partial=partial)
-                valid.update(inline_data)
-
-            return valid
-        except Exception as e:
-            raise HTTPException(400, detail=str(e))
-
+    # --- Поиск во вложенных структурах ---
     def _nested_find(self, doc: Any, target_id: str) -> bool:
-        """Ищет target_id в документе (dict/list) рекурсивно."""
+        """Ищет target_id во вложенных структурах."""
         if isinstance(doc, dict):
             if str(doc.get("id")) == target_id:
                 return True
-            for v in doc.values():
-                if self._nested_find(v, target_id):
-                    return True
-        elif isinstance(doc, list):
-            for item in doc:
-                if self._nested_find(item, target_id):
-                    return True
+            return any(self._nested_find(v, target_id) for v in doc.values())
+        if isinstance(doc, list):
+            return any(self._nested_find(i, target_id) for i in doc)
         return False
 
     def _find_container(self, doc: Any, target_id: str) -> Optional[dict]:
-        """Возвращает родительский словарь, в котором находится элемент с target_id."""
+        """Возвращает родительский контейнер для элемента с target_id."""
         if isinstance(doc, dict):
             for k, v in doc.items():
                 if k == "id" and str(v) == target_id:
                     return doc
-                sub_container = self._find_container(v, target_id)
-                if sub_container:
-                    return sub_container
+                sub = self._find_container(v, target_id)
+                if sub:
+                    return sub
         elif isinstance(doc, list):
-            for item in doc:
-                sub_container = self._find_container(item, target_id)
-                if sub_container:
-                    return sub_container
+            for i in doc:
+                sub = self._find_container(i, target_id)
+                if sub:
+                    return sub
         return None
 
     async def get_root_document(self, any_id: str) -> Optional[dict]:
-        """Возвращает корневой документ по _id или вложенному id (любая глубина)."""
-        objs = await self.db.find({"_id": ObjectId(any_id)}).to_list(None)
-        if objs:
-            return objs[0]
-        all_parents = await self.db.find({}).to_list(None)
-        for parent in all_parents:
+        """Возвращает корневой документ по _id или вложенному id."""
+        direct = await self.db.find_one({"_id": ObjectId(any_id)})
+        if direct:
+            return direct
+        async for parent in self.db.find({}):
             if self._nested_find(parent, any_id):
                 return parent
         return None
 
     async def get_parent_container(self, any_id: str) -> Optional[dict]:
-        """Возвращает родительский словарь, в котором лежит элемент с any_id."""
+        """Возвращает контейнер, содержащий элемент с any_id."""
         root = await self.get_root_document(any_id)
-        if not root:
-            return None
-        return self._find_container(root, any_id)
+        return self._find_container(root, any_id) if root else None
 
     def __str__(self) -> str:
-        """Строковое представление класса."""
+        """Имя модели."""
         return self.verbose_name
 
 
+
 class InlineCrud(BaseCrudCore):
-    """CRUD-класс для работы с вложенными объектами (инлайнами)."""
+    """CRUD для вложенных объектов."""
 
     collection_name: str = ""
     dot_field_path: str = ""
-    parent_document: dict = None 
+    parent_document: dict | None = None
 
-    def __init__(self, db: AsyncIOMotorDatabase):
-        """Инициализирует коллекцию и базовый класс."""
+    def __init__(self, db: AsyncIOMotorDatabase) -> None:
         super().__init__(db)
-        self.db = db[self.collection_name] if isinstance(
-            db, AsyncIOMotorDatabase) else db
+        self.db = db[self.collection_name] if isinstance(db, AsyncIOMotorDatabase) else db
 
     async def _get_nested_field(self, doc: dict, dot_path: str) -> Any:
-        """Получает вложенные данные по точечной нотации ('a.b.c')."""
+        """Возвращает данные по точечной нотации."""
         for part in dot_path.split("."):
             if not isinstance(doc, dict) or part not in doc:
                 return None
             doc = doc[part]
         return doc
 
-    # async def get_queryset(
-    #     self,
-    #     filters: Optional[dict] = None,
-    #     sort_by: Optional[str] = "id",
-    #     order: int = 1,
-    #     page: Optional[int] = None,
-    #     page_size: Optional[int] = None,
-    #     current_user: Optional[dict] = None
-    # ) -> List[dict]:
-    #     """
-    #     Получает список вложенных объектов (массив или словарь) из dot_field_path
-    #     у родительских документов, прошедших фильтр permission_class + filters.
-    #     """
-    #     self.check_crud_enabled(
-    #         "read")
-    #     self.permission_class.check("read", current_user, None)
-
-    #     base_filter = await self.permission_class.get_base_filter(current_user)
-    #     query = {**(filters or {}), **base_filter}
-
-    #     cursor = self.db.find(query)
-    #     results = []
-
-    #     async for parent_doc in cursor:
-    #         nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
-    #         if isinstance(nested_data, list):
-    #             results.extend(nested_data)
-    #         elif isinstance(nested_data, dict):
-    #             results.append(nested_data)
-
-    #     if sort_by:
-    #         results.sort(key=lambda x: x.get(sort_by), reverse=(order == -1))
-    #     return results
-
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
-        sort_by: Optional[str] = "id",
+        sort_by: str = "id",
         order: int = 1,
         page: Optional[int] = None,
         page_size: Optional[int] = None,
-        current_user: Optional[dict] = None
+        current_user: Optional[dict] = None,
     ) -> List[dict]:
-        """
-        Получает список вложенных объектов из dot_field_path внутри родительских документов,
-        прошедших фильтр. Форматирует все вложенные документы параллельно.
-        """
-        self.check_crud_enabled("read")
-        self.permission_class.check("read", current_user)
+        """Возвращает список вложенных объектов."""
+        self.check_permission("read", current_user)
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         query = {**(filters or {}), **base_filter}
 
-        # Если точно знаем, что фильтр по _id (один родитель) — ускорим
-        limit = 1 if "_id" in query else 0
-        cursor = self.db.find(query)
-        if limit:
-            cursor = cursor.limit(limit)
+        cursor = self.db.find(query).limit(1 if "_id" in query else 0)
+        results: List[dict] = []
 
-        results = []
-        async for parent_doc in cursor:
-            nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
-            if isinstance(nested_data, list):
-                results.extend(nested_data)
-            elif isinstance(nested_data, dict):
-                results.append(nested_data)
+        async for parent in cursor:
+            nested = await self._get_nested_field(parent, self.dot_field_path)
+            if isinstance(nested, list):
+                results.extend(nested)
+            elif isinstance(nested, dict):
+                results.append(nested)
 
         if sort_by:
             results.sort(key=lambda x: x.get(sort_by), reverse=(order == -1))
 
-        return await asyncio.gather(*[
-            self.format_document(item, current_user)
-            for item in results
-        ])
+        return await asyncio.gather(*(self.format_document(i, current_user) for i in results))
 
-
-    async def get(
-        self,
-        object_id: str,
-        current_user: Optional[dict] = None
-    ) -> Optional[dict]:
-        """
-        Находит вложенный объект по ID (в dot_field_path), учитывая права доступа (read).
-        """
+    async def get(self, object_id: str, current_user: Optional[dict] = None) -> Optional[dict]:
+        """Возвращает вложенный объект по ID."""
         self.check_crud_enabled("read")
 
         base_filter = await self.permission_class.get_base_filter(current_user)
-        query = {f"{self.dot_field_path}.id": object_id, **base_filter}
-
-        parent_doc = await self.db.find_one(query)
-        if not parent_doc:
+        parent = await self.db.find_one({f"{self.dot_field_path}.id": object_id, **base_filter})
+        if not parent:
             return None
 
-        nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
-        item = None
-        if isinstance(nested_data, list):
-            item = next(
-                (el for el in nested_data if el.get("id") == object_id), None)
-        elif isinstance(nested_data, dict) and nested_data.get("id") == object_id:
-            item = nested_data
+        nested = await self._get_nested_field(parent, self.dot_field_path)
+        item = next((el for el in nested if el.get("id") == object_id), None) if isinstance(nested, list) else (
+            nested if isinstance(nested, dict) and nested.get("id") == object_id else None
+        )
 
         if item:
             self.permission_class.check("read", current_user, item)
-
         return item
 
-    async def create(
-        self,
-        data: dict,
-        current_user: Optional[dict] = None
-    ) -> dict:
-        """
-        Создаёт новый вложенный объект (append в список dot_field_path).
-        """
+
+    async def create(self, data: dict, current_user: Optional[dict] = None) -> dict:
+        """Добавляет новый вложенный объект."""
         self.check_permission("create", current_user)
 
-        valid_data = await self._process_data(data)
-        if not valid_data:
+        valid = await self._process_data(data)
+        if not valid:
             raise HTTPException(400, "No valid fields provided.")
 
         base_filter = await self.permission_class.get_base_filter(current_user)
-        update_query = {"$push": {self.dot_field_path: valid_data}}
+        res = await self.db.update_one(base_filter, {"$push": {self.dot_field_path: valid}}, upsert=True)
 
-        res = await self.db.update_one(base_filter, update_query, upsert=True)
         if res.modified_count == 0 and not res.upserted_id:
             raise HTTPException(500, "Failed to create object.")
+        return valid
 
-        return valid_data
 
-    async def update(
-        self,
-        object_id: str,
-        data: dict,
-        current_user: Optional[dict] = None
-    ) -> dict:
-        """
-        Обновляет вложенный объект в массиве (dot_field_path) по "id": object_id.
-        """
+    async def update(self, object_id: str, data: dict, current_user: Optional[dict] = None) -> dict:
+        """Обновляет вложенный объект."""
         self.check_crud_enabled("update")
-        existing_obj = await self.get(object_id, current_user)
-        if not existing_obj:
+
+        existing = await self.get(object_id, current_user)
+        if not existing:
             raise HTTPException(404, "Item not found for update.")
+        self.permission_class.check("update", current_user, existing)
 
-        self.permission_class.check("update", current_user, existing_obj)
-
-        valid_data = await self._process_data(data, partial=True)
-        if not valid_data:
+        valid = await self._process_data(data, partial=True)
+        if not valid:
             raise HTTPException(400, "No valid fields to update.")
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         filters = {**base_filter, f"{self.dot_field_path}.id": object_id}
-
-        update_query = {
-            "$set": {f"{self.dot_field_path}.$.{k}": v for k, v in valid_data.items()}
-        }
+        update_query = {"$set": {f"{self.dot_field_path}.$.{k}": v for k, v in valid.items()}}
 
         res = await self.db.update_one(filters, update_query)
         if res.matched_count == 0:
             raise HTTPException(500, "Failed to update object.")
+        return await self.get(object_id, current_user)
 
-        updated_obj = await self.get(object_id, current_user)
-        if not updated_obj:
-            raise HTTPException(500, "Failed to retrieve updated object.")
-        return updated_obj
-
-    async def delete(
-        self,
-        object_id: str,
-        current_user: Optional[dict] = None
-    ) -> dict:
-        """
-        Удаляет вложенный объект (учитывает, что dot_field_path может быть списком или единичным объектом).
-        """
+    async def delete(self, object_id: str, current_user: Optional[dict] = None) -> dict:
+        """Удаляет вложенный объект."""
         self.check_crud_enabled("delete")
 
-        existing_obj = await self.get(object_id, current_user)
-        if not existing_obj:
+        existing = await self.get(object_id, current_user)
+        if not existing:
             raise HTTPException(404, "Item not found for deletion.")
-
-        self.permission_class.check("delete", current_user, existing_obj)
+        self.permission_class.check("delete", current_user, existing)
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         filters = {**base_filter, f"{self.dot_field_path}.id": object_id}
-        parent_doc = await self.db.find_one(filters)
-        if not parent_doc:
+        parent = await self.db.find_one(filters)
+        if not parent:
             raise HTTPException(404, "Parent document not found.")
 
-        nested_data = await self._get_nested_field(parent_doc, self.dot_field_path)
-
-        if isinstance(nested_data, list):
-            update_query = {"$pull": {self.dot_field_path: {"id": object_id}}}
-        elif isinstance(nested_data, dict):
-            update_query = {"$unset": {self.dot_field_path: ""}}
-        else:
-            raise HTTPException(
-                500, "Unexpected field structure during deletion.")
+        nested = await self._get_nested_field(parent, self.dot_field_path)
+        update_query = (
+            {"$pull": {self.dot_field_path: {"id": object_id}}}
+            if isinstance(nested, list)
+            else {"$unset": {self.dot_field_path: ""}}
+        )
 
         res = await self.db.update_one(filters, update_query)
         if res.modified_count == 0:
             raise HTTPException(500, "Failed to delete object.")
-
         return {"status": "success"}
 
 
 class BaseCrud(BaseCrudCore):
-    """Базовый класс для CRUD-операций в админке."""
+    """CRUD для коллекций."""
 
     collection_name: str
     inlines: Dict[str, Type[InlineCrud]] = {}
 
-    def __init__(self, db: AsyncIOMotorDatabase):
-        """Определяет основную коллекцию и инициализирует базовый класс."""
+    def __init__(self, db: AsyncIOMotorDatabase) -> None:
         super().__init__(db)
         self.db = db[self.collection_name]
-
-    # async def get_queryset(
-    #     self,
-    #     filters: Optional[dict] = None,
-    #     sort_by: Optional[str] = None,
-    #     order: int = 1,
-    #     current_user: Optional[dict] = None
-    # ) -> List[dict]:
-    #     """Возвращает список документов, учитывая фильтры, права и сортировку."""
-    #     print('=1=')
-    #     self.check_crud_enabled("read")
-    #     print('=2=')
-    #     self.permission_class.check("read", current_user)
-    #     print('=3=')
-
-    #     base_filter = await self.permission_class.get_base_filter(current_user)
-    #     print('=4=')
-    #     query = {**(filters or {}), **base_filter}
-    #     print('=5=')
-
-    #     sort_field = sort_by or self.detect_id_field()
-    #     print('=6=')
-    #     cursor = self.db.find(query).sort(sort_field, order)
-    #     print('=7=')
-
-    #     objs = []
-    #     print('=8=')
-    #     # page_size = 20
-    #     i = 0
-    #     async for raw_doc in cursor:
-    #         i += 1
-    #         print("итерация", i)
-    #         # print(raw_doc["_id"])
-    #         if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
-    #             # print("нашли урода")
-    #             # print(len(str(raw_doc)))
-    #             continue
-
-    #         # if len(objs) >= page_size:
-    #         #     break 
-    #         objs.append(await self.format_document(raw_doc, current_user))
-    #     return objs
-
-    # async def get_queryset(
-    #     self,
-    #     filters: Optional[dict] = None,
-    #     sort_by: Optional[str] = None,
-    #     order: int = 1,
-    #     page: Optional[int] = None,
-    #     page_size: Optional[int] = None,
-    #     current_user: Optional[dict] = None,
-    #     format: bool = True
-    # ) -> List[dict]:
-    #     """Возвращает список документов, учитывая фильтры, права и сортировку."""
-    #     print('=1=')
-    #     self.check_crud_enabled("read")
-    #     print('=2=')
-    #     self.permission_class.check("read", current_user)
-    #     print('=3=')
-
-    #     base_filter = await self.permission_class.get_base_filter(current_user)
-    #     print('=4=')
-    #     query = {**(filters or {}), **base_filter}
-    #     print('=5=')
-
-    #     sort_field = sort_by or self.detect_id_field()
-    #     print('=6=')
-    #     cursor = self.db.find(query).sort(sort_field, order)
-
-    #     if page is not None and page_size is not None:
-    #         skip_count = (page - 1) * page_size
-    #         cursor = cursor.skip(skip_count).limit(page_size)
-
-    #     print('=7=')
-    #     objs = []
-    #     print('=8=')
-    #     i = 0
-    #     async for raw_doc in cursor:
-    #         i += 1
-    #         print("итерация", i)
-    #         if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
-    #             print("⚠️ Пропущен проблемный документ")
-    #             continue
-
-    #         if format:
-    #             # continue
-    #             objs.append(await self.format_document(raw_doc, current_user))
-    #         else:
-    #             objs.append(raw_doc)
-    #     return objs
 
     async def get_queryset(
         self,
@@ -981,33 +639,24 @@ class BaseCrud(BaseCrudCore):
         page: Optional[int] = None,
         page_size: Optional[int] = None,
         current_user: Optional[dict] = None,
-        format: bool = True
+        format: bool = True,
     ) -> List[dict]:
-        self.check_crud_enabled("read")
-        self.permission_class.check("read", current_user)
+        """Возвращает документы коллекции с учётом фильтров и пагинации."""
+        self.check_permission("read", current_user)
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         query = {**(filters or {}), **base_filter}
 
-        sort_field = sort_by or self.detect_id_field()
-        cursor = self.db.find(query).sort(sort_field, order)
+        cursor = (
+            self.db.find(query)
+            .sort(sort_by or self.detect_id_field(), order)
+            .skip(((page - 1) * page_size) if page and page_size else 0)
+            .limit(page_size or 0)
+        )
 
-        if page is not None and page_size is not None:
-            skip_count = (page - 1) * page_size
-            cursor = cursor.skip(skip_count).limit(page_size)
-
-        raw_docs = []
-        async for raw_doc in cursor:
-            if str(raw_doc["_id"]) == "67ffea0effce4085f2b8a1bd":
-                print("⚠️ Пропущен проблемный документ")
-                continue
-            raw_docs.append(raw_doc)
+        raw_docs: List[dict] = [doc async for doc in cursor]
 
         if not format:
             return raw_docs
 
-        # ⚡ Параллельное форматирование
-        return await asyncio.gather(*[
-            self.format_document(doc, current_user)
-            for doc in raw_docs
-        ])
+        return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))

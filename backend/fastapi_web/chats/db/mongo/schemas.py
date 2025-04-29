@@ -35,15 +35,9 @@ class BriefAnswer(IdModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
-# class Sender(BaseValidatedIdModel):
-#     """Сообщение в чате."""
-#     client_id: str
-#     sender_role: SenderRole
-
 class ChatMessage(BaseValidatedIdModel):
     """Сообщение в чате."""
     message: str
-    # sender: Sender
     sender_role: SenderRole
     sender_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -58,9 +52,9 @@ class ChatMessage(BaseValidatedIdModel):
     @classmethod
     def validate_length(cls, v: str, info: ValidationInfo) -> str:
         MAX_MESSAGE_LENGTH = 10000
-        # MAX_MESSAGE_LENGTH = 200
         if len(v) > MAX_MESSAGE_LENGTH:
-            raise ValueError(f"Сообщение превышает допустимую длину {MAX_MESSAGE_LENGTH} символов.")
+            raise ValueError(
+                f"Сообщение превышает допустимую длину {MAX_MESSAGE_LENGTH} символов.")
         return v
 
 
@@ -78,6 +72,7 @@ class ChatReadInfo(BaseValidatedModel):
     user_id: Optional[str] = None
     last_read_msg: str
     last_read_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 class ChatSession(BaseValidatedModel):
     """Чат-сессия."""
@@ -136,7 +131,7 @@ class ChatSession(BaseValidatedModel):
             if self.messages[-1].sender_role == SenderRole.CONSULTANT
             else ChatStatus.CLOSED_WITHOUT_RESPONSE
         )
-    
+
     def is_read_by_any_staff(self, staff_ids: set[str]) -> bool:
         """Проверяет, прочитан ли чат хотя бы одним из указанных staff-пользователей."""
         if not self.messages or not self.read_state:
@@ -148,4 +143,3 @@ class ChatSession(BaseValidatedModel):
             ri.user_id in staff_ids and ri.last_read_msg == last_msg_id
             for ri in self.read_state if ri.user_id
         )
-
