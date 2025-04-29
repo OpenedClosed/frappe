@@ -5,15 +5,15 @@ from datetime import datetime
 from typing import Dict
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Response
-from fastapi.responses import JSONResponse
-from fastapi_jwt_auth import AuthJWT
-
 from crud_core.registry import BaseRegistry
 from crud_core.routes_generator import generate_base_routes
 from db.mongo.db_init import mongo_db
+from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.responses import JSONResponse
+from fastapi_jwt_auth import AuthJWT
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User
+from utils.help_functions import normalize_numbers, send_sms
 
 from .client_interface.db.mongo.schemas import (ConfirmationSchema,
                                                 LoginSchema,
@@ -37,9 +37,8 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
         - Проверяем согласие (accept_terms).
         - Проверяем совпадение паролей.
         - Проверяем, что телефон не занят.
-        - Генерируем код, отправляем (заглушка).
+        - Генерируем код, отправляем.
         """
-
         errors = {}
 
         if not data.accept_terms:
@@ -49,7 +48,7 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
             errors["password"] = "Passwords do not match."
             errors["password_confirm"] = "Passwords do not match."
 
-        phone_key = data.phone.strip()
+        phone_key = normalize_numbers(data.phone)
         if not phone_key:
             errors["phone"] = "Phone is required."
         else:
@@ -62,6 +61,8 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
 
         code = "".join(random.choices(string.digits, k=6))
         REG_CODES[phone_key] = code
+
+        await send_sms(phone_key, f"Код подтверждения: {code}")
 
         return {"message": "Code sent to phone", "debug_code": code}
 
@@ -80,7 +81,7 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
             3) Документ в `patients_contact_info` (phone, email, user_id, ...)
         - Выдаём токены.
         """
-        phone_key = data.phone.strip()
+        phone_key = normalize_numbers(data.phone)
         real_code = REG_CODES.pop(phone_key, None)
         if not real_code or real_code != data.code:
             raise HTTPException(400, "Invalid code.")
@@ -113,7 +114,7 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
-        main_info_result = await mongo_db["patients_main_info"].insert_one(main_doc)
+        await mongo_db["patients_main_info"].insert_one(main_doc)
 
         contact_doc = {
             "phone": phone_key,
@@ -145,10 +146,10 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
         """
         Шаг 1 входа:
         - Ищем пользователя по телефону.
-        - Проверяем пароль (data.check_password(stored_hash)).
+        - Проверяем пароль.
         - Генерируем одноразовый код 2FA.
         """
-        phone_key = data.phone.strip()
+        phone_key = normalize_numbers(data.phone)
 
         user_main = await mongo_db["patients_main_info"].find_one({"phone": phone_key})
         if not user_main or not user_main.get("user_id"):
@@ -175,6 +176,8 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
         code_2fa = "".join(random.choices(string.digits, k=6))
         TWO_FA_CODES[phone_key] = code_2fa
 
+        await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
+
         return {
             "message": "2FA code sent",
             "debug_code": code_2fa
@@ -191,7 +194,7 @@ def generate_base_account_routes(registry: BaseRegistry) -> APIRouter:
         - Проверяем код из TWO_FA_CODES.
         - Возвращаем JWT токены.
         """
-        phone_key = data.phone.strip()
+        phone_key = normalize_numbers(data.phone)
 
         real_code = TWO_FA_CODES.pop(phone_key, None)
         if not real_code or real_code != data.code:

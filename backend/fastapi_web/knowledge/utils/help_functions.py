@@ -97,7 +97,6 @@ def merge_external_structures(main_kb: dict, externals: list[dict]) -> dict:
     merged = deepcopy(main_kb)
     for ext in externals:
         merged = deep_merge(merged, ext)
-    print(externals)
     return merged
 
 

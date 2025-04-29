@@ -90,3 +90,8 @@ WHATSAPP_BOT_NUMBER_ID = os.getenv("WHATSAPP_BOT_NUMBER_ID", "change_me")
 WHATSAPP_BOT_NUMBER = os.getenv("WHATSAPP_BOT_NUMBER", "change_me")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "change_me")
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "change_me")
+
+# SMTP
+SMS_API_URL = os.getenv("SMS_API_URL", "change_me")
+SMS_API_KEY =os.getenv("SMS_API_KEY", "change_me")
+SMS_API_SENDER = os.getenv("SMS_API_SENDER", "change_me")
