@@ -1,4 +1,5 @@
 """Обработчики маршрутов приложения Знания."""
+import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
@@ -162,6 +163,7 @@ async def get_bot_info(
 # БЛОК: Работа с контекстом
 # ==============================
 
+
 @knowledge_base_router.post("/context_entity", response_model=ContextEntry, status_code=201)
 @jwt_required()
 @permission_required(AdminPanelPermission)
@@ -201,16 +203,16 @@ async def create_context_entity(
     else:
         raise HTTPException(422, f"Unknown type: {type}")
 
-    # --- 2. сразу создаём snapshot_text + kb_structure
-    await ensure_entry_processed(entry, ai_model)
-
-    # --- 3. только потом добавляем в базу
+    # --- 2. сразу добавляем в базу без ожидания тяжёлых обработок
     kb_doc["context"].append(entry.model_dump(mode="python"))
     kb_doc["update_date"] = datetime.utcnow()
     await save_kb_doc(kb_doc)
 
-    return entry
+    # --- 3. параллельно в фоне запускаем обработку snapshot/kb_structure
+    asyncio.create_task(ensure_entry_processed(entry, ai_model))
 
+    # --- 4. возвращаем пользователю сразу
+    return entry
 
 
 

@@ -199,7 +199,9 @@ async def parse_url(url: str, timeout: int = 10) -> str:
 
 async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
     key = f"url_cache:{hashlib.sha1(url.encode()).hexdigest()}"
+    
     cached = await redis_db.get(key)
+    print(f'кешируем по {key} и {cached}')
     if cached:
         # redis может вернуть bytes
         if isinstance(cached, bytes):
@@ -244,15 +246,7 @@ async def llm_chat(client, model: str, messages: list[dict], system_instruction:
         temperature=0.1,
         system_instruction=system_instruction,
     )
-    print('-'*100)
-    print('*'*100)
-    print(model)
-    print('*'*100)
-    print(messages)
-    print('*'*100)
-    print(system_instruction)
-    print('*'*100)
-    print('-'*100)
+
     return resp["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
@@ -622,11 +616,11 @@ async def generate_patch_body_via_gpt(
 ) -> dict:
     """Генерирует JSON-патч для базы знаний."""
     _, kb_model = await get_knowledge_base()
-    print(kb_model.model_dump())
+
     ctx_blocks = await collect_context_blocks(kb_model.context, {ContextPurpose.BOTH, ContextPurpose.KB})
-    print(kb_model.context)
+
     _, bot_prompt = await collect_bot_context_snippets(kb_model.context)
-    print(bot_prompt)
+
 
     snippets = await analyze_update_snippets_via_gpt(
         user_blocks=user_blocks,
@@ -646,7 +640,7 @@ async def generate_patch_body_via_gpt(
     msg_bundle = build_messages_for_model(sys_prompt, ctx_blocks + user_blocks, "", ai_model)
     client, real_model = pick_model_and_client(ai_model)
     raw = await llm_chat(client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction"))
-    print(raw)
+
     return extract_json_from_gpt(raw)
 
 

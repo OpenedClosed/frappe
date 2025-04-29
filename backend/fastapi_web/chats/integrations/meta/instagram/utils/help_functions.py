@@ -1,4 +1,5 @@
 """Вспомогательные функции интеграции Instagram."""
+import asyncio
 from typing import Any, Dict, List
 
 from chats.db.mongo.enums import ChatSource, SenderRole
@@ -99,17 +100,18 @@ async def process_instagram_message(
         "is_superuser": sender_role == SenderRole.CONSULTANT
     }
 
-
-    await handle_message(
-        manager=manager,
-        typing_manager=typing_manager,
-        chat_id=chat_id,
-        client_id=client_id,
-        redis_session_key=redis_session_key,
-        redis_flood_key=redis_flood_key,
-        data=data,
-        is_superuser=(sender_role == SenderRole.CONSULTANT),
-        user_language=user_language,
-        gpt_lock=gpt_lock,
-        user_data=user_data
+    asyncio.create_task(
+        await handle_message(
+            manager=manager,
+            typing_manager=typing_manager,
+            chat_id=chat_id,
+            client_id=client_id,
+            redis_session_key=redis_session_key,
+            redis_flood_key=redis_flood_key,
+            data=data,
+            is_superuser=(sender_role == SenderRole.CONSULTANT),
+            user_language=user_language,
+            gpt_lock=gpt_lock,
+            user_data=user_data
+        )
     )
