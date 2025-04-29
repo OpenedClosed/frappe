@@ -1,14 +1,14 @@
 <template>
   <!-- Full screen container with no overflow -->
-  <div class="flex flex-1 flex-col min-h-0 xl:max-h-[90vh] h-full">
+  <div class="flex flex-1 flex-col min-h-0 2xl:max-h-[90vh] h-full">
     <Toast />
     <!-- Main container -->
     <div class="flex flex-col flex-1 overflow-hidden">
       <!-- Main block: 3 columns -->
       <div class="flex flex-1 flex-row rounded-md overflow-hidden">
-        <div class="flex flex-col xl:flex-row flex-1 justify-between overflow-hidden">
+        <div class="flex flex-col 2xl:flex-row flex-1 justify-between overflow-hidden">
           <!-- LEFT COLUMN -->
-          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
+          <div class="flex-0 2xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
             <section>
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -19,12 +19,13 @@
                 </div>
                 <div class="flex justify-center items-center">
                   <i
-    class="pi pi-info-circle text-base cursor-pointer text-xl"
-    v-tooltip.right="
-      'Context sources are the files, links, or text that the bot uses to answer questions. \
+                    class="pi pi-info-circle text-base cursor-pointer text-xl"
+                    v-tooltip.right="
+                      'Context sources are the files, links, or text that the bot uses to answer questions. \
        You can add, remove, or edit them as needed.  \
-       The bot will use the most relevant sources to provide accurate answers.'"
-/>
+       The bot will use the most relevant sources to provide accurate answers.'
+                    "
+                  />
                 </div>
               </header>
               <header class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark">
@@ -32,13 +33,26 @@
                 <div class="p-input-icon-left flex-1">
                   <IconField>
                     <InputIcon class="pi pi-search" />
-                    <InputText v-model="searchTerm" icon="pi pi-search" placeholder="Search of sources…" class="w-full"   v-tooltip.bottom="
-    'Search by source name.  Enter part of a file name, web page or text document to search through the list.'" />
+                    <InputText
+                      v-model="searchTerm"
+                      icon="pi pi-search"
+                      placeholder="Search of sources…"
+                      class="w-full"
+                      v-tooltip.bottom="
+                        'Search by source name.  Enter part of a file name, web page or text document to search through the list.'
+                      "
+                    />
                   </IconField>
                 </div>
 
                 <!-- добавить -->
-                <Button label="Add context" icon="pi pi-plus" class="" @click="openContextDialog"  v-tooltip.bottom="'Import a new data source: file, web page or text.'" />
+                <Button
+                  label="Add context"
+                  icon="pi pi-plus"
+                  class=""
+                  @click="openContextDialog"
+                  v-tooltip.bottom="'Import a new data source: file, web page or text.'"
+                />
               </header>
 
               <div class="flex flex-col gap-4 p-4 h-full max-h-[30vh] overflow-y-auto">
@@ -212,12 +226,13 @@
                 </div>
                 <div class="flex justify-center items-center">
                   <i
-    class="pi pi-info-circle text-base cursor-pointer text-xl"
-    v-tooltip.right="
-      'Query field is where you can enter your question or request.  \
+                    class="pi pi-info-circle text-base cursor-pointer text-xl"
+                    v-tooltip.right="
+                      'Query field is where you can enter your question or request.  \
        The AI will use the context sources to provide a relevant answer.  \
-       You can also use the \'Generate smart change\' button to create a new context based on your input.'"
-/>
+       You can also use the \'Generate smart change\' button to create a new context based on your input.'
+                    "
+                  />
                 </div>
               </header>
               <div class="flex flex-col gap-4 p-4 h-full">
@@ -251,10 +266,17 @@
 
                 <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 overflow-y-auto gap-4">
                   <!-- TEXTAREA -->
-                  <Textarea id="promptTextArea" class="w-full min-h-[150px] max-h-[40vh]" required v-model="promptText"   v-tooltip.bottom="
-    'Write here what the AI assistant should do with your data.  \
+                  <Textarea
+                    id="promptTextArea"
+                    class="w-full min-h-[150px] max-h-[40vh]"
+                    required
+                    v-model="promptText"
+                    v-tooltip.bottom="
+                      'Write here what the AI assistant should do with your data.  \
      Example: “Highlight the main services from my website and create questions and answers for them”.  \
-     Press send button to convert selected sources into a structured knowledge base.'" />
+     Press send button to convert selected sources into a structured knowledge base.'
+                    "
+                  />
 
                   <!-- GENERATE SMART CHANGE BUTTON -->
                   <Dropdown
@@ -280,7 +302,7 @@
           </div>
 
           <!-- CENTER COLUMN -->
-          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div class="flex-0 2xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -305,23 +327,24 @@
 
                     <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
                     <Button :disabled="isLoading" icon="pi pi-trash" class="p-button-sm" @click="clearPlayground" />
-                    <Button v-if="isEditMode" label="Add topic" icon="pi pi-plus" class="p-button-sm" @click="addTopic"  />
+                    <Button v-if="isEditMode" label="Add topic" icon="pi pi-plus" class="p-button-sm" @click="addTopic" />
                   </div>
-                   <i
-    class="pi pi-info-circle text-base cursor-pointer text-xl"
-    v-tooltip.right="
-      'Topic – the main theme that combines related subtopics.  \
+                  <i
+                    class="pi pi-info-circle text-base cursor-pointer text-xl"
+                    v-tooltip.right="
+                      'Topic – the main theme that combines related subtopics.  \
        Subtopic – a subsection of the main topic with a specific focus.  \
        Question – a typical user question within a subtopic.  \
-       Answer – a detailed response to a specific question.'"
-/>
+       Answer – a detailed response to a specific question.'
+                    "
+                  />
                 </div>
               </header>
               <div class="flex flex-col gap-4 p-4 h-full overflow-y-auto">
                 <div class="flex flex-1 min-h-0 overflow-y-auto" v-if="Object.keys(knowledgeBaseData.knowledge_base).length || isEditMode">
                   <!-- Read-only display if not editing -->
                   <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
-                    <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6" >
+                    <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6">
                       <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                       <div v-if="topicValue.subtopics">
                         <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
@@ -392,7 +415,7 @@
                             :value="subtopicName.includes('New Subtopic') ? '' : subtopicName"
                             @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
                             @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
-                              v-tooltip.right="'A section of a topic that groups related questions and answers.'"
+                            v-tooltip.right="'A section of a topic that groups related questions and answers.'"
                           />
                           <Button
                             icon="pi pi-arrow-up"
@@ -459,7 +482,7 @@
                             <Textarea
                               v-model="questionObj.text"
                               class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
-                                v-tooltip.right="'An answer to a question that the bot will use when formulating responses.'"
+                              v-tooltip.right="'An answer to a question that the bot will use when formulating responses.'"
                             />
 
                             <!-- LINKS / FILES -->
@@ -546,13 +569,19 @@
                   />
                 </div>
                 <div v-else class="flex flex-col gap-2 my-2">
-                  <Button :disabled="isLoading || !hasChanges" label="Publish" icon="pi pi-save" class="p-button-sm" @click="saveChanges" 
-                  v-tooltip.bottom="
-    'Publishes the knowledge structure to the main knowledge base, which the bot will \
+                  <Button
+                    :disabled="isLoading || !hasChanges"
+                    label="Publish"
+                    icon="pi pi-save"
+                    class="p-button-sm"
+                    @click="saveChanges"
+                    v-tooltip.bottom="
+                      'Publishes the knowledge structure to the main knowledge base, which the bot will \
     use to answer user questions.  Changes take effect immediately.  Make sure the \
-    structure is completely ready.'"
+    structure is completely ready.'
+                    "
                   />
-                  
+
                   <Button :disabled="isLoading" label="Reject" icon="pi pi-times" class="p-button-sm" @click="rejectPlayground" />
                 </div>
               </div>
@@ -560,7 +589,7 @@
           </div>
 
           <!-- RIGHT COLUMN (Readonly Copy) -->
-          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div class="flex-0 2xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -574,12 +603,13 @@
                   <!-- 🔍 search toggle -->
                   <Button icon="pi pi-search text-xl" class="p-button-text p-button-rounded p-button-sm" @click="toggleReadonlySearch" />
                   <i
-    class="pi pi-info-circle text-base cursor-pointer text-xl"
-    v-tooltip="
-      'Knowledge base is the main source of information for the bot. \
+                    class="pi pi-info-circle text-base cursor-pointer text-xl"
+                    v-tooltip="
+                      'Knowledge base is the main source of information for the bot. \
        It contains all the topics, subtopics, and questions that the bot can answer.  \
-       You can view and search through it, but you cannot edit it directly here.'"
-/>
+       You can view and search through it, but you cannot edit it directly here.'
+                    "
+                  />
                 </div>
               </header>
               <div
