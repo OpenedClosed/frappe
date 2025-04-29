@@ -18,7 +18,13 @@
                   <h2 class="font-semibold text-xl">Context sources</h2>
                 </div>
                 <div class="flex justify-center items-center">
-                  <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
+                  <i
+    class="pi pi-info-circle text-base cursor-pointer text-xl"
+    v-tooltip.right="
+      'Context sources are the files, links, or text that the bot uses to answer questions. \
+       You can add, remove, or edit them as needed.  \
+       The bot will use the most relevant sources to provide accurate answers.'"
+/>
                 </div>
               </header>
               <header class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark">
@@ -26,18 +32,19 @@
                 <div class="p-input-icon-left flex-1">
                   <IconField>
                     <InputIcon class="pi pi-search" />
-                    <InputText v-model="searchTerm" icon="pi pi-search" placeholder="Search of sources…" class="w-full" />
+                    <InputText v-model="searchTerm" icon="pi pi-search" placeholder="Search of sources…" class="w-full"   v-tooltip.bottom="
+    'Search by source name.  Enter part of a file name, web page or text document to search through the list.'" />
                   </IconField>
                 </div>
 
                 <!-- добавить -->
-                <Button label="Add context" icon="pi pi-plus" class="" @click="openContextDialog" />
+                <Button label="Add context" icon="pi pi-plus" class="" @click="openContextDialog"  v-tooltip.bottom="'Import a new data source: file, web page or text.'" />
               </header>
 
-              <div class="flex flex-col gap-4 p-4 h-full">
+              <div class="flex flex-col gap-4 p-4 h-full max-h-[30vh] overflow-y-auto">
                 <div>
                   <ul class="flex flex-col divide-y divide-slate-200">
-                    <li v-for="(ctx, idx) in contextList" :key="ctx.id" class="flex items-center justify-between gap-4 py-3">
+                    <li v-for="(ctx, idx) in filteredContextList" :key="ctx.id" class="flex items-center justify-between gap-4 py-3">
                       <!-- Иконка -->
                       <div class="flex-shrink-0">
                         <div class="h-12 w-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600">
@@ -52,7 +59,20 @@
                         </p>
                         <p class="text-sm text-slate-500">{{ formatDate(ctx.created_at) }} · {{ ctx.type.toUpperCase() }}</p>
                       </div>
+                      <div class="card flex justify-center">
+                        <Button
+                          v-if="ctx.type === 'file'"
+                          icon="pi pi-download"
+                          class="p-button-rounded p-button-text p-button-sm"
+                          @click="downloadContext(ctx)"
+                        />
 
+                        <Button
+                          icon="pi pi-trash"
+                          class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                          @click="deleteContext(ctx.id)"
+                        />
+                      </div>
                       <!-- Таблетка -->
                       <!-- ▼ replace ваш <Dropdown> этим  ▼ -->
                       <Dropdown
@@ -66,22 +86,15 @@
                         <!-- пункт в выпадающем списке -->
                         <template #option="slotProps">
                           <div class="flex flex-1 justify-between items-center gap-2">
-                            <span class="flex items-center gap-2" >
-                            {{ slotProps.option.label }}
-                          </span>
-                          <i class="pi pi-info-circle" v-tooltip.right="slotProps.option.desc"></i>
+                            <span class="flex items-center gap-2">
+                              {{ slotProps.option.label }}
+                            </span>
+                            <i class="pi pi-info-circle" v-tooltip.right="slotProps.option.desc"></i>
                           </div>
-                          
                         </template>
-
                       </Dropdown>
 
-                      <!-- Кебаб-меню -->
-                      <Button
-                        icon="pi pi-ellipsis-v"
-                        class="p-button-rounded p-button-text p-button-sm"
-                        @click="openCtxMenu(ctx, $event)"
-                      />
+                      <!-- ⬇️ place this once anywhere inside the same <template> root (outside the v-for) -->
                     </li>
                   </ul>
 
@@ -93,60 +106,102 @@
                     :closable="true"
                     :style="{ width: '40vw' }"
                   >
-                    <div class="flex flex-col gap-3">
-                      <!-- тип -->
-                      <Dropdown
-                        v-model="newCtx.type"
-                        :options="contextTypes"
-                        optionLabel="label"
-                        optionValue="value"
-                        class="w-full"
-                        placeholder="Select type"
-                      />
-
-                      <!-- необязательный заголовок -->
-                      <InputText v-model="newCtx.title" class="w-full" placeholder="Title (optional)" />
-
-                      <!-- динамическое поле по типу -->
+                    <div class="flex flex-col gap-4">
+                      <!-- ░░ TYPE SELECTOR ░░ -->
+                      <div class="flex rounded-md overflow-hidden border border-gray-300 dark:border-gray-600">
+                        <button
+                          v-for="tab in ctxTabs"
+                          :key="tab.value"
+                          @click="newCtx.type = tab.value"
+                          class="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors"
+                          :class="[
+                            newCtx.type === tab.value
+                              ? 'bg-gray-900 text-white dark:bg-gray-200 dark:text-gray-900'
+                              : 'bg-white text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700',
+                          ]"
+                        >
+                          <i :class="tab.icon"></i>
+                          <span>{{ tab.label }}</span>
+                        </button>
+                      </div>
+                      <!-- OPTIONAL TITLE (always shown) -->
+                      <InputText v-model="newCtx.title" class="w-full" placeholder="Title" />
+                      <!-- ░░ DYNAMIC FIELDS ░░ -->
+                      <!-- TEXT -->
                       <Textarea
                         v-if="newCtx.type === 'text'"
                         v-model="newCtx.text"
-                        rows="5"
-                        class="w-full"
-                        placeholder="Paste the text here"
+                        rows="6"
+                        class="w-full max-h-[40vh]"
+                        placeholder="Paste the text here…"
                       />
 
+                      <!-- SITE / URL -->
                       <InputText v-else-if="newCtx.type === 'url'" v-model="newCtx.url" class="w-full" placeholder="https://example.com" />
 
+                      <!-- FILE -->
                       <div v-else-if="newCtx.type === 'file'">
                         <FileUpload
+                          ref="fileUpload"
                           name="file"
+                          mode="advanced"
+                          dragDrop
                           :customUpload="true"
                           :auto="false"
                           :showUploadButton="false"
+                          :showChooseButton="false"
                           :showCancelButton="false"
-                          accept="image/*,application/pdf,application/zip"
+                          :accept="acceptedTypes"
                           @select="onCtxFileSelect"
-                        />
-                        <p v-if="newCtx.file" class="text-sm mt-2">{{ newCtx.file.name }} — {{ newCtx.file.size }} bytes</p>
+                        >
+                          <!-- custom empty state -->
+                          <template #header>
+                            <span></span>
+                          </template>
+                          <template #empty>
+                            <div
+                              class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                              @click="fileUpload.choose"
+                            >
+                              <i class="pi pi-cloud-upload text-5xl text-gray-400 mb-4"></i>
+                              <h3 class="text-lg font-medium mb-1">Upload sources</h3>
+                              <p class="text-sm text-gray-500 mb-2">Select a file or drag it here.</p>
+                              <p class="text-xs text-gray-400">Supported types: PDF, TXT, Images, DOCX, XLSX, images</p>
+                            </div>
+                          </template>
+                        </FileUpload>
+                        <p v-if="newCtx.file" class="text-sm mt-2 italic">
+                          {{ newCtx.file.name }} – {{ newCtx.file.size.toLocaleString() }} bytes
+                        </p>
                       </div>
 
-                      <!-- кнопки -->
-                      <div class="flex justify-end gap-2 mt-4">
-                        <Button label="Cancel" class="p-button-text" @click="showContextDialog = false" />
-                        <Button
-                          label="Add"
-                          icon="pi pi-check"
-                          class="p-button-success"
-                          :disabled="!canSubmitContext"
-                          @click="submitContext"
-                        />
+                      <!-- ░░ ACTIONS ░░ -->
+                      <div class="flex justify-between items-center gap-2 mt-4">
+                        <span>Total sources: {{ totalSources }}/{{ MAX_SOURCES }}</span>
+                        <div class="flex items-center gap-2">
+                          <Button label="Cancel" class="p-button-text" @click="showContextDialog = false" />
+                          <Button
+                            label="Add"
+                            icon="pi pi-check"
+                            class="p-button-success"
+                            :disabled="!canSubmitContext"
+                            @click="submitContext"
+                          />
+                        </div>
                       </div>
                     </div>
                   </Dialog>
                 </div>
               </div>
             </section>
+            <!-- Context source count display -->
+            <header
+              class="flex items-center justify-between px-4 py-2 text-[15px] font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-t border-secondaryDark"
+            >
+              <span>Total sources: {{ totalSources }}/{{ MAX_SOURCES }}</span>
+              <span>Selected: {{ selectedSources }}</span>
+            </header>
+
             <section>
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-y border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -156,14 +211,50 @@
                   <h2 class="font-semibold text-xl">Query field</h2>
                 </div>
                 <div class="flex justify-center items-center">
-                  <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
+                  <i
+    class="pi pi-info-circle text-base cursor-pointer text-xl"
+    v-tooltip.right="
+      'Query field is where you can enter your question or request.  \
+       The AI will use the context sources to provide a relevant answer.  \
+       You can also use the \'Generate smart change\' button to create a new context based on your input.'"
+/>
                 </div>
               </header>
               <div class="flex flex-col gap-4 p-4 h-full">
                 <!-- FORM with generatePatch submit handler -->
+                <!-- Request History section styled like the design -->
+                <section class="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 mt-4">
+                  <header class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Request History</h2>
+                    </div>
+                  </header>
+
+                  <div v-if="requestHistory.length" class="flex flex-col gap-2 max-h-[20vh] overflow-y-auto">
+                    <button
+                      v-for="(item, index) in requestHistory"
+                      :key="index"
+                      type="button"
+                      class="text-sm text-left px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                      @click="reuseRequest(item)"
+                      v-tooltip.bottom="'Reuse this request'"
+                    >
+                      {{ item.length > 40 ? item.slice(0, 40) + "…" : item }}
+                    </button>
+
+                    <button type="button" class="self-start text-red-600 text-sm underline mt-2" @click="clearRequestHistory">
+                      Clear History
+                    </button>
+                  </div>
+                  <div v-else class="text-sm text-gray-500 dark:text-gray-400">No previous requests found.</div>
+                </section>
+
                 <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 overflow-y-auto gap-4">
                   <!-- TEXTAREA -->
-                  <Textarea id="promptTextArea" class="w-full min-h-[150px] max-h-[40vh]" required v-model="promptText" />
+                  <Textarea id="promptTextArea" class="w-full min-h-[150px] max-h-[40vh]" required v-model="promptText"   v-tooltip.bottom="
+    'Write here what the AI assistant should do with your data.  \
+     Example: “Highlight the main services from my website and create questions and answers for them”.  \
+     Press send button to convert selected sources into a structured knowledge base.'" />
 
                   <!-- GENERATE SMART CHANGE BUTTON -->
                   <Dropdown
@@ -178,7 +269,7 @@
                     type="submit"
                     :disabled="isLoading"
                     label="Generate smart change"
-                    icon="pi pi-save"
+                    icon="pi pi-send"
                     class="w-full flex justify-center items-center"
                   >
                     <LoaderSmall v-if="isLoading" />
@@ -214,16 +305,23 @@
 
                     <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
                     <Button :disabled="isLoading" icon="pi pi-trash" class="p-button-sm" @click="clearPlayground" />
-                    <Button v-if="isEditMode" label="Add topic" icon="pi pi-plus" class="p-button-sm" @click="addTopic" />
+                    <Button v-if="isEditMode" label="Add topic" icon="pi pi-plus" class="p-button-sm" @click="addTopic"  />
                   </div>
-                  <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
+                   <i
+    class="pi pi-info-circle text-base cursor-pointer text-xl"
+    v-tooltip.right="
+      'Topic – the main theme that combines related subtopics.  \
+       Subtopic – a subsection of the main topic with a specific focus.  \
+       Question – a typical user question within a subtopic.  \
+       Answer – a detailed response to a specific question.'"
+/>
                 </div>
               </header>
               <div class="flex flex-col gap-4 p-4 h-full overflow-y-auto">
                 <div class="flex flex-1 min-h-0 overflow-y-auto" v-if="Object.keys(knowledgeBaseData.knowledge_base).length || isEditMode">
                   <!-- Read-only display if not editing -->
                   <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
-                    <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6">
+                    <div v-for="(topicValue, topicName) in knowledgeBaseData.knowledge_base" :key="topicName" class="mb-6" >
                       <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                       <div v-if="topicValue.subtopics">
                         <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
@@ -262,6 +360,7 @@
                           :value="topicName.includes('New Topic') ? '' : topicName"
                           @blur="renameTopic(topicName, $event.target.value)"
                           @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
+                          v-tooltip.right="'The main topic containing related subsections and questions.'"
                         />
                         <Button
                           icon="pi pi-arrow-up"
@@ -293,6 +392,7 @@
                             :value="subtopicName.includes('New Subtopic') ? '' : subtopicName"
                             @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
                             @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
+                              v-tooltip.right="'A section of a topic that groups related questions and answers.'"
                           />
                           <Button
                             icon="pi pi-arrow-up"
@@ -351,6 +451,7 @@
                               :value="questionKey.includes('New Question') ? '' : questionKey"
                               class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                               @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
+                              v-tooltip.right="'A question in the knowledge base that the bot will look for answers to.'"
                             />
 
                             <!-- ANSWER TEXT -->
@@ -358,6 +459,7 @@
                             <Textarea
                               v-model="questionObj.text"
                               class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
+                                v-tooltip.right="'An answer to a question that the bot will use when formulating responses.'"
                             />
 
                             <!-- LINKS / FILES -->
@@ -424,7 +526,17 @@
 
                 <!-- Save / Reject / Transfer -->
                 <div v-if="isEditMode" class="flex flex-col gap-2 my-2">
-                  <Button :disabled="isLoading" label="Save" icon="pi pi-save" class="p-button-sm" @click="savePlayground" />
+                  <Button
+                    :disabled="isLoading"
+                    label="Save"
+                    icon="pi pi-save"
+                    class="p-button-sm"
+                    @click="savePlayground"
+                    v-tooltip.bottom="
+                      'Saves the current knowledge structure as a draft. You can return to it later. \
+    The draft is not used by the bot to answer questions until you publish it.'
+                    "
+                  />
                   <Button
                     :disabled="isLoading"
                     label="Reject playground"
@@ -434,7 +546,13 @@
                   />
                 </div>
                 <div v-else class="flex flex-col gap-2 my-2">
-                  <Button :disabled="isLoading || !hasChanges" label="Publish" icon="pi pi-save" class="p-button-sm" @click="saveChanges" />
+                  <Button :disabled="isLoading || !hasChanges" label="Publish" icon="pi pi-save" class="p-button-sm" @click="saveChanges" 
+                  v-tooltip.bottom="
+    'Publishes the knowledge structure to the main knowledge base, which the bot will \
+    use to answer user questions.  Changes take effect immediately.  Make sure the \
+    structure is completely ready.'"
+                  />
+                  
                   <Button :disabled="isLoading" label="Reject" icon="pi pi-times" class="p-button-sm" @click="rejectPlayground" />
                 </div>
               </div>
@@ -451,12 +569,34 @@
                   <i class="pi pi-folder-open text-2xl"></i>
                   <h2 class="font-semibold text-xl">Knowledge base (read-only)</h2>
                 </div>
-                <div class="flex justify-center items-center">
-                  <i class="pi pi-info-circle text-xl cursor-pointer" @click="showInstructions = true"></i>
+                <div class="flex justify-center items-center gap-4">
+                  <!-- 🔍 search toggle -->
+                  <!-- 🔍 search toggle -->
+                  <Button icon="pi pi-search text-xl" class="p-button-text p-button-rounded p-button-sm" @click="toggleReadonlySearch" />
+                  <i
+    class="pi pi-info-circle text-base cursor-pointer text-xl"
+    v-tooltip="
+      'Knowledge base is the main source of information for the bot. \
+       It contains all the topics, subtopics, and questions that the bot can answer.  \
+       You can view and search through it, but you cannot edit it directly here.'"
+/>
                 </div>
               </header>
+              <div
+                v-if="showReadonlySearch"
+                class="px-4 py-3 bg-secondaryLight dark:bg-secondaryDark border-b border-secondaryDark flex items-center gap-2"
+              >
+                <InputText
+                  ref="readonlySearchInput"
+                  v-model="readonlySearchTerm"
+                  placeholder="Search knowledge base…"
+                  class="flex-1 w-full"
+                >
+                </InputText>
+                <Button icon="pi pi-times" class="p-button-text p-button-rounded p-button-sm" @click="resetReadonlySearch" />
+              </div>
               <div class="flex-1 overflow-y-auto p-4">
-                <div v-for="(topicValue, topicName) in readonlyData.knowledge_base" :key="topicName" class="mb-6">
+                <div v-for="(topicValue, topicName) in filteredReadonlyData" :key="topicName" class="mb-6">
                   <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                   <div v-if="topicValue.subtopics">
                     <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
@@ -631,7 +771,7 @@ const { t } = useI18n(); // Получаем функцию перевода
 const toast = useToast();
 const readonlyData = ref({});
 const promptText = ref("");
-const searchTerm = ref("");
+
 const selectedFiles = ref([]);
 const isEditMode = ref(false);
 const showInstructions = ref(false);
@@ -653,6 +793,61 @@ const reviewOnly = ref(false);
 const contextList = ref([]); // список
 const showContextDialog = ref(false); // диалог
 
+const ctxMenu = ref(null); // ссылка на меню
+const selectedCtx = ref(null); // «активный» ctx
+
+/* пункты меню */
+const menuItems = [
+  {
+    label: "Переименовать",
+    icon: "pi pi-pencil",
+    command: () => renameContext(selectedCtx.value),
+  },
+  {
+    label: "Скачать",
+    icon: "pi pi-download",
+    command: () => downloadContext(selectedCtx.value),
+  },
+  { separator: true },
+  {
+    label: "Удалить",
+    icon: "pi pi-trash",
+    class: "text-red-600",
+    command: () => deleteContext(selectedCtx.value.id),
+  },
+];
+
+const searchTerm = ref("");
+
+/* 🔎 filtered list */
+const filteredContextList = computed(() =>
+  contextList.value.filter((c) => {
+    if (!searchTerm.value.trim()) return true;
+    const s = searchTerm.value.toLowerCase();
+    return (c.title && c.title.toLowerCase().includes(s)) || (c.type && c.type.toLowerCase().includes(s));
+  })
+);
+
+/* открыть меню */
+function openCtxMenu(ctx, event) {
+  selectedCtx.value = ctx; // запоминаем, над кем кликнули
+  ctxMenu.value.toggle(event); // показываем TieredMenu
+}
+async function renameContext(ctx) {
+  if (!ctx) return;
+  const newTitle = prompt("Rename context", ctx.title);
+  if (!newTitle || newTitle === ctx.title) return;
+  try {
+    const form = new FormData();
+    form.append("title", newTitle);
+    await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/rename`, form);
+    ctx.title = newTitle;
+    showSuccess("Renamed");
+  } catch (e) {
+    showError("Not renamed");
+  }
+}
+
 const formatDate = (d) => new Intl.DateTimeFormat("ru-RU").format(new Date(d));
 
 const formatSize = (bytes) => (bytes / (1024 * 1024)).toFixed(1) + " MB";
@@ -661,13 +856,13 @@ const purposeLabel = (v) => (contextPurposes.find((o) => o.value === v) || {}).l
 
 const typeIcon = (t) => {
   switch (t) {
-    case "pdf":
-      return "pi pi-file-pdf";
-    case "docx":
+    case "text":
+      return "pi pi-pencil";
+    case "file":
       return "pi pi-file";
     case "qa":
       return "pi pi-question";
-    case "website":
+    case "url":
       return "pi pi-globe";
     default:
       return "pi pi-file";
@@ -684,31 +879,28 @@ const contextPurposes = [
   {
     label: "Don't use",
     value: "none",
-    desc: 'The source is ignored when generating answers.',
+    desc: "The source is ignored when generating answers.",
   },
   {
-    label: 'Bot knowledge',
-    value: 'bot',
-    desc:
-      'Information is added to the knowledge base and influences general answers, but is not used in specific queries.',
+    label: "Bot knowledge",
+    value: "bot",
+    desc: "Information is added to the knowledge base and influences general answers, but is not used in specific queries.",
   },
   {
-    label: 'Context only',
+    label: "Context only",
     value: "kb",
-    desc:
-      'The source is used only to answer the specific question, and does not affect overall knowledge.',
+    desc: "The source is used only to answer the specific question, and does not affect overall knowledge.",
   },
   {
-    label: 'Knowledge & context',
-    value: 'both',
-    desc:
-      'The source is used for both general knowledge and specific query answers.',
+    label: "Knowledge & context",
+    value: "both",
+    desc: "The source is used for both general knowledge and specific query answers.",
   },
 ];
 
 // данные формы добавления
-const newCtx = reactive({
-  type: "", // 'TEXT' | 'FILE' | 'URL'
+const newCtx = ref({
+  type: "file", // 👈 default = Files
   title: "",
   text: "",
   url: "",
@@ -754,32 +946,59 @@ async function fetchContextUnits() {
   }
 }
 
+const MAX_SOURCES = 50;
+
+const totalSources = computed(() => contextList.value.length);
+const selectedSources = computed(() => contextList.value.filter((c) => c.purpose !== "none").length);
+
+const ctxTabs = [
+  { label: "Files", value: "file", icon: "pi pi-upload" },
+  { label: "Site", value: "url", icon: "pi pi-link" },
+  { label: "Text", value: "text", icon: "pi pi-file" },
+];
+
+// Prevent opening dialog if limit is reached
 function openContextDialog() {
+  if (totalSources.value >= MAX_SOURCES) {
+    showError(`Maximum of ${MAX_SOURCES} sources reached`);
+    return;
+  }
   Object.assign(newCtx, { type: "", title: "", text: "", url: "", file: null });
   showContextDialog.value = true;
 }
 
-function onCtxFileSelect(e) {
-  newCtx.file = e.files[0] || null;
-}
+const fileUpload = ref(null);
 
+const acceptedTypes = [
+  "application/pdf",
+  "text/plain",
+  "text/markdown",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/*",
+].join(",");
+
+function onCtxFileSelect(event) {
+  // event.files is an Array of File objects
+  newCtx.value.file = event.files[0] || null;
+}
 const canSubmitContext = computed(() => {
-  if (newCtx.type === "text") return newCtx.text.trim();
-  if (newCtx.type === "url") return newCtx.url.trim();
-  if (newCtx.type === "file") return newCtx.file;
+  if (newCtx.value.type === "text") return newCtx.value.text.trim();
+  if (newCtx.value.type === "url") return newCtx.value.url.trim();
+  if (newCtx.value.type === "file") return newCtx.value.file;
   return false;
 });
 
 async function submitContext() {
   try {
     const form = new FormData();
-    form.append("type", newCtx.type);
+    form.append("type", newCtx.value.type);
     form.append("purpose", "none");
-    if (newCtx.title) form.append("title", newCtx.title);
+    if (newCtx.value.title) form.append("title", newCtx.value.title);
 
-    if (newCtx.type === "text") form.append("text", newCtx.text);
-    if (newCtx.type === "url") form.append("url", newCtx.url);
-    if (newCtx.type === "file" && newCtx.file) form.append("file", newCtx.file, newCtx.file.name);
+    if (newCtx.value.type === "text") form.append("text", newCtx.value.text);
+    if (newCtx.value.type === "url") form.append("url", newCtx.value.url);
+    if (newCtx.value.type === "file" && newCtx.value.file) form.append("file", newCtx.value.file, newCtx.value.file.name);
 
     console.log("form= ", ...form);
     await useNuxtApp().$api.post("/api/knowledge/context_entity", form);
@@ -829,7 +1048,78 @@ function toggleEditMode() {
 
 const showDialog = ref(false);
 const isLocalhost = window.location.hostname === "localhost";
-const { currentFrontendUrl } = useURLState();
+const { currentFrontendUrl, currentUrl } = useURLState();
+
+function downloadContext(ctx) {
+  if (!ctx || ctx.type !== "file" || !ctx.file_path) return;
+
+  // Extract relative path after "/files/context/"
+  const match = ctx.file_path.match(/\/files\/context\/.+$/);
+  if (!match) return;
+
+  const fileRelativePath = match[0]; // "/files/context/..."
+  const fileName = ctx.file_path.split("/").pop();
+
+  const downloadUrl = `${currentUrl.value}${fileRelativePath}`;
+
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = fileName;
+  a.target = "_blank";
+  a.click();
+}
+
+/* ▼ NEW state */
+const readonlySearchTerm = ref("");
+const showReadonlySearch = ref(false);
+const readonlySearchInput = ref(null);
+
+/* ▼ Toggle + autofocus helper */
+function toggleReadonlySearch() {
+  showReadonlySearch.value = !showReadonlySearch.value;
+  if (showReadonlySearch.value) {
+    nextTick(() => readonlySearchInput.value?.focus());
+  } else {
+    readonlySearchTerm.value = ""; // clear when closing
+  }
+}
+
+/* ▼ Filtered readonly copy */
+const filteredReadonlyData = computed(() => {
+  const src = readonlyData.value.knowledge_base;
+  const q = readonlySearchTerm.value.trim().toLowerCase();
+  if (!q) return src;
+
+  const out = {};
+  for (const [topic, tVal] of Object.entries(src)) {
+    let topicMatch = topic.toLowerCase().includes(q);
+    const subOut = {};
+
+    for (const [sub, sVal] of Object.entries(tVal.subtopics || {})) {
+      let subMatch = sub.toLowerCase().includes(q);
+      const qsOut = {};
+
+      for (const [qKey, qObj] of Object.entries(sVal.questions || {})) {
+        const text = `${qKey} ${qObj.text || ""}`.toLowerCase();
+        if (text.includes(q)) qsOut[qKey] = qObj;
+      }
+
+      if (subMatch || Object.keys(qsOut).length) {
+        subOut[sub] = { ...sVal, questions: Object.keys(qsOut).length ? qsOut : sVal.questions };
+      }
+    }
+
+    if (topicMatch || Object.keys(subOut).length) {
+      out[topic] = { ...tVal, subtopics: Object.keys(subOut).length ? subOut : tVal.subtopics };
+    }
+  }
+  return out;
+});
+
+function resetReadonlySearch() {
+  readonlySearchTerm.value = "";
+  nextTick(() => readonlySearchInput.value?.focus());
+}
 const chatUrl = isLocalhost ? `${currentFrontendUrl.value}/chats/telegram-chat` : `${currentFrontendUrl.value}/chats/telegram-chat`;
 
 async function isImage(url) {
@@ -1430,6 +1720,8 @@ async function generatePatch() {
         "Content-Type": "multipart/form-data",
       },
     });
+    rememberRequest(promptText.value);
+
     // handle success
     updatePlayground(response.data);
     showSuccess("Patch generated successfully");
@@ -1439,6 +1731,39 @@ async function generatePatch() {
   } finally {
     isLoading.value = false;
   }
+}
+
+// Request history: LocalStorage-based
+const REQUEST_HISTORY_KEY = "kb_request_history";
+const requestHistory = ref(JSON.parse(localStorage.getItem(REQUEST_HISTORY_KEY) || "[]"));
+
+// Save to localStorage whenever it changes
+watch(
+  requestHistory,
+  (h) => {
+    localStorage.setItem(REQUEST_HISTORY_KEY, JSON.stringify(h));
+  },
+  { deep: true }
+);
+
+// Remember a new request
+function rememberRequest(text) {
+  const v = text.trim();
+  if (!v) return;
+  requestHistory.value = [v, ...requestHistory.value.filter((i) => i !== v)].slice(0, 20);
+}
+
+// Reuse a request into the textarea
+function reuseRequest(text) {
+  promptText.value = text;
+  nextTick(() => {
+    document.getElementById("promptTextArea")?.focus();
+  });
+}
+
+// Clear all history
+function clearRequestHistory() {
+  requestHistory.value = [];
 }
 
 /** ======================== Методы для ПЕРЕИМЕНОВАНИЯ ======================== **/
@@ -1867,6 +2192,8 @@ function csvEscape(val) {
 }
 </script>
 
-<style scoped>
-/* Tailwind (или ваши кастомные стили) */
+<style>
+.p-fileupload-file-details .p-badge {
+  display: none !important;
+}
 </style>
