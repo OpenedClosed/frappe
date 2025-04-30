@@ -196,7 +196,7 @@ jobs:
 
             # CRON задачи (ежедневно в 00:00 по МСК → значит 21:00 по UTC)
             (crontab -l 2>/dev/null; echo "*/20 * * * * ~/scripts/restart_containers.sh >> ~/scripts/logs/restart_containers.log 2>&1") | sort -u | crontab -
-            (crontab -l 2>/dev/null; echo "*/10 * * * * ~/scripts/restart_nginx.sh >> ~/scripts/logs/restart_nginx.log 2>&1") | sort -u | crontab -
+            (crontab -l 2>/dev/null; echo "*/15 * * * * ~/scripts/restart_nginx.sh >> ~/scripts/logs/restart_nginx.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_backup_script.sh >> ~/scripts/logs/full_backup.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_mongo_backup.sh >> ~/scripts/logs/mongo_backup.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_media_backup_script.sh >> ~/scripts/logs/media_backup.log 2>&1") | sort -u | crontab -
