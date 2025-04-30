@@ -375,7 +375,7 @@ class MainInfoAccount(BaseAccount):
             pid = await schema.get_patient_id_from_crm(contact_data)
             return str(pid) if pid else "PAT-123456"
         except Exception as e:
-            print(e)
+            # print(e)
             return "PAT-123456"
 
 

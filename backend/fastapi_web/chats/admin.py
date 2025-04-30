@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from admin_core.base_admin import BaseAdmin, InlineAdmin
+from crud_core.permissions import OperatorPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 from infra import settings
@@ -18,6 +19,7 @@ class ChatMessageInline(InlineAdmin):
     model = ChatMessage
     collection_name = "chats"
     dot_field_path = "messages"
+    permission_class = OperatorPermission()
 
     verbose_name = {
         "en": "Chat Message",
@@ -158,6 +160,7 @@ class ClientInline(InlineAdmin):
     model = Client
     collection_name = "chats"
     dot_field_path = "client"
+    permission_class = OperatorPermission()
 
     verbose_name = {
         "en": "Client", "pl": "Klient", "uk": "Клієнт", "zh": "客户", "es": "Cliente", "ru": "Клиент"
@@ -226,6 +229,7 @@ class ChatSessionAdmin(BaseAdmin):
 
     model = ChatSession
     collection_name = "chats"
+    permission_class = OperatorPermission()
 
     verbose_name = {
         "en": "Chat Session", "pl": "Sesja czatu", "uk": "Сесія чату", "ru": "Сессия чата",

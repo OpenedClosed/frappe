@@ -177,6 +177,7 @@ async def create_context_entity(
     ai_model: str = Form(settings.MODEL_DEFAULT),
     Authorize: AuthJWT = Depends(),
 ):
+    """Создать единицу контекста."""
     kb_doc, _ = await get_knowledge_base()
     kb_doc.setdefault("context", [])
 

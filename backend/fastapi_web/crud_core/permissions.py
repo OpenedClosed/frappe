@@ -1,10 +1,9 @@
 """Основные классы резрешений для CRUD."""
 from typing import List, Optional
 
+from db.mongo.db_init import mongo_db
 from fastapi import HTTPException
 from pydantic import BaseModel
-
-from db.mongo.db_init import mongo_db
 from users.db.mongo.enums import RoleEnum
 
 
@@ -124,6 +123,20 @@ class RoleBasedPermission(MethodPermissionMixin):
     def can_delete(self, user, obj):
         return user and user.role in self.roles_delete
 
+class OperatorPermission(RoleBasedPermission):
+    """
+    Просмотр чатов для main-operator + остальных,
+    изменение/удаление ‒ только для (super)admin.
+    """
+    roles_create = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    roles_read   = [
+        RoleEnum.MAIN_OPERATOR,
+        RoleEnum.STAFF,
+        RoleEnum.ADMIN,
+        RoleEnum.SUPERADMIN,
+    ]
+    roles_update = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    roles_delete = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
 
 class AdminPanelPermission(RoleBasedPermission):
     """
