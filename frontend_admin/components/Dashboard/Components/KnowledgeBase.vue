@@ -1,14 +1,14 @@
 <template>
   <!-- Full screen container with no overflow -->
-  <div class="flex flex-1 flex-col min-h-0 2xl:max-h-[90vh] h-full">
+  <div class="flex flex-1 flex-col min-h-0 xl:max-h-[90vh] h-full">
     <Toast />
     <!-- Main container -->
     <div class="flex flex-col flex-1 overflow-hidden">
       <!-- Main block: 3 columns -->
       <div class="flex flex-1 flex-row rounded-md overflow-hidden">
-        <div class="flex flex-col 2xl:flex-row flex-1 justify-between overflow-hidden">
+        <div class="flex flex-col xl:flex-row flex-1 justify-between overflow-hidden">
           <!-- LEFT COLUMN -->
-          <div class="flex-0 2xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
+          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
             <section>
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -216,7 +216,7 @@
               <span>Selected: {{ selectedSources }}</span>
             </header>
 
-            <section>
+            <section class="flex flex-col flex-1 overflow-y-auto">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-y border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
               >
@@ -264,7 +264,7 @@
                   <div v-else class="text-sm text-gray-500 dark:text-gray-400">No previous requests found.</div>
                 </section>
 
-                <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 overflow-y-auto gap-4">
+                <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0  gap-4 my-4">
                   <!-- TEXTAREA -->
                   <Textarea
                     id="promptTextArea"
@@ -292,7 +292,7 @@
                     :disabled="isLoading"
                     label="Generate smart change"
                     icon="pi pi-send"
-                    class="w-full flex justify-center items-center"
+                    class="w-full flex justify-center items-center min-h-[37px]"
                   >
                     <LoaderSmall v-if="isLoading" />
                   </Button>
@@ -302,7 +302,7 @@
           </div>
 
           <!-- CENTER COLUMN -->
-          <div class="flex-0 2xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -315,12 +315,11 @@
                 <div class="flex justify-center items-center gap-4">
                   <div class="flex flex-row gap-2">
                     <!-- Review-changes button -->
-                    <Button class="p-button-sm flex items-center justify-center gap-2 min-w-[210px] max-h-[37px]" @click="reviewChanges">
-                      <div v-if="!isLoading" class="flex items-center gap-2">
+                    <Button class="p-button-sm flex items-center justify-center gap-2  max-h-[37px]" @click="reviewChanges">
+                      <div v-if="!isLoading" class="flex items-center">
                         <i class="pi pi-eye"></i>
-                        <p>Review changes</p>
 
-                        <Badge v-if="changesTotal" :value="changesTotal" severity="info" class="ml-2" />
+                        <Badge :value="changesTotal" severity="info" class="ml-2" />
                       </div>
                       <LoaderSmall v-else />
                     </Button>
@@ -548,32 +547,25 @@
                 </div>
 
                 <!-- Save / Reject / Transfer -->
-                <div v-if="isEditMode" class="flex flex-col gap-2 my-2">
+                <div  class="flex flex-row justify-between gap-2 my-2">
+                  <Button :disabled="isLoading" label="Reject" icon="pi pi-times" class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300" @click="rejectPlayground" />
                   <Button
-                    :disabled="isLoading"
+                    :disabled="isLoading || !isEditMode"
                     label="Save"
                     icon="pi pi-save"
-                    class="p-button-sm"
+                    class="p-button-sm flex-1"
                     @click="savePlayground"
                     v-tooltip.bottom="
                       'Saves the current knowledge structure as a draft. You can return to it later. \
     The draft is not used by the bot to answer questions until you publish it.'
                     "
                   />
+                
                   <Button
-                    :disabled="isLoading"
-                    label="Reject playground"
-                    icon="pi pi-times"
-                    class="p-button-sm"
-                    @click="rejectPlayground"
-                  />
-                </div>
-                <div v-else class="flex flex-col gap-2 my-2">
-                  <Button
-                    :disabled="isLoading || !hasChanges"
+                    :disabled="(isLoading || !hasChanges) && isEditMode"
                     label="Publish"
                     icon="pi pi-save"
-                    class="p-button-sm"
+                    class="p-button-sm flex-1"
                     @click="saveChanges"
                     v-tooltip.bottom="
                       'Publishes the knowledge structure to the main knowledge base, which the bot will \
@@ -582,21 +574,21 @@
                     "
                   />
 
-                  <Button :disabled="isLoading" label="Reject" icon="pi pi-times" class="p-button-sm" @click="rejectPlayground" />
+                
                 </div>
               </div>
             </section>
           </div>
 
           <!-- RIGHT COLUMN (Readonly Copy) -->
-          <div class="flex-0 2xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-folder-open text-2xl"></i>
-                  <h2 class="font-semibold text-xl">Knowledge base (read-only)</h2>
+                  <i class="pi pi-book text-2xl"></i>
+                  <h2 class="font-semibold text-xl">Knowledge base</h2>
                 </div>
                 <div class="flex justify-center items-center gap-4">
                   <!-- 🔍 search toggle -->
@@ -648,10 +640,10 @@
                   </div>
                 </div>
               </div>
-              <div class="flex flex-col gap-2 p-4 my-2">
-                <Button label="Export" icon="pi pi-file-export" class="p-button-sm" @click="showExportDialog = true" />
+              <div class="flex flex-row justify-between gap-2 p-4 my-2">
+                <Button label="Export" icon="pi pi-file-export" class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300" @click="showExportDialog = true" />
 
-                <AdminChat />
+                <AdminChat class="flex-1" />
               </div>
             </section>
           </div>
