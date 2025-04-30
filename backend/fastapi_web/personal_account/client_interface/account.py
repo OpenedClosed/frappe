@@ -1,17 +1,18 @@
 """Персональный аккаунт приложения Клиентский интерфейс."""
-from datetime import datetime
-from typing import List, Optional
+from datetime import date, datetime
+from typing import Any, List, Optional
 
 from fastapi import HTTPException
 
 # from crud_core.permissions import AdminPanelPermission
+from integrations.panamedica.client import CRMError, get_client
 from crud_core.registry import account_registry
 from db.mongo.db_init import mongo_db
 from personal_account.base_account import BaseAccount, InlineAccount
 
-from .db.mongo.enums import (FamilyStatusEnum, HealthFormStatus,
+from .db.mongo.enums import (AccountVerificationEnum, FamilyStatusEnum, HealthFormStatus,
                              TransactionTypeEnum)
-from .db.mongo.schemas import (BonusProgramSchema, BonusTransactionSchema,
+from .db.mongo.schemas import (AppointmentSchema, BonusProgramSchema, BonusTransactionSchema,
                                ConsentSchema, ContactInfoSchema,
                                FamilyMemberSchema, HealthSurveySchema,
                                MainInfoSchema)
@@ -53,6 +54,7 @@ class MainInfoAccount(BaseAccount):
         "gender",
         "company_name",
         "avatar",
+        "account_status",
         "patient_id",
         "created_at",
         "updated_at"
@@ -72,6 +74,12 @@ class MainInfoAccount(BaseAccount):
             "en": "Avatar",
             "ru": "Аватар",
             "pl": "Awatar"
+        },
+        "account_status": {
+            "en": "Account Status", "ru": "Статус аккаунта", "pl": "Status konta"
+        },
+        "metadata": {
+            "en": "Metadata", "ru": "Метаданные", "pl": "Metadane"
         },
         "patient_id": {"en": "Patient ID", "ru": "ID пациента", "pl": "ID pacjenta"},
         "created_at": {"en": "Created At", "ru": "Дата создания", "pl": "Data utworzenia"},
@@ -114,6 +122,16 @@ class MainInfoAccount(BaseAccount):
             "ru": "Фотография пользователя или аватар",
             "pl": "Zdjęcie użytkownika lub awatar"
         },
+        "account_status": {
+            "en": "Verification status of the account",
+            "ru": "Статус верификации аккаунта",
+            "pl": "Status weryfikacji konta"
+        },
+        # "metadata": {
+        #     "en": "Extra parameters such as referral code",
+        #     "ru": "Дополнительные параметры, например реферальный код",
+        #     "pl": "Dodatkowe parametry, np. kod polecający"
+        # },
         "patient_id": {
             "en": "Patient internal ID",
             "ru": "Внутренний ID пациента",
@@ -133,17 +151,20 @@ class MainInfoAccount(BaseAccount):
 
     field_groups = [
         {
+            "column": 0,
             "title": {"en": "Personal data", "ru": "Личные данные", "pl": "Dane osobowe"},
-            "fields": ["last_name", "first_name", "patronymic", "birth_date", "gender", "avatar"]
+            "fields": ["last_name", "first_name", "patronymic", "birth_date", "gender", "avatar"],
         },
         {
+            "column": 1,
             "title": {"en": "Company info", "ru": "Информация о компании", "pl": "Informacje o firmie"},
-            "fields": ["company_name"]
+            "fields": ["company_name"],
         },
         {
+            "column": 1,
             "title": {"en": "System info", "ru": "Системная информация", "pl": "Informacje systemowe"},
-            "fields": ["patient_id", "created_at", "updated_at"]
-        }
+            "fields": ["patient_id", "account_status", "metadata", "created_at", "updated_at"],
+        },
     ]
 
     field_styles = {
@@ -265,11 +286,99 @@ class MainInfoAccount(BaseAccount):
         "delete": False
     }
 
+    async def maybe_update_status_from_crm(self, doc: dict) -> dict:
+        """
+        Если `account_status` == UNVERIFIED и в CRM найден закрытый визит —
+        обновляем статус на VERIFIED.
+        """
+        if doc.get("account_status") == AccountVerificationEnum.VERIFIED.value:
+            return doc
+
+        patient_id = doc.get("patient_id")
+        if not patient_id:
+            return doc
+
+        # crm = get_client()
+        # apps = await crm.future_appointments(int(patient_id), from_date=date.today())
+        # if any(a.get("status") == "closed" for a in apps):
+        #     await self.db.update_one(
+        #         {"_id": doc["_id"]},
+        #         {"$set": {"account_status": AccountVerificationEnum.VERIFIED}}
+        #     )
+        #     doc["account_status"] = AccountVerificationEnum.VERIFIED
+        return doc  # без CRM
+
+    async def get_queryset(
+        self,
+        filters: dict | None = None,
+        sort_by: str | None = None,
+        order: int = 1,
+        page: int | None = None,
+        page_size: int | None = None,
+        current_user: Any | None = None,
+        format: bool = True,
+    ) -> list[dict]:
+        """
+        Перед выводом каждой записи уточняем `account_status` через CRM (если нужно).
+        """
+        docs = await super().get_queryset(
+            filters, sort_by, order, page, page_size, current_user, format=False
+        )
+
+        updated: list[dict] = []
+        for raw in docs:
+            raw = await self.maybe_update_status_from_crm(raw)
+            if format:
+                updated.append(await self.format_document(raw, current_user))
+            else:
+                updated.append(raw)
+        return updated
+
+    async def create(self, data: dict, current_user=None):
+        """
+        Создание записи. CRM-синхронизация отключена по умолчанию.
+        """
+        created = await super().create(data, current_user)
+
+        # crm = get_client()
+        # pid = await crm.find_or_create_patient(local_data=created, contact_data={})
+        # await self.db.update_one({"_id": ObjectId(created["id"])}, {"$set": {"patient_id": pid}})
+
+        return created
+
+    async def update(self, object_id: str, data: dict, current_user=None):
+        """
+        Обновление записи. Патч в CRM (при наличии patient_id) закомментирован.
+        """
+        updated = await super().update(object_id, data, current_user)
+
+        # if updated.get("patient_id"):
+        #     crm_patch = {"phone": updated.get("phone"), "email": updated.get("email")}
+        #     await get_client().patch_patient(int(updated["patient_id"]), crm_patch)
+
+        return updated
+
     async def get_patient_id(self, obj: dict) -> str:
         """
-        Получение ID пациента из внешней CRM (заглушка).
+        Получение ID пациента из CRM (или заглушка, если недоступен).
         """
-        return "PAT-123456"
+        try:
+            schema = MainInfoSchema(**obj)
+            user_id = obj.get("user_id")
+            if not user_id:
+                return "PAT-123456"
+
+            contact_data = await mongo_db["patients_contact_info"].find_one({"user_id": str(user_id)})
+            if not contact_data:
+                return "PAT-123456"
+
+            pid = await schema.get_patient_id_from_crm(contact_data)
+            return str(pid) if pid else "PAT-123456"
+        except Exception as e:
+            print(e)
+            return "PAT-123456"
+
+
 
 
 # ==========
@@ -279,7 +388,7 @@ class MainInfoAccount(BaseAccount):
 
 class ContactInfoAccount(BaseAccount):
     """
-    Админка для вкладки 'Контактная информация'
+    Админка для вкладки «Контактная информация».
     """
 
     model = ContactInfoSchema
@@ -290,84 +399,61 @@ class ContactInfoAccount(BaseAccount):
         "ru": "Контактная информация",
         "pl": "Informacje kontaktowe"
     }
-    plural_name = {
-        "en": "Contact information records",
-        "ru": "Записи контактной информации",
-        "pl": "Rekordy informacji kontaktowych"
-    }
+    plural_name = verbose_name
 
-    icon: str = "pi pi-envelope"
+    icon = "pi pi-envelope"
     max_instances_per_user = 1
 
-    list_display = []
+    list_display: list[str] = []
 
     detail_fields = [
-        "email",
-        "phone",
-        "address",
-        "pesel",
-        "emergency_contact",
-        "doc_id",
-        "updated_at"
+        "email", "phone", "address", "pesel",
+        "emergency_contact", "doc_id", "updated_at"
     ]
 
     computed_fields = ["doc_id"]
-    read_only_fields = ["updated_at", "doc_id"]
+    read_only_fields = ["doc_id", "updated_at"]
 
     field_titles = {
-        "email": {"en": "Email", "ru": "Email", "pl": "E-mail"},
-        "phone": {"en": "Phone", "ru": "Телефон", "pl": "Telefon"},
-        "address": {"en": "Address", "ru": "Адрес", "pl": "Adres"},
-        "pesel": {"en": "PESEL", "ru": "PESEL", "pl": "PESEL"},
-        "emergency_contact": {"en": "Emergency contact", "ru": "Экстренный контакт", "pl": "Kontakt awaryjny"},
-        "doc_id": {"en": "Document ID", "ru": "ID документа", "pl": "ID dokumentu"},
-        "updated_at": {"en": "Last update", "ru": "Последнее обновление", "pl": "Ostatnia aktualizacja"},
+        "email":             {"en": "Email",              "ru": "Email",     "pl": "E-mail"},
+        "phone":             {"en": "Phone",              "ru": "Телефон",   "pl": "Telefon"},
+        "address":           {"en": "Address",            "ru": "Адрес",     "pl": "Adres"},
+        "pesel":             {"en": "PESEL",              "ru": "PESEL",     "pl": "PESEL"},
+        "emergency_contact": {"en": "Emergency contact",  "ru": "Экстренный контакт", "pl": "Kontakt awaryjny"},
+        "doc_id":            {"en": "Document ID",        "ru": "ID документа",       "pl": "ID dokumentu"},
+        "updated_at":        {"en": "Last update",        "ru": "Последнее обновление","pl": "Ostatnia aktualizacja"},
     }
 
     help_texts = {
-        "email": {
-            "en": "Enter a valid email address",
-            "ru": "Введите действующий адрес электронной почты",
-            "pl": "Wprowadź poprawny adres e-mail"
-        },
-        "phone": {
-            "en": "Primary phone number",
-            "ru": "Основной номер телефона",
-            "pl": "Główny numer telefonu"
-        },
-        "address": {
-            "en": "Postal or residential address",
-            "ru": "Почтовый или фактический адрес проживания",
-            "pl": "Adres pocztowy lub zamieszkania"
-        },
-        "pesel": {
-            "en": "National identifier (PESEL, SNILS, etc.)",
-            "ru": "Национальный идентификатор (СНИЛС, ИИН, и т.д.)",
-            "pl": "Numer identyfikacyjny (PESEL, itp.)"
-        },
-        "emergency_contact": {
-            "en": "Phone of a person to contact in emergency",
-            "ru": "Телефон близкого человека для экстренной связи",
-            "pl": "Telefon kontaktowy w nagłych wypadkach"
-        },
-        "doc_id": {
-            "en": "Passport or other document ID",
-            "ru": "Паспорт или другой номер документа",
-            "pl": "Paszport lub inny dokument tożsamości"
-        },
-        "updated_at": {
-            "en": "Date and time this info was last updated",
-            "ru": "Дата и время последнего обновления контактных данных",
-            "pl": "Data i godzina ostatniej aktualizacji danych kontaktowych"
-        }
+        "email":             {"en": "Valid e-mail",        "ru": "Действующий e-mail",  "pl": "Poprawny e-mail"},
+        "phone":             {"en": "Primary phone",       "ru": "Основной телефон",    "pl": "Główny telefon"},
+        "address":           {"en": "Postal address",      "ru": "Адрес проживания",    "pl": "Adres zamieszkania"},
+        "pesel":             {"en": "National ID",         "ru": "Нац. идентификатор",  "pl": "Numer PESEL"},
+        "emergency_contact": {"en": "Emergency phone",     "ru": "Телефон для экстренной связи", "pl": "Telefon awaryjny"},
+        "doc_id":            {"en": "Passport / ID",       "ru": "Паспорт / ID",        "pl": "Paszport / ID"},
+        "updated_at":        {"en": "Timestamp",           "ru": "Отметка времени",     "pl": "Znacznik czasu"},
     }
+
+
+    field_groups = [
+        {
+            "column": 0,
+            "title": {"en": "Contacts", "ru": "Контакты", "pl": "Kontakty"},
+            "fields": ["email", "phone", "emergency_contact"],
+        },
+        {
+            "column": 1,
+            "title": {"en": "Address & IDs", "ru": "Адрес и идентификаторы", "pl": "Adres i ID"},
+            "fields": ["address", "pesel", "doc_id", "updated_at"],
+        },
+    ]
 
     field_styles = {
         "email": {
             "label_styles": {
                 "font_size": "13px",
                 "font_weight": "normal",
-                "text_color": "#6B6B7B"  # серовато-синий
+                "text_color": "#6B6B7B"
             },
             "value_styles": {
                 "font_size": "15px",
@@ -456,11 +542,42 @@ class ContactInfoAccount(BaseAccount):
         "delete": False
     }
 
+    async def patch_crm(self, user_id: str, patch: dict) -> None:
+        """
+        Отправляет PATCH /patients/{id} в CRM (если patient_id найден).
+        Выключено комментариями.
+        """
+        # main = await mongo_db["patients_main_info"].find_one({"user_id": str(user_id)})
+        # if not main or not main.get("patient_id"):
+        #     return
+        # pid = int(main["patient_id"])
+        # await get_client().patch_patient(pid, patch)
+        return
+
+    async def create(self, data: dict, current_user=None):
+        created = await super().create(data, current_user)
+        # await self.patch_crm(current_user.id, {"phone": created["phone"], "email": created["email"]})
+        return created
+
+    async def update(self, object_id: str, data: dict, current_user=None):
+        updated = await super().update(object_id, data, current_user)
+        # await self.patch_crm(current_user.id, {"phone": updated["phone"], "email": updated["email"]})
+        return updated
+
+
     async def get_doc_id(self, obj: dict) -> str:
         """
-        Получение ID документа из внешней системы (заглушка).
+        Возвращает doc_id из CRM (или заглушка).
         """
-        return "4510 123456"
+        try:
+            # crm = get_client()
+            # pid = obj.get("patient_id")
+            # if pid:
+            #     patient = await crm.call("GET", f"/patients/{pid}")
+            #     return patient.get("passport") or "4510 123456"
+            return "4510 123456"  # заглушка
+        except Exception:
+            return "4510 123456"
 
 
 # ==========
@@ -1236,6 +1353,102 @@ class ConsentAccount(BaseAccount):
         "delete": False
     }
 
+# ==========
+# Встречи
+# ==========
+
+class AppointmentAccount(BaseAccount):
+    """
+    Только для чтения: встречи пользователя, полученные из CRM.
+    """
+
+    model = AppointmentSchema  # фиктивная схема, не используется
+    collection_name = "crm_appointments"
+    verbose_name = {
+        "en": "Appointments",
+        "ru": "Визиты",
+        "pl": "Wizyty"
+    }
+    plural_name = {
+        "en": "Appointments",
+        "ru": "Визиты",
+        "pl": "Wizyty"
+    }
+
+    icon = "pi pi-calendar"
+    max_instances_per_user = None
+    allow_crud_actions = {
+        "create": False,
+        "read": True,
+        "update": False,
+        "delete": False
+    }
+
+    list_display = [
+        "visit_date", "start", "end", "doctor"
+    ]
+    detail_fields = [
+        "visit_date", "start", "end", "doctor"
+    ]
+
+    field_titles = {
+        "visit_date": {"en": "Date", "ru": "Дата", "pl": "Data"},
+        "start": {"en": "Start Time", "ru": "Начало", "pl": "Godzina rozpoczęcia"},
+        "end": {"en": "End Time", "ru": "Конец", "pl": "Godzina zakończenia"},
+        "doctor": {"en": "Doctor", "ru": "Врач", "pl": "Lekarz"},
+    }
+
+    read_only_fields = ["visit_date", "start", "end", "doctor"]
+
+    # async def get_queryset(
+    #     self, filters=None, sort_by=None, order=1, page=None, page_size=None, current_user=None, format=True
+    # ) -> list[dict]:
+    #     """
+    #     Получает встречи из CRM для текущего пользователя начиная с даты регистрации.
+    #     Если patient_id отсутствует, создаёт пациента в CRM.
+    #     """
+    #     if not current_user or not current_user.data["user_id"]:
+    #         raise HTTPException(403, "Unauthorized")
+
+    #     user_id = str(current_user.data["user_id"])
+    #     info = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
+    #     contact = await mongo_db["patients_contact_info"].find_one({"user_id": user_id})
+    #     if not info or not contact:
+    #         return []
+
+    #     # Если patient_id нет, пытаемся создать
+    #     if "patient_id" not in info:
+    #         try:
+    #             pid = await get_client().find_or_create_patient(local_data=info, contact_data=contact)
+    #             await mongo_db["patients_main_info"].update_one(
+    #                 {"_id": info["_id"]},
+    #                 {"$set": {"patient_id": pid}}
+    #             )
+    #             info["patient_id"] = pid
+    #         except CRMError as e:
+    #             raise HTTPException(502, f"CRM error: {e.detail}")
+
+    #     patient_id = info["patient_id"]
+    #     created = info.get("created_at", date.today())
+
+    #     appointments = await get_client().future_appointments(patient_id, from_date=created.date())
+
+    #     def to_result(raw: dict) -> dict:
+    #         return {
+    #             "visit_date": raw.get("date"),
+    #             "start": raw.get("start"),
+    #             "end": raw.get("end"),
+    #             "doctor": raw.get("doctor", {}).get("name"),
+    #             "id": str(raw.get("id")),
+    #         }
+
+    #     results = [to_result(a) for a in appointments]
+
+    #     if sort_by:
+    #         results.sort(key=lambda x: x.get(sort_by), reverse=(order == -1))
+
+    #     return results
+
 
 account_registry.register("patients_main_info", MainInfoAccount(mongo_db))
 account_registry.register(
@@ -1249,3 +1462,4 @@ account_registry.register(
     "patients_bonus_program",
     BonusProgramAccount(mongo_db))
 account_registry.register("patients_consents", ConsentAccount(mongo_db))
+account_registry.register("crm_appointments", AppointmentAccount(mongo_db))

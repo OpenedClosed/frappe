@@ -1,13 +1,15 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
-from datetime import datetime
-from typing import Any, List, Optional
+from datetime import datetime, time, date
+from typing import Any, Dict, List, Optional
 
 from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr, Field
 
+from utils.help_functions import normalize_numbers
+from integrations.panamedica.client import get_client
 from db.mongo.base.schemas import BaseValidatedModel, Photo
 
-from .enums import (ConditionEnum, ConsentEnum, FamilyStatusEnum, GenderEnum,
+from .enums import (AccountVerificationEnum, ConditionEnum, ConsentEnum, FamilyStatusEnum, GenderEnum,
                     RelationshipEnum, TransactionTypeEnum)
 
 # ==========
@@ -77,17 +79,70 @@ class TwoFASchema(BaseModel):
 # Основная информация
 # ==========
 
+# class MainInfoSchema(BaseValidatedModel):
+#     """
+#     Основная информация о пациенте, хранится в MongoDB.
+#     """
+
+#     last_name: str
+#     first_name: str
+#     patronymic: Optional[str] = None
+
+#     birth_date: datetime = Field(
+#         ...,
+#         json_schema_extra={
+#             "settings": {
+#                 "type": "calendar",
+#                 "placeholder": {
+#                     "ru": "Выберите дату рождения",
+#                     "en": "Select birth date",
+#                     "pl": "Wybierz datę urodzenia"
+#                 }
+#             }
+#         }
+#     )
+
+#     gender: GenderEnum = Field(
+#         ...,
+#         json_schema_extra={
+#             "settings": {
+#                 "type": "select",
+#                 "placeholder": {
+#                     "ru": "Выберите пол",
+#                     "en": "Select gender",
+#                     "pl": "Wybierz płeć"
+#                 }
+#             }
+#         }
+#     )
+
+#     company_name: Optional[str] = None
+#     avatar: Optional[Photo] = None
+
+#     account_status: AccountVerificationEnum = Field(
+#         default=AccountVerificationEnum.UNVERIFIED,
+#         json_schema_extra={"settings": {"readonly": True}}
+#     )
+
+#     metadata: Optional[Dict[str, Any]] = Field(
+#         default_factory=dict,
+#         json_schema_extra={"settings": {"readonly": True}}
+#     )
+
+#     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+#     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
 class MainInfoSchema(BaseValidatedModel):
     """
-    Схема для вкладки 'Основная информация'.
+    Основная информация о пациенте, хранится в MongoDB.
     """
 
     last_name: str
     first_name: str
     patronymic: Optional[str] = None
 
-    birth_date: datetime = Field(
-        ...,
+    birth_date: Optional[datetime] = Field(
+        None,
         json_schema_extra={
             "settings": {
                 "type": "calendar",
@@ -100,8 +155,8 @@ class MainInfoSchema(BaseValidatedModel):
         }
     )
 
-    gender: GenderEnum = Field(
-        ...,
+    gender: Optional[GenderEnum] = Field(
+        None,
         json_schema_extra={
             "settings": {
                 "type": "select",
@@ -115,12 +170,44 @@ class MainInfoSchema(BaseValidatedModel):
     )
 
     company_name: Optional[str] = None
-
     avatar: Optional[Photo] = None
+
+    account_status: AccountVerificationEnum = Field(
+        default=AccountVerificationEnum.UNVERIFIED,
+        json_schema_extra={"settings": {"readonly": True}}
+    )
+
+    metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        json_schema_extra={"settings": {"readonly": True}}
+    )
 
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
+    async def get_patient_id_from_crm(self, contact_data: dict) -> Optional[int]:
+        """
+        Получает ID пациента из CRM, если он существует. Возвращает None, если не найден.
+        Используется при логине или синхронизации.
+        """
+        # crm = get_client()
+        # phone = normalize_numbers(contact_data.get("phone", ""))
+        # pesel = contact_data.get("pesel")
+        # gender = self.gender.value if self.gender else None
+        # bdate = self.birth_date.strftime("%Y-%m-%d") if self.birth_date else None
+
+        # try:
+        #     patient_id = await crm.find_patient(
+        #         phone=phone,
+        #         pesel=pesel,
+        #         gender=gender,
+        #         birth_date=bdate
+        #     )
+        #     return patient_id
+        # except Exception as e:
+        #     print(e)
+        #     return None
+        return None
 
 # ==========
 # Контактная информация
@@ -566,3 +653,77 @@ class ConsentSchema(BaseValidatedModel):
     )
 
     last_updated: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+# ==========
+# Встречи
+# ==========
+
+class AppointmentSchema(BaseModel):
+    """
+    Схема для вкладки 'Визиты пациента'. Только для чтения (read-only).
+    """
+
+    visit_date: date = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "calendar",
+                "readonly": True,
+                "placeholder": {
+                    "ru": "Дата визита",
+                    "en": "Visit date",
+                    "pl": "Data wizyty"
+                }
+            }
+        }
+    )
+
+    start: time = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "time",
+                "readonly": True
+            }
+        }
+    )
+
+    end: time = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "time",
+                "readonly": True
+            }
+        }
+    )
+
+    doctor_name: str = Field(
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "text",
+                "readonly": True,
+                "placeholder": {
+                    "ru": "Имя врача",
+                    "en": "Doctor name",
+                    "pl": "Imię lekarza"
+                }
+            }
+        }
+    )
+
+    status: Optional[str] = Field(
+        None,
+        json_schema_extra={
+            "settings": {
+                "type": "select",
+                "readonly": True,
+                "placeholder": {
+                    "ru": "Статус визита",
+                    "en": "Appointment status",
+                    "pl": "Status wizyty"
+                }
+            }
+        }
+    )

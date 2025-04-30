@@ -250,6 +250,7 @@ def generate_base_routes(registry: BaseRegistry):
                 has_page_size_in_query = ('page_size' in request.query_params)
 
                 if instance.max_instances_per_user == 1:
+                    
                     items = await instance.get_queryset(current_user=user_doc)
                     item = None
                     if items:

@@ -185,8 +185,39 @@ async def parse_file_from_path(path: str) -> str:
 
 # ---------- Парсинг URL ----------
 
+# async def parse_url(url: str, timeout: int = 10) -> str:
+#     """Скачивает страницу и возвращает очищенный текст без скриптов/стилей."""
+#     async with httpx.AsyncClient(
+#         timeout=timeout,
+#         follow_redirects=True,
+#         headers={"User-Agent": "Mozilla/5.0 (knowledge-context-bot)"},
+#     ) as client:
+#         r = await client.get(url)
+#         r.raise_for_status()
+
+#     soup = BeautifulSoup(r.text, "lxml")
+#     for t in soup(["script", "style", "noscript", "header", "footer", "form"]):
+#         t.decompose()
+#     return "\n".join(line.strip() for line in soup.get_text("\n").splitlines() if line.strip())
+
+
+# async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
+#     """Возвращает кешированный текст страницы или кэширует новый."""
+#     key = f"url_cache:{hashlib.sha1(url.encode()).hexdigest()}"
+#     cached = await redis_db.get(key)
+#     if cached:
+#         return cached.decode(errors="ignore") if isinstance(cached, bytes) else cached
+
+#     parsed = await parse_url(url)
+#     await redis_db.set(key, parsed, ex=ttl)
+#     return parsed
+
 async def parse_url(url: str, timeout: int = 10) -> str:
     """Скачивает страницу и возвращает очищенный текст без скриптов/стилей."""
+    url = url.strip()
+    if not url:
+        raise ValueError("Empty URL passed to parse_url")
+
     async with httpx.AsyncClient(
         timeout=timeout,
         follow_redirects=True,
@@ -200,9 +231,12 @@ async def parse_url(url: str, timeout: int = 10) -> str:
         t.decompose()
     return "\n".join(line.strip() for line in soup.get_text("\n").splitlines() if line.strip())
 
-
 async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
     """Возвращает кешированный текст страницы или кэширует новый."""
+    url = url.strip()
+    if not url:
+        raise ValueError("Empty or whitespace-only URL passed to cache_url_snapshot")
+
     key = f"url_cache:{hashlib.sha1(url.encode()).hexdigest()}"
     cached = await redis_db.get(key)
     if cached:

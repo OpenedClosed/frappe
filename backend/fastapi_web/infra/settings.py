@@ -93,5 +93,10 @@ WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "change_me")
 
 # SMTP
 SMS_API_URL = os.getenv("SMS_API_URL", "change_me")
-SMS_API_KEY =os.getenv("SMS_API_KEY", "change_me")
+SMS_API_KEY = os.getenv("SMS_API_KEY", "change_me")
 SMS_API_SENDER = os.getenv("SMS_API_SENDER", "change_me")
+
+# PaNa Medica CRM
+CRM_API_URL = os.getenv("CRM_API_URL", "change_me")
+CRM_CLIENT_ID = os.getenv("CRM_CLIENT_ID", "change_me")
+CRM_CLIENT_SECRET = os.getenv("CRM_CLIENT_SECRET", "change_me")
