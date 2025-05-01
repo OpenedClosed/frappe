@@ -161,8 +161,9 @@ async def get_bot_info(
 # ==============================
 
 
-@knowledge_base_router.post("/context_entity",
-                            response_model=ContextEntry, status_code=201)
+# @knowledge_base_router.post("/context_entity",
+#                             response_model=ContextEntry, status_code=201)
+@knowledge_base_router.post("/context_entity", status_code=201)
 @jwt_required()
 @permission_required(AdminPanelPermission)
 async def create_context_entity(
@@ -258,7 +259,7 @@ async def get_all_context(
     updated = False
     for ctx_data in context:
         ctx_entry = ContextEntry(**ctx_data)
-        is_updated = await ensure_entry_processed(ctx_entry)
+        is_updated = asyncio.create_task(ensure_entry_processed(ctx_entry))
         if is_updated:
             for i, item in enumerate(context):
                 if item.get("id") == ctx_entry.id:
