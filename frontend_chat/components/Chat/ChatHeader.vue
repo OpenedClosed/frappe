@@ -14,7 +14,7 @@
       </div>
       <div class="flex flex-row items-center gap-2">
         <h2 class="font-bold hidden md:block">{{ botHeaderData?.app_name || " " }}</h2>
-        <h2 class="font-bold max-w-[100px] block md:hidden truncate text-nowrap">
+        <h2 class="font-bold max-w-[60px] block md:hidden truncate text-nowrap">
           {{ botHeaderData?.app_name || " " }}
         </h2>
         <p v-if="typingUserNames.length" class="animate-pulse hidden md:block">is typing...</p>
