@@ -26,15 +26,15 @@
 
     if (mobile) {
       container.style.position = 'fixed';
-      container.style.bottom = '20px';
-      container.style.left = '50%'; // center horizontally
-      container.style.transform = 'translateX(-50%)'; // shift left by half its width
+      container.style.top = '0';
+      container.style.left = '0';
       container.style.width = '100vw';
-      container.style.height = '750px';
+      container.style.height = '100vh';
       container.style.zIndex = '9999';
       container.style.background = 'transparent';
       container.style.pointerEvents = 'auto';
       container.style.overflow = 'hidden';
+
     
       iframe.style.width = '100%';
       iframe.style.height = '100%';
