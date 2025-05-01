@@ -25,7 +25,7 @@ function postSizeToParent() {
 
   const collapsedSize = { width: 162, height: 62 };
 
-  const expandedSize = { width: 400, height: 700, };
+  const expandedSize = { width: 420, height: 700, };
 
   const size = showChat.value ? expandedSize : collapsedSize;
   console.log("postSizeToParent", size);
@@ -128,7 +128,8 @@ body {
   position: absolute;
   bottom: 80px;
   right: 20px;
-  width: 400px;
+
+  width: 420px;
   height: 600px;
   border: 1px solid #ccc;
   background-color: transparent;

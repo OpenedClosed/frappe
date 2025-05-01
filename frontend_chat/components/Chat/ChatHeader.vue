@@ -2,7 +2,7 @@
   <div class="w-full flex items-center justify-between">
     <!-- {{ rooms }} -->
     <div class="flex flex-row items-center gap-2">
-      <!-- Left Section: Title -->
+      <!-- Left Section: Title --> 
       <!-- {{ currentUrl+botHeaderData.avatar }} -->
       <div class="min-w-[3rem] w-12 h-12 flex-shrink-0">
         <Avatar
