@@ -66,7 +66,7 @@
 
   // Handle messages from iframe
   window.addEventListener('message', (event) => {
-    if (!event.data || (event.data.type !== 'bgSize' && event.data.typ !== 'bgSize')) {
+    if (!event.data || (event.data.type !== 'bgSize')) {
       return;
     }
 
@@ -81,7 +81,20 @@
         if (width) {
           container.style.width = `${width}px`;
         }
+      } else {
+      if (showChat) {
+        container.style.height = '100vh';
+        container.style.width = '100vw';
+      }else {
+        if (height) {
+          container.style.height = `${height}px`;
+        }
+        if (width) {
+          container.style.width = `${width}px`;
+        }
       }
+      }
+    
     }, timeout);
   });
 
