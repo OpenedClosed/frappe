@@ -128,6 +128,7 @@ body {
   position: absolute;
   bottom: 80px;
   right: 20px;
+
   width: 420px;
   height: 600px;
   border: 1px solid #ccc;

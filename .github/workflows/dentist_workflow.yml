@@ -188,6 +188,17 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
+
+            # Замок деплоя
+            sudo mkdir -p /var/lock
+            LOCK_FILE="/var/lock/dentist_deploy.lock"
+            sudo touch "$LOCK_FILE"
+
+            # Снимаем замок при любых завершениях
+            cleanup() { sudo rm -f "$LOCK_FILE"; }
+            trap cleanup EXIT INT TERM
+
+            # Начало деплоя
             mkdir -p ~/scripts/backups ~/scripts/logs
  
             # Права на все скрипты

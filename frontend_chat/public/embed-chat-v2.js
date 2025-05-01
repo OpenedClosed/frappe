@@ -16,7 +16,6 @@
 
     container.appendChild(iframe);
     document.body.appendChild(container);
-
     applyStyles(); // Apply initial styles
   }
 
@@ -89,7 +88,6 @@
   } else {
     injectIframe();
   }
-
   // Reload iframe on focus
   window.addEventListener('focus', () => {
     if (iframe && iframe.contentWindow) {

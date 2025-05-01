@@ -1,10 +1,26 @@
 #!/bin/bash
+# restart_nginx.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$SCRIPT_DIR/../logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/restart_nginx_$(date +'%Y-%m-%d_%H-%M').log"
 
+## ----------  НОВОЕ: глобальный замок деплоя  ----------
+LOCK_FILE="/var/lock/dentist_deploy.lock"
+if [ -e "$LOCK_FILE" ]; then
+  echo "🚧 Найден файл $LOCK_FILE — идёт деплой. Завершаю работу." | tee -a "$LOG_FILE"
+  exit 0
+fi
+
+## ----------  НОВОЕ: защита от повторного запуска самого скрипта  ----------
+exec 9>/var/lock/restart_nginx.runlock
+flock -n 9 || {
+  echo "⚠️  Скрипт уже запущен, выхожу." | tee -a "$LOG_FILE"
+  exit 0
+}
+
+# ======= старая логика без изменений =======
 echo "=== Проверка Nginx ===" | tee -a "$LOG_FILE"
 
 NGINX_SERVICE_NAME="nginx"
@@ -35,7 +51,6 @@ else
   echo "Nginx работает нормально." | tee -a "$LOG_FILE"
 fi
 
-# Очищаем логи, которые старше 1 дня
 echo "🧹 Удаляем лог-файлы старше 1 дня..." | tee -a "$LOG_FILE"
 find "$LOG_DIR" -type f -name "*.log" -mtime +1 -exec rm {} \; >> "$LOG_FILE" 2>&1
 

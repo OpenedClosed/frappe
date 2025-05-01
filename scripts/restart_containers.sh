@@ -1,11 +1,26 @@
 #!/bin/bash
+# restart_containers.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$SCRIPT_DIR/../logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/restart_containers_$(date +'%Y-%m-%d_%H-%M').log"
 
-# Список имён контейнеров, которые можно игнорировать, даже если они упали
+## ----------  НОВОЕ: глобальный замок деплоя  ----------
+LOCK_FILE="/var/lock/dentist_deploy.lock"
+if [ -e "$LOCK_FILE" ]; then
+  echo "🚧 Найден файл $LOCK_FILE — идёт деплой. Завершаю работу." | tee -a "$LOG_FILE"
+  exit 0
+fi
+
+## ----------  НОВОЕ: защита от повторного запуска самого скрипта  ----------
+exec 9>/var/lock/restart_containers.runlock
+flock -n 9 || {
+  echo "⚠️  Скрипт уже запущен, выхожу." | tee -a "$LOG_FILE"
+  exit 0
+}
+
+# ======= старая логика без изменений =======
 IGNORED_CONTAINERS=("root_bot_1")
 
 echo "=== Проверка контейнеров ===" | tee -a "$LOG_FILE"
@@ -25,7 +40,6 @@ if [ -n "$STOPPED_CONTAINERS" ]; then
   while read -r CONTAINER_ID CONTAINER_NAME; do
     echo " - $CONTAINER_NAME ($CONTAINER_ID)" | tee -a "$LOG_FILE"
 
-    # Проверяем, нужно ли игнорировать этот контейнер
     if [[ " ${IGNORED_CONTAINERS[*]} " =~ " ${CONTAINER_NAME} " ]]; then
       echo "   ⏭️  Контейнер $CONTAINER_NAME входит в список игнорируемых. Пропускаем." | tee -a "$LOG_FILE"
       continue
@@ -33,7 +47,6 @@ if [ -n "$STOPPED_CONTAINERS" ]; then
 
     AFFECTING_CONTAINERS+=("$CONTAINER_ID $CONTAINER_NAME")
 
-    # Сохраняем логи
     echo "=== Logs: $CONTAINER_NAME ($CONTAINER_ID) ===" >> "$LOG_FILE"
     docker logs --tail 50 "$CONTAINER_ID" >> "$LOG_FILE" 2>&1
     echo -e "\n==============================\n" >> "$LOG_FILE"
@@ -59,7 +72,6 @@ else
   fi
 fi
 
-# Очистка логов старше 14 дней
 echo "🧹 Очистка логов старше 14 дней..." | tee -a "$LOG_FILE"
 find "$LOG_DIR" -type f -name "*.log" -mtime +14 -exec rm {} \; >> "$LOG_FILE" 2>&1
 
