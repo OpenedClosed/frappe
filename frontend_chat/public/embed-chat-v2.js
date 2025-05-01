@@ -10,7 +10,8 @@
     iframe = document.createElement('iframe');
 
     // Set common iframe styles
-    iframe.src = 'http://localhost:4000/chats/chat/';
+    // iframe.src = 'http://localhost:4000/chats/chat/';
+    iframe.src = `https://panamed-aihubworks.com/chats/chat/`;
     iframe.style.border = 'none';
     iframe.style.pointerEvents = 'auto';
 
