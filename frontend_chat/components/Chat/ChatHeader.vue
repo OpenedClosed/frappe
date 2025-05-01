@@ -14,7 +14,7 @@
       </div>
       <div class="flex flex-row items-center gap-2">
         <h2 class="font-bold hidden md:block">{{ botHeaderData?.app_name || " " }}</h2>
-        <h2 class="font-bold max-w-[100px] w-[100px] block md:hidden truncate text-nowrap">
+        <h2 class="font-bold max-w-[100px] block md:hidden truncate text-nowrap">
           {{ botHeaderData?.app_name || " " }}
         </h2>
         <p v-if="typingUserNames.length" class="animate-pulse hidden md:block">is typing...</p>
@@ -31,10 +31,10 @@
       </div>
     </div>
     <!-- Right Section: Toggle + Menu Button -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-1">
       <!-- Button to open the menu (TieredMenu) -->
-      <Button icon="pi pi-bars" class="p-button-rounded p-button-text" @click="$refs.menu.toggle($event)" />
-      <Button v-if="!isTelegram" icon="pi pi-times" class="p-button-rounded p-button-text" @click="props.closeChat()" />
+      <Button icon="pi pi-bars" class="p-button-rounded p-button-text p-button-sm" @click="$refs.menu.toggle($event)" />
+      <Button v-if="!isTelegram" icon="pi pi-times" class="p-button-rounded p-button-text p-button-sm" @click="props.closeChat()" />
 
       <!-- TieredMenu as a popover with Refresh/Close actions -->
       <TieredMenu ref="menu" :model="menuItems" popup style="z-index: 10000" />

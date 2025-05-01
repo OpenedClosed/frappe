@@ -103,6 +103,6 @@ export default defineNuxtConfig({
     "/scripts/**": { headers: { "Cache-Control": "no-store, max-age=0" } },
   },
 
-  devtools: { enabled: true },
+  // devtools: { enabled: true },
   compatibilityDate: "2025-03-11",
 });
