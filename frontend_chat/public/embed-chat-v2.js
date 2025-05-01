@@ -27,8 +27,8 @@
 
     if (mobile) {
       container.style.position = 'fixed';
-      container.style.top = '0';
-      container.style.left = '0';
+      container.style.bottom = '20px';
+      container.style.right = '20px';
       container.style.width = '100vw';
       container.style.height = '100vh';
       container.style.zIndex = '9999';
@@ -37,8 +37,8 @@
       container.style.overflow = 'hidden';
 
     
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
+      container.style.width = '162px';
+      container.style.height = '62px';
     } else {
       container.style.position = 'fixed';
       container.style.bottom = '20px';
