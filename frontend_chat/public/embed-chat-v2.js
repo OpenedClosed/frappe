@@ -84,12 +84,8 @@
         container.style.height = '100vh';
         container.style.width = '100vw';
       }else {
-        if (height) {
-          container.style.height = `${height}px`;
-        }
-        if (width) {
-          container.style.width = `${width}px`;
-        }
+        container.style.width = '162px';
+        container.style.height = '62px';
       }
       }
     
