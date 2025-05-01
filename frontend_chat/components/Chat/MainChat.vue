@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Floating toggle -->
-    <Button icon="pi pi-comments" label="Open Chat" class="chat-toggle-button" @click="toggleChat" />
+    <Button icon="pi pi-comments" label="Open Chat" class="chat-toggle-button text-white" @click="toggleChat" />
 
     <!-- Chat box -->
     <transition name="fade">

@@ -30,7 +30,7 @@
       container.style.top = '0';
       container.style.left = '0';
       container.style.width = '100vw';
-      container.style.height = '100vh';
+      container.style.height = '700px';
       container.style.zIndex = '9999';
       container.style.background = 'transparent';
       container.style.pointerEvents = 'auto';
