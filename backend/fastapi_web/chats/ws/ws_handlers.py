@@ -2,15 +2,16 @@
 import asyncio
 import json
 import logging
-import pprint
 import random
 import re
 from asyncio import Lock
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 import httpx
-import requests
+from pydantic import ValidationError
+
+from utils.help_functions import try_parse_json
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
@@ -22,7 +23,6 @@ from knowledge.utils.help_functions import (build_messages_for_model,
                                             merge_external_structures,
                                             pick_model_and_client)
 from openai_base.openai_init import openai_client
-from pydantic import ValidationError
 from users.db.mongo.enums import RoleEnum
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
@@ -31,7 +31,8 @@ from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
 from ..utils.help_functions import (clean_markdown, find_last_bot_message,
                                     get_bot_context, get_weather_by_address,
                                     send_message_to_bot,
-                                    split_text_into_chunks, update_read_state_for_client)
+                                    split_text_into_chunks,
+                                    update_read_state_for_client)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
@@ -160,21 +161,13 @@ async def save_and_broadcast_new_message(
     await save_message_to_db(chat_session, new_msg)
     await broadcast_message(manager, chat_session, new_msg)
     await redis_db.set(redis_key_session, "1", ex=int(settings.CHAT_TIMEOUT.total_seconds()))
-    # await redis_db.set(
-    #     redis_key_session,
-    #     chat_session.chat_id,
-    #     ex=int(settings.CHAT_TIMEOUT.total_seconds())
-    # )
-    print('Обновляем статус прочтения')
     if new_msg.sender_role != SenderRole.AI:
         await update_read_state_for_client(
             chat_id=chat_session.chat_id,
             client_id=new_msg.sender_id,
-            user_id=None,  # можно передать если знаешь user_id
+            user_id=None,
             last_read_msg=new_msg.id
         )
-    message = clean_markdown(new_msg.message)
-    chunks = split_text_into_chunks(message)
 
     if new_msg.sender_role != SenderRole.CLIENT and chat_session.client.external_id:
         await send_message_to_external_meta_channel(chat_session, new_msg)
@@ -232,7 +225,8 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
                 if response.status_code == 200:
                     logging.info(f"Отправлено в Instagram: {recipient_id}")
                 else:
-                    logging.error(f"Ошибка Instagram: {response.status_code} {response.text}")
+                    logging.error(
+                        f"Ошибка Instagram: {response.status_code} {response.text}")
             except httpx.HTTPError as e:
                 logging.error(f"HTTP ошибка при отправке в Instagram: {e}")
 
@@ -302,7 +296,8 @@ async def handle_status_check(
     chat_session = ChatSession(**chat_data)
 
     staff_roles = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
-    staff_users_cursor = mongo_db.users.find({"role": {"$in": [role.value for role in staff_roles]}}, {"_id": 1})
+    staff_users_cursor = mongo_db.users.find(
+        {"role": {"$in": [role.value for role in staff_roles]}}, {"_id": 1})
     staff_ids = {str(user["_id"]) async for user in staff_users_cursor}
 
     read_by_staff = chat_session.is_read_by_any_staff(staff_ids)
@@ -352,6 +347,7 @@ async def handle_get_messages(
         return False
 
     messages: List[dict] = chat_data.get("messages", [])
+    messages.sort(key=lambda m: m.get("timestamp"))
     if not messages:
         remaining = max(await redis_db.ttl(redis_key_session), 0)
         await manager.broadcast(custom_json_dumps({
@@ -365,7 +361,6 @@ async def handle_get_messages(
     client_id = user_data["client_id"]
     user_id = user_data.get("user_id")
 
-    # ✅ Обновляем read_state при входе
     if data.get("with_enter"):
         await update_read_state_for_client(
             chat_id=chat_id,
@@ -374,8 +369,7 @@ async def handle_get_messages(
             last_read_msg=last_id
         )
 
-    # Получаем актуальное read_state
-    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})  # снова, чтобы взять актуальный read_state
+    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     read_state_raw = chat_data.get("read_state", [])
     read_state: List[ChatReadInfo] = [
         ChatReadInfo(**ri) if isinstance(ri, dict) else ri
@@ -402,9 +396,6 @@ async def handle_get_messages(
     }))
 
     return enriched
-
-
-
 
 
 # ==============================
@@ -460,7 +451,6 @@ async def handle_new_message(
             get_translation("errors", "message_too_long", user_language)
         )
         return
-
 
     if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
         return
@@ -559,7 +549,6 @@ async def validate_chat_status(manager: ConnectionManager, client_id: str, chat_
 
     if ttl_value < 0 and chat_session.messages:
         await redis_db.set(redis_key_session, "1", ex=int(settings.CHAT_TIMEOUT.total_seconds()))
-        # await redis_db.set(redis_key_session, chat_id, ex=int(settings.CHAT_TIMEOUT.total_seconds()))
 
     return True
 
@@ -726,12 +715,15 @@ async def start_brief(
     """
     welcome_flag_key = f"chat:welcome:{chat_session.chat_id}"
 
-    # Проверка на метку + длину сообщений
     if len(chat_session.messages) > 0 or not await redis_db.set(welcome_flag_key, "1", ex=60, nx=True):
-        return  # Приветствие уже было или только что отправляется другим потоком
+        return
 
     bot_context = await get_bot_context()
-    hello_text = bot_context.get("welcome_message", "Hello!").get(user_language, None)
+    hello_text = bot_context.get(
+        "welcome_message",
+        "Hello!").get(
+        user_language,
+        None)
 
     if isinstance(hello_text, str):
         msg = ChatMessage(message=hello_text, sender_role=SenderRole.AI)
@@ -786,7 +778,7 @@ async def process_brief_question(
 
     next_question = chat_session.get_current_question(BRIEF_QUESTIONS)
     if next_question:
-        msg = _build_brief_question_message(next_question, user_language)
+        msg = build_brief_question_message(next_question, user_language)
         await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
 
 
@@ -841,7 +833,7 @@ async def ask_brief_question(
     """
     Задаёт первый вопрос брифа при инициализации чата.
     """
-    msg = _build_brief_question_message(question, user_language)
+    msg = build_brief_question_message(question, user_language)
     await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
 
 
@@ -870,7 +862,7 @@ async def broadcast_brief_question(
     await manager.broadcast(custom_json_dumps(payload))
 
 
-def _build_brief_question_message(
+def build_brief_question_message(
         question: BriefQuestion, user_language: str) -> ChatMessage:
     """
     Формирует ChatMessage с учётом типа вопроса (choice/text) и ожидаемых ответов.
@@ -944,94 +936,6 @@ async def handle_superuser_message(
 # БЛОК: AI-логика (GPT)
 # ==============================
 
-# async def process_user_query_after_brief(
-#     manager: Any,
-#     chat_id: str,
-#     user_msg: ChatMessage,
-#     chat_session: ChatSession,
-#     redis_key_session: str,
-#     user_language: str,
-#     typing_manager: TypingManager,
-#     gpt_lock: Lock,
-#     user_data: dict
-# ) -> Optional[ChatMessage]:
-#     """
-#     Обрабатывает пользовательский запрос после брифа, используя GPT-логику.
-#     Выполняется строго последовательно с помощью gpt_lock.
-#     Может быть отменена, если пришло новое сообщение.
-#     """
-#     try:
-#         async with gpt_lock:
-#             if not user_data:
-#                 user_data = {}
-
-#             # Извлекаем бриф
-#             brief_info = extract_brief_info(chat_session)
-#             user_data["brief_info"] = brief_info
-
-#             chat_history = chat_session.messages[-25:]
-
-#             # Основная БЗ
-#             kb_doc, knowledge_base_model = await get_knowledge_base()
-        
-#             knowledge_base = kb_doc["knowledge_base"]
-
-#             # 👇 Собираем внешние структуры (мини-БЗ)
-#             external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
-#             merged_kb = merge_external_structures(knowledge_base, external_structs)
-
-#             # 👇 Отправляем в GPT определение релевантных тем
-#             gpt_data = await determine_topics_via_gpt(
-#                 user_msg.message, user_data, merged_kb
-#             )
-
-#             user_msg.gpt_evaluation = GptEvaluation(
-#                 topics=gpt_data.get("topics", []),
-#                 confidence=gpt_data.get("confidence", 0.0),
-#                 out_of_scope=gpt_data.get("out_of_scope", False),
-#                 consultant_call=gpt_data.get("consultant_call", False)
-#             )
-
-#             await _update_gpt_evaluation_in_db(
-#                 chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation
-#             )
-
-#             # Ответ от ИИ
-#             ai_msg = await _build_ai_response(
-#                 manager=manager,
-#                 chat_session=chat_session,
-#                 user_msg=user_msg,
-#                 user_data=user_data,
-#                 chat_history=chat_history,
-#                 redis_key_session=redis_key_session,
-#                 user_language=user_language,
-#                 typing_manager=typing_manager,
-#                 chat_id=chat_id
-#             )
-
-#             if ai_msg:
-#                 await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
-
-#             return ai_msg
-
-#     except asyncio.CancelledError:
-#         print(f"[GPT] Задача GPT для чата {chat_id} отменена.")
-#         return None
-
-#     except Exception as e:
-#         logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
-#         bot_context = await get_bot_context()
-#         ai_text = bot_context.get("fallback_ai_error_message", {}).get(
-#             user_language, "The assistant is currently unavailable."
-#         )
-#         ai_msg = ChatMessage(
-#             message=ai_text,
-#             sender_role=SenderRole.AI,
-#         )
-#         if ai_msg:
-#             await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
-#         return None
-
 
 async def process_user_query_after_brief(
     manager: Any,
@@ -1054,21 +958,18 @@ async def process_user_query_after_brief(
             if not user_data:
                 user_data = {}
 
-            # Извлекаем бриф
             brief_info = extract_brief_info(chat_session)
             user_data["brief_info"] = brief_info
 
             chat_history = chat_session.messages[-25:]
 
-            # Получаем актуальную базу знаний
             kb_doc, knowledge_base_model = await get_knowledge_base()
             knowledge_base = kb_doc["knowledge_base"]
 
-            # Дополняем внешними структурами
             external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
-            merged_kb = merge_external_structures(knowledge_base, external_structs)
+            merged_kb = merge_external_structures(
+                knowledge_base, external_structs)
 
-            # 🔥 Новый двухшаговый анализ: темы + параметры
             gpt_data = await determine_topics_via_gpt(
                 user_message=user_msg.message,
                 user_info=user_data,
@@ -1076,7 +977,6 @@ async def process_user_query_after_brief(
                 chat_history=chat_history
             )
 
-            # Записываем результат оценки GPT в сообщение
             user_msg.gpt_evaluation = GptEvaluation(
                 topics=gpt_data.get("topics", []),
                 confidence=gpt_data.get("confidence", 0.0),
@@ -1084,15 +984,13 @@ async def process_user_query_after_brief(
                 consultant_call=gpt_data.get("consultant_call", False)
             )
 
-            # Обновляем запись в базе
-            await _update_gpt_evaluation_in_db(
+            await update_gpt_evaluation_in_db(
                 chat_session.chat_id,
                 user_msg.id,
                 user_msg.gpt_evaluation
             )
 
-            # Строим ответ от ИИ
-            ai_msg = await _build_ai_response(
+            ai_msg = await build_ai_response(
                 manager=manager,
                 chat_session=chat_session,
                 user_msg=user_msg,
@@ -1110,11 +1008,12 @@ async def process_user_query_after_brief(
             return ai_msg
 
     except asyncio.CancelledError:
-        print(f"[GPT] Задача GPT для чата {chat_id} отменена.")
+        logging.info(f"[GPT] Задача GPT для чата {chat_id} отменена.")
         return None
 
     except Exception as e:
-        logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+        logging.error(
+            f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
         bot_context = await get_bot_context()
         fallback_text = bot_context.get("fallback_ai_error_message", {}).get(
             user_language, "The assistant is currently unavailable."
@@ -1126,60 +1025,6 @@ async def process_user_query_after_brief(
         if fallback_msg:
             await save_and_broadcast_new_message(manager, chat_session, fallback_msg, redis_key_session)
         return None
-
-
-
-# async def  determine_topics_via_gpt(
-#     user_message: str,
-#     user_info: dict,
-#     knowledge_base: Dict[str, Any]
-# ) -> Dict[str, Any]:
-#     """
-#     Обращается к GPT для определения тематики,
-#     вычисления confidence, out_of_scope и consultant_call.
-#     """
-#     try:
-#         kb_description = _build_kb_description(knowledge_base)
-#         bot_context = await get_bot_context()
-#         app_description = bot_context["app_description"]
-#         forbidden_topics = bot_context["forbidden_topics"]
-
-#         system_prompt = AI_PROMPTS["system_topics_prompt"].format(
-#             user_info=user_info,
-#             kb_description=kb_description,
-#             app_description=app_description,
-#             forbidden_topics=forbidden_topics,
-#         )
-
-#         messages = [
-#             {"role": "model", "content": system_prompt.strip()},
-#             {"role": "user", "content": user_message.strip()}
-#         ]
-#         response = await gemini_client.chat_generate(
-#             model="gemini-2.0-flash",
-#             messages=messages,
-#             temperature=0.1
-#         )
-#         raw_content = response["candidates"][0]["content"]["parts"][0]["text"].strip(
-#         )
-#         match = re.search(r"\{.*\}", raw_content, re.DOTALL)
-
-#         if not match:
-#             return {"topics": [], "confidence": 0.0,
-#                     "out_of_scope": False, "consultant_call": False}
-
-#         json_text = match.group(0).replace("None", "null")
-
-#         result = json.loads(json_text)
-#         return {
-#             "topics": result.get("topics", []),
-#             "confidence": result.get("confidence", 0.0),
-#             "out_of_scope": result.get("out_of_scope", False),
-#             "consultant_call": result.get("consultant_call", False)
-#         }
-#     except json.JSONDecodeError:
-#         return {"topics": [], "confidence": 0.0,
-#                 "out_of_scope": False, "consultant_call": False}
 
 
 async def determine_topics_via_gpt(
@@ -1197,7 +1042,7 @@ async def determine_topics_via_gpt(
     """
     bot_context = await get_bot_context()
 
-    topics_data = await _detect_topics_gpt(
+    topics_data = await detect_topics_gpt(
         user_message=user_message,
         user_info=user_info,
         knowledge_base=knowledge_base,
@@ -1205,7 +1050,7 @@ async def determine_topics_via_gpt(
         bot_context=bot_context
     )
 
-    outcome_data = await _detect_outcome_gpt(
+    outcome_data = await detect_outcome_gpt(
         user_message=user_message,
         topics=topics_data.get("topics", []),
         knowledge_base=knowledge_base,
@@ -1223,14 +1068,14 @@ async def determine_topics_via_gpt(
     }
 
 
-async def _detect_topics_gpt(
+async def detect_topics_gpt(
     user_message: str,
     user_info: dict,
     knowledge_base: Dict[str, Any],
     model_name: str,
     bot_context: dict
 ) -> Dict[str, Any]:
-    kb_description = _build_kb_description(knowledge_base)
+    kb_description = build_kb_description(knowledge_base)
 
     system_prompt = AI_PROMPTS["system_topics_prompt"].format(
         user_info=user_info,
@@ -1250,8 +1095,10 @@ async def _detect_topics_gpt(
 
     raw = response["candidates"][0]["content"]["parts"][0]["text"]
     match = re.search(r"\{.*\}", raw, re.DOTALL)
-    result = json.loads(match.group(0).replace("None", "null")) if match else {}
-    print('===== TOPICS =====\n', result)
+    result = json.loads(
+        match.group(0).replace(
+            "None",
+            "null")) if match else {}
 
     return {
         "topics": result.get("topics", []),
@@ -1259,7 +1106,7 @@ async def _detect_topics_gpt(
     }
 
 
-async def _detect_outcome_gpt(
+async def detect_outcome_gpt(
     user_message: str,
     topics: List[Dict[str, Any]],
     knowledge_base: Dict[str, Any],
@@ -1273,7 +1120,8 @@ async def _detect_outcome_gpt(
     snippets = await extract_knowledge(topics, user_message, knowledge_base)
     last_messages = chat_history[-history_tail:] if chat_history else []
 
-    history_text = "\n".join(f"- {m.sender_role.value}: {m.message}" for m in last_messages)
+    history_text = "\n".join(
+        f"- {m.sender_role.value}: {m.message}" for m in last_messages)
 
     prompt = AI_PROMPTS["system_outcome_analysis_prompt"].format(
         forbidden_topics=json.dumps(forbidden_topics, ensure_ascii=False),
@@ -1291,7 +1139,6 @@ async def _detect_outcome_gpt(
     raw = response["candidates"][0]["content"]["parts"][0]["text"]
     match = re.search(r"\{.*\}", raw, re.DOTALL)
     result = json.loads(match.group(0)) if match else {}
-    print('===== OUTCOME_STATUS =====\n', result)
 
     return {
         "out_of_scope": result.get("out_of_scope", False),
@@ -1299,14 +1146,11 @@ async def _detect_outcome_gpt(
     }
 
 
-
-
-
 # ==============================
 # Вспомогательные функции
 # ==============================
 
-async def _update_gpt_evaluation_in_db(
+async def update_gpt_evaluation_in_db(
         chat_id: str, message_id: str, gpt_eval: GptEvaluation) -> None:
     """Обновляет поля GPT-оценки в документе сообщения."""
     await mongo_db.chats.update_one(
@@ -1315,7 +1159,7 @@ async def _update_gpt_evaluation_in_db(
     )
 
 
-def _build_kb_description(knowledge_base: Dict[str, Any]) -> str:
+def build_kb_description(knowledge_base: Dict[str, Any]) -> str:
     """Формирует текстовое описание базы знаний для GPT."""
     lines = []
     for topic_name, topic_data in knowledge_base.items():
@@ -1336,7 +1180,7 @@ def _build_kb_description(knowledge_base: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-async def _build_ai_response(
+async def build_ai_response(
     manager: Any,
     chat_session: ChatSession,
     user_msg: ChatMessage,
@@ -1382,7 +1226,7 @@ async def _build_ai_response(
     )
 
     files: List[str] = []
-    _remove_files_from_snippets(snippet_data, files)
+    remove_files_from_snippets(snippet_data, files)
 
     final_text = await generate_ai_answer(
         user_message=user_msg.message,
@@ -1416,17 +1260,17 @@ async def _build_ai_response(
     )
 
 
-def _remove_files_from_snippets(data: Any, files: List[str]) -> None:
+def remove_files_from_snippets(data: Any, files: List[str]) -> None:
     """Рекурсивно извлекает файлы из структуры snippet_data, удаляя их из исходных данных."""
     if isinstance(data, dict):
         if "files" in data:
             files.extend(data["files"])
             del data["files"]
         for key, value in data.items():
-            _remove_files_from_snippets(value, files)
+            remove_files_from_snippets(value, files)
     elif isinstance(data, list):
         for item in data:
-            _remove_files_from_snippets(item, files)
+            remove_files_from_snippets(item, files)
 
 
 # ==============================
@@ -1461,10 +1305,9 @@ async def extract_knowledge(
     """
     if not knowledge_base:
         kb_doc, knowledge_base_model = await get_knowledge_base()
-    
+
         knowledge_base = kb_doc["knowledge_base"]
 
-        # 👇 Собираем внешние структуры (мини-БЗ)
         external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
         merged_kb = merge_external_structures(knowledge_base, external_structs)
         knowledge_base = merged_kb
@@ -1479,7 +1322,7 @@ async def extract_knowledge(
             continue
 
         topic_data = knowledge_base[topic_name]
-        topic_entry = _extract_topic_data(topic_name, subtopics, topic_data)
+        topic_entry = extract_topic_data(topic_name, subtopics, topic_data)
 
         if topic_entry["subtopics"]:
             extracted_data["topics"].append(topic_entry)
@@ -1487,7 +1330,7 @@ async def extract_knowledge(
     return extracted_data if extracted_data["topics"] else {"topics": []}
 
 
-def _extract_topic_data(
+def extract_topic_data(
     topic_name: str,
     subtopics: List[Dict[str, Any]],
     topic_data: Dict[str, Any]
@@ -1504,21 +1347,21 @@ def _extract_topic_data(
             questions = subtopic_item.get("questions", [])
 
             if subtopic_name and subtopic_name in subs:
-                extracted_sub = _extract_subtopic_data(
+                extracted_sub = extract_subtopic_data(
                     subtopic_name, questions, subs[subtopic_name]
                 )
                 if extracted_sub["questions"]:
                     result["subtopics"].append(extracted_sub)
     else:
         for sub_name, sub_data in subs.items():
-            extracted_sub = _extract_subtopic_data(sub_name, [], sub_data)
+            extracted_sub = extract_subtopic_data(sub_name, [], sub_data)
             if extracted_sub["questions"]:
                 result["subtopics"].append(extracted_sub)
 
     return result
 
 
-def _extract_subtopic_data(
+def extract_subtopic_data(
     subtopic_name: str,
     questions: List[str],
     subtopic_data: Dict[str, Any]
@@ -1589,13 +1432,11 @@ async def generate_ai_answer(
     chosen_model = bot_context["ai_model"]
     chosen_temp = bot_context["temperature"]
 
-    # print('===== SNIPPETS =====\n', snippets)
-
     weather_info = {}
     for weather_address in settings.LOCATION_INFO:
-        weather_info[weather_address["name"]] =  await get_weather_by_address(address=weather_address["address"])
+        weather_info[weather_address["name"]] = await get_weather_by_address(address=weather_address["address"])
 
-    system_prompt = _assemble_system_prompt(
+    system_prompt = assemble_system_prompt(
         bot_context, snippets, user_info, user_language, weather_info
     )
 
@@ -1607,7 +1448,7 @@ async def generate_ai_answer(
     )
 
     await typing_manager.add_typing(chat_id, "ai_bot", manager)
-    await _simulate_delay()
+    await simulate_delay()
 
     client, real_model = pick_model_and_client(chosen_model)
 
@@ -1649,13 +1490,12 @@ async def generate_ai_answer(
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
 
     if return_json:
-        return _try_parse_json(ai_text)
+        return try_parse_json(ai_text)
 
     return ai_text
 
 
-
-def _assemble_system_prompt(
+def assemble_system_prompt(
     bot_context: Dict[str, Any],
     snippets: List[str],
     user_info: str,
@@ -1681,46 +1521,11 @@ def _assemble_system_prompt(
     )
 
 
-async def _simulate_delay() -> None:
+async def simulate_delay() -> None:
     """Имитирует задержку от 5 до 15 секунд перед вызовом AI."""
     delay = random.uniform(3, 7)
-    # delay = random.uniform(10, 20)
     logging.info(f"⏳ Artificial delay {delay:.2f}s before AI generation...")
     await asyncio.sleep(delay)
-
-
-async def _generate_model_response(
-        client: Any, real_model: str, messages: List[Dict[str, str]], temperature: float) -> str:
-    """
-    Вызывает нужную AI-модель (OpenAI, gemini и т.д.) и
-    возвращает сгенерированный ответ в виде текста.
-    """
-    if real_model.startswith("gpt"):
-        response = await client.chat.completions.create(
-            model=real_model, messages=messages, temperature=temperature
-        )
-        return response.choices[0].message.content.strip()
-
-    if real_model.startswith("gemini"):
-        response = await client.chat_generate(
-            model=real_model, messages=messages, temperature=temperature
-        )
-        return response["candidates"][0]["content"]["parts"][0]["text"].strip()
-
-    response = await openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        temperature=0.1
-    )
-    return response.choices[0].message.content.strip()
-
-
-def _try_parse_json(ai_text: str) -> Union[Dict[str, Any], str]:
-    """Пытается парсить JSON из ai_text. Если неуспешно — возвращает текст как есть."""
-    try:
-        return json.loads(ai_text)
-    except json.JSONDecodeError:
-        return {"error": "Invalid JSON", "original": ai_text}
 
 
 async def check_relevance_to_brief(question: str, user_message: str) -> bool:
@@ -1758,23 +1563,23 @@ async def handle_unknown_type(
 async def set_manual_mode(manager: Any, chat_session: ChatSession, new_msg: ChatMessage,
                           user_language: str, redis_key_session: str):
     """Переключает чат в ручной режим."""
-    await _toggle_chat_mode(manager, chat_session, redis_key_session, manual_mode=True)
-    await _send_mode_change_message(manager, chat_session, user_language, redis_key_session, "manual_mode_enabled")
+    await toggle_chat_mode(manager, chat_session, redis_key_session, manual_mode=True)
+    await send_mode_change_message(manager, chat_session, user_language, redis_key_session, "manual_mode_enabled")
 
 
 @command_handler("/auto")
 async def set_auto_mode(manager: Any, chat_session: ChatSession, new_msg: ChatMessage,
                         user_language: str, redis_key_session: str):
     """Переключает чат в автоматический режим."""
-    await _toggle_chat_mode(manager, chat_session, redis_key_session, manual_mode=False)
-    await _send_mode_change_message(manager, chat_session, user_language, redis_key_session, "auto_mode_enabled")
+    await toggle_chat_mode(manager, chat_session, redis_key_session, manual_mode=False)
+    await send_mode_change_message(manager, chat_session, user_language, redis_key_session, "auto_mode_enabled")
 
 
 # ==============================
 # Вспомогательные функции для смены режима
 # ==============================
 
-async def _toggle_chat_mode(manager: Any, chat_session: ChatSession,
+async def toggle_chat_mode(manager: Any, chat_session: ChatSession,
                             redis_key_session: str, manual_mode: bool) -> None:
     """Переключает чат в указанный режим (ручной/автоматический)."""
     chat_session.manual_mode = manual_mode
@@ -1782,7 +1587,7 @@ async def _toggle_chat_mode(manager: Any, chat_session: ChatSession,
     await fill_remaining_brief_questions(chat_session.chat_id, chat_session)
 
 
-async def _send_mode_change_message(manager: Any, chat_session: ChatSession,
+async def send_mode_change_message(manager: Any, chat_session: ChatSession,
                                     user_language: str, redis_key_session: str, message_key: str) -> None:
     """Отправляет пользователю сообщение о смене режима."""
     response_text = get_translation("info", message_key, user_language)

@@ -1,10 +1,9 @@
 """Схемы приложения Пользователи для работы с БД MongoDB."""
 from datetime import datetime
-from token import OP
 from typing import Optional
 
 from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from db.mongo.base.schemas import BaseValidatedModel
 from db.mongo.db_init import mongo_db
@@ -82,7 +81,7 @@ class UserWithData(User):
             user_id = self.data.get("user_id")
             main = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
         return main.get("phone") if main else None
-    
+
     async def get_full_user_data(self) -> dict:
         """
         Возвращает объединённую информацию о пользователе: базовую, контактную и основную.
@@ -100,4 +99,3 @@ class UserWithData(User):
         }
 
         return full_data
-

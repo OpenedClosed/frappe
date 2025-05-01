@@ -8,19 +8,19 @@
 }
 
 #spinner .path-solid {
-    stroke: var(--main-red);
+    stroke: white;
 }
 
 .dark #spinner .path-solid {
-    stroke: var(--main-red);
+    stroke: white;
 }
 
 #spinner #sGD stop {
-    stop-color: var(--main-red);
+    stop-color: white;
 }
 
 .dark #spinner #sGD stop {
-    stop-color: var(--main-red);
+    stop-color: white;
 }
 </style>
 

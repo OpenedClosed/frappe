@@ -174,9 +174,6 @@ class GeminiClient:
                 "parts": [{"text": system_instruction}]
             }
 
-
-        # print('_'*100)
-        # print(payload)
         url = self.BASE_URL.format(model=model) + f"?key={self.api_key}"
         try:
             async with self.session.post(url, json=payload, headers=self.headers) as r:

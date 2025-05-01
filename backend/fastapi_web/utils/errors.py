@@ -24,9 +24,9 @@ class FieldValidationError(Exception):
             error[self.field_name] = self.nested
         return error
 
-#     )
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(
+        request: Request, exc: RequestValidationError):
     """Обработка исключения при валидации запроса."""
     errors = {}
     for e in exc.errors():
@@ -34,8 +34,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         current = errors
         for key in loc[:-1]:
             current = current.setdefault(str(key), {})
-        # Используем максимально безопасный способ получения текста ошибки
-        message = e.get("ctx", {}).get("error") or e.get("msg", "Invalid input")
+        message = e.get(
+            "ctx",
+            {}).get("error") or e.get(
+            "msg",
+            "Invalid input")
         current[str(loc[-1])] = message
 
     return JSONResponse(

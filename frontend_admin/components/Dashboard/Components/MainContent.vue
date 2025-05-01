@@ -1,8 +1,8 @@
 <!-- pages/${currentPageName.value}/[group]/[entity]/index.vue -->
 <template>
-  <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto">
+  <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight dark:bg-secondaryDark">
     <!-- Main Layout with Sidebar and DataTable -->
-    <div class="max-w-full flex flex-row flex-1 w-full gap-4 p-4 justify-start"
+    <div class="max-w-full flex flex-row flex-1 w-full gap-4  justify-center"
       :class="[currentPageName === 'personal_account' ? 'flex-col' : 'flex-row']">
       <!-- Navigation Sidebar Component -->
       <NavigationSidebar v-if="currentPageName === 'admin'" :navItems="navItems" />
@@ -16,7 +16,7 @@
       </div>
       <div v-else-if="currentGroup === 'support'"
         class="flex flex-col flex-1 basis-11/12 min-h-0 min-w-0 justify-start">
-        <SupportPage class="" />
+        <SupportPage class="m-4" />
       </div>
       <div v-else-if="currentEntity === 'patients_health_survey' && !currentId"
         class="flex flex-col basis-11/12 min-w-0 justify-center items-center">
@@ -43,7 +43,7 @@
           @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
       </div>
       <div v-else-if="currentEntity === 'chat_sessions' && !currentId"
-        class="flex w-full flex-col min-w-0 justify-start items-center">
+        class="flex w-full flex-col min-w-0 justify-start items-center m-4">
 
           <EmbeddedChat class="w-full" v-if="filteredTableData.length>0"  :id="filteredTableData[0]?.chat_id" :chatsData="filteredTableData" :totalRecords="totalRecords" @page="changeCurrentPage" :isRoomsLoading="isLoading"/>
 
@@ -71,7 +71,7 @@
       </div> -->
 
       <!-- Default behavior: Show Data Table -->
-      <div v-else-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between">
+      <div v-else-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between m-4">
         <DynamicDataTable v-if="currentPageInstances > 1 || currentPageName === 'admin'" :title="currentEntityName"
           :isInline="isEntityInline" :displayedColumns="displayedColumns" :tableData="filteredTableData"
           :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize" :first="(currentPage - 1) * pageSize"
@@ -160,6 +160,44 @@ const onClickCreate = () => {
   // Переходим на: /${currentPageName.value}/..../..../id
   navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
 };
+
+const tt = {
+  /* ── PlaygroundPanel ─────────────────────────────── */
+  playground: {
+    saveDraft:
+      'Saves the current knowledge structure as a draft. You will be able to continue working with it later. The draft is not used by the bot to answer questions until you publish it.',
+    publish:
+      'Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions. After publication, changes take effect immediately, and the bot will start responding using the new data. Make sure the structure is completely ready.',
+    statusReady: 'Ready for publication',
+    blockType:
+      'Topic – the main theme that combines related subtopics.\nSubtopic – a subsection of the main topic with a specific focus.\nQuestion – a typical user question within a subtopic.\nAnswer – a detailed response to a specific question.',
+    parentBlock:
+      'Select the block to which the created element will relate.\nFollow the correct hierarchy:\n• Subtopics are created within Topics\n• Questions are created within Subtopics\n• Answers are created for specific Questions'
+  },
+
+  /* ── ImportPanel ─────────────────────────────────── */
+  import: {
+    sourceSearch:
+      'Search by source name. Enter part of the file name, web page, or text document to filter the list.',
+    importNew: 'Import a new data source: file, web page, or text.',
+    aiInput:
+      'Write here what the AI assistant should do with your data. Example: "Highlight the main services from my website and create questions and answers for them". Press Enter or the send button to convert selected sources into a structured knowledge base.',
+    generator:
+      'Write to the AI assistant specific tasks for structuring your data. Examples:\n• "Create Q&A pairs from a product document"\n• "Divide text into subtopics"\n• "Form a menu of services from my price list"\n• "Extract key benefits"'
+  },
+
+  /* ── Knowledge blocks (topic / subtopic / …) ─────── */
+  kbBlock: {
+    topic:
+      'The main topic containing related subsections and questions.',
+    subtopic:
+      'A section of a topic that groups related questions and answers.',
+    question:
+      'A question in the knowledge base that the bot will look for answers to.',
+    answer:
+      'An answer to a question that the bot will use when formulating responses.'
+  }
+} 
 
 function changeCurrentPage(page) {
   currentPage.value = page + 1;

@@ -6,4 +6,5 @@ class RoleEnum(str, Enum):
     SUPERADMIN = "superadmin"
     ADMIN = "admin"
     STAFF = "staff"
+    MAIN_OPERATOR = "main_operator"
     CLIENT = "client"

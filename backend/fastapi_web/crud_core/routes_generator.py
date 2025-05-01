@@ -250,6 +250,7 @@ def generate_base_routes(registry: BaseRegistry):
                 has_page_size_in_query = ('page_size' in request.query_params)
 
                 if instance.max_instances_per_user == 1:
+                    
                     items = await instance.get_queryset(current_user=user_doc)
                     item = None
                     if items:
@@ -266,14 +267,6 @@ def generate_base_routes(registry: BaseRegistry):
                     return item
 
                 if has_page_in_query and has_page_size_in_query:
-                    # print("1")
-                    # print(await instance.list_with_meta(
-                    #     page=page,
-                    #     page_size=page_size,
-                    #     sort_by=sort_by,
-                    #     order=order,
-                    #     current_user=user_doc
-                    # ))
                     return await instance.list_with_meta(
                         page=page,
                         page_size=page_size,
@@ -283,16 +276,6 @@ def generate_base_routes(registry: BaseRegistry):
                     )
 
                 else:
-                    # print("2")
-                    # print(sort_by)
-                    # print(order)
-                    # print(user_doc)
-                    # print("???")
-                    # print(await instance.list(
-                    #     sort_by=sort_by,
-                    #     order=order,
-                    #     current_user=user_doc
-                    # ))
                     return await instance.list(
                         sort_by=sort_by,
                         order=order,
@@ -581,18 +564,14 @@ def _build_field_schema(instance, field, schema_props, model_annotations,
         py_type, field, read_only_fields
     )
 
-    # Если в settings указаны choices — они имеют приоритет
     if "choices" in field_settings:
         choices = field_settings["choices"]
 
-    # Если в settings указан type — он имеет приоритет
     if "type" in field_settings:
         field_type = field_settings["type"]
 
-    # Отдельно вытаскиваем placeholder из settings
     placeholder = field_settings.pop("placeholder", None)
 
-    # Определяем required
     has_explicit_default = field_default is not None
     has_factory = callable(
         getattr(
@@ -789,32 +768,6 @@ def _build_model_entry(instance, api_prefix,
         "model": _build_model_info(instance),
         "routes": _get_model_routes(api_prefix, registered_name, instance)
     }
-
-
-# def get_routes_by_apps(registry: BaseRegistry) -> Dict[str, Any]:
-#     """Формирует структуру описания моделей для переданного реестра (админка, личный кабинет и т.д.)."""
-#     apps = {}
-#     api_prefix = f"/api/{registry.name}"
-
-#     for registered_name, instance in registry.get_registered().items():
-#         module_path = instance.__module__
-#         app_name, verbose_name, icon, color = _get_app_info(
-#             module_path, registry.name)
-
-#         if app_name not in apps:
-#             apps[app_name] = {
-#                 "verbose_name": verbose_name,
-#                 "icon": icon,
-#                 "color": color,
-#                 "entities": []}
-
-#         apps[app_name]["entities"].append(
-#             _build_model_entry(
-#                 instance,
-#                 api_prefix,
-#                 registered_name))
-
-#     return apps
 
 
 def get_routes_by_apps(registry, current_user) -> Dict[str, Any]:

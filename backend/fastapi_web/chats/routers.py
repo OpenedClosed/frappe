@@ -1,15 +1,16 @@
 """Обработчики маршрутов приложения Чаты."""
+from fastapi import HTTPException
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
 
 from chats.utils.commands import COMMAND_HANDLERS
-
-from .db.mongo.enums import ChatSource
-from .utils.help_functions import get_active_chats_for_client, handle_chat_creation, serialize_active_chat
-
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
+
+from .db.mongo.enums import ChatSource
+from .utils.help_functions import (get_active_chats_for_client,
+                                   handle_chat_creation, serialize_active_chat)
 
 chat_router = APIRouter()
 
@@ -39,8 +40,6 @@ async def create_or_get_chat(
     )
 
 
-from fastapi import HTTPException
-
 @chat_router.get("/get_chat_by_id/{chat_id}")
 async def get_chat_by_id(chat_id: str) -> dict:
     """Получает чат по ID, если он активен. Иначе — 404."""
@@ -51,9 +50,12 @@ async def get_chat_by_id(chat_id: str) -> dict:
     redis_key = f"chat:session:{chat_id}"
     ttl = await redis_db.ttl(redis_key)
     if ttl <= 0:
-        raise HTTPException(status_code=404, detail="Chat session is not active")
+        raise HTTPException(
+            status_code=404,
+            detail="Chat session is not active")
 
     return await serialize_active_chat(chat_data, ttl)
+
 
 @chat_router.get("/get_active_chats")
 async def get_active_chats(

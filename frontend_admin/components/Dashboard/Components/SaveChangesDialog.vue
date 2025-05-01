@@ -5,36 +5,34 @@
     :modal="true"
     :dismissableMask="true"
     :header="
-      isEditMode
+      reviewOnly
+        ? 'Preview of detected changes.'
+        : isEditMode
         ? 'Do you want to save changes to playground?'
         : 'Do you want to save changes to knowledge base?'
     "
     class="w-1/2 max-w-4xl min-w-96"
   >
+    <!-- ──────────── info text ────────────-->
     <p class="mb-4 text-sm text-gray-600">
       {{
-        !isEditMode && !hasChanges
-          ? "There are no changes to apply to knowledge base."
+        reviewOnly
+          ? ''
+          : !isEditMode && !hasChanges
+          ? 'There are no changes to apply to knowledge base.'
           : isEditMode
-          ? "It will change the playground, but WILL NOT update the knowledge base."
-          : "It will CHANGE the knowledge base."
+          ? 'It will change the playground, but WILL NOT update the knowledge base.'
+          : 'It will CHANGE the knowledge base.'
       }}
     </p>
+
+    <!-- ──────────── counters & diff ────────────-->
     <div class="p-4">
       <div class="flex flex-row justify-between items-center mb-4">
         <div class="flex items-center gap-4">
-          <div>
-            <span class="font-bold text-green-600">Added:</span>
-            {{ changes.added }}
-          </div>
-          <div>
-            <span class="font-bold text-blue-600">Changed:</span>
-            {{ changes.changed }}
-          </div>
-          <div>
-            <span class="font-bold text-red-600">Deleted:</span>
-            {{ changes.deleted }}
-          </div>
+          <div><span class="font-bold text-green-600">Added:</span> {{ changes.added }}</div>
+          <div><span class="font-bold text-blue-600">Changed:</span> {{ changes.changed }}</div>
+          <div><span class="font-bold text-red-600">Deleted:</span> {{ changes.deleted }}</div>
         </div>
       </div>
 
@@ -248,14 +246,17 @@
         </div>
       </div>
     </div>
+
+    <!-- ──────────── footer ────────────-->
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button
-          label="Cancel"
+          :label="reviewOnly ? 'Close' : 'Cancel'"
           class="p-button-secondary p-button-sm"
           @click="$emit('cancel')"
         />
         <Button
+          v-if="!reviewOnly"
           label="Confirm"
           class="p-button-success p-button-sm"
           :disabled="!isEditMode && !hasChanges"
@@ -267,39 +268,21 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from "vue";
-import ImageLink from "./ImageLink.vue";
+import { defineProps, defineEmits } from 'vue';
+import ImageLink from './ImageLink.vue';
 
 const props = defineProps({
-  visible: {
-    type: Boolean,
-    required: true,
-  },
-  isEditMode: {
-    type: Boolean,
-    default: false,
-  },
-  hasChanges: {
-    type: Boolean,
-    default: false,
-  },
-  changes: {
-    type: Object,
-    default: () => ({ added: 0, changed: 0, deleted: 0 }),
-  },
-  addedItems: {
-    type: Object,
-    default: () => ({}),
-  },
-  changedItems: {
-    type: Object,
-    default: () => ({}),
-  },
-  deletedItems: {
-    type: Object,
-    default: () => ({}),
-  },
+  visible: { type: Boolean, required: true },
+  isEditMode: { type: Boolean, default: false },
+  hasChanges: { type: Boolean, default: false },
+  reviewOnly: { type: Boolean, default: false }, // ★ NEW PROP ★
+  changes: { type: Object, default: () => ({ added: 0, changed: 0, deleted: 0 }) },
+  addedItems: { type: Object, default: () => ({}) },
+  changedItems: { type: Object, default: () => ({}) },
+  deletedItems: { type: Object, default: () => ({}) },
 });
 
-defineEmits(["update:visible", "save", "cancel"]);
+defineEmits(['update:visible', 'save', 'cancel']);
 </script>
+
+<!-- Add or adjust scoped styles if necessary -->

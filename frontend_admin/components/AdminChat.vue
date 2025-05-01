@@ -1,18 +1,22 @@
 <template>
+   <div class="flex ">
+
+    <Button label="Train AI bot"
+                    icon="pi pi-user" class="text-white p-button-sm w-full" @click="toggleChat" />
     <div v-if="currentPageName === 'admin' && currentGroup === 'knowledge-base'" class="chat-overlay-container">
         <!-- Chat toggle button (always visible) -->
 
-        <Button icon="pi pi-comments" :label="openLabel" class="chat-toggle-button text-white" @click="toggleChat" />
 
         <!-- Transition for smooth show/hide -->
         <transition name="fade">
             <!-- The actual chat box (visible only if `showChat` is true) -->
-            <div v-if="isChatOpen" class="chat-box" :class="{ 'chat-overlay-mobile': isMobile }">
+            <div v-if="isChatOpen" class="chat-box " :class="{ 'chat-overlay-mobile': isMobile }">
                 <iframe :src="chatUrl" class="flex-1" style="border: none; z-index: 9999"></iframe>
-                <Button v-if="isMobile" @click="onClose" :label="$t('buttons.close')"></Button>
+                <Button @click="onClose" icon="pi pi-times" label="Close chat"></Button>
             </div>
         </transition>
     </div>
+   </div> 
 </template>
 <script setup>
 import { useI18n } from "#imports";

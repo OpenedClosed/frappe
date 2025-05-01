@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path("../infra/.env"))
 
 # Базовые настройки
+APP_NAME = "main"
+MODEL_DEFAULT = "gemini-2.0-flash"
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_DIR = BASE_DIR / "media/images"
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
@@ -59,10 +62,7 @@ FLOOD_TIMEOUTS = {
     "automatic": timedelta(seconds=10),
 }
 CONTEXT_TTL = timedelta(days=1)
-# FLOOD_TIMEOUTS = {
-#     "manual": timedelta(seconds=0),
-#     "automatic": timedelta(seconds=0),
-# }
+
 SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru"}
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "change_me")
 WEATHER_API_URL = "http://api.openweathermap.org/data/2.5/weather"
@@ -90,3 +90,13 @@ WHATSAPP_BOT_NUMBER_ID = os.getenv("WHATSAPP_BOT_NUMBER_ID", "change_me")
 WHATSAPP_BOT_NUMBER = os.getenv("WHATSAPP_BOT_NUMBER", "change_me")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "change_me")
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "change_me")
+
+# SMTP
+SMS_API_URL = os.getenv("SMS_API_URL", "change_me")
+SMS_API_KEY = os.getenv("SMS_API_KEY", "change_me")
+SMS_API_SENDER = os.getenv("SMS_API_SENDER", "change_me")
+
+# PaNa Medica CRM
+CRM_API_URL = os.getenv("CRM_API_URL", "change_me")
+CRM_CLIENT_ID = os.getenv("CRM_CLIENT_ID", "change_me")
+CRM_CLIENT_SECRET = os.getenv("CRM_CLIENT_SECRET", "change_me")

@@ -14,10 +14,11 @@ class ContextType(str, Enum):
 
 class ContextPurpose(str, Enum):
     """Для чего будет использоваться запись контекста."""
-    NONE = "none"       # просто хранится
-    BOT = "bot"        # шпаргалка для бота (учесть при ответах)
-    KB = "kb"         # исходный материал для переноса в БЗ
-    BOTH = "both"       # и то, и другое
+    NONE = "none"
+    BOT = "bot"
+    KB = "kb"
+    BOTH = "both"
+
 
 class CommunicationStyleEnum(BaseJsonEnumMixin, str, Enum):
     """Стиль общения ИИ-бота"""

@@ -23,6 +23,9 @@ class GenderEnum(BaseJsonEnumMixin, str, Enum):
         "settings": {}
     })
 
+class AccountVerificationEnum(str, Enum):
+    UNVERIFIED = "unverified"
+    VERIFIED = "verified"
 
 # ==========
 # Анкета здоровья
@@ -189,3 +192,8 @@ class ConsentEnum(BaseJsonEnumMixin, str, Enum):
         "ru": "Согласие на персонализацию",
         "pl": "Zgoda na personalizację"
     })
+
+# ==========
+# Встречи
+# ==========
+

@@ -6,7 +6,7 @@ import AdminChat from '~/components/AdminChat.vue';
 <template>
   <div class="Main">
     <DashboardPage />
-   <AdminChat/>
+   <!-- <AdminChat/> -->
     <!-- <ChatMainChat/> -->
   </div>
 </template>

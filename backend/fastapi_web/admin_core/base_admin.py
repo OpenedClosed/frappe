@@ -22,6 +22,7 @@ class InlineAdmin(InlineCrud):
     Использует AdminPanelPermission.
     """
     permission_class = AdminPanelPermission()
+    # pass
 
 
 class BaseAdmin(BaseCrud):

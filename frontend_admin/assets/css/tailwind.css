@@ -1,9 +1,9 @@
 @layer tailwind-base {
   @tailwind base;
-    /* Apply the Play font globally */
-    body {
-      font-family: 'Play', sans-serif;
-    }
+  /* Apply the Play font globally */
+  body {
+    font-family: "Play", sans-serif;
+  }
 }
 
 @layer tailwind-utilities {
@@ -12,7 +12,7 @@
 }
 
 /* Main Colors */
-:root {
+/* :root {
   --color-primary: #458457;
   --color-primary-light: #63a475;
   --color-primary-dark: #B37401;
@@ -30,12 +30,31 @@
 
   --color-white: #FFFFFF;
   --color-black: #000000;
+} */
+:root {
+
+  --color-primary: #1e293b;
+  --color-primary-light: #666666;
+  --color-primary-dark: #1e293b;
+
+  --color-accent: #1e293b;
+  --color-accent-dark: #333333;
+
+
+  --color-secondary:            #64748b; /* Slate 500 */
+  --color-secondary-light: #f5f6f7; 
+  --color-secondary-extra-light:#cbd5e1; /* Slate 300 – cards, muted blocks */
+  --color-secondary-dark:       #475569; /* Slate 600 – hover / active states */
+
+  --color-neutral: #ffffff;
+  --color-neutral-dark: #6e6d6d;
+  --color-neutral-light: #f9f9f9;
+
+  --color-white: #ffffff;
+  --color-black: #1e293b;
 }
 
-
-
-@import url('https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap');
-
+@import url("https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap");
 
 /*! wysiwyg.css v0.0.3 | MIT License | github.com/jgthms/wysiwyg.css */
 .wysiwyg {

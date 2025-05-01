@@ -121,7 +121,8 @@ def permission_required(permission_cls):
             except HTTPException as e:
                 raise e
             except Exception as e:
-                raise HTTPException(403, f"No permission to perform '{action}'.")
+                raise HTTPException(
+                    403, f"No permission to perform '{action}'.")
 
             return await func(
                 request=request,
