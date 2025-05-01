@@ -34,7 +34,7 @@
     <div class="flex items-center gap-1">
       <!-- Button to open the menu (TieredMenu) -->
       <Button icon="pi pi-bars" class="p-button-rounded p-button-text p-button-sm" @click="$refs.menu.toggle($event)" />
-      <Button v-if="!isTelegram" icon="pi pi-times" class="p-button-rounded p-button-text " @click="props.closeChat()" />
+      <!-- <Button v-if="!isTelegram" icon="pi pi-times" class="p-button-rounded p-button-text " @click="props.closeChat()" /> -->
 
       <!-- TieredMenu as a popover with Refresh/Close actions -->
       <TieredMenu ref="menu" :model="menuItems" popup style="z-index: 10000" />
