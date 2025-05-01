@@ -29,8 +29,6 @@
       container.style.position = 'fixed';
       container.style.bottom = '20px';
       container.style.right = '20px';
-      container.style.width = '100vw';
-      container.style.height = '100vh';
       container.style.zIndex = '9999';
       container.style.background = 'transparent';
       container.style.pointerEvents = 'auto';
