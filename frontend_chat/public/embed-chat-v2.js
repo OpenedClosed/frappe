@@ -18,7 +18,8 @@
     container.style.height = '62px';
 
     iframe = document.createElement('iframe');
-    iframe.src = 'http://localhost:4000/chats/chat/';
+    // iframe.src = 'http://localhost:4000/chats/chat/';
+    iframe.src = `https://panamed-aihubworks.com/chats/chat/`;
     iframe.style.border = 'none';
     iframe.style.width = '100%';
     iframe.style.height = '100%';
