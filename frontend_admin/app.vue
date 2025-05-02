@@ -1,6 +1,5 @@
 <template>
   <div >
-    {{ colorMode }}
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
