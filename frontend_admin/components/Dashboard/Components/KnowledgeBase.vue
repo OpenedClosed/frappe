@@ -8,7 +8,7 @@
       <div class="flex flex-1 flex-row rounded-md overflow-hidden">
         <div class="flex flex-col xl:flex-row flex-1 justify-between overflow-hidden">
           <!-- LEFT COLUMN -->
-          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
+          <div class="flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
             <section>
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -302,7 +302,7 @@
           </div>
 
           <!-- CENTER COLUMN -->
-          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div class="flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -581,7 +581,7 @@
           </div>
 
           <!-- RIGHT COLUMN (Readonly Copy) -->
-          <div class="flex-0 xl:flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div class="flex-1 max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
