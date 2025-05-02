@@ -13,11 +13,11 @@
           >
             <section>
               <header
-                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
+                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-folder-open text-2xl"></i>
-                  <h2 class="font-semibold text-xl">Context sources</h2>
+                  <i class="pi pi-folder-open text-[14px] 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-[10px] 2xl:text-xl">Context sources</h2>
                 </div>
                 <div class="flex justify-center items-center">
                   <i
@@ -57,60 +57,86 @@
                 />
               </header>
 
-              <div class="flex flex-col gap-4 p-4 h-full max-h-[30vh] overflow-y-auto">
+              <div class="flex flex-col gap-4 p-4 h-full max-h-[20vh] overflow-y-auto">
                 <div>
+                  <!-- compact + regular in one markup — relies only on Tailwind breakpoints -->
                   <ul class="flex flex-col divide-y divide-slate-200">
-                    <li v-for="(ctx, idx) in filteredContextList" :key="ctx.id" class="flex items-center justify-between gap-4 py-3">
-                      <!-- Иконка -->
+                    <li
+                      v-for="(ctx, idx) in filteredContextList"
+                      :key="ctx.id"
+                      class="flex items-center justify-between gap-4 py-2 /* a bit tighter vertically */ xl:py-3 /* regular on ≥ 1024 px */"
+                    >
+                      <!-- Icon -->
                       <div class="flex-shrink-0">
-                        <div class="h-12 w-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600">
-                          <i :class="typeIcon(ctx.type)" class="text-xl"></i>
+                        <div
+                          :class="[
+                            'h-8 w-8 rounded-lg 2xl:h-12 2xl:w-12 2xl:rounded-xl flex items-center justify-center',
+                            colourFor(ctx.purpose).bg /* bg‑tint */,
+                            colourFor(ctx.purpose).text /* icon colour */,
+                          ]"
+                        >
+                          <i :class="[typeIcon(ctx.type), 'text-lg 2xl:text-xl']" />
                         </div>
                       </div>
 
-                      <!-- Заголовок + мета -->
-                      <div class="flex-1 flex flex-col jsustify-between items-start">
-                        <p class="font-medium text-[17px] leading-5 truncate">
+                      <!-- Title + meta -->
+                      <div class="flex-1 flex flex-col justify-between">
+                        <p class="font-medium truncate text-[14px] 2xl:text-[17px] leading-5">
                           {{ ctx.title }}
                         </p>
-                        <p class="text-sm text-slate-500">{{ formatDate(ctx.created_at) }} · {{ ctx.type.toUpperCase() }}</p>
+                        <!-- hide date on really tight widths to keep one‑line height -->
+                        <p class="text-[10px] text-slate-500 2xl:text-sm /* ≥640 px */ max-[375px]:hidden /* iPhone‑sized screens only */">
+                          {{ formatDate(ctx.created_at) }} · {{ ctx.type.toUpperCase() }}
+                        </p>
                       </div>
-                      <div class="card flex justify-center">
-                        <Button
-                          v-if="ctx.type === 'file'"
-                          icon="pi pi-download"
-                          class="p-button-rounded p-button-text p-button-sm"
-                          @click="downloadContext(ctx)"
-                        />
 
-                        <Button
-                          icon="pi pi-trash"
-                          class="p-button-rounded p-button-text p-button-danger p-button-sm"
-                          @click="deleteContext(ctx.id)"
-                        />
+                      <!-- Actions -->
+                      <div class="flex items-center gap-1 2xl:gap-2">
+                        <div class="flex flex-col 2xl:flex-row items-center gap-1 2xl:gap-2">
+                          <Button
+                            v-if="ctx.type === 'file'"
+                            icon="pi pi-download text-xs 2xl:text-base"
+                            class="p-button-rounded p-button-text p-button-xs 2xl:p-button-sm"
+                            @click="downloadContext(ctx)"
+                          />
+                          <Button
+                            icon="pi pi-trash text-xs 2xl:text-base"
+                            class="p-button-rounded p-button-text p-button-xs 2xl:p-button-sm"
+                            @click="deleteContext(ctx.id)"
+                          />
+                        </div>
+                        <Dropdown
+                          v-model="ctx.purpose"
+                          :options="contextPurposes"
+                          optionLabel="label"
+                          optionValue="value"
+                          @change="onPurposeChange(ctx, $event.value)"
+                          :class="['w-28 2xl:w-60 text-xs 2xl:text-base', colourFor(ctx.purpose).bg, colourFor(ctx.purpose).text]"
+                          :pt="{
+                            /* internal label inherits the text colour so it stays readable */
+                            label: () => ({ class: colourFor(ctx.purpose).text }),
+                          }"
+                        >
+                          <!-- ­­­­OPTION LIST → keep default panel colour, just tint each row -->
+                          <template #option="slotProps">
+                            <div
+                              class="flex justify-between items-center gap-2 px-2 py-1 rounded"
+                              :class="[
+                                colourFor(slotProps.option.value).bg,
+                                colourFor(slotProps.option.value).text,
+                                slotProps.selected && 'ring-2 ring-offset-1 ring-current',
+                              ]"
+                            >
+                              <span class="flex items-center gap-2">{{ slotProps.option.label }}</span>
+                              <i
+                                class="pi pi-info-circle"
+                                :class="colourFor(slotProps.option.value).text"
+                                v-tooltip.right="slotProps.option.desc"
+                              />
+                            </div>
+                          </template>
+                        </Dropdown>
                       </div>
-                      <!-- Таблетка -->
-                      <!-- ▼ replace ваш <Dropdown> этим  ▼ -->
-                      <Dropdown
-                        v-model="ctx.purpose"
-                        :options="contextPurposes"
-                        optionLabel="label"
-                        optionValue="value"
-                        @change="onPurposeChange(ctx, $event.value)"
-                        class="w-48"
-                      >
-                        <!-- пункт в выпадающем списке -->
-                        <template #option="slotProps">
-                          <div class="flex flex-1 justify-between items-center gap-2">
-                            <span class="flex items-center gap-2">
-                              {{ slotProps.option.label }}
-                            </span>
-                            <i class="pi pi-info-circle" v-tooltip.right="slotProps.option.desc"></i>
-                          </div>
-                        </template>
-                      </Dropdown>
-
-                      <!-- ⬇️ place this once anywhere inside the same <template> root (outside the v-for) -->
                     </li>
                   </ul>
 
@@ -156,8 +182,8 @@
                       <InputText v-else-if="newCtx.type === 'url'" v-model="newCtx.url" class="w-full" placeholder="https://example.com" />
 
                       <!-- FILE -->
-                  <!-- FILE -->
-                  <div v-else-if="newCtx.type === 'file'">
+                      <!-- FILE -->
+                      <div v-else-if="newCtx.type === 'file'">
                         <FileUpload
                           ref="fileUpload"
                           name="file"
@@ -221,13 +247,21 @@
 
             <section class="flex flex-col flex-1 overflow-y-auto">
               <header
-                class="flex items-center justify-between gap-2 px-4 py-3 border-y border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
+                class="flex items-center justify-between gap-2 px-4 py-3 border-y border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px] 2xl:h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-pencil text-2xl"></i>
-                  <h2 class="font-semibold text-xl">Query field</h2>
+                  <i class="pi pi-pencil text-sm 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-sm 2xl:text-xl">Query field</h2>
                 </div>
-                <div class="flex justify-center items-center">
+                <div class="flex justify-center items-center gap-2">
+                  <Dropdown
+                    v-model="selectedModel"
+                    :options="aiModels"
+                    optionLabel="label"
+                    optionValue="value"
+                    class="w-full text-sm 2xl:text-xl"
+                    placeholder="Select AI Model"
+                  />
                   <i
                     class="pi pi-info-circle text-base cursor-pointer text-xl"
                     v-tooltip.right="
@@ -238,17 +272,20 @@
                   />
                 </div>
               </header>
-              <div class="flex flex-col gap-4 p-4 h-full">
+              <div class="flex flex-col p-4 h-full gap-2">
                 <!-- FORM with generatePatch submit handler -->
                 <!-- Request History section styled like the design -->
-                <section class="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 mt-4">
+                <section class="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2">
                   <header class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
                       <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Request History</h2>
                     </div>
+                    <button type="button" class="self-start text-red-600 text-sm underline" @click="clearRequestHistory">
+                      Clear History
+                    </button>
                   </header>
 
-                  <div v-if="requestHistory.length" class="flex flex-col gap-2 max-h-[20vh] overflow-y-auto">
+                  <div v-if="requestHistory.length" class="flex flex-col gap-2 max-h-[12vh] overflow-y-auto">
                     <button
                       v-for="(item, index) in requestHistory"
                       :key="index"
@@ -259,46 +296,36 @@
                     >
                       {{ item.length > 40 ? item.slice(0, 40) + "…" : item }}
                     </button>
-
-                    <button type="button" class="self-start text-red-600 text-sm underline mt-2" @click="clearRequestHistory">
-                      Clear History
-                    </button>
                   </div>
                   <div v-else class="text-sm text-gray-500 dark:text-gray-400">No previous requests found.</div>
                 </section>
 
-                <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 gap-4 my-4">
+                <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 gap-2">
+                  <!-- GENERATE SMART CHANGE BUTTON -->
+
                   <!-- TEXTAREA -->
-                  <Textarea
-                    id="promptTextArea"
-                    class="w-full min-h-[150px] max-h-[40vh]"
-                    required
-                    v-model="promptText"
-                    v-tooltip.bottom="
-                      'Write here what the AI assistant should do with your data.  \
+                  <div class="flex flex-row gap-1 justify-center items-center">
+                    <InputText
+                      id="promptTextArea"
+                      class="w-full"
+                      placeholder="KB structuring question"
+                      required
+                      v-model="promptText"
+                      v-tooltip.bottom="
+                        'Write here what the AI assistant should do with your data.  \
      Example: “Highlight the main services from my website and create questions and answers for them”.  \
      Press send button to convert selected sources into a structured knowledge base.'
-                    "
-                  />
-
-                  <!-- GENERATE SMART CHANGE BUTTON -->
-                  <Dropdown
-                    v-model="selectedModel"
-                    :options="aiModels"
-                    optionLabel="label"
-                    optionValue="value"
-                    class="w-full"
-                    placeholder="Select AI Model"
-                  />
-                  <Button
-                    type="submit"
-                    :disabled="isLoading"
-                    label="Generate smart change"
-                    icon="pi pi-send"
-                    class="w-full flex justify-center items-center min-h-[37px]"
-                  >
-                    <LoaderSmall v-if="isLoading" />
-                  </Button>
+                      "
+                    />
+                    <Button
+                      type="submit"
+                      :disabled="isLoading"
+                      icon="pi pi-send"
+                      class="w-full flex justify-center items-center min-h-[37px] max-h-[37px] max-w-[37px] p-button-sm"
+                    >
+                      <LoaderSmall v-if="isLoading" />
+                    </Button>
+                  </div>
                 </form>
               </div>
             </section>
@@ -310,11 +337,11 @@
           >
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
-                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
+                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-file-edit text-2xl"></i>
-                  <h2 class="font-semibold text-xl">Playground</h2>
+                  <i class="pi pi-folder-open text-[14px] 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-[8px] 2xl:text-xl">Playground</h2>
                 </div>
 
                 <div class="flex justify-center items-center gap-4">
@@ -595,11 +622,11 @@
           >
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
-                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
+                class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-book text-2xl"></i>
-                  <h2 class="font-semibold text-xl">Knowledge base</h2>
+                  <i class="pi pi-folder-open text-[14px] 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-[10px] 2xl:text-xl">Knowledge base</h2>
                 </div>
                 <div class="flex justify-center items-center gap-4">
                   <!-- 🔍 search toggle -->
@@ -615,10 +642,7 @@
                   />
                 </div>
               </header>
-              <div
-                v-if="showReadonlySearch"
-                class="px-4 py-3 bg-secondaryLight dark:bg-secondaryDark border-b border-secondaryDark flex items-center gap-2"
-              >
+              <div v-if="showReadonlySearch" class="px-4 py-3 bg-secondaryLight border-b border-secondaryDark flex items-center gap-2">
                 <InputText
                   ref="readonlySearchInput"
                   v-model="readonlySearchTerm"
@@ -935,7 +959,15 @@ const contextPurposes = [
     desc: "The source is used for both general knowledge and specific query answers.",
   },
 ];
+const purposeColours = {
+  bot: { bg: "bg-green-100", text: "text-green-600" },
+  kb: { bg: "bg-blue-100", text: "text-blue-600" },
+  both: { bg: "bg-purple-100", text: "text-purple-600" },
+  none: { bg: "bg-gray-50", text: "text-gray-500" },
+};
 
+/* Helper that returns the colour classes for the current model value */
+const colourFor = (value) => purposeColours[value] || purposeColours.none;
 // данные формы добавления
 const newCtx = ref({
   type: "file", // 👈 default = Files
@@ -2232,6 +2264,9 @@ function csvEscape(val) {
 
 <style>
 .p-fileupload-file-details .p-badge {
+  display: none !important;
+}
+.p-fileupload-file .p-fileupload-file-thumbnail {
   display: none !important;
 }
 </style>

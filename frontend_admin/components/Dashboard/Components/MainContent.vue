@@ -1,9 +1,9 @@
 <!-- pages/${currentPageName.value}/[group]/[entity]/index.vue -->
 <template>
-  <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight dark:bg-secondaryDark">
+  <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto "  :class="[currentPageName === 'personal_account' ? '' : 'bg-secondaryLight']">
     <!-- Main Layout with Sidebar and DataTable -->
-    <div class="max-w-full flex flex-row flex-1 w-full justify-center"
-      :class="[currentPageName === 'personal_account' ? 'flex-col' : 'flex-row']">
+    <div class="max-w-full flex flex-row flex-1 w-full "
+      :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-center']">
       <!-- Navigation Sidebar Component -->
       <NavigationSidebar v-if="currentPageName === 'admin'" :navItems="navItems" />
 
@@ -317,7 +317,7 @@ function processAdminData(data) {
       const routePath = `/${currentPageName.value}/${groupKey}/${entity.registered_name}`;
       validCombos.push({ group: groupKey, entity: entity.registered_name });
 
-      const itemName = entity.model.verbose_name;
+      const itemName = entity.model.plural_name;
       // console.log("entity =", entity);
       return {
         name: itemName,

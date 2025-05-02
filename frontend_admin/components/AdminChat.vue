@@ -2,7 +2,7 @@
    <div class="flex ">
 
     <Button label="Train AI bot"
-                    icon="pi pi-user" class="text-white p-button-sm w-full" @click="toggleChat" />
+                    icon="pi pi-user" class="p-button-sm w-full" @click="toggleChat" />
     <div v-if="currentPageName === 'admin' && currentGroup === 'knowledge-base'" class="chat-overlay-container">
         <!-- Chat toggle button (always visible) -->
 

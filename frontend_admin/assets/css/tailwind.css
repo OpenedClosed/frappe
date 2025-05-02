@@ -36,6 +36,7 @@
   --color-primary: #1e293b;
   --color-primary-light: #666666;
   --color-primary-dark: #1e293b;
+  --color-primary-header: #1e293b;        /* White fallback if needed */
 
   --color-accent: #1e293b;
   --color-accent-dark: #333333;
@@ -57,6 +58,8 @@
   --color-primary: #cbd5e1;             /* Lighter slate for main text */
   --color-primary-light: #94a3b8;       /* Slightly muted for secondary elements */
   --color-primary-dark: #ffffff;        /* White fallback if needed */
+  --color-primary-header: #131a26;        /* White fallback if needed */
+  
 
   --color-accent: #facc15;              /* Amber 400 - contrast accent */
   --color-accent-dark: #fde047;         /* Amber 300 - hover accent */

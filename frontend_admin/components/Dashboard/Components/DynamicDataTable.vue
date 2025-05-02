@@ -3,7 +3,7 @@
   <div>
     <!-- Фильтры и управление таблицей -->
     <div class="max-w-full mb-4">
-      <div class="outline outline-primary dark:outline-secondary rounded-md p-2">
+      <div class="outline outline-primary  rounded-md p-2">
         <div class="flex flex-col xl:flex-row items-center md:justify-between gap-4">
           <h2 class="font-bold text-lg ml-2">{{ title[currentLanguage] || title['en'] || '' }}</h2>
           <!-- <Dropdown
