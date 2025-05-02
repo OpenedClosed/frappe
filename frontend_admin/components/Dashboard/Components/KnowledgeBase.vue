@@ -8,7 +8,9 @@
       <div class="flex flex-1 flex-row rounded-md overflow-hidden">
         <div class="flex flex-col xl:flex-row flex-1 justify-between overflow-hidden">
           <!-- LEFT COLUMN -->
-          <div class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4">
+          <div
+            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4"
+          >
             <section>
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -154,7 +156,8 @@
                       <InputText v-else-if="newCtx.type === 'url'" v-model="newCtx.url" class="w-full" placeholder="https://example.com" />
 
                       <!-- FILE -->
-                      <div v-else-if="newCtx.type === 'file'">
+                  <!-- FILE -->
+                  <div v-else-if="newCtx.type === 'file'">
                         <FileUpload
                           ref="fileUpload"
                           name="file"
@@ -264,7 +267,7 @@
                   <div v-else class="text-sm text-gray-500 dark:text-gray-400">No previous requests found.</div>
                 </section>
 
-                <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0  gap-4 my-4">
+                <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 gap-4 my-4">
                   <!-- TEXTAREA -->
                   <Textarea
                     id="promptTextArea"
@@ -302,7 +305,9 @@
           </div>
 
           <!-- CENTER COLUMN -->
-          <div class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div
+            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full"
+          >
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -315,7 +320,7 @@
                 <div class="flex justify-center items-center gap-4">
                   <div class="flex flex-row gap-2">
                     <!-- Review-changes button -->
-                    <Button class="p-button-sm flex items-center justify-center gap-2  max-h-[37px]" @click="reviewChanges">
+                    <Button class="p-button-sm flex items-center justify-center gap-2 max-h-[37px]" @click="reviewChanges">
                       <div v-if="!isLoading" class="flex items-center">
                         <i class="pi pi-eye"></i>
 
@@ -547,8 +552,14 @@
                 </div>
 
                 <!-- Save / Reject / Transfer -->
-                <div  class="flex flex-row justify-between gap-2 my-2">
-                  <Button :disabled="isLoading" label="Reject" icon="pi pi-times" class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300" @click="rejectPlayground" />
+                <div class="flex flex-row justify-between gap-2 my-2">
+                  <Button
+                    :disabled="isLoading"
+                    label="Reject"
+                    icon="pi pi-times"
+                    class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300"
+                    @click="rejectPlayground"
+                  />
                   <Button
                     :disabled="isLoading || !isEditMode"
                     label="Save"
@@ -560,7 +571,7 @@
     The draft is not used by the bot to answer questions until you publish it.'
                     "
                   />
-                
+
                   <Button
                     :disabled="(isLoading || !hasChanges) && isEditMode"
                     label="Publish"
@@ -573,15 +584,15 @@
     structure is completely ready.'
                     "
                   />
-
-                
                 </div>
               </div>
             </section>
           </div>
 
           <!-- RIGHT COLUMN (Readonly Copy) -->
-          <div class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full">
+          <div
+            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full"
+          >
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight dark:bg-secondaryDark max-h-[60px] h-[60px]"
@@ -641,7 +652,12 @@
                 </div>
               </div>
               <div class="flex flex-row justify-between gap-2 p-4 my-2">
-                <Button label="Export" icon="pi pi-file-export" class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300" @click="showExportDialog = true" />
+                <Button
+                  label="Export"
+                  icon="pi pi-file-export"
+                  class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300"
+                  @click="showExportDialog = true"
+                />
 
                 <AdminChat class="flex-1" />
               </div>
