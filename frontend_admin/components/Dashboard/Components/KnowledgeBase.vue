@@ -959,15 +959,17 @@ const contextPurposes = [
     desc: "The source is used for both general knowledge and specific query answers.",
   },
 ];
+/* light + dark palette for the “source purpose” dropdown */
 const purposeColours = {
-  bot: { bg: "bg-green-100", text: "text-green-600" },
-  kb: { bg: "bg-blue-100", text: "text-blue-600" },
-  both: { bg: "bg-purple-100", text: "text-purple-600" },
-  none: { bg: "bg-gray-50", text: "text-gray-500" },
+  bot:  { bg: "bg-green-100  dark:bg-green-900/40",  text: "text-green-600  dark:text-green-300" },
+  kb:   { bg: "bg-blue-100   dark:bg-blue-900/40",   text: "text-blue-600   dark:text-blue-300" },
+  both: { bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-600 dark:text-purple-300" },
+  none: { bg: "bg-gray-50    dark:bg-gray-700",      text: "text-gray-500   dark:text-gray-300" },
 };
 
-/* Helper that returns the colour classes for the current model value */
+/* unchanged helper */
 const colourFor = (value) => purposeColours[value] || purposeColours.none;
+
 // данные формы добавления
 const newCtx = ref({
   type: "file", // 👈 default = Files
