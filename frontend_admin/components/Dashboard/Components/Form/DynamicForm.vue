@@ -4,14 +4,14 @@
     <div v-for="group in groupedFields" :key="group.title.en">
       <div
         v-if="!group.fields.every((field) => isDisabled(field)) || !isNewItem"
-        class="mb-6 bg-neutralLight dark:bg-neutralDark border border-neutralDark dark:border-neutralLight rounded-lg p-6 shadow"
+        class="mb-6 bg-neutralLight  border border-neutralDark  rounded-lg p-6 shadow"
       >
         <!-- Group header -->
-        <h2 class="text-2xl font-bold text-primaryDark dark:text-primaryLight mb-2">
+        <h2 class="text-2xl font-bold text-primaryDark mb-2">
           {{ group.title?.[currentLanguage] || group.title?.en || "" }}
         </h2>
 
-        <p v-if="group.help_text" class="text-base dark:text-neutralLight mb-4">
+        <p v-if="group.help_text" class="text-base  mb-4">
           {{ group.help_text[currentLanguage] || group.help_text.en || "" }}
         </p>
         <!-- {{ internalValue }} -->

@@ -10,20 +10,20 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     currentPageName.value = pagename;
   
     // Set CSS variables for specific pages (client-only)
-    if (process.client && pagename === "personal_account") {
-      const root = document.documentElement;
-      root.style.setProperty("--color-primary", "#000000");
-      root.style.setProperty("--color-primary-light", "#666666");
-      root.style.setProperty("--color-primary-dark", "#000000");
-      root.style.setProperty("--color-secondary", "#000000");
-      root.style.setProperty("--color-secondary-light", "#666666");
-      root.style.setProperty("--color-secondary-dark", "#1a1a1a");
-      root.style.setProperty("--color-accent", "#000000");
-      root.style.setProperty("--color-accent-dark", "#333333");
-      root.style.setProperty("--color-neutral", "#FFFFFF");
-      root.style.setProperty("--color-neutral-dark", "#E5E5E5");
-      root.style.setProperty("--color-neutral-light", "#F9F9F9");
-    }
+    // if (process.client && pagename === "personal_account") {
+    //   const root = document.documentElement;
+    //   root.style.setProperty("--color-primary", "#000000");
+    //   root.style.setProperty("--color-primary-light", "#666666");
+    //   root.style.setProperty("--color-primary-dark", "#000000");
+    //   root.style.setProperty("--color-secondary", "#000000");
+    //   root.style.setProperty("--color-secondary-light", "#666666");
+    //   root.style.setProperty("--color-secondary-dark", "#1a1a1a");
+    //   root.style.setProperty("--color-accent", "#000000");
+    //   root.style.setProperty("--color-accent-dark", "#333333");
+    //   root.style.setProperty("--color-neutral", "#FFFFFF");
+    //   root.style.setProperty("--color-neutral-dark", "#E5E5E5");
+    //   root.style.setProperty("--color-neutral-light", "#F9F9F9");
+    // }
   
     if (process.client) {
       const hostname = window.location.hostname;

@@ -58,6 +58,8 @@
 
     <!-- Кнопка "Начать заново" (если таймер истёк) -->
     <ReloadButton v-if="timerExpired" :reloadLabel="t('chatAgain')" :reloadPage="reloadPage" />
+    <Button label="Close" v-if="!isTelegram && isMobile" icon="pi pi-times" class="" @click="closeChat()" />
+
   </div>
 </template>
 

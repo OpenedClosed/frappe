@@ -1,11 +1,11 @@
 <template>
   <div>
     <!-- Floating toggle -->
-    <Button icon="pi pi-comments" label="Open Chat" class="chat-toggle-button" @click="toggleChat" />
+    <Button icon="pi pi-comments" label="Open Chat" class="chat-toggle-button text-white" @click="toggleChat" />
 
     <!-- Chat box -->
     <transition name="fade">
-      <div v-if="showChat" class="chat-box" :class="{ 'inset-0 w-full h-full border-0': isMobile }">
+      <div v-if="showChat" class="chat-box"   :class="{ 'chat-box--mobile': isMobile }">
         <ChatComponent :is-telegram="false" @close-chat="toggleChat" />
       </div>
     </transition>
@@ -143,14 +143,15 @@ body {
   4. Mobile full-screen 
      ---------------------------------------------
 */
-.chat-overlay-mobile {
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
+.chat-box--mobile {
+  position: fixed !important;
+  inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  border: none;
+  border: 0 !important;
+  border-radius: 0 !important;
+  bottom: 0 !important;
+  right: 0 !important;
 }
 
 /* 

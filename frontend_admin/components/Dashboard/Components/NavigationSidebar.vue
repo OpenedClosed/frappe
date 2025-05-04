@@ -4,7 +4,7 @@
     <div class="rounded-xl shadow-thicc p-2 flex flex-col bg-white dark:bg-secondary h-full w-full">
       <!-- collapse / expand button -->
       <button
-        class="p-2 self-end text-xl hover:text-primary dark:hover:text-secondary"
+        class="p-2 self-end text-xl hover:text-primary "
         @click="isCollapsed = !isCollapsed"
         v-tooltip.bottom="isCollapsed ? 'Expand' : 'Collapse'"
       >
@@ -21,7 +21,7 @@
           </h3>
 
           <!-- collapsed header separator -->
-          <div v-else class="border-t border-gray-200 dark:border-gray-700 my-3" />
+          <div v-else class="border-t border-gray-200  my-3" />
 
           <!-- nav items -->
           <ul class="flex flex-col space-y-2" :class="isCollapsed ? 'items-center' : 'ml-4'">
@@ -32,8 +32,8 @@
                 :class="[
                   isCollapsed ? 'justify-center' : '',
                   isActiveRoute(item.route)
-                    ? 'border-2 border-primary dark:border-secondary'
-                    : 'hover:text-primary dark:hover:text-secondary',
+                    ? 'border-2 border-primary'
+                    : 'hover:text-primary ',
                 ]"
                 v-tooltip.right="item.name[currentLanguage] || item.name.en"
               >
@@ -59,8 +59,8 @@
               :class="[
                 isCollapsed ? 'justify-center' : '',
                 isActiveRoute(`/${currentPageName}/knowledge-base`)
-                  ? 'border-2 border-primary dark:border-secondary'
-                  : 'hover:text-primary dark:hover:text-secondary',
+                  ? 'border-2 border-primary'
+                  : 'hover:text-primary ',
               ]"
               v-tooltip.right="'Knowledge Base'"
             >
@@ -74,8 +74,8 @@
               :class="[
                 isCollapsed ? 'justify-center' : '',
                 isActiveRoute(`/${currentPageName}/knowledge/bot_settings`)
-                  ? 'border-2 border-primary dark:border-secondary'
-                  : 'hover:text-primary dark:hover:text-secondary',
+                  ? 'border-2 border-primary'
+                  : 'hover:text-primary ',
               ]"
               v-tooltip.right="'Bot Settings'"
             >
@@ -105,9 +105,9 @@
             <li v-for="item in group.items" :key="item.name" class="flex items-center">
               <RouterLink
                 :to="item.route"
-                class="flex items-center hover:text-primary dark:hover:text-secondary p-2 rounded-md"
+                class="flex items-center hover:text-primary  p-2 rounded-md"
                 @click="closeSidebar"
-                :class="{ 'border-2 border-primary dark:border-secondary': isActiveRoute(item.route) }"
+                :class="{ 'border-2 border-primary': isActiveRoute(item.route) }"
               >
                 <i :class="item.iconClass" class="mr-3"></i>
                 <span class="text-sm">{{ item.name[currentLanguage] || item.name["en"] }}</span>
@@ -123,9 +123,9 @@
           <ul class="ml-4">
             <RouterLink
               :to="`/${currentPageName}/knowledge-base`"
-              class="flex items-center hover:text-primary dark:hover:text-secondary p-2 rounded-md"
+              class="flex items-center hover:text-primary  p-2 rounded-md"
               @click="closeSidebar"
-              :class="{ 'border-2 border-primary dark:border-secondary': isActiveRoute(`/${currentPageName}/knowledge-base`) }"
+              :class="{ 'border-2 border-primary': isActiveRoute(`/${currentPageName}/knowledge-base`) }"
             >
               <i class="pi pi-book mr-3"></i>
               <span class="text-sm">Knowledge Base</span>
@@ -134,9 +134,9 @@
           <ul class="ml-4">
             <RouterLink
               :to="`/${currentPageName}/knowledge/bot_settings`"
-              class="flex items-center hover:text-primary dark:hover:text-secondary p-2 rounded-md"
+              class="flex items-center hover:text-primary  p-2 rounded-md"
               @click="closeSidebar"
-              :class="{ 'border-2 border-primary dark:border-secondary': isActiveRoute(`/${currentPageName}/knowledge/bot_settings`) }"
+              :class="{ 'border-2 border-primary': isActiveRoute(`/${currentPageName}/knowledge/bot_settings`) }"
             >
               <i class="pi pi-cog mr-3"></i>
               <span class="text-sm">Bot Settings</span>

@@ -15,6 +15,7 @@ module.exports = {
         primary: "var(--color-primary)",
         primaryLight: "var(--color-primary-light)",
         primaryDark: "var(--color-primary-dark)",
+        primaryHeader: "var(--color-primary-header)",
 
         secondary: "var(--color-secondary)",
         secondaryLight: "var(--color-secondary-light)",

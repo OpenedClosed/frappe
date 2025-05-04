@@ -36,6 +36,7 @@
   --color-primary: #1e293b;
   --color-primary-light: #666666;
   --color-primary-dark: #1e293b;
+  --color-primary-header: #1e293b;        /* White fallback if needed */
 
   --color-accent: #1e293b;
   --color-accent-dark: #333333;
@@ -53,6 +54,29 @@
   --color-white: #ffffff;
   --color-black: #1e293b;
 }
+:root.dark {
+  --color-primary: #cbd5e1;             /* Lighter slate for main text */
+  --color-primary-light: #94a3b8;       /* Slightly muted for secondary elements */
+  --color-primary-dark: #ffffff;        /* White fallback if needed */
+  --color-primary-header: #131a26;        /* White fallback if needed */
+  
+
+  --color-accent: #facc15;              /* Amber 400 - contrast accent */
+  --color-accent-dark: #fde047;         /* Amber 300 - hover accent */
+
+  --color-secondary: #334155;           /* Slate 700 */
+  --color-secondary-light: #1e293b;     /* Slate 800 */
+  --color-secondary-extra-light: #0f172a; /* Slate 900 – background blocks */
+  --color-secondary-dark: #475569;      /* Slate 600 – retained for consistency */
+
+  --color-neutral: #1e293b;             /* Dark slate */
+  --color-neutral-dark: #0f172a;        /* Almost black */
+  --color-neutral-light: #334155;       /* Muted contrast */
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+}
+
 
 @import url("https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap");
 

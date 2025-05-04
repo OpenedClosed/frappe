@@ -1,14 +1,14 @@
 <template>
     <div>
         <Button v-if="smallButton" @click="visible_support = true" text class="export-button h-full flex justify-center items-center">
-            <i class="pi pi-comments text-[18px] text-black dark:text-white"></i>
+            <i class="pi pi-comments text-[18px]"></i>
           </Button>
         <Button v-else   icon="pi pi-comment" :label="t('supportForm.support')" class="w-full neon-button flex justify-between  items-center text-white" @click="visible_support = true" >
         </Button>
 
         <Dialog v-model:visible="visible_support" modal :header="t('supportForm.supportForm')" :style="{ width: '25rem' }">
 
-            <!-- <span class="text-surface-500 dark:text-surface-400 block mb-8">Create Project.</span> -->
+
             <LoaderOverlay v-if="is_loading" :isLoading="!loading_text_displayed" :finshText="t('supportForm.messageSent')" />
             <form @submit.prevent="sendSupport" class="flex flex-col  gap-4">
 

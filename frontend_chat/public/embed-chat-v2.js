@@ -10,7 +10,8 @@
     iframe = document.createElement('iframe');
 
     // Set common iframe styles
-    iframe.src = 'http://localhost:4000/chats/chat/';
+    // iframe.src = 'http://localhost:4000/chats/chat/';
+    iframe.src = `https://panamed-aihubworks.com/chats/chat/`;
     iframe.style.border = 'none';
     iframe.style.pointerEvents = 'auto';
 
@@ -26,15 +27,16 @@
 
     if (mobile) {
       container.style.position = 'fixed';
-      container.style.top = '0';
-      container.style.left = '0';
-      container.style.width = '100vw';
-      container.style.height = '100vh';
+      container.style.bottom = '0';
+      container.style.right = '0';
+      container.style.width = '162px';
+      container.style.height = '62px';
       container.style.zIndex = '9999';
       container.style.background = 'transparent';
       container.style.pointerEvents = 'auto';
       container.style.overflow = 'hidden';
 
+    
       iframe.style.width = '100%';
       iframe.style.height = '100%';
     } else {
@@ -64,7 +66,7 @@
 
   // Handle messages from iframe
   window.addEventListener('message', (event) => {
-    if (!event.data || (event.data.type !== 'bgSize' && event.data.typ !== 'bgSize')) {
+    if (!event.data || (event.data.type !== 'bgSize')) {
       return;
     }
 
@@ -79,7 +81,16 @@
         if (width) {
           container.style.width = `${width}px`;
         }
+      } else {
+      if (showChat) {
+        container.style.height = '100vh';
+        container.style.width = '100vw';
+      }else {
+        container.style.width = '162px';
+        container.style.height = '62px';
       }
+      }
+    
     }, timeout);
   });
 
