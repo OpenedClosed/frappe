@@ -308,7 +308,7 @@
                     <InputText
                       id="promptTextArea"
                       class="w-full"
-                      placeholder="Type here..."
+                      placeholder="KB structuring question"
                       required
                       v-model="promptText"
                       v-tooltip.bottom="
