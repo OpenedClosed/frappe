@@ -78,15 +78,15 @@ const currentId = computed(() => route.params.id);
 
 // Emit if you still need "exportToExcel" or other events
 const emit = defineEmits(["exportToExcel"]);
+function onExportToExcel() {
+  emit("exportToExcel");
+}
 
 // Example of using a computed label for "Create" / "Add"
 const createLabel = computed(() => (currentPageName.value === "admin" ? "Создать" : "Добавить"));
 function onClickEdit(id) {
   // Переходим на: /${currentPageName.value}/..../..../id
   router.push(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/${id}`);
-}
-function onExportToExcel() {
-  emit("exportToExcel");
 }
 
 function onClickCreate() {
