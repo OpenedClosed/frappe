@@ -499,10 +499,9 @@
                               </div>
                             </div>
 
-                            <!-- QUESTION (the key) -->
                             <Textarea
-                              :placeholder="questionKey.includes('New Question') ? questionKey : ''"
-                              :value="questionKey.includes('New Question') ? '' : questionKey"
+                              :modelValue="questionKey"
+                              :placeholder="questionKey"
                               class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                               @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
                               v-tooltip.right="'A question in the knowledge base that the bot will look for answers to.'"
@@ -961,10 +960,10 @@ const contextPurposes = [
 ];
 /* light + dark palette for the “source purpose” dropdown */
 const purposeColours = {
-  bot:  { bg: "bg-green-100  dark:bg-green-900/40",  text: "text-green-600  dark:text-green-300" },
-  kb:   { bg: "bg-blue-100   dark:bg-blue-900/40",   text: "text-blue-600   dark:text-blue-300" },
+  bot: { bg: "bg-green-100  dark:bg-green-900/40", text: "text-green-600  dark:text-green-300" },
+  kb: { bg: "bg-blue-100   dark:bg-blue-900/40", text: "text-blue-600   dark:text-blue-300" },
   both: { bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-600 dark:text-purple-300" },
-  none: { bg: "bg-gray-50    dark:bg-gray-700",      text: "text-gray-500   dark:text-gray-300" },
+  none: { bg: "bg-gray-50    dark:bg-gray-700", text: "text-gray-500   dark:text-gray-300" },
 };
 
 /* unchanged helper */
@@ -1271,10 +1270,16 @@ function renameQuestion(topicName, subtopicName, oldQuestion, newQuestion) {
     return;
   }
 
-  // Move entire object { text, files } to the new key
-  subtopic.questions[newQuestion] = subtopic.questions[oldQuestion];
-  delete subtopic.questions[oldQuestion];
+  // Clone and update the questions object
+  const updatedQuestions = { ...subtopic.questions };
+  updatedQuestions[newQuestion] = updatedQuestions[oldQuestion];
+  delete updatedQuestions[oldQuestion];
 
+  // Assign the updated object to trigger reactivity
+  console.log("updatedQuestions= ", updatedQuestions);
+  knowledgeBaseData.value.knowledge_base[topicName].subtopics[subtopicName].questions = updatedQuestions;
+  console.log("knowledgeBaseData= ", knowledgeBaseData.value.knowledge_base[topicName].subtopics[subtopicName].questions);
+  // Update the renaming map
   const originalName = questionRenamingMap.value.get(oldQuestion) || oldQuestion;
   questionRenamingMap.value.delete(oldQuestion);
   questionRenamingMap.value.set(newQuestion, originalName);
