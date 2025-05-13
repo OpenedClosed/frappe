@@ -17,7 +17,7 @@
         </transition>
     </div>
    </div>
-</template> 
+</template>  
 <script setup>
 import { useI18n } from "#imports";
 import { ref, computed, onMounted, onUnmounted } from "vue";
