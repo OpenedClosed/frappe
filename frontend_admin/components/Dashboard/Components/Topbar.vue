@@ -3,9 +3,10 @@
     <Menubar class="rounded-none bg-primaryHeader outline-none border-none">
       <template #start>
         <div class="flex flex-row items-center justify-between">
-          <Button text icon="pi pi-bars" class="xl:hidden" @click="isSidebarOpen = true" aria-label="Menu" />
+          <Button text icon="pi pi-bars color-black dark:color-white" class="xl:!hidden !block" @click="isSidebarOpen = true" aria-label="Menu" />
           <div v-if="currentPageName === 'admin'" class="flex items-center justify-center md:justify-start ml-2">
-            <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto" />
+            <img src="/main/LogoLight.png" alt="Logo" class="w-24 h-auto block dark:hidden" />
+            <img src="/main/LogoDark.png" alt="Logo" class="w-24 h-auto hidden dark:block" />
           </div>
           <div v-else class="flex items-center justify-center md:justify-start ml-2">
             <h3 class="text-white text-lg font-bold">Личный кабинет</h3>
@@ -49,13 +50,13 @@ function toggleTheme() {
 }
 
 function updateTheme() {
-  const systemTheme =
-    colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
-  //console.log("systemTheme", systemTheme)
-  const themeLink = document.getElementById("theme-link");
-  //console.log(themeLink)
-  themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
-  //console.log(themeLink)
+  // const systemTheme =
+  //   colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
+  // //console.log("systemTheme", systemTheme)
+  // const themeLink = document.getElementById("theme-link");
+  // //console.log(themeLink)
+  // themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
+  // //console.log(themeLink)
 }
 
 
@@ -78,12 +79,12 @@ const menuOpen = ref(false);
 const items = computed(() => {
   const menuItems = [
     {
-      label: "Сменить тему",
+      label: "Change Theme",
       icon: colorMode.preference === "dark" ? "pi pi-sun" : "pi pi-moon",
       command: toggleTheme,
     },
     {
-      label: "Выйти",
+      label: "Logout",
       icon: "pi pi-power-off",
       command: onLogout,
     },
@@ -91,7 +92,7 @@ const items = computed(() => {
 
   if (currentPageName.value === "admin") {
     menuItems.unshift({
-      label: "В личный кабинет",
+      label: "To Personal Account",
       icon: "pi pi-user",
       command: () => {
         window.location.href = "/personal_account";
@@ -99,7 +100,7 @@ const items = computed(() => {
     });
   } else {
     menuItems.unshift({
-      label: "AI Assistant",
+      label: "To Admin Panel",
       icon: "pi pi-user",
       command: () => {
         window.location.href = "/admin";

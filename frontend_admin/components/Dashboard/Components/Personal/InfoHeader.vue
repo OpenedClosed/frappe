@@ -122,13 +122,13 @@ function toggleTheme() {
 }
 
 function updateTheme() {
-  const systemTheme =
-    colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
-  //console.log("systemTheme", systemTheme)
-  const themeLink = document.getElementById("theme-link");
-  //console.log(themeLink)
-  themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
-  //console.log(themeLink)
+  // const systemTheme =
+  //   colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
+  // //console.log("systemTheme", systemTheme)
+  // const themeLink = document.getElementById("theme-link");
+  // //console.log(themeLink)
+  // themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
+  // //console.log(themeLink)
 }
 
 

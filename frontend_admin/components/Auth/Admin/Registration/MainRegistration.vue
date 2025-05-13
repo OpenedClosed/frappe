@@ -7,12 +7,11 @@
           <div class="w-full flex flex-col justify-center items-center mb-4">
             <div class="flex justify-center items-center w-full">
               <div class="h-[46px] m-3">
-                <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto" />
+                <img src="/main/LogoLight.png" alt="Logo" class="w-32 h-auto block dark:hidden" />
+                <img src="/main/LogoDark.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
               </div>
             </div>
-            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">
-              Регистрация
-            </p>
+            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">Регистрация</p>
           </div>
 
           <!-- E-mail -->
@@ -139,13 +138,9 @@
             />
             <label for="terms" class="text-[14px] text-black dark:text-white">
               Согласен с
-              <a href="https://quam.cc/termsofuse" target="_blank" class="underline">
-                Условиями использования
-              </a>
+              <a href="https://quam.cc/termsofuse" target="_blank" class="underline"> Условиями использования </a>
               и
-              <a href="https://quam.cc/privacy" target="_blank" class="underline">
-                Политикой конфиденциальности
-              </a>
+              <a href="https://quam.cc/privacy" target="_blank" class="underline"> Политикой конфиденциальности </a>
             </label>
           </div>
           <small class="text-red-500 mt-1">{{ regError.terms }}</small>
@@ -160,46 +155,39 @@
           <!-- Ссылка на логин -->
           <small class="text-[14px]">
             Уже есть аккаунт?
-            <span @click="goLogin" class="underline cursor-pointer">
-              Перейти к логину
-            </span>
+            <span @click="goLogin" class="underline cursor-pointer"> Перейти к логину </span>
           </small>
         </form>
       </template>
 
       <template v-else>
-        
         <div>
           <h3 class="text-[18px] text-center">Тестовый код (Потом будет с почты)</h3>
-       <div class="flex flex-row items-center gap-1">
-        <InputText v-model="testCode" readonly id="code" class="w-full" />
-        <Button icon="pi pi-copy" @click="onCopy"></Button>
-       </div>
+          <div class="flex flex-row items-center gap-1">
+            <InputText v-model="testCode" readonly id="code" class="w-full" />
+            <Button icon="pi pi-copy" @click="onCopy"></Button>
+          </div>
         </div>
-
 
         <form @submit.prevent="sendCode" class="flex flex-col items-center gap-3">
           <!-- Заголовок для подтверждения кода -->
           <div class="w-full flex flex-col justify-center items-center mb-4">
             <div class="flex justify-center items-center w-full">
               <div class="h-[46px] m-3">
-                <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto" />
+                <img src="/main/LogoLight.png" alt="Logo" class="w-32 h-auto block dark:hidden" />
+                <img src="/main/LogoDark.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
               </div>
             </div>
-            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">
-              Подтверждение кода
-            </p>
+            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">Подтверждение кода</p>
           </div>
 
           <!-- Поле ввода кода -->
           <div class="w-full flex flex-col justify-center items-center space-y-3">
             <p for="code" class="font-bold text-lg w-full text-center">Введите шестизначный код с Почты</p>
 
-            <InputOtp required :length="6" v-model="regForm.code" id="code"
-              :class="{ 'p-invalid': Boolean(regError.code) }" />
+            <InputOtp required :length="6" v-model="regForm.code" id="code" :class="{ 'p-invalid': Boolean(regError.code) }" />
             <small class="text-red-500 mt-1">{{ regError.code }}</small>
           </div>
-
 
           <!-- Кнопка подтверждения -->
           <div class="w-full mt-6">
@@ -213,9 +201,7 @@
             <p>Если код не был получен —</p>
             <p>
               проверьте спам или
-              <a @click="goNoCode" class="underline cursor-pointer">
-                повторить отправку
-              </a>
+              <a @click="goNoCode" class="underline cursor-pointer"> повторить отправку </a>
             </p>
           </div>
         </form>
@@ -225,8 +211,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute, navigateTo, reloadNuxtApp } from '#imports';
+import { ref, onMounted } from "vue";
+import { useRoute, navigateTo, reloadNuxtApp } from "#imports";
 
 const is_loading = ref(false);
 const loading_text_displayed = ref(false);
@@ -240,7 +226,7 @@ let regForm = ref({
   birth_date: "",
   city: "",
   gender: "",
-  code: '',
+  code: "",
 });
 
 let regError = ref({
@@ -251,7 +237,7 @@ let regError = ref({
   birth_date: "",
   city: "",
   gender: "",
-  code: '',
+  code: "",
   terms: "",
 });
 
@@ -260,14 +246,14 @@ function onCopy() {
 }
 
 const CheckboxValue = ref(true);
-const passwordFieldType = ref('password');
-const passwordFieldTypeConfirm = ref('password');
+const passwordFieldType = ref("password");
+const passwordFieldTypeConfirm = ref("password");
 
 function togglePasswordVisibility() {
-  passwordFieldType.value = passwordFieldType.value === 'password' ? 'text' : 'password';
+  passwordFieldType.value = passwordFieldType.value === "password" ? "text" : "password";
 }
 function togglePasswordVisibilityConfirm() {
-  passwordFieldTypeConfirm.value = passwordFieldTypeConfirm.value === 'password' ? 'text' : 'password';
+  passwordFieldTypeConfirm.value = passwordFieldTypeConfirm.value === "password" ? "text" : "password";
 }
 
 function goNoCode() {
@@ -279,18 +265,18 @@ function goNoCode() {
     birth_date: "",
     city: "",
     gender: "",
-    code: '',
+    code: "",
   };
   isCode.value = false;
 }
 
-const testCode = ref("")
-const { currentPageName } = usePageState()
+const testCode = ref("");
+const { currentPageName } = usePageState();
 const route = useRoute();
-const is_payment = route.query.is_payment === 'true';
+const is_payment = route.query.is_payment === "true";
 
 function goLogin() {
-  console.log('currentPageName.value', currentPageName.value);
+  console.log("currentPageName.value", currentPageName.value);
   if (is_payment) {
     navigateTo(`/${currentPageName.value}/login?is_payment=true`);
   } else {
@@ -312,34 +298,34 @@ function sendReg() {
     birth_date: "",
     city: "",
     gender: "",
-    code: '',
+    code: "",
     terms: "",
   };
-  const { currentPageName } = usePageState()
+  const { currentPageName } = usePageState();
   is_loading.value = true;
   loading_text_displayed.value = false;
   let formData = regForm.value;
-  useNuxtApp().$api
-    .post(`/api/${currentPageName.value}/register`, formData)
+  useNuxtApp()
+    .$api.post(`/api/${currentPageName.value}/register`, formData)
     .then((response) => {
       isCode.value = true;
       is_loading.value = false;
       const responceData = response.data;
-      console.log('responceData', responceData);
+      console.log("responceData", responceData);
       testCode.value = responceData?.code_for_test;
     })
     .catch((err) => {
-      console.log('err', err);
+      console.log("err", err);
       if (err.response && err.response.data.errors) {
         const errors = err.response.data.errors;
-        regError.value.email = errors.email || '';
-        regError.value.phone = errors.phone || '';
-        regError.value.first_name = errors.first_name || '';
-        regError.value.last_name = errors.last_name || '';
-        regError.value.birth_date = errors.birth_date || '';
-        regError.value.city = errors.city || '';
-        regError.value.gender = errors.gender || '';
-        regError.value.terms = errors.agreeToTerms || '';
+        regError.value.email = errors.email || "";
+        regError.value.phone = errors.phone || "";
+        regError.value.first_name = errors.first_name || "";
+        regError.value.last_name = errors.last_name || "";
+        regError.value.birth_date = errors.birth_date || "";
+        regError.value.city = errors.city || "";
+        regError.value.gender = errors.gender || "";
+        regError.value.terms = errors.agreeToTerms || "";
       }
       is_loading.value = false;
     });
@@ -366,12 +352,12 @@ function sendCode() {
       //   reloadNuxtApp({ path: "/dashboard", ttl: 1000 });
       // }
       let responceData = response.data;
-      console.log('responceData', responceData);
+      console.log("responceData", responceData);
       currentPageName.value = "admin"; // Обновляем state на 'admin'
       navigateTo(`/${currentPageName.value}/`);
     })
     .catch((err) => {
-      console.log('err', err);
+      console.log("err", err);
       if (err.response) {
         if (err.response.data.errors) {
           regError.value.code = err.response.data.errors.code;
@@ -384,8 +370,8 @@ function sendCode() {
 }
 
 onMounted(() => {
-  if (currentPageName.value != 'personal_account') {
-   navigateTo(`/${currentPageName.value}/login/`);
+  if (currentPageName.value != "personal_account") {
+    navigateTo(`/${currentPageName.value}/login/`);
   }
 });
 </script>

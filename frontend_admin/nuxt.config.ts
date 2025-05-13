@@ -1,8 +1,66 @@
 import { defineNuxtConfig } from "nuxt/config";
+import Aura from "@primeuix/themes/aura";
+import { definePreset } from "@primeuix/themes";
 
+
+const MyPreset = definePreset(Aura, {
+  semantic: {
+    colorScheme: {
+      light: {
+        primary: {
+          color: "var(--tw-color-primary)",
+          inverseColor: "var(--tw-color-white)",
+          hoverColor: "var(--tw-color-primary-light)",
+          activeColor: "var(--tw-color-primary-dark)",
+          // Optional extra mapping:
+          header: "var(--tw-color-primary-header)"
+        },
+        highlight: {
+          background: "var(--tw-color-secondary)",
+          focusBackground: "var(--tw-color-secondary-dark)",
+          color: "var(--tw-color-white)",
+          focusColor: "var(--tw-color-white)"
+        },
+        // Additional mappings based on your Tailwind theme:
+        accent: {
+          color: "var(--tw-color-accent)",
+          dark: "var(--tw-color-accent-dark)"
+        },
+        neutral: {
+          color: "var(--tw-color-neutral)",
+          dark: "var(--tw-color-neutral-dark)",
+          light: "var(--tw-color-neutral-light)"
+        }
+      },
+      dark: {
+        primary: {
+          color: "var(--tw-color-primary)",
+          inverseColor: "var(--tw-color-white)",
+          hoverColor: "var(--tw-color-primary-light)",
+          activeColor: "var(--tw-color-primary-dark)",
+          header: "var(--tw-color-primary-header)"
+        },
+        highlight: {
+          background: "var(--tw-color-secondary)",
+          focusBackground: "var(--tw-color-secondary-dark)",
+          color: "var(--tw-color-white)",
+          focusColor: "var(--tw-color-white)"
+        },
+        accent: {
+          color: "var(--tw-color-accent)",
+          dark: "var(--tw-color-accent-dark)"
+        },
+        neutral: {
+          color: "var(--tw-color-neutral)",
+          dark: "var(--tw-color-neutral-dark)",
+          light: "var(--tw-color-neutral-light)"
+        }
+      }
+    }
+  }
+});
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-
   spaLoadingTemplate: "spa-loading-template.html",
 
   app: {
@@ -13,8 +71,7 @@ export default defineNuxtConfig({
         { "http-equiv": "Content-Security-Policy", content: "upgrade-insecure-requests" },
         { "http-equiv": "X-UA-Compatible", content: "IE=edge" },
       ],
-      script: [
-      ],
+      script: [],
       link: [
         {
           rel: "preconnect",
@@ -30,14 +87,14 @@ export default defineNuxtConfig({
           rel: "stylesheet",
           crossorigin: "anonymous",
         },
-        {
-          id: "theme-link",
-          rel: "stylesheet",
-          href: "/aura-light-cyan/theme.css",
-      },
-    ],
+        // {
+        //   id: "theme-link",
+        //   rel: "stylesheet",
+        //   href: "/aura-light-cyan/theme.css",
+        // },
+      ],
+    },
   },
-},
 
   ssr: false,
 
@@ -50,25 +107,18 @@ export default defineNuxtConfig({
     "~/node_modules/primeicons/primeicons.css",
   ],
 
-  modules: [
-    "@nuxtjs/tailwindcss",
-    "nuxt-primevue",
-    "@nuxtjs/i18n",
-    "@nuxtjs/color-mode",
-    'nuxt-jsoneditor',
-    "nuxt-maplibre",
-  ],
+  modules: ["@nuxtjs/tailwindcss", "@primevue/nuxt-module", "@nuxtjs/i18n", "@nuxtjs/color-mode", "nuxt-jsoneditor", "nuxt-maplibre"],
 
   jsoneditor: {
-    componentName: 'JsonEditor',
+    componentName: "JsonEditor",
     includeCss: true,
     options: {
-        /**
-        *
-        * SET GLOBAL OPTIONS
-        * 
-        * */
-    }
+      /**
+       *
+       * SET GLOBAL OPTIONS
+       *
+       * */
+    },
   },
   colorMode: {
     classSuffix: "",
@@ -95,23 +145,48 @@ export default defineNuxtConfig({
   // extends: ['nuxt-umami'],
   vue: {
     compilerOptions: {
-      isCustomElement: (tag) => ["vue-advanced-chat","draggable"].includes(tag),
+      isCustomElement: (tag) => ["vue-advanced-chat", "draggable"].includes(tag),
     },
   },
 
-  primevue: {
-    cssLayerOrder: "tailwind-base, primevue, tailwind-utilities",   
-  },
- 
+  //   primevue: {
+  //     options: {
+  //       theme: {
+  //         options: {
+  //           darkModeSelector: "light",
+  //         }
+  //       },
+  //       ripple: true
+  //     },
+  //     cssLayerOrder: "reset, primevue, tailwind-base, tailwind-utilities",
+  //     components: {
+  //       exclude: ["Tag", "Terminal", "Form", "FormField", "LazyTag", "LazyTerminal", "LazyForm", "LazyFormField"],
+  //     },
+  // },
 
+  primevue: {
+    options: {
+      theme: {
+        preset: MyPreset,
+        options: {
+            darkModeSelector: '.dark',
+        }
+    }
+      
+    },
+    //  cssLayerOrder: "reset, primevue, tailwind-base, tailwind-utilities",
+    components: {
+      exclude: ["Tag", "Terminal", "Form", "FormField", "LazyTag", "LazyTerminal", "LazyForm", "LazyFormField"],
+    },
+  },
   nitro: {
     routeRules: {
-      '/chat': { headers: { 'X-Frame-Options': 'ALLOWALL' } },
+      "/chat": { headers: { "X-Frame-Options": "ALLOWALL" } },
     },
   },
 
   routeRules: {
-    '/scripts/**': { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    "/scripts/**": { headers: { "Cache-Control": "no-store, max-age=0" } },
   },
 
   devtools: { enabled: true },

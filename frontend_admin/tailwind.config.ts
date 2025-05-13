@@ -12,31 +12,31 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "var(--color-primary)",
-        primaryLight: "var(--color-primary-light)",
-        primaryDark: "var(--color-primary-dark)",
-        primaryHeader: "var(--color-primary-header)",
+        primary: "var(--tw-color-primary)",
+        primaryLight: "var(--tw-color-primary-light)",
+        primaryDark: "var(--tw-color-primary-dark)",
+        primaryHeader: "var(--tw-color-primary-header)",
 
-        secondary: "var(--color-secondary)",
-        secondaryLight: "var(--color-secondary-light)",
-        secondaryExtraLight: "var(--color-secondary-extra-light)",
-        secondaryDark: "var(--color-secondary-dark)",
+        secondary: "var(--tw-color-secondary)",
+        secondaryLight: "var(--tw-color-secondary-light)",
+        secondaryExtraLight: "var(--tw-color-secondary-extra-light)",
+        secondaryDark: "var(--tw-color-secondary-dark)",
 
-        accent: "var(--color-accent)",
-        accentDark: "var(--color-accent-dark)",
+        accent: "var(--tw-color-accent)",
+        accentDark: "var(--tw-color-accent-dark)",
 
-        neutral: "var(--color-neutral)",
-        neutralDark: "var(--color-neutral-dark)",
-        neutralLight: "var(--color-neutral-light)",
+        neutral: "var(--tw-color-neutral)",
+        neutralDark: "var(--tw-color-neutral-dark)",
+        neutralLight: "var(--tw-color-neutral-light)",
 
-        white: "var(--color-white)",
-        black: "var(--color-black)",
+        white: "var(--tw-color-white)",
+        black: "var(--tw-color-black)",
       },
       fontFamily: {
         play: ['Play', 'sans-serif'],
       },
       boxShadow: {
-        thicc: '0 8px 12px rgba(0, 0, 0, 0.6)', // darker, tighter shadow
+        thicc: '0 8px 12px rgba(0, 0, 0, 0.6)',
       },
     },
   },

@@ -202,8 +202,4 @@ h3 {
   font-weight: 600;
 }
 </style>
-<style>
-.p-menubar .p-menubar-start .p-button-icon {
-  color: white !important;
-}
-</style>
+

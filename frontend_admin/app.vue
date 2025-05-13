@@ -61,13 +61,13 @@ function applyCabinetPalette (mode) {
 }
 
 function updateTheme () {
-  const systemTheme =
-    colorMode.preference !== 'dark' ? 'aura-light-cyan' : 'aura-dark-cyan'
-  document
-    .getElementById('theme-link')
-    ?.setAttribute('href', `/${systemTheme}/theme.css`)
+  // const systemTheme =
+  //   colorMode.preference !== 'dark' ? 'aura-light-cyan' : 'aura-dark-cyan'
+  // document
+  //   .getElementById('theme-link')
+  //   ?.setAttribute('href', `/${systemTheme}/theme.css`)
 
-  applyCabinetPalette(colorMode.preference === 'dark' ? 'dark' : 'light')
+  // applyCabinetPalette(colorMode.preference === 'dark' ? 'dark' : 'light')
 }
 
 /* ------------------------------------------------------------------ */
