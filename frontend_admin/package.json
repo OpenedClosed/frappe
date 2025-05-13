@@ -31,6 +31,7 @@
     "postcss": "^8.4.38",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.4",
+    "quill": "^2.0.3",
     "v-jsoneditor": "^1.4.5",
     "vue": "^3.4.27",
     "vue-advanced-chat": "^2.1.0",
