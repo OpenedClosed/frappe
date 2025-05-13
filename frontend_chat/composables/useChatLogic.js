@@ -375,6 +375,7 @@ let skipNextStatusCheck = false;
 
         case "new_message":
           {
+            console.log("Пришло новое сообщение:", data);
             const [transformed] = await transformChatMessages([data]);
             updateMessages(transformed);
             messagesLoaded.value = true;

@@ -81,7 +81,7 @@
 
                       <!-- Title + meta -->
                       <div class="flex-1 flex flex-col justify-between">
-                        <p class="font-medium truncate text-[14px] 2xl:text-[17px] leading-5">
+                        <p class="font-medium truncate text-[14px] 2xl:text-[17px] leading-5 max-w-[60px] 2xl:max-w-[190px]">
                           {{ ctx.title }}
                         </p>
                         <!-- hide date on really tight widths to keep one‑line height -->
@@ -305,12 +305,14 @@
 
                   <!-- TEXTAREA -->
                   <div class="flex flex-row gap-1 justify-center items-center">
-                    <InputText
+                    <Textarea
+                      autoResize
                       id="promptTextArea"
                       class="w-full"
                       placeholder="KB structuring question"
                       required
                       v-model="promptText"
+                      size="small"
                       v-tooltip.bottom="
                         'Write here what the AI assistant should do with your data.  \
      Example: “Highlight the main services from my website and create questions and answers for them”.  \
@@ -820,7 +822,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, Text } from "vue";
 // import Textarea from 'primevue/textarea';
 // import Button from 'primevue/button';
 import cloneDeep from "lodash/cloneDeep";
