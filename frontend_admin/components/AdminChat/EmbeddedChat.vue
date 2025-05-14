@@ -161,7 +161,7 @@ async function onExportToExcel() {
     const wb = utils.book_new();
     const usedNames = new Set();
 
-    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/`);
+    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/?order=-1`);
     console.log("response", response); // For debugging: log API response
 
     // ── 2. Добавляем листы без дубликатов ──────────────
