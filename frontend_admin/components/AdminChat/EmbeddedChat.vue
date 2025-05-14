@@ -21,7 +21,7 @@
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> Unread </span>
       </div>
       <Button
-        label="Export current page to Excel"
+        label="Export chats to Excel"
         icon="pi pi-file-excel"
         class="p-button-success p-button-sm bg-green-600 hover:bg-green-500 text-white min-w-[14rem] xl:min-w-[8rem] my-2 mx-3"
         @click="onExportToExcel"
