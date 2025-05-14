@@ -1,5 +1,5 @@
 <template>
-    <div class="p-4 rounded border bg-white shadow-sm">
+    <div class="p-4 rounded border bg-white dark:bg-secondaryDark shadow-sm">
       <!-- Заголовок страницы -->
       <h1 class="text-xl font-bold mb-6">Контактная информация</h1>
   
@@ -9,40 +9,40 @@
         <div class="flex-1 flex flex-col space-y-4">
           <!-- Email -->
           <div>
-            <label class="block text-[13px] font-normal text-[#6B6B7B]">
+            <label class="block text-[13px] font-normal ">
               Email
             </label>
-            <span class="text-[15px] font-normal text-[#1F1F29]">
+            <span class="text-[15px] font-normal">
               {{ itemData.email }}
             </span>
           </div>
   
           <!-- Phone -->
           <div>
-            <label class="block text-[13px] font-normal text-[#6B6B7B]">
+            <label class="block text-[13px] font-normal ">
               Телефон
             </label>
-            <span class="text-[15px] font-bold text-[#1F1F29]">
+            <span class="text-[15px] font-bold">
               {{ itemData.phone }}
             </span>
           </div>
   
           <!-- Address -->
           <div>
-            <label class="block text-[13px] font-normal text-[#6B6B7B]">
+            <label class="block text-[13px] font-normal ">
               Адрес
             </label>
-            <span class="text-[15px] font-normal text-[#1F1F29]">
+            <span class="text-[15px] font-normal">
               {{ itemData.address }}
             </span>
           </div>
   
           <!-- PESEL -->
           <div>
-            <label class="block text-[13px] font-normal text-[#6B6B7B]">
+            <label class="block text-[13px] font-normal ">
               PESEL / Идентификатор
             </label>
-            <span class="text-[15px] font-normal text-[#1F1F29]">
+            <span class="text-[15px] font-normal">
               {{ itemData.pesel }}
             </span>
           </div>
@@ -52,27 +52,27 @@
         <div class="flex-1 flex flex-col space-y-4">
           <!-- Emergency Contact -->
           <div>
-            <label class="block text-[13px] font-normal text-[#6B6B7B]">
+            <label class="block text-[13px] font-normal ">
               Экстренный контакт
             </label>
-            <span class="text-[15px] font-bold text-[#1F1F29]">
+            <span class="text-[15px] font-bold">
               {{ itemData.emergency_contact }}
             </span>
           </div>
   
           <!-- Document ID -->
           <div>
-            <label class="block text-[13px] font-normal text-[#6B6B7B]">
+            <label class="block text-[13px] font-normal ">
               ID документа
             </label>
-            <span class="text-[15px] font-normal text-[#1F1F29]">
+            <span class="text-[15px] font-normal">
               {{ itemData.doc_id }}
             </span>
           </div>
   
           <!-- Last Update -->
           <div>
-            <label class="block text-[12px] font-normal text-[#8B8B99]">
+            <label class="block text-[12px] font-normal ">
               Последнее обновление
             </label>
             <span class="text-[14px] font-normal text-[#4F4F59]">

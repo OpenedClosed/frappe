@@ -1,6 +1,6 @@
 <!-- pages/${currentPageName.value}/[group]/[entity]/index.vue -->
 <template>
-  <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto "  :class="[currentPageName === 'personal_account' ? '' : 'bg-secondaryLight']">
+<div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight"  :class="[currentPageName === 'personal_account' ? '' : '']">
     <!-- Main Layout with Sidebar and DataTable -->
     <div class="max-w-full flex flex-row flex-1 w-full "
       :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-center']">
@@ -15,28 +15,28 @@
         <KnowledgeBase />
       </div>
       <div v-else-if="currentGroup === 'support'"
-        class="flex flex-col flex-1 basis-11/12 min-h-0 min-w-0 justify-start">
+        class="flex flex-col flex-1 basis-11/12 min-h-0 min-w-0 justify-start p-4">
         <SupportPage class="m-4" />
       </div>
       <div v-else-if="currentEntity === 'patients_health_survey' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center">
+        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
           label="Заполнить Анкету здоровья"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_main_info' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center">
+        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить основную информацию"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_contact_info' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center">
+        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить Контактную информацию"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_consents' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center">
+        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить Согласия"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_family' && !currentId"
-        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center">
+        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center p-4">
       <FamilyTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
           :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
           :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"

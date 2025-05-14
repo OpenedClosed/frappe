@@ -20,6 +20,10 @@
         <p v-if="typingUserNames.length" class="animate-pulse hidden md:block">is typing...</p>
         <p v-if="typingUserNames.length" class="animate-pulse block md:hidden">...</p>
       </div>
+      
+    </div>
+    <!-- Right Section: Toggle + Menu Button -->
+    <div class="flex items-center gap-1">
       <!-- Toggle Container -->
       <div class="flex items-center gap-2 bg-light dark:bg-gray-700 px-4 py-[2px] md:py-[2px] rounded-lg shadow ml-4">
         <span class="text-2xl font-medium">🧑‍💻</span>
@@ -29,9 +33,6 @@
 
         <span class="text-2xl font-medium">🚀</span>
       </div>
-    </div>
-    <!-- Right Section: Toggle + Menu Button -->
-    <div class="flex items-center gap-1">
       <!-- Button to open the menu (TieredMenu) -->
       <Button icon="pi pi-bars" class="p-button-rounded p-button-text p-button-sm" @click="$refs.menu.toggle($event)" />
       <!-- <Button v-if="!isTelegram" icon="pi pi-times" class="p-button-rounded p-button-text " @click="props.closeChat()" /> -->

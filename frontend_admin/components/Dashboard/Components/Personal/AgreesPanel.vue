@@ -1,8 +1,8 @@
 <template>
-  <div class="p-6 border rounded-lg shadow-sm bg-white">
+  <div class="p-6 border rounded-lg shadow-sm bg-white dark:bg-secondaryDark">
     <!-- Заголовок и описание -->
     <h2 class="text-xl font-semibold mb-1">Согласия пользователя</h2>
-    <p class="text-gray-600 mb-4">Информация о согласиях пользователя</p>
+    <p class=" mb-4">Информация о согласиях пользователя</p>
 
     <!-- Список согласий -->
     <ul>

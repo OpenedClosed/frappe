@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col flex-1 min-h-0 p-4 rounded border bg-white shadow-sm">
+    <div class="flex flex-col flex-1 min-h-0 p-4 rounded border bg-white  dark:bg-secondaryDark shadow-sm">
       <h1 class="text-2xl font-bold mb-4">Чат поддержки</h1>
       <iframe :src="chatUrl" style="flex: 1; border: none"></iframe>
     </div>

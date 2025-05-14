@@ -1,6 +1,6 @@
 <template>
   <!-- Main horizontal navigation container -->
-  <nav class="w-full">
+  <nav class="w-full px-4 pb-4">
     <ul class="flex bg-neutralLight dark:bg-neutralDark shadow-sm rounded-lg items-center space-x-4 p-1">
       <!-- Loop over each “group” -->
       <li v-for="group in filteredNavItems" :key="group.header" class="flex items-center">

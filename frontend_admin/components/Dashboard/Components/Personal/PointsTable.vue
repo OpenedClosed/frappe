@@ -1,21 +1,21 @@
 <template>
-  <div class="w-full container mx-auto px-4 py-8 flex flex-col md:flex-row gap-6">
+  <div class="w-full container mx-auto flex flex-col md:flex-row gap-6">
     <!-- Левая карточка: Бонусный счёт -->
      <Toast/>
-    <div class="flex-1 bg-white rounded-lg p-6 shadow">
+    <div class="flex-1 border bg-white dark:bg-secondaryDark rounded-lg p-6 shadow">
       <h2 class="text-2xl font-bold mb-2">Бонусный счёт</h2>
-      <p class="text-sm text-gray-500 mb-6">
+      <p class="text-sm  mb-6">
         Информация о бонусах пользователя
       </p>
 
       <!-- Текущий баланс -->
       <div class="mb-4 flex flex-row justify-between items-center">
-        <span class="block text-gray-600 text-lg font-bold">Текущий баланс:</span>
+        <span class="block text-lg font-bold">Текущий баланс:</span>
         <p class="text-4xl font-bold text-blue-600">{{ balance }}</p>
       </div>
 
       <div class="flex flex-col items-start w-full gap-4">
-        <span class="block text-gray-600 text-lg font-bold">Реферальный код:</span>
+        <span class="block text-lg font-bold">Реферальный код:</span>
         <div class="flex w-full">
           <InputText v-model="referralCode" readonly class="text-lg font-medium flex-1" />
           <Button icon="pi pi-copy" class="ml-2" @click="copyReferralCode" tooltip="Copy Referral Code" />
@@ -24,17 +24,17 @@
 
       <!-- Дата последнего обновления -->
       <div class="mt-4">
-        <span class="block text-gray-600 text-sm">Последнее обновление</span>
-        <p class="text-base text-gray-800">{{ formattedLastUpdate }}</p>
+        <span class="block text-sm">Последнее обновление</span>
+        <p class="text-base ">{{ formattedLastUpdate }}</p>
       </div>
     </div>
 
 
 
     <!-- Правая карточка: История транзакций -->
-    <div class="flex-1 bg-white rounded-lg p-6 shadow">
+    <div class="flex-1 border bg-white dark:bg-secondaryDark rounded-lg p-6 shadow">
       <h2 class="text-2xl font-bold mb-2">История транзакций</h2>
-      <p class="text-sm text-gray-500 mb-6">
+      <p class="text-sm  mb-6">
         Последние бонусные операции
       </p>
 
@@ -47,7 +47,7 @@
               <p class="text-sm font-bold" :style="{ color: txn.transaction_type.settings.color }">
                 {{ txn.transaction_type.ru }}
               </p>
-              <p class="text-gray-700 text-sm">{{ txn.title }}</p>
+              <p class=" text-sm">{{ txn.title }}</p>
             </div>
 
             <!-- Правая часть: сумма и дата -->
@@ -55,7 +55,7 @@
               <p class="text-lg font-bold" :class="txn.amount > 0 ? 'text-green-600' : 'text-red-600'">
                 {{ txn.amount > 0 ? '+' : '-' }}{{ txn.amount }}
               </p>
-              <p class="text-gray-500 text-sm">{{ formatDate(txn.date_time) }}</p>
+              <p class=" text-sm">{{ formatDate(txn.date_time) }}</p>
             </div>
           </div>
           <Divider />

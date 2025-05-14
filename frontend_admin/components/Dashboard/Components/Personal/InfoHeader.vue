@@ -1,5 +1,5 @@
 <template>
-  <div class="flex">
+  <div class="flex px-4 py-2">
     <!-- Карточка с основными сведениями о пациенте -->
     <div class="bg-white dark:bg-neutralDark border-2 shadow rounded flex-1 flex flex-row justify-between items-center p-4 gap-4">
      <div class="flex items-center gap-4">
