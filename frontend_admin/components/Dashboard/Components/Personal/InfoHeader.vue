@@ -2,32 +2,30 @@
   <div class="flex px-4 py-2">
     <!-- Карточка с основными сведениями о пациенте -->
     <div class="bg-white dark:bg-neutralDark border-2 shadow rounded flex-1 flex flex-row justify-between items-center p-4 gap-4">
-     <div class="flex items-center gap-4">
-      <Avatar icon="pi pi-user" class="mr-2" size="xlarge" shape="circle" />
-      <div class="flex flex-col">
-        <div class="text-xl font-bold text-black dark:text-white">
-          {{ patientName }}
-        </div>
-        <div class="text-sm">
-          ID пациента: {{ patientId }} • Бонусов: {{ bonusCount }}
+      <div class="flex items-center gap-4">
+        <Avatar v-if="patientAvatar" :image="currentUrl  + patientAvatar " class="mr-2" size="xlarge" shape="circle" />
+        <Avatar v-else icon="pi pi-user" class="mr-2" size="xlarge" shape="circle" />
+        <div class="flex flex-col">
+          <div class="text-xl font-bold text-black dark:text-white">
+            {{ patientName }}
+          </div>
+          <div class="text-sm">ID пациента: {{ patientId }} • Бонусов: {{ bonusCount }}</div>
         </div>
       </div>
-     </div>
       <div class="flex items-center gap-2">
-          <Button
-            text
-            :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
-            type="button"
-            :label="userName"
-            class="text-white bg-primary"
-            @click="toggle"
-            aria-haspopup="true"
-            aria-controls="overlay_tmenu"
-          />
-          <TieredMenu ref="menu" id="overlay_tmenu" :model="items" popup />
-        </div>
+        <Button
+          text
+          :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
+          type="button"
+          :label="userName"
+          class="text-white bg-primary"
+          @click="toggle"
+          aria-haspopup="true"
+          aria-controls="overlay_tmenu"
+        />
+        <TieredMenu ref="menu" id="overlay_tmenu" :model="items" popup />
+      </div>
     </div>
-    
   </div>
 </template>
 
@@ -37,8 +35,11 @@ import { ref } from "vue";
 // Определяем реактивные переменные с начальными значениями
 const patientName = ref("Имя");
 const patientId = ref("");
+const patientAvatar = ref("");
 const bonusCount = ref(0);
 const isAdmin = ref(false);
+
+const { currentUrl } = useURLState();
 
 const contactInfo = ref({
   email: "",
@@ -47,21 +48,23 @@ const contactInfo = ref({
   pesel: "",
   documentId: "",
   emergencyContact: "",
+  avatar_url: "",
 });
 
 // Получаем данные из API через useAsyncData (Nuxt 3)
-const { data: headerData, error } = await useAsyncData('headerData', getHeaderData);
+const { data: headerData, error } = await useAsyncData("headerData", getHeaderData);
 
 if (headerData.value) {
   // Destructure the two objects from headerData.value
   const { responseData, responseDataMe } = headerData.value;
   console.log("responseDataMe", responseDataMe);
+  console.log("responseData", responseData);
   if (responseDataMe?.role && (responseDataMe?.role === "admin" || responseDataMe?.role === "superadmin")) {
     isAdmin.value = true;
   }
   // Use responseData (and responseDataMe if needed) inside setData
   setData(responseData);
-  
+
   // For example, if you want to log responseDataMe:
   console.log("User data =", responseDataMe);
 } else if (error.value) {
@@ -72,14 +75,13 @@ if (headerData.value) {
 function setData(data: any) {
   console.log("Полученные данные headerData =", data);
   // Пример: формируем полное имя из first_name и last_name (и patronymic, если есть)
-  patientName.value = [data?.first_name, data?.patronymic, data?.last_name]
-    .filter(Boolean)
-    .join(" ") || "Неизвестный пациент";
+  patientName.value = [data?.first_name, data?.patronymic, data?.last_name].filter(Boolean).join(" ") || "Неизвестный пациент";
   patientId.value = data?.patient_id || "";
   bonusCount.value = data?.bonus_count || 0;
+  patientAvatar.value = data?.avatar?.url || "";
 
   // Если в ответе API присутствует контактная информация, устанавливаем её
-  if(data?.contact) {
+  if (data?.contact) {
     contactInfo.value = {
       email: data?.contact.email || "",
       phone: data?.contact.phone || "",
@@ -110,7 +112,7 @@ async function getHeaderData() {
 }
 
 const { isSidebarOpen } = useSidebarState();
-const { currentPageName } = usePageState()
+const { currentPageName } = usePageState();
 // Initialize the color mode
 const colorMode = useColorMode();
 
@@ -130,7 +132,6 @@ function updateTheme() {
   // themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
   // //console.log(themeLink)
 }
-
 
 // Logout function with API request
 async function onLogout() {
@@ -171,7 +172,6 @@ const toggle = (event) => {
   menuOpen.value = !menuOpen.value;
   menu.value.toggle(event);
 };
-
 </script>
 
 <style scoped>
