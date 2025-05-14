@@ -184,13 +184,14 @@ export function useChatLogic(options = {}) {
 
       results.push({
         _id: msg._id ?? index,
+        backend_id: msg.id,
         content: contentString,
         senderId,
         username,
         date: formattedDate,
         timestamp: formattedTime,
         sent: isSent, // true for messages from Consultant/AI, false for Client
-        disableActions: true,
+        disableActions: false,
         disableReactions: true,
         files,
       });

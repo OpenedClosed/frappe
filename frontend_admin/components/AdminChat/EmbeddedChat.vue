@@ -21,7 +21,7 @@
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> Unread </span>
       </div>
       <Button
-        label="Экспорт в Excel"
+        label="Export current page to Excel"
         icon="pi pi-file-excel"
         class="p-button-success p-button-sm bg-green-600 hover:bg-green-500 text-white min-w-[14rem] xl:min-w-[8rem] my-2 mx-3"
         @click="onExportToExcel"
@@ -50,6 +50,8 @@
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
       :rooms-loaded="isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
+      :message-actions="JSON.stringify(messageActions)" 
+      @message-action-handler="onMessageAction"
     >
       <div slot="room-header-avatar">
         <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
@@ -76,6 +78,17 @@
     </vue-advanced-chat>
     <!-- ⬇️ add this right after the closing </vue-advanced-chat> tag -->
     <Paginator :rows="20" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" />
+    <!-- place this just before </template> so it sits outside vue‑advanced-chat -->
+    <Dialog v-model:visible="showMsgDialog" modal :header="`Message `" :style="{ width: '600px' }">
+      <p class="mb-3">
+        <strong>ID:</strong> {{ selectedMsg?.message?.backend_id || '' }}<br />
+        <strong>Text:</strong> {{ selectedMsg?.message?.content || '' }}
+      </p>
+
+      <template #footer>
+        <Button label="Close" icon="pi pi-times" @click="showMsgDialog = false" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -87,13 +100,43 @@ import Toast from "primevue/toast";
 import { useChatLogic } from "~/composables/useChatLogic";
 import LoaderOverlay from "../LoaderOverlay.vue";
 import LoaderSmall from "../LoaderSmall.vue";
-const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
+import * as XLSX from "xlsx";
 
+const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
+const route = useRoute();
+const currentGroup = computed(() => route.params.group); // :group
+const currentEntity = computed(() => route.params.entity); // :entity
+const { currentPageName, currentPageInstances } = usePageState();
 register();
 const colorMode = useColorMode();
 const { $listen } = useNuxtApp();
 const roomsLoaded = computed(() => rooms.value.length > 0);
 const unreadOnly = ref(false); // false → “All”, true → “Unread”
+
+/* ── REFS ───────────────────────────────────────────── */
+const showMsgDialog = ref(false)
+const selectedMsg   = ref(null)
+
+/* ── CUSTOM DROPDOWN ITEMS (only one in this example) ─ */
+const messageActions = [
+    { name: "seeSources", title: "See sources" },
+];
+
+
+
+/* ── EVENT HANDLER ──────────────────────────────────── */
+function onMessageAction (messageAction) {
+  if (!messageAction || !messageAction.detail || !messageAction.detail[0]) return;
+
+  const info = messageAction.detail[0]; // Extract message from action
+
+  console.log("onMessageAction", info); // For debugging: log action and message
+  if (info.action.name === 'seeSources') {
+    selectedMsg.value = info        // full message object
+    showMsgDialog.value = true
+  }
+}
+
 
 /* ── props / emits ─────────────────────────────────────────── */
 const props = defineProps({
@@ -103,13 +146,70 @@ const props = defineProps({
   isRoomsLoading: { type: Boolean, default: false },
 });
 
+watch(props, () => {
+  console.log("props", props); // For debugging: log props changes (e.g. close chat on user_id change)
+});
+
+const toast = useToast();
+
+async function onExportToExcel() {
+  try {
+    // динамический импорт, чтобы не трогать SSR
+    const { utils, writeFileXLSX } = await import("xlsx");
+
+    // ── 1. Создаём книгу ───────────────────────────────
+    const wb = utils.book_new();
+    const usedNames = new Set();
+
+    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/`);
+    console.log("response", response); // For debugging: log API response
+
+    // ── 2. Добавляем листы без дубликатов ──────────────
+    response.data.forEach((chat, idx) => {
+      const rows = chat.messages.map((m) => ({
+        ChatID: chat.chat_id,
+        Time: m.timestamp,
+        Sender: m.sender_role?.en || "",
+        Text: m.message,
+        ReadBy: (m.read_by_display || []).join(", "),
+      }));
+
+      /* базовое имя листа */
+      let name = chat.chat_id;
+      name = name.slice(0, 31); // Excel ≤ 31 символ
+      usedNames.add(name);
+
+      const ws = utils.json_to_sheet(rows);
+
+      // Auto-adjust column widths based on content
+      const columnWidths = Object.keys(rows[0] || {}).map((key) => {
+        const maxLen = Math.max(key.length, ...rows.map((row) => (row[key] ? row[key].toString().length : 0)));
+        return { wch: maxLen + 2 }; // +2 for padding
+      });
+
+      ws["!cols"] = columnWidths;
+      console.log("ws", ws); // For debugging: log worksheet data
+      utils.book_append_sheet(wb, ws, name);
+    });
+
+    // ── 3. Сохраняем файл ──────────────────────────────
+    writeFileXLSX(wb, `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`);
+
+    toast.add({ severity: "success", summary: "Excel created", life: 3000 });
+  } catch (err) {
+    console.error("Excel export failed:", err);
+    toast.add({
+      severity: "error",
+      summary: "Excel export failed",
+      detail: err.message || err,
+      life: 5000,
+    });
+  }
+}
+
 const chatRows = computed(() => props.chatsData.filter((row) => !row._isBlank && row.chat_id));
 
-const emit = defineEmits(["close-chat", "page", "exportToExcel"]); // Emit if you still need "exportToExcel" or other events
-
-function onExportToExcel() {
-  emit("exportToExcel");
-}
+const emit = defineEmits(["close-chat", "page"]); // Emit if you still need "exportToExcel" or other events
 
 function onPageChange(e) {
   emit("page", e.page);
