@@ -44,9 +44,12 @@ class ChatMessage(BaseValidatedIdModel):
     choice_options: Optional[List] = None
     choice_strict: bool = False
     gpt_evaluation: Optional[GptEvaluation] = None
+    snippets_by_source: Optional[Dict[str, Any]] = Field(default_factory=dict)
     reply_to: Optional[str] = None
     external_id: Optional[str] = None
+    synced_to_constructor: bool = False
     files: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] | None = None 
 
     @field_validator("message")
     @classmethod
@@ -57,13 +60,21 @@ class ChatMessage(BaseValidatedIdModel):
                 f"Сообщение превышает допустимую длину {MAX_MESSAGE_LENGTH} символов.")
         return v
 
+class MasterClient(BaseValidatedIdModel):
+    """Информация о клиенте."""
+    client_id: str
+    source: ChatSource
+    external_id: str
+    name: str | None = None
+    avatar_url: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+
 
 class Client(IdModel):
     """Клиент."""
     client_id: str
     source: ChatSource
-    external_id: Optional[str] = None
-    metadata: Dict[str, Any] = {}
 
 
 class ChatReadInfo(BaseValidatedModel):
@@ -89,11 +100,12 @@ class ChatSession(BaseValidatedModel):
     brief_answers: List[BriefAnswer] = []
     closed_by_request: Optional[bool] = False
     admin_marker: bool = False
+    constructor_chat_id: Optional[str] = None
     read_state: Optional[List[ChatReadInfo]] = Field(default_factory=list)
 
     def get_client_id(self) -> str:
-        """Возвращает `client_id` или `external_id`, если он указан."""
-        return self.client.external_id or self.client.client_id if self.client else ""
+        """Возвращает client_id клиента (external_id больше не хранится здесь)."""
+        return self.client.client_id if self.client else ""
 
     def calculate_mode(self, brief_questions: List[BriefQuestion]) -> str:
         """Определяет текущий режим работы чата."""

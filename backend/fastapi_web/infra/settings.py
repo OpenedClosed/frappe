@@ -57,9 +57,13 @@ ALLOWED_ORIGINS = [
 
 # Остальные
 CHAT_TIMEOUT = timedelta(days=1)
+# FLOOD_TIMEOUTS = {
+#     "manual": timedelta(seconds=3),
+#     "automatic": timedelta(seconds=10),
+# }
 FLOOD_TIMEOUTS = {
     "manual": timedelta(seconds=3),
-    "automatic": timedelta(seconds=10),
+    "automatic": timedelta(seconds=3), 
 }
 CONTEXT_TTL = timedelta(days=1)
 
@@ -90,6 +94,11 @@ WHATSAPP_BOT_NUMBER_ID = os.getenv("WHATSAPP_BOT_NUMBER_ID", "change_me")
 WHATSAPP_BOT_NUMBER = os.getenv("WHATSAPP_BOT_NUMBER", "change_me")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "change_me")
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "change_me")
+
+# Constructor.chat настройки
+CONSTRUCTOR_URL = "https://ai-chat-bbho.onrender.com/graphql"
+CONSTRUCTOR_TOKEN = os.getenv("CONSTRUCTOR_TOKEN", "change_me")
+CONSTRUCTOR_ASSISTANT_ID = os.getenv("CONSTRUCTOR_ASSISTANT_ID", "change_me")
 
 # SMTP
 SMS_API_URL = os.getenv("SMS_API_URL", "change_me")

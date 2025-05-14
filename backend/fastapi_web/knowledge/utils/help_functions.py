@@ -35,7 +35,8 @@ from .knowledge_base import KNOWLEDGE_BASE
 # -----------------------------------------------------------
 
 IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-DOC_EXT = {".pdf", ".docx", ".xlsx", ".xls"}
+# DOC_EXT = {".pdf", ".docx", ".xlsx", ".xls"}
+DOC_EXT = {".pdf", ".docx", ".doc", ".xlsx", ".xls"}
 
 
 # -----------------------------------------------------------
@@ -143,11 +144,28 @@ async def parse_pdf(file: UploadFile) -> str:
         return "\n".join(page.extract_text() or "" for page in pdf.pages).strip()
 
 
+
 async def parse_docx(file: UploadFile) -> str:
-    """Возвращает текст из DOCX-файла."""
+    """Возвращает текст (параграфы + таблицы) из DOCX."""
     data = await file.read()
     doc = docx.Document(io.BytesIO(data))
-    return "\n".join(p.text for p in doc.paragraphs).strip()
+
+    parts: list[str] = []
+
+    # 1. Параграфы
+    for p in doc.paragraphs:
+        if p.text.strip():
+            parts.append(p.text.strip())
+
+    # 2. Таблицы (по строкам)
+    for tbl in doc.tables:
+        for row in tbl.rows:
+            row_text = "\t".join(cell.text.strip() for cell in row.cells)
+            if row_text.strip():
+                parts.append(row_text)
+
+    return "\n".join(parts).strip()
+
 
 
 async def parse_excel(file: UploadFile) -> str:
@@ -167,6 +185,7 @@ async def parse_file(upload_file: UploadFile) -> Optional[str]:
     parsers = {
         ".pdf": parse_pdf,
         ".docx": parse_docx,
+        # ".doc":  parse_doc,
         ".xlsx": parse_excel,
         ".xls": parse_excel,
     }
@@ -339,7 +358,7 @@ def build_messages_for_model(
 
     for raw in messages_data:
         role_raw, content = ("user", raw)
-        if "ChatMessage" in str(type(raw)):       # isinstance без импорта
+        if "ChatMessage" in str(type(raw)):
             role_raw = extract_english_value(raw.sender_role.value)
             content = raw.message
         elif isinstance(raw, dict):

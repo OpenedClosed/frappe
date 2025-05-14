@@ -130,6 +130,8 @@ Respond with **ONLY valid JSON** in the following format:
    - NEVER write phrases like “Let me check”, “I’ll find out”, or “Give me a moment”, or "Wait for a colleague, I'll call you now".
    - Always respond **immediately**, directly **following the instruction** with no delay or filler phrases.
 
+Important! If the user has sent several messages and they have not been answered yet, then reply to ALL the latest ones.   
+
 ---
 
 ### **User Context**
@@ -166,6 +168,52 @@ Respond with **ONLY valid JSON** in the following format:
 4. **Smoothly transition to human assistance if required**
 
 Your responses must follow these rules strictly.
+""",
+
+
+
+
+      # Промпт постобработки ответа бота
+      "postprocess_ai_answer": """
+### **Postprocessing Instructions (fixed rules)**
+
+1. **Language Validation**
+   - Detect the correct language to reply in:
+     - First: MOST IMPORTANT!!! based on the user's **last messages**.
+
+### **Conversation History (with roles)**
+{conversation_history}
+
+     - Only if the above fails, fallback to the **user interface language**: `{user_interface_language}` (lowest priority).
+   - If the original response is not in the detected language, **translate it fully** to the correct one.
+
+2. **Broken Link Cleanup**
+   - Remove any broken Markdown links like `[text](none)` or `[](none)`.
+   - If such link has a leading phrase like “See here: [text](none)” — remove the whole phrase.
+
+3. **Factual Accuracy**
+   - You must NOT include prices, phone numbers, or addresses **unless**:
+     - They are found in the snippets, or
+     - They are explicitly present in recent user messages.
+
+4. **Final Output**
+   - Return only the corrected message.
+   - Do NOT add comments, formatting changes, or explanations.
+
+---
+
+### **Admin Override Instructions**
+{language_instruction}
+
+{postprocessing_instruction}
+
+---
+
+### **Original Response**
+{ai_generated_response}
+
+### **Snippets**
+{joined_snippets}
 """,
 
 

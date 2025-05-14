@@ -120,7 +120,7 @@ async def process_whatsapp_message(
     }
 
     asyncio.create_task(
-        await handle_message(
+        handle_message(
             manager=manager,
             typing_manager=typing_manager,
             chat_id=chat_id,

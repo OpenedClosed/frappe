@@ -1,4 +1,6 @@
 """Интеграция с Instagram."""
+import json
+import logging
 from fastapi import APIRouter, Query, Request
 
 from chats.db.mongo.enums import ChatSource
@@ -33,9 +35,16 @@ async def handle_instagram_messages(request: Request):
     """
     Обрабатывает входящие сообщения из Instagram с проверкой подписи.
     """
+    body = await request.body()
+    logging.debug(f"📨 [IG] Incoming RAW body (bytes):\n{body.decode('utf-8', errors='ignore')}")
+
+    headers = dict(request.headers)
+    logging.debug(f"📨 [IG] Incoming headers:\n{json.dumps(headers, indent=2)}")
+
     await verify_meta_signature(request, settings.INSTAGRAM_APP_SECRET)
 
     payload = await request.json()
+    logging.debug("📨 [IG] Incoming JSON payload:\n%s", json.dumps(payload, indent=2, ensure_ascii=False))
     messages_info = parse_instagram_payload(payload)
 
     await handle_incoming_meta_messages(

@@ -16,6 +16,12 @@ def to_snake_case(name: str) -> str:
     """Привести строку в snake_case."""
     return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
+def get_language_from_locale(locale: str | None) -> str:
+    """Извлекает язык из locale, по умолчанию 'en'."""
+    if not locale:
+        return "en"
+    return locale.split("_")[0].lower()
+
 
 def generate_random_filename(extension: str) -> str:
     """Сгенерировать случайное имя для файла с временной меткой."""

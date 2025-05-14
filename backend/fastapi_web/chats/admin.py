@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from admin_core.base_admin import BaseAdmin, InlineAdmin
+from chats.utils.help_functions import get_master_client_by_id
 from crud_core.permissions import OperatorPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
@@ -347,11 +348,15 @@ class ChatSessionAdmin(BaseAdmin):
         """ID клиента или его внешний ID (в виде JSON строки)."""
         client_data = obj.get("client")
         value = "N/A"
+
         if isinstance(client_data, dict):
             client = Client(**client_data)
-            value = client.external_id or client.client_id or "N/A"
+            master = await get_master_client_by_id(client.client_id)
+            if master:
+                value = master.external_id or master.client_id
 
         return json.dumps({"en": value, "ru": value}, ensure_ascii=False)
+
 
     async def get_client_source_display(self, obj: dict) -> str:
         """Источник клиента (в виде JSON строки)."""

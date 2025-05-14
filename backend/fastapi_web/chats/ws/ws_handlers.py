@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional, Union
 import httpx
 from pydantic import ValidationError
 
+from knowledge.db.mongo.schemas import Answer, Subtopic, Topic
+from chats.integrations.constructor_chat.handlers import push_to_constructor
 from utils.help_functions import try_parse_json
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from db.mongo.db_init import mongo_client, mongo_db
@@ -38,6 +40,7 @@ from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
 from .ws_helpers import (ConnectionManager, TypingManager, custom_json_dumps,
                          gpt_task_manager)
+from chats.utils.help_functions import get_master_client_by_id
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -169,8 +172,17 @@ async def save_and_broadcast_new_message(
             last_read_msg=new_msg.id
         )
 
-    if new_msg.sender_role != SenderRole.CLIENT and chat_session.client.external_id:
+
+    if new_msg.sender_role != SenderRole.CLIENT:
         await send_message_to_external_meta_channel(chat_session, new_msg)
+
+
+    try:
+        await push_to_constructor(chat_session, [new_msg])
+    except Exception as exc:
+        logging.warning(
+            f"Ошибка отправки в конструктор {chat_session.chat_id} {exc}"
+        )
 
 
 # ==============================
@@ -179,10 +191,39 @@ async def save_and_broadcast_new_message(
 
 
 async def send_message_to_external_meta_channel(
-        chat_session: ChatSession, new_msg: ChatMessage) -> None:
-    """Отправляет сообщение в стороннюю интеграцию (Instagram / WhatsApp)."""
+    chat_session: ChatSession,
+    new_msg: ChatMessage
+) -> None:
+    """
+    Отправляет сообщение в стороннюю интеграцию (Instagram / WhatsApp).
+    """
+
+    # 🔒 Защита от лупа: не слать назад Instagram-echo консультанта без external_id
+    if (
+        chat_session.client.source == ChatSource.INSTAGRAM
+        and new_msg.metadata
+        and new_msg.metadata.get("is_echo")
+    ):
+        external_id = new_msg.metadata.get("message_id") or new_msg.external_id
+        if not external_id:
+            logging.debug("⛔ IG: echo-сообщение без external_id — не отправляем в Instagram")
+            return
+
+        logging.debug("⛔ IG: consultant echo — не отправляем в Instagram (защита от лупа)")
+        return
+
+    # 📤 Debug — полное содержимое сообщения перед отправкой
+    logging.debug(f"📤 Message dict перед отправкой:\n{new_msg.dict()}")
+
     source = chat_session.client.source
-    external_id = chat_session.client.external_id
+    client_id = chat_session.client.client_id
+
+    master_client = await get_master_client_by_id(client_id)
+    if not master_client:
+        logging.warning(f"Не удалось найти master-клиента для {client_id}")
+        return
+
+    external_id = master_client.external_id
     message = new_msg.message
 
     if source == ChatSource.INSTAGRAM:
@@ -192,17 +233,21 @@ async def send_message_to_external_meta_channel(
     else:
         logging.warning(f"Интеграция для источника {source} не реализована")
 
+
 # ==============================
 # Instagram
 # ==============================
 
 
+# ---------------------------------------------------------------------------
+# 3. chats.integrations.instagram.send_instagram_message
+# ---------------------------------------------------------------------------
 async def send_instagram_message(recipient_id: str, message: str) -> None:
-    """Отправляет сообщение в Instagram Direct."""
-    url = "https://graph.instagram.com/v22.0/me/messages"
+    """Отправляет сообщение в Instagram Direct, помечая его как broadcast."""
 
-    # Альтернативный вариант через Facebook Graph
-    # url = f"https://graph.facebook.com/v22.0/{settings.INSTAGRAM_BOT_ID}/messages"
+
+
+    url = "https://graph.instagram.com/v22.0/me/messages"
 
     message = clean_markdown(message)
     chunks = split_text_into_chunks(message)
@@ -216,19 +261,30 @@ async def send_instagram_message(recipient_id: str, message: str) -> None:
         for i, chunk in enumerate(chunks, 1):
             payload = {
                 "recipient": {"id": recipient_id},
-                "message": {"text": chunk},
-                "metadata": "broadcast"
+                "message": {
+                    "text": chunk,
+                    "metadata": "broadcast"        # ← ключевая метка
+                }
             }
+            logging.debug(f"📤 IG payload #{i}: {json.dumps(payload, ensure_ascii=False)}")
 
             try:
                 response = await client.post(url, json=payload, headers=headers)
+                logging.debug(f"📥 IG response #{i}: {response.status_code} {response.text}")
+
                 if response.status_code == 200:
+                    response_data = response.json()
+                    message_id = response_data.get("message_id")
                     logging.info(f"Отправлено в Instagram: {recipient_id}")
+                    return message_id
                 else:
                     logging.error(
                         f"Ошибка Instagram: {response.status_code} {response.text}")
-            except httpx.HTTPError as e:
-                logging.error(f"HTTP ошибка при отправке в Instagram: {e}")
+                    return None
+            except httpx.HTTPError as exc:
+                logging.error(f"HTTP ошибка при отправке в Instagram: {exc}")
+                return None
+
 
 
 # ==============================
@@ -394,6 +450,8 @@ async def handle_get_messages(
         "messages": enriched,
         "remaining_time": remaining
     }))
+    print('+'*100)
+    print(enriched)
 
     return enriched
 
@@ -420,9 +478,10 @@ async def handle_new_message(
     msg_text = data.get("message", "")
     reply_to = data.get("reply_to")
     external_id = data.get("external_id")
+    metadata=data.get("metadata")
 
     if is_superuser:
-        await handle_superuser_message(manager, client_id, chat_id, msg_text, reply_to, redis_key_session, user_language)
+        await handle_superuser_message(manager, client_id, chat_id, msg_text, metadata, reply_to, redis_key_session, user_language)
         return
 
     chat_session = await load_chat_data(manager, client_id, chat_id, user_language)
@@ -441,7 +500,8 @@ async def handle_new_message(
             sender_role=SenderRole.CLIENT,
             sender_id=client_id,
             reply_to=reply_to,
-            external_id=external_id
+            external_id=external_id,
+            metadata=metadata,
         )
     except ValidationError as e:
         await broadcast_error(
@@ -455,7 +515,7 @@ async def handle_new_message(
     if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
         return
 
-    if not await check_flood_control(manager, client_id, chat_id, redis_key_flood,
+    if not await check_flood_control(manager, client_id, chat_session, redis_key_flood,
                                      chat_session.calculate_mode(BRIEF_QUESTIONS), user_language):
         return
 
@@ -604,12 +664,16 @@ def get_translation(category: str, key: str, language: str, **kwargs) -> str:
 
 
 async def check_flood_control(
-    manager: ConnectionManager, client_id: str, chat_id: str, redis_key_flood: str, mode: str, user_language: str
+    manager: ConnectionManager, client_id: str, chat_session: ChatSession, redis_key_flood: str, mode: str, user_language: str
 ) -> bool:
     """
     Контроль частоты сообщений (flood control), учитывая режим чата (manual/automatic).
     """
+    source = chat_session.client.source
+    if source in {ChatSource.INSTAGRAM, ChatSource.WHATSAPP}:
+        return True
     flood_timeout = settings.FLOOD_TIMEOUTS.get(mode)
+    chat_id = chat_session.chat_id
     if flood_timeout:
         redis_key_mode_flood = f"{redis_key_flood}:{mode}"
         current_ts = datetime.utcnow().timestamp()
@@ -901,6 +965,7 @@ async def handle_superuser_message(
     client_id: str,
     chat_id: str,
     msg_text: str,
+    metadata: dict,
     reply_to: Optional[str],
     redis_key_session: str,
     user_language: str
@@ -923,7 +988,8 @@ async def handle_superuser_message(
         message=msg_text,
         sender_role=SenderRole.CONSULTANT,
         sender_id=client_id,
-        reply_to=reply_to
+        reply_to=reply_to,
+        metadata=metadata,
     )
 
     chat_session.manual_mode = True
@@ -1180,6 +1246,85 @@ def build_kb_description(knowledge_base: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+# async def build_ai_response(
+#     manager: Any,
+#     chat_session: ChatSession,
+#     user_msg: ChatMessage,
+#     user_data: dict,
+#     chat_history: List[ChatMessage],
+#     redis_key_session: str,
+#     user_language: str,
+#     typing_manager: TypingManager,
+#     chat_id: str
+# ) -> Optional[ChatMessage]:
+#     """
+#     На основе результатов GPT (out_of_scope, confidence, consultant_call) формирует итоговое сообщение бота.
+#     """
+#     confidence = user_msg.gpt_evaluation.confidence
+#     out_of_scope = user_msg.gpt_evaluation.out_of_scope
+#     consultant_call = user_msg.gpt_evaluation.consultant_call
+
+#     if out_of_scope or consultant_call or confidence < 0.2:
+#         chat_session.manual_mode = True
+#         await mongo_db.chats.update_one({"chat_id": chat_session.chat_id}, {"$set": {"manual_mode": True}})
+
+#         bot_context = await get_bot_context()
+#         redirect_msg = bot_context.get(
+#             "redirect_message", "Bye!").get(
+#             user_language, None)
+#         session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
+#         if session_doc:
+#             await send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump(mode="python"))
+
+#         return ChatMessage(
+#             message=redirect_msg,
+#             sender_role=SenderRole.AI,
+#             choice_options=[
+#                 (get_translation(
+#                     "choices",
+#                     "get_auto_mode",
+#                     user_language),
+#                     "/auto")],
+#             choice_strict=False
+#         )
+#     snippet_data: Dict[str, Any] = await extract_knowledge(
+#         user_msg.gpt_evaluation.topics, user_msg.message
+#     )
+
+#     files: List[str] = []
+#     remove_files_from_snippets(snippet_data, files)
+
+#     final_text = await generate_ai_answer(
+#         user_message=user_msg.message,
+#         snippets=snippet_data,
+#         user_info=str(user_data),
+#         chat_history=chat_history,
+#         style="",
+#         user_language=user_language,
+#         typing_manager=typing_manager,
+#         manager=manager,
+#         chat_id=chat_id
+#     )
+
+#     if 0.3 <= confidence < 0.7:
+#         return ChatMessage(
+#             message=final_text,
+#             sender_role=SenderRole.AI,
+#             files=list(set(files)),
+#             choice_options=[
+#                 get_translation(
+#                     "choices",
+#                     "consultant",
+#                     user_language)],
+#             choice_strict=False
+#         )
+
+#     return ChatMessage(
+#         message=final_text,
+#         sender_role=SenderRole.AI,
+#         files=list(set(files))
+#     )
+
 async def build_ai_response(
     manager: Any,
     chat_session: ChatSession,
@@ -1221,16 +1366,34 @@ async def build_ai_response(
                     "/auto")],
             choice_strict=False
         )
-    snippet_data: Dict[str, Any] = await extract_knowledge(
+
+    # 🧠 Новый вызов: с источниками
+    snippets_by_source: Dict[str, Dict[str, Topic]] = await extract_knowledge_with_sources(
         user_msg.gpt_evaluation.topics, user_msg.message
     )
 
+    # 🧩 Сбор всех файлов (из всех источников)
     files: List[str] = []
-    remove_files_from_snippets(snippet_data, files)
+    for topic_dict in snippets_by_source.values():
+        for topic in topic_dict.values():
+            for subtopic in topic.subtopics.values():
+                for answer in subtopic.questions.values():
+                    files.extend(answer.files or [])
 
+    # 📦 Слияние всех тем в одну общую структуру (для передачи в генератор)
+    merged_snippet_tree: Dict[str, Topic] = {}
+    for topic_dict in snippets_by_source.values():
+        for topic_name, topic in topic_dict.items():
+            if topic_name not in merged_snippet_tree:
+                merged_snippet_tree[topic_name] = topic
+            else:
+                # слияние подтем
+                merged_snippet_tree[topic_name].subtopics.update(topic.subtopics)
+
+    # 🤖 Генерация текста
     final_text = await generate_ai_answer(
         user_message=user_msg.message,
-        snippets=snippet_data,
+        snippets=merged_snippet_tree,
         user_info=str(user_data),
         chat_history=chat_history,
         style="",
@@ -1240,24 +1403,23 @@ async def build_ai_response(
         chat_id=chat_id
     )
 
-    if 0.3 <= confidence < 0.7:
-        return ChatMessage(
-            message=final_text,
-            sender_role=SenderRole.AI,
-            files=list(set(files)),
-            choice_options=[
-                get_translation(
-                    "choices",
-                    "consultant",
-                    user_language)],
-            choice_strict=False
-        )
-
-    return ChatMessage(
+    # 📌 Создаём итоговое сообщение ИИ с добавлением snippets_by_source
+    ai_msg = ChatMessage(
         message=final_text,
         sender_role=SenderRole.AI,
-        files=list(set(files))
+        files=list(set(files)),
+        snippets_by_source=snippets_by_source
     )
+
+    # 🔘 Вариант с выбором консультанта при средней уверенности
+    if 0.3 <= confidence < 0.7:
+        ai_msg.choice_options = [
+            get_translation("choices", "consultant", user_language)
+        ]
+        ai_msg.choice_strict = False
+
+    return ai_msg
+
 
 
 def remove_files_from_snippets(data: Any, files: List[str]) -> None:
@@ -1408,6 +1570,86 @@ def extract_subtopic_data(
     return result
 
 
+async def extract_knowledge_with_sources(
+    topics: List[Dict[str, Optional[str]]],
+    user_message: Optional[str] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Возвращает словарь структур знаний, сгруппированных по источнику:
+    {
+        "kb": { "Тема": Topic(...) },
+        "65abc123": { "Доставка": Topic(...) },  # ID ContextEntry
+    }
+    """
+    kb_doc, knowledge_base_model = await get_knowledge_base()
+    base_kb = kb_doc["knowledge_base"]
+    context_entries = knowledge_base_model.context or []
+
+    context_map = {}  # topic -> source_ref (если из контекста)
+    external_structs = []
+
+    for ctx in context_entries:
+        if ctx.kb_structure:
+            ctx_topics = ctx.kb_structure.keys()
+            for topic in ctx_topics:
+                context_map[topic] = str(ctx.id)
+            external_structs.append(ctx.kb_structure)
+
+    merged_kb = merge_external_structures(base_kb, external_structs)
+
+    result_by_source: Dict[str, Dict[str, Topic]] = {}
+
+    for item in topics:
+        topic_name = item.get("topic", "")
+        subtopics = item.get("subtopics", [])
+
+        if topic_name not in merged_kb:
+            continue
+
+        topic_data = merged_kb[topic_name]
+        subtopics_data = topic_data.get("subtopics", {})
+        extracted_subtopics = {}
+
+        source_ref = context_map.get(topic_name, "kb")
+        if source_ref not in result_by_source:
+            result_by_source[source_ref] = {}
+
+        for subtopic_item in subtopics:
+            subtopic_name = subtopic_item.get("subtopic", "")
+            questions = subtopic_item.get("questions", [])
+
+            if subtopic_name not in subtopics_data:
+                continue
+
+            sub_data = subtopics_data[subtopic_name]["questions"]
+            matched_questions = {}
+
+            for user_q in questions:
+                user_q_clean = user_q.lower().strip()
+                for kb_q, ans in sub_data.items():
+                    kb_q_clean = kb_q.lower().strip()
+                    if user_q_clean in kb_q_clean or kb_q_clean in user_q_clean:
+                        matched_questions[user_q] = Answer(
+                            text=ans.get("text", ""),
+                            files=ans.get("files", []),
+                            source_ref=source_ref
+                        )
+                        break
+
+            if matched_questions:
+                extracted_subtopics[subtopic_name] = Subtopic(
+                    questions=matched_questions
+                )
+
+        if extracted_subtopics:
+            result_by_source[source_ref][topic_name] = Topic(
+                subtopics=extracted_subtopics
+            )
+
+    return result_by_source
+
+
+
 # ==============================
 # БЛОК: Генерация ответа AI
 # ==============================
@@ -1426,7 +1668,7 @@ async def generate_ai_answer(
 ) -> Union[str, Dict[str, Any]]:
     """
     Генерирует ответ от AI, учитывая историю чата, язык пользователя,
-    сниппеты знаний и настройки бота из MongoDB.
+    сниппеты знаний и настройки бота из MongoDB, с последующей постобработкой.
     """
     bot_context = await get_bot_context()
     chosen_model = bot_context["ai_model"]
@@ -1454,38 +1696,50 @@ async def generate_ai_answer(
 
     try:
         if real_model.startswith("gpt"):
-            ai_text = (
-                await client.chat.completions.create(
-                    model=real_model,
-                    messages=msg_bundle["messages"],
-                    temperature=chosen_temp
-                )
-            ).choices[0].message.content.strip()
+            response = await client.chat.completions.create(
+                model=real_model,
+                messages=msg_bundle["messages"],
+                temperature=chosen_temp
+            )
+            ai_text = response.choices[0].message.content.strip()
 
         elif real_model.startswith("gemini"):
-            ai_text = (
-                await client.chat_generate(
-                    model=real_model,
-                    messages=msg_bundle["messages"],
-                    temperature=chosen_temp,
-                    system_instruction=msg_bundle.get("system_instruction")
-                )
-            )["candidates"][0]["content"]["parts"][0]["text"].strip()
+            response = await client.chat_generate(
+                model=real_model,
+                messages=msg_bundle["messages"],
+                temperature=chosen_temp,
+                system_instruction=msg_bundle.get("system_instruction")
+            )
+            ai_text = response["candidates"][0]["content"]["parts"][0]["text"].strip()
 
         else:
-            ai_text = (
-                await openai_client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=msg_bundle["messages"],
-                    temperature=chosen_temp
-                )
-            ).choices[0].message.content.strip()
+            response = await openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=msg_bundle["messages"],
+                temperature=chosen_temp
+            )
+            ai_text = response.choices[0].message.content.strip()
 
     except Exception as e:
         logging.error(f"AI generation failed: {e}")
         ai_text = bot_context.get("fallback_ai_error_message", {}).get(
             user_language, "The assistant is currently unavailable."
         )
+        await typing_manager.remove_typing(chat_id, "ai_bot", manager)
+        return ai_text
+    
+    logging.debug("===== Ответ до обработки =====")
+
+    ai_text = await postprocess_ai_response(
+        raw_text=ai_text,
+        chat_history=chat_history,
+        snippets=snippets,
+        bot_context=bot_context,
+        user_interface_language=user_language,
+
+    )
+
+    logging.debug("===== Ответ после обработки =====")
 
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
 
@@ -1493,6 +1747,74 @@ async def generate_ai_answer(
         return try_parse_json(ai_text)
 
     return ai_text
+
+
+async def postprocess_ai_response(
+    *,
+    raw_text: str,
+    chat_history: List[ChatMessage],
+    snippets: List[str],
+    bot_context: dict,
+    user_interface_language: str
+) -> str:
+    """
+    Проверяет, соответствует ли ответ языку пользователя, не содержит ли он фейковые ссылки
+    или вымышленные факты. Исправляет, если требуется.
+    """
+
+    admin_instruction = bot_context.get("postprocessing_instruction", "").strip()
+    language_instruction = bot_context.get("language_instruction", "").strip()
+
+    conversation_history = "\n".join(
+        f"{msg.sender_role.name.upper()}: {msg.message.strip()}"
+        for msg in chat_history[-10:]
+    )
+
+    # user_interface_language = "en"
+
+    prompt = AI_PROMPTS["postprocess_ai_answer"].format(
+        ai_generated_response=raw_text.strip(),
+        joined_snippets="\n\n".join(snippets),
+        user_interface_language=user_interface_language,
+        postprocessing_instruction=admin_instruction or "None",
+        language_instruction=language_instruction or "Always reply in the same language as the user's last message.",
+        conversation_history=conversation_history
+    )
+
+    model_name = bot_context.get("ai_model", "gpt-4o")
+    temperature = 0.2
+    client, real_model = pick_model_and_client(model_name)
+
+    try:
+        if real_model.startswith("gpt"):
+            result = await client.chat.completions.create(
+                model=real_model,
+                messages=[{"role": "system", "content": prompt}],
+                temperature=temperature
+            )
+            return result.choices[0].message.content.strip()
+
+        elif real_model.startswith("gemini"):
+            result = await client.chat_generate(
+                model=real_model,
+                messages=[{"role": "system", "content": prompt}],
+                temperature=temperature
+            )
+            return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+        else:
+            result = await openai_client.chat.completions.create(
+                model=real_model,
+                messages=[{"role": "system", "content": prompt}],
+                temperature=temperature
+            )
+            return result.choices[0].message.content.strip()
+
+    except Exception as e:
+        logging.warning(f"Ошибка постобработки: {e}")
+        return raw_text
+
+
 
 
 def assemble_system_prompt(

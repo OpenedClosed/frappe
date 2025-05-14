@@ -39,6 +39,7 @@ class Answer(BaseModel):
 
     text: str
     files: Optional[List[str]] = []
+    source_ref: Optional[str] = None
 
 
 class Subtopic(BaseModel):
@@ -116,6 +117,16 @@ class BotSettings(BaseValidatedModel):
     )
     special_instructions: List[FunctionalityEnum] = Field(default_factory=list)
     forbidden_topics: List[ForbiddenTopicsEnum] = Field(default_factory=list)
+
+    postprocessing_instruction: Optional[str] = Field(
+        default="Do not invent facts. Do not generate placeholder links. Do not provide addresses, phones, or prices unless clearly present in the snippets or chat history.",
+        json_schema_extra={"settings": {"type": "textarea"}}
+    )
+
+    language_instruction: Optional[str] = Field(
+        default="Always respond in the language of the user's latest messages. If it is unclear, use the language of the recent chat context or interface.",
+        json_schema_extra={"settings": {"type": "textarea"}}
+    )
 
     greeting: Dict[str, str] = Field(
         default_factory=lambda: {

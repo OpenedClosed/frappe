@@ -16,7 +16,7 @@ from telegram_bot.infra import settings as bot_settings
 
 from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from chats.db.mongo.schemas import (ChatMessage, ChatReadInfo, ChatSession,
-                                    Client)
+                                    Client, MasterClient)
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
@@ -79,15 +79,34 @@ async def generate_client_id(
     return f"{chat_source_value}_{short_hash}"
 
 
-async def get_client_id(websocket: WebSocket, chat_id: str,
-                        is_superuser: bool) -> str:
-    """Определяет `client_id`, связанный с чатом, в зависимости от типа пользователя."""
+async def get_client_id(websocket: WebSocket, chat_id: str, is_superuser: bool) -> str:
+    """
+    Определяет client_id или external_id, связанный с чатом, в зависимости от типа пользователя.
+    Суперпользователь видит внешний ID, если он есть.
+    """
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
         raise ValueError(f"Chat session with ID {chat_id} not found.")
 
     chat_session = ChatSession(**chat_data)
-    return chat_session.get_client_id() if is_superuser else await generate_client_id(websocket)
+
+    if not is_superuser:
+        return await generate_client_id(websocket)
+
+    if not chat_session.client:
+        return ""
+
+    master = await get_master_client_by_id(chat_session.client.client_id)
+    if master:
+        return master.external_id or master.client_id
+
+    return chat_session.client.client_id
+
+
+async def get_master_client_by_id(client_id: str) -> MasterClient | None:
+    """Возвращает карточку клиента по его client_id."""
+    doc = await mongo_db.clients.find_one({"client_id": client_id})
+    return MasterClient(**doc) if doc else None
 
 
 def determine_language(accept_language: str) -> str:
@@ -188,6 +207,51 @@ async def serialize_active_chat(chat_data: dict, ttl: int) -> Dict[str, Any]:
     }
 
 
+async def get_or_create_master_client(
+    source: ChatSource,
+    external_id: str,
+    name: Optional[str] = None,
+    avatar_url: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> MasterClient:
+    """Создаёт/возвращает MasterClient, «чистит» metadata."""
+    client_id = f"{source.name}_{external_id}"
+    col = mongo_db.clients
+
+    doc = await col.find_one({"source": source.value, "external_id": external_id})
+    if doc:
+        # обновляем имя/аватар при изменении
+        update_fields: dict[str, Any] = {}
+        if name and name != doc.get("name"):
+            update_fields["name"] = name
+        if avatar_url and avatar_url != doc.get("avatar_url"):
+            update_fields["avatar_url"] = avatar_url
+        if update_fields:
+            await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
+            doc = await col.find_one({"_id": doc["_id"]})
+        return MasterClient(**doc)
+
+    # ――― сохраняем ТОЛЬКО «паспортные» данные в metadata
+    safe_meta: dict[str, Any] = {}
+    for key in ("locale", "ig_username"):
+        if metadata and key in metadata:
+            safe_meta[key] = metadata[key]
+
+    client = MasterClient(
+        client_id=client_id,
+        source=source,
+        external_id=external_id,
+        name=name,
+        avatar_url=avatar_url,
+        metadata=safe_meta,
+        created_at=datetime.utcnow()
+    )
+    await col.insert_one(client.dict())
+    return client
+
+
+
+
 async def handle_chat_creation(
     mode: Optional[str] = None,
     chat_source: ChatSource = ChatSource.INTERNAL,
@@ -200,9 +264,21 @@ async def handle_chat_creation(
 ) -> dict:
     """Создаёт или получает чат-сессию, используя Redis и MongoDB."""
     metadata = metadata or {}
-    client_id = await generate_client_id(
-        request, chat_source=chat_source, external_id=client_external_id
-    ) if request else f"{chat_source.value}_{client_external_id}"
+
+    if chat_source != ChatSource.INTERNAL:
+        master_client = await get_or_create_master_client(
+            source=chat_source,
+            external_id=client_external_id,
+            name=metadata.get("name"),
+            avatar_url=metadata.get("avatar_url"),
+            metadata=metadata
+        )
+        client_id = master_client.client_id
+    else:
+        client_id = await generate_client_id(
+            request, chat_source=chat_source, external_id=client_external_id
+        )
+
 
     active_chats = await get_active_chats_for_client(client_id)
 
@@ -234,9 +310,7 @@ async def handle_chat_creation(
 
     client = Client(
         client_id=client_id,
-        source=chat_source,
-        external_id=client_external_id,
-        metadata=metadata
+        source=chat_source
     )
     chat_id = generate_chat_id()
 
@@ -262,6 +336,7 @@ async def handle_chat_creation(
         "client_id": client_id,
         "status": ChatStatus.IN_PROGRESS.value,
     }
+
 
 
 async def update_read_state_for_client(
@@ -468,23 +543,31 @@ async def get_bot_context() -> Dict[str, Any]:
 
 
 def build_bot_settings_context(
-        settings: BotSettings,
-        admin_model: BotSettingsAdmin
+    settings: BotSettings,
+    admin_model: BotSettingsAdmin
 ) -> Dict[str, Any]:
     """Формирует словарь контекста бота из настроек и админ-модели."""
 
     bot_config = {
         "ai_model": settings.ai_model.value if settings.ai_model else "gpt-4o",
         "temperature": PERSONALITY_TRAITS_DETAILS.get(settings.personality_traits, 0.1),
-        "welcome_message": settings.greeting or {"en": "Hello!", "ru": "Здравствуйте!"},
-        "redirect_message": settings.error_message or {"en": "Please wait...", "ru": "Ожидайте..."},
-        "farewell_message": settings.farewell_message or {"en": "Goodbye!", "ru": "До свидания!"},
-        "fallback_ai_error_message": settings.fallback_ai_error_message or {"en": "Error!", "ru": "Ошибка!"},
+        "welcome_message": settings.greeting,
+        "redirect_message": settings.error_message,
+        "farewell_message": settings.farewell_message,
+        "fallback_ai_error_message": settings.fallback_ai_error_message,
         "app_name": settings.project_name,
         "app_description": settings.additional_instructions,
         "forbidden_topics": settings.forbidden_topics,
         "avatar": settings.avatar.url if settings.avatar else None,
-        "bot_color": settings.bot_color.value
+        "bot_color": settings.bot_color.value,
+        "postprocessing_instruction": settings.postprocessing_instruction or (
+            "Do not invent facts. Do not generate placeholder links. "
+            "Do not provide addresses, phones, or prices unless clearly present in the snippets or chat history."
+        ),
+        "language_instruction": settings.language_instruction or (
+            "Always respond in the language of the user's latest messages. "
+            "If it is unclear, use the language of the recent chat context or interface."
+        )
     }
 
     prompt_text = generate_prompt_text(settings, admin_model)
@@ -585,6 +668,11 @@ def split_text_into_chunks(text, max_length=998) -> List[str]:
     )
 
     sentences = pattern.findall(text)
+
+    # Fallback: если регулярка ничего не нашла
+    if not sentences:
+        sentences = [text]
+
     chunks = []
     current_chunk = ""
 
@@ -619,5 +707,6 @@ def clean_markdown(text: str) -> str:
     text = re.sub(r'\*([^*]+)\*', r'\1', text)
     text = re.sub(r'_([^_]+)_', r'\1', text)
     text = re.sub(r'~([^~]+)~', r'\1', text)
+
 
     return text.strip()
