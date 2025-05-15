@@ -23,7 +23,7 @@
         </template>
       </template>
     </div>
-  </details>
+  </details> 
 </template>
 
 <script setup>
