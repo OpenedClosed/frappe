@@ -54,6 +54,9 @@ export function useChatLogic(options = {}) {
   // WebSocket-соединение и chatId
   const websocket = ref(null);
   const currenChatId = ref("");
+  watch(currenChatId, (newChatId) => {
+    console.log("chatId изменился:", newChatId);
+  })
 
   // Текстовые сообщения для vue-advanced-chat (i18n)
   const textMessagesObject = computed(() => ({
@@ -465,6 +468,7 @@ export function useChatLogic(options = {}) {
           life: 3000,
         });
         chatMessages.value = [];
+        currenChatId.value = null;
         currenChatId.value = response.data.chat_id;
         initializeWebSocket(response.data.chat_id);
       }

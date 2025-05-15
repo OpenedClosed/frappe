@@ -50,7 +50,7 @@
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
       :rooms-loaded="isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
-      :message-actions="JSON.stringify(messageActions)" 
+      :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
     >
       <div slot="room-header-avatar">
@@ -81,9 +81,16 @@
     <!-- place this just before </template> so it sits outside vue‑advanced-chat -->
     <Dialog v-model:visible="showMsgDialog" modal :header="`Message `" :style="{ width: '600px' }">
       <p class="mb-3">
-        <strong>ID:</strong> {{ selectedMsg?.message?.backend_id || '' }}<br />
-        <strong>Text:</strong> {{ selectedMsg?.message?.content || '' }}
+        <strong>ID:</strong> {{ selectedMsg?.message?.backend_id || "" }}<br />
+        <strong>Text:</strong> {{ selectedMsg?.message?.content || "" }}
       </p>
+
+      <ReadonlyKB v-if="selectedMsg?.message?.sources && selectedMsg?.message?.sources.kb" :sources="selectedMsg?.message.sources" />
+      <div v-else>
+        <p class="font-semibold text-start text-gray-500">
+          Message has no sources from knowledge base
+        </p>
+      </div>
 
       <template #footer>
         <Button label="Close" icon="pi pi-times" @click="showMsgDialog = false" />
@@ -100,6 +107,7 @@ import Toast from "primevue/toast";
 import { useChatLogic } from "~/composables/useChatLogic";
 import LoaderOverlay from "../LoaderOverlay.vue";
 import LoaderSmall from "../LoaderSmall.vue";
+import ReadonlyKB from "~/components/Dashboard/Components/ReadonlyKB.vue";
 import * as XLSX from "xlsx";
 
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
@@ -114,29 +122,24 @@ const roomsLoaded = computed(() => rooms.value.length > 0);
 const unreadOnly = ref(false); // false → “All”, true → “Unread”
 
 /* ── REFS ───────────────────────────────────────────── */
-const showMsgDialog = ref(false)
-const selectedMsg   = ref(null)
+const showMsgDialog = ref(false);
+const selectedMsg = ref(null);
 
 /* ── CUSTOM DROPDOWN ITEMS (only one in this example) ─ */
-const messageActions = [
-    { name: "seeSources", title: "See sources" },
-];
-
-
+const messageActions = [{ name: "seeSources", title: "See sources" }];
 
 /* ── EVENT HANDLER ──────────────────────────────────── */
-function onMessageAction (messageAction) {
+function onMessageAction(messageAction) {
   if (!messageAction || !messageAction.detail || !messageAction.detail[0]) return;
 
   const info = messageAction.detail[0]; // Extract message from action
 
   console.log("onMessageAction", info); // For debugging: log action and message
-  if (info.action.name === 'seeSources') {
-    selectedMsg.value = info        // full message object
-    showMsgDialog.value = true
+  if (info.action.name === "seeSources") {
+    selectedMsg.value = info; // full message object
+    showMsgDialog.value = true;
   }
 }
-
 
 /* ── props / emits ─────────────────────────────────────────── */
 const props = defineProps({

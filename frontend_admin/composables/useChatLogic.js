@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 // import { useI18n } from "vue-i18n";
 // import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
-const { isAutoMode, currentChatId, chatMessages,messagesLoaded } = useChatState();
+const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 
 import { debounce } from "lodash";
 
@@ -38,8 +38,6 @@ export function useChatLogic(options = {}) {
   ];
 
   // Список сообщений и статус загрузки
-
-
 
   // Настройки выбора опций
   const choiceOptions = ref([]);
@@ -97,6 +95,15 @@ export function useChatLogic(options = {}) {
     }
   }
 
+  function getExtFromUrl(url) {
+    const match = url.match(/\.(\w+?)(?:[?#]|$)/i);
+    if (!match) return "image";
+    const ext = match[1].toLowerCase();
+    if (ext === "jpg") return "jpeg";
+    if (ext === "svg") return "svg+xml";
+    return ext;
+  }
+
   /**
    * Преобразовать сообщения API в формат для компонента чата (vue-advanced-chat).
    */
@@ -113,20 +120,33 @@ export function useChatLogic(options = {}) {
       console.log("msg", msg);
 
       // Attached files (if link preview exists)
-      let files = null;
+      let files = [];
       if (detectUrl(contentString)) {
         const previewData = await fetchLinkPreview(contentString);
         if (previewData?.data?.image) {
-          files = [
-            {
-              type: "png",
-              name: "Preview",
-              url: previewData.data.image,
-              preview: previewData.data.image,
-            },
-          ];
+          files.push({
+            type: "png",
+            name: "Preview",
+            url: previewData.data.image,
+            preview: previewData.data.image,
+          });
         }
       }
+      // 2. Обрабатываем attachments, пришедшие сразу в msg.files
+      if (Array.isArray(msg.files) && msg.files?.length) {
+        msg.files.forEach((url, i) => {
+          const ext = getExtFromUrl(url); // jpg / png / pdf …
+          files.push({
+            type: ext.startsWith("image/") ? ext : "image/" + ext,
+            name: `Attachment-${i + 1}.${ext.replace(/^image\//, "")}`,
+            url,
+            preview: url, // изображение сразу отображается
+          });
+        });
+      }
+
+      // Если ничего не нашли, ставим null
+      if (files?.length === 0) files = null;
 
       // Parse date from UTC string
       const utcString = msg.timestamp ? msg.timestamp.replace(/\.\d+$/, "") + "Z" : null;
@@ -182,6 +202,12 @@ export function useChatLogic(options = {}) {
       const isSent = ["ai", "AI Assistant", "consultant", "Consultant"].includes(roleEn);
       // console.log("senderId", senderId);
 
+      let sources = null;
+      if (msg?.snippets_by_source) {
+        sources = msg.snippets_by_source;
+        console.log("sources", sources);
+      }
+
       results.push({
         _id: msg._id ?? index,
         backend_id: msg.id,
@@ -194,6 +220,7 @@ export function useChatLogic(options = {}) {
         disableActions: false,
         disableReactions: true,
         files,
+        sources: msg?.snippets_by_source,
       });
     }
 
@@ -344,7 +371,7 @@ export function useChatLogic(options = {}) {
         case "get_messages":
           {
             console.log("data.messages:", data.messages);
-            const transformed = await transformChatMessages(data.messages,true);
+            const transformed = await transformChatMessages(data.messages, true);
             chatMessages.value = transformed;
             messagesLoaded.value = true;
             if (data.remaining_time) {
