@@ -635,8 +635,12 @@ def _build_field_groups(field_groups):
     Собирает структуру групп полей.
     """
     return [
-        {"title": group["title"], "fields": group["fields"],
-            "help_text": group.get("help_text", {})}
+        {
+            "title": group["title"],
+            "fields": group["fields"],
+            "help_text": group.get("help_text", {}),
+            "column": group.get("column", 0)
+        }
         for group in field_groups
     ]
 

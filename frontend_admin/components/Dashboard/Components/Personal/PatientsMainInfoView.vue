@@ -82,6 +82,16 @@ const props = defineProps({
     }
 })
 
+watch(
+    () => props,  
+    (newValue) => {
+        if (newValue) {
+            console.log('itemData changed:', newValue)
+        }
+    },
+    { immediate: true }
+)
+
 // Helper function to format dates with time
 function formatDate(date) {
     if (!date) return '—'

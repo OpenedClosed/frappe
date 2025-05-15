@@ -79,6 +79,9 @@ LOCATION_INFO = [
 ]
 
 # Instagram API настройки
+APPLICATION_ACCESS_TOKEN = os.getenv("APPLICATION_ACCESS_TOKEN", "change_me")
+APPLICATION_PAGE_ID = os.getenv("APPLICATION_PAGE_ID", "change_me")
+
 INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "change_me")
 INSTAGRAM_APP_ID = os.getenv("INSTAGRAM_APP_ID", "change_me")
 INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET", "change_me")

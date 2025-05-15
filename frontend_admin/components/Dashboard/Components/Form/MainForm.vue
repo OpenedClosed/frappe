@@ -5,8 +5,7 @@
     <div v-if="isForm" class="p-4">
       <!-- {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }} -->
       <h2 class="text-xl font-bold mb-4">
-        {{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle[currentLanguage] ||
-        entityTitle?.en || " " }}
+        {{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle[currentLanguage] || entityTitle?.en || " " }}
       </h2>
 
       <!-- Global error -->
@@ -25,81 +24,70 @@
         </div>
         <div v-else-if="currentEntity === 'patients_health_survey' && !isNewItem && isReadOnly">
           <PatientsHealthSurveyView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
-
         </div>
         <div v-else-if="currentEntity === 'patients_consents' && !isNewItem && isReadOnly">
           <AgreesPanel v-if="itemData && Object.keys(itemData).length > 0" :filteredFields="filteredFields" :itemData="itemData" />
-
         </div>
         <div v-else-if="currentEntity === 'patients_bonus_program' && !isNewItem && isReadOnly">
           <PointsTable v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
-
         </div>
 
         <div class="flex flex-col" v-else>
-          <DynamicForm  :fields="filteredFields" :fieldGroups="fieldGroups" :modelValue="itemData"
-          :read-only="isReadOnly" :isNewItem="isNewItem" :fieldErrors="fieldErrors"
-          @update:modelValue="updateItemData" />
+          <DynamicForm
+            :fields="filteredFields"
+            :fieldGroups="fieldGroups"
+            :modelValue="itemData"
+            :read-only="isReadOnly"
+            :isNewItem="isNewItem"
+            :fieldErrors="fieldErrors"
+            @update:modelValue="updateItemData"
+          />
 
-        <!-- 2) Inlines rendering -->
-        <!-- {{ inlines }} -->
-        <div v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
-          <div>
-            <h3 class="text-lg font-bold mb-2">
-              {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " " }}
-            </h3>
+          <!-- 2) Inlines rendering -->
+          <!-- {{ inlines }} -->
+          <div v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
+            <div>
+              <h3 class="text-lg font-bold mb-2">
+                {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " " }}
+              </h3>
 
-            <InlineList :inlineDef="inlineDef" :parentEntity="currentEntity" :parentId="currentId"
-              :items="itemData[inlineDef.field]" :readOnly="isReadOnly" @reloadParent="reloadCurrentData" />
+              <InlineList
+                :inlineDef="inlineDef"
+                :parentEntity="currentEntity"
+                :parentId="currentId"
+                :items="itemData[inlineDef.field]"
+                :readOnly="isReadOnly"
+                @reloadParent="reloadCurrentData"
+              />
+            </div>
           </div>
         </div>
-        </div>
 
-       <!-- Control Buttons -->
-       <div class="mt-4 flex flex-col md:flex-row gap-2">
+        <!-- Control Buttons -->
+        <div class="mt-4 flex flex-col md:flex-row gap-2">
           <!-- Existing item: edit, save and delete -->
           <template v-if="!isNewItem">
             <!-- Show edit/save only if update is allowed -->
-            <Button
-              v-if="isReadOnly && allowCrudActions.update"
-              label="Редактировать"
-              icon="pi pi-pencil"
-              @click="toggleEditMode"
-            />
-            <Button
-              v-else-if="!isReadOnly && allowCrudActions.update"
-              label="Сохранить"
-              icon="pi pi-save"
-              @click="saveItem"
-            />
+            <Button v-if="isReadOnly && allowCrudActions.update" label="Редактировать" icon="pi pi-pencil" @click="toggleEditMode" />
+            <Button v-else-if="!isReadOnly && allowCrudActions.update" label="Сохранить" icon="pi pi-save" @click="saveItem" />
             <!-- Show delete button only if delete is allowed -->
-            <Button
-              v-if="allowCrudActions.delete"
-              label="Удалить"
-              icon="pi pi-trash"
-              class="p-button-danger"
-              @click="deleteItem"
-            />
+            <Button v-if="allowCrudActions.delete" label="Удалить" icon="pi pi-trash" class="p-button-danger" @click="deleteItem" />
           </template>
 
           <!-- New record: create -->
-          <Button
-            v-else-if="allowCrudActions.create"
-            label="Создать запись"
-            icon="pi pi-check"
-            @click="createItem"
-          />
+          <Button v-else-if="allowCrudActions.create" label="Создать запись" icon="pi pi-check" @click="createItem" />
 
           <!-- Special button for chat_sessions entity -->
-          <Button
-            v-if="currentEntity === 'chat_sessions'"
-            label="Открыть чат"
-            icon="pi pi-comments"
-            @click="openChat(itemData?.chat_id)"
-          />
+          <Button v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
 
           <!-- Navigation: go back to list -->
-          <Button v-if="currentPageInstances > 1 || currentPageInstances === null" label="Назад к списку" icon="pi pi-arrow-left" class="p-button-text" @click="goBack" />
+          <Button
+            v-if="currentPageInstances > 1 || currentPageInstances === null"
+            label="Назад к списку"
+            icon="pi pi-arrow-left"
+            class="p-button-text"
+            @click="goBack"
+          />
         </div>
       </div>
     </div>
@@ -185,6 +173,12 @@ const filteredFields = computed(() => {
   return fields.value;
 });
 
+watch(filteredFields, (newValue) => {
+    console.log("filteredFields.value", filteredFields.value);
+    console.log("itemData.value", itemData.value);
+
+});
+
 onMounted(() => {
   initPage();
   const queryFormState = route.query.isForm;
@@ -208,8 +202,8 @@ async function initPage() {
     }
     console.log("entityConfig:", entityConfig?.model?.plural_name);
     entityTitle.value = entityConfig.model.plural_name;
-      // Set allowed CRUD actions from the backend config
-      allowCrudActions.value = entityConfig.model.allow_crud_actions || {};
+    // Set allowed CRUD actions from the backend config
+    allowCrudActions.value = entityConfig.model.allow_crud_actions || {};
 
     // Get fields and filter only detail fields
     const allFields = entityConfig.model.fields || [];
@@ -225,10 +219,16 @@ async function initPage() {
 
     if (!isNewItem.value) {
       await fetchItemData(currentId.value);
-      if (currentPageInstances.value === 1) {
-        isReadOnly.value = true;
+      console.log("currentPageName.value", currentPageName.value);
+
+      if (currentPageName.value == "admin") {
+        if (currentPageInstances.value === 1) {
+          isReadOnly.value = true;
+        } else {
+          isReadOnly.value = false;
+        }
       } else {
-        isReadOnly.value = false;
+        isReadOnly.value = true;
       }
     } else {
       itemData.value = fields.value.reduce((acc, field) => {

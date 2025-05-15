@@ -209,5 +209,16 @@ const { isAutoMode, chatMessages } = useChatState();
     background-color: #b2ebf2; /* Change this to your desired color for sent messages */
     color: #004d40; /* Change this to your desired text color for sent messages */
   }
+
+  .vac-format-message-wrapper img {
+  max-width: 100%;
+  max-height: 300px; /* или любое другое ограничение по высоте */
+  height: auto;
+  width: auto;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 </style>
 <style scoped></style>
