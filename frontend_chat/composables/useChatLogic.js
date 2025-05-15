@@ -117,25 +117,25 @@ export function useChatLogic(options = {}) {
     const results = [];
 
     for (let [index, msg] of apiMessages.entries()) {
-      const contentString = typeof msg.message === "string" ? msg.message : "";
-
-      // Прикреплённые файлы (если есть превью по ссылке)
-      let files = null;
-      if (detectUrl(contentString)) {
-        const previewData = await fetchLinkPreview(contentString);
-        if (previewData?.data?.image) {
-          const ext = getExtFromUrl(previewData.data.image);
-          files = [
-            {
-              type: ext.startsWith("image/") ? ext : "image/" + ext,
-              name: "Preview." + ext,
-              url: previewData.data.image,
-              preview: previewData.data.image,
-            },
-          ];
-
-        }
+      const contentString =
+        typeof msg.message === "string" ? msg.message : "";
+      /* ---------- соберём вложения ---------- */
+      let files = [];
+      // 2. Обрабатываем attachments, пришедшие сразу в msg.files
+      if (Array.isArray(msg.files) && msg.files.length) {
+        msg.files.forEach((url, i) => {
+          const ext = getExtFromUrl(url);                         // jpg / png / pdf …
+          files.push({
+            type: ext.startsWith("image/") ? ext : "image/" + ext,
+            name: `Attachment-${i + 1}.${ext.replace(/^image\//, "")}`,
+            url,
+            preview: url,                                         // изображение сразу отображается
+          });
+        });
       }
+
+      // Если ничего не нашли, ставим null
+      if (files.length === 0) files = null;
 
       // Парсим дату из UTC-строки
       const utcString = msg.timestamp ? msg.timestamp.replace(/\.\d+$/, "") + "Z" : null;
