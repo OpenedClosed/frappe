@@ -10,11 +10,15 @@ export function useChatLogic(options = {}) {
   const toast = useToast();
   const { isAutoMode, chatMessages } = useChatState();
 
-  // Состояние экрана, устройства и т.п.
+
+  watch(chatMessages, (newMessages) => {
+    console.log("chatMessages изменились:", newMessages);
+    // Здесь можно добавить логику, если нужно
+  });
   const isMobile = ref(false);
   const isIphone = ref(false);
-// ← здесь
-let skipNextStatusCheck = false;
+  // ← здесь
+  let skipNextStatusCheck = false;
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
   const currentUserId = ref("1234");
@@ -95,6 +99,16 @@ let skipNextStatusCheck = false;
     }
   }
 
+  function getExtFromUrl(url) {
+    const match = url.match(/\.(\w+?)(?:[?#]|$)/i);
+    if (!match) return "image";
+    const ext = match[1].toLowerCase();
+    if (ext === "jpg") return "jpeg";
+    if (ext === "svg") return "svg+xml";
+    return ext;
+  }
+
+
   /**
    * Преобразовать сообщения API в формат для компонента чата (vue-advanced-chat).
    */
@@ -110,14 +124,16 @@ let skipNextStatusCheck = false;
       if (detectUrl(contentString)) {
         const previewData = await fetchLinkPreview(contentString);
         if (previewData?.data?.image) {
+          const ext = getExtFromUrl(previewData.data.image);
           files = [
             {
-              type: "png",
-              name: "Preview",
+              type: ext.startsWith("image/") ? ext : "image/" + ext,
+              name: "Preview." + ext,
               url: previewData.data.image,
               preview: previewData.data.image,
             },
           ];
+
         }
       }
 
@@ -242,7 +258,7 @@ let skipNextStatusCheck = false;
    */
   function toggleChatMode(isAuto) {
     // console.log("toggleChatMode:", isAuto);
-    skipNextStatusCheck = true;        
+    skipNextStatusCheck = true;
     const command = isAuto ? "/auto" : "/manual";
     // console.log("Отправляем команду:", command);
     sendMessage({ content: command });
