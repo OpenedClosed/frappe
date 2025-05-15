@@ -6,20 +6,7 @@
       <div class="flex items-center gap-3 m-2">
         <!-- “All” label -->
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> All </span>
-    <div class="flex flex-row justify-between items-center">
-      <div class="flex items-center gap-3 m-2">
-        <!-- “All” label -->
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> All </span>
 
-        <!-- InputSwitch (PrimeVue) -->
-        <InputSwitch
-          v-model="unreadOnly"
-          onLabel="Unread"
-          offLabel="All"
-          onIcon="pi pi-envelope-open"
-          offIcon="pi pi-inbox"
-          class="h-6 w-11 shrink-0 cursor-pointer outline-none transition-colors duration-200"
-        />
         <!-- InputSwitch (PrimeVue) -->
         <InputSwitch
           v-model="unreadOnly"
@@ -34,7 +21,7 @@
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> Unread </span>
       </div>
       <Button
-        label="Экспорт в Excel"
+        label="Export chats to Excel"
         icon="pi pi-file-excel"
         class="p-button-success p-button-sm bg-green-600 hover:bg-green-500 text-white min-w-[14rem] xl:min-w-[8rem] my-2 mx-3"
         @click="onExportToExcel"
@@ -63,6 +50,8 @@
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
       :rooms-loaded="isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
+      :message-actions="JSON.stringify(messageActions)" 
+      @message-action-handler="onMessageAction"
     >
       <div slot="room-header-avatar">
         <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
@@ -83,9 +72,7 @@
       <div slot="rooms-list-search">
         <div v-if="isRoomsLoading" class="flex items-center justify-center py-5">
           <LoaderSmall />
-          <LoaderSmall />
         </div>
-        <div v-else class="h-[65px]"></div>
         <div v-else class="h-[65px]"></div>
       </div>
     </vue-advanced-chat>
@@ -222,11 +209,7 @@ async function onExportToExcel() {
 
 const chatRows = computed(() => props.chatsData.filter((row) => !row._isBlank && row.chat_id));
 
-const emit = defineEmits(["close-chat", "page", "exportToExcel"]); // Emit if you still need "exportToExcel" or other events
-
-function onExportToExcel() {
-  emit("exportToExcel");
-}
+const emit = defineEmits(["close-chat", "page"]); // Emit if you still need "exportToExcel" or other events
 
 function onPageChange(e) {
   emit("page", e.page);

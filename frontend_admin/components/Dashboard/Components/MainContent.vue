@@ -36,7 +36,7 @@
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить Согласия"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_family' && !currentId"
-        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center">
+        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center p-4">
       <FamilyTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
           :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
           :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
