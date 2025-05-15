@@ -5,8 +5,8 @@
         <div class="flex flex-row items-center justify-between">
           <Button text icon="pi pi-bars color-black dark:color-white" class="xl:!hidden !block" @click="isSidebarOpen = true" aria-label="Menu" />
           <div v-if="currentPageName === 'admin'" class="flex items-center justify-center md:justify-start ml-2">
-            <img src="/main/LogoLight.png" alt="Logo" class="w-24 h-auto block dark:hidden" />
-            <img src="/main/LogoDark.png" alt="Logo" class="w-24 h-auto hidden dark:block" />
+            <img src="/main/LogoMainLight.png" alt="Logo" class="w-24 h-auto block dark:hidden" />
+            <img src="/main/LogoMainDark.png" alt="Logo" class="w-24 h-auto hidden dark:block" />
           </div>
           <div v-else class="flex items-center justify-center md:justify-start ml-2">
             <h3 class="text-white text-lg font-bold">Личный кабинет</h3>

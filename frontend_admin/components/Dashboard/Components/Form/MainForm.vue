@@ -175,9 +175,9 @@ const filteredFields = computed(() => {
 });
 
 watch(filteredFields, (newValue) => {
-  if (newValue) {
-    console.log("Filtered fields changed:", newValue);
-  }
+    console.log("filteredFields.value", filteredFields.value);
+    console.log("itemData.value", itemData.value);
+
 });
 
 onMounted(() => {
