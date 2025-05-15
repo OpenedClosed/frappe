@@ -189,7 +189,6 @@ async def save_and_broadcast_new_message(
 # БЛОК: Интеграция с Meta
 # ==============================
 
-
 async def send_message_to_external_meta_channel(
     chat_session: ChatSession,
     new_msg: ChatMessage
@@ -226,8 +225,16 @@ async def send_message_to_external_meta_channel(
     external_id = master_client.external_id
     message = new_msg.message
 
+    # === Отправка в Instagram ===
     if source == ChatSource.INSTAGRAM:
-        await send_instagram_message(external_id, message)
+        message_id = await send_instagram_message(external_id, new_msg)
+        if message_id:
+            # 💾 Обновляем external_id сообщения в базе
+            await mongo_db.chats.update_one(
+                {"chat_id": chat_session.chat_id, "messages.id": new_msg.id},
+                {"$set": {"messages.$.external_id": message_id}}
+            )
+    # === Отправка в WhatsApp ===
     elif source == ChatSource.WHATSAPP:
         await send_whatsapp_message(external_id, message)
     else:
@@ -239,51 +246,141 @@ async def send_message_to_external_meta_channel(
 # ==============================
 
 
-# ---------------------------------------------------------------------------
-# 3. chats.integrations.instagram.send_instagram_message
-# ---------------------------------------------------------------------------
-async def send_instagram_message(recipient_id: str, message: str) -> None:
-    """Отправляет сообщение в Instagram Direct, помечая его как broadcast."""
-
-
-
+async def send_instagram_message(recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
+    """
+    Отправляет сообщение в Instagram Direct:
+    - Если есть хотя бы один файл — отправляет его как фото с подписью.
+    - Иначе — просто текст.
+    """
     url = "https://graph.instagram.com/v22.0/me/messages"
-
-    message = clean_markdown(message)
-    chunks = split_text_into_chunks(message)
-
     headers = {
         "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
 
-    async with httpx.AsyncClient() as client:
-        for i, chunk in enumerate(chunks, 1):
-            payload = {
-                "recipient": {"id": recipient_id},
-                "message": {
-                    "text": chunk,
-                    "metadata": "broadcast"        # ← ключевая метка
-                }
+    text = message_obj.message.strip()
+    files = message_obj.files or []
+
+    # Берём только первую картинку
+    # first_file = files[0] if files else None
+    first_file = None
+
+    if first_file:
+        payload = {
+            "recipient": {"id": recipient_id},
+            "message": {
+                "attachment": {
+                    "type": "image",
+                    "payload": {
+                        "url": first_file,
+                        "is_reusable": False
+                    }
+                },
+                "text": text,
+                "metadata": "broadcast"
             }
-            logging.debug(f"📤 IG payload #{i}: {json.dumps(payload, ensure_ascii=False)}")
+        }
+    else:
+        payload = {
+            "recipient": {"id": recipient_id},
+            "message": {
+                "text": text,
+                "metadata": "broadcast"
+            }
+        }
 
-            try:
-                response = await client.post(url, json=payload, headers=headers)
-                logging.debug(f"📥 IG response #{i}: {response.status_code} {response.text}")
+    logging.debug(f"📤 IG payload: {json.dumps(payload, ensure_ascii=False)}")
 
-                if response.status_code == 200:
-                    response_data = response.json()
-                    message_id = response_data.get("message_id")
-                    logging.info(f"Отправлено в Instagram: {recipient_id}")
-                    return message_id
-                else:
-                    logging.error(
-                        f"Ошибка Instagram: {response.status_code} {response.text}")
-                    return None
-            except httpx.HTTPError as exc:
-                logging.error(f"HTTP ошибка при отправке в Instagram: {exc}")
-                return None
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            response_data = response.json()
+            logging.info(f"Отправлено в Instagram: {recipient_id}")
+            return response_data.get("message_id")
+        except httpx.HTTPError as exc:
+            logging.error(f"Ошибка отправки в Instagram: {exc} — {response.text if 'response' in locals() else 'нет ответа'}")
+            return None
+
+
+import httpx
+import logging
+
+
+# async def send_instagram_message(recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
+#     """
+#     Отправляет фото (если есть) и текст (если есть) в Instagram Direct.
+#     Фото и подпись отправляются отдельными сообщениями.
+#     """
+#     import json
+
+#     # url = f"https://graph.facebook.com/v22.0/{settings.INSTAGRAM_BOT_ID}/messages"
+#     # access_token = settings.INSTAGRAM_ACCESS_TOKEN
+
+#     url = f"https://graph.facebook.com/v22.0/{settings.APPLICATION_PAGE_ID}/messages"
+#     access_token = settings.APPLICATION_ACCESS_TOKEN
+
+#     headers = {
+#         "Authorization": f"Bearer {access_token}",
+#         "Content-Type": "application/json"
+#     }
+
+#     text = message_obj.message.strip()
+#     files = message_obj.files or []
+#     image_url = files[0] if files else None
+
+#     logging.debug(f"💬 Подготовка отправки Instagram-сообщения:")
+#     logging.debug(f"↪ recipient_id = {recipient_id}")
+#     logging.debug(f"↪ text = {text!r}")
+#     logging.debug(f"↪ image_url = {image_url}")
+#     logging.debug(f"↪ total files = {len(files)}")
+
+#     async with httpx.AsyncClient() as client:
+#         try:
+#             # if image_url:
+#             #     payload_image = {
+#             #         "recipient": {"id": recipient_id},
+#             #         "message": {
+#             #             "attachment": {
+#             #                 "type": "image",
+#             #                 "payload": {
+#             #                     "url": image_url,
+#             #                     "is_reusable": False
+#             #                 }
+#             #             }
+#             #         }
+#             #     }
+
+#             #     logging.debug("📤 Отправка изображения в Instagram...")
+#             #     logging.debug(f"📦 payload_image: {json.dumps(payload_image, ensure_ascii=False)}")
+
+#             #     response = await client.post(url, headers=headers, json=payload_image)
+#             #     logging.debug(f"📥 Ответ на изображение: {response.status_code} — {response.text}")
+#             #     response.raise_for_status()
+
+#             if text:
+#                 payload_text = {
+#                     "recipient": {"id": recipient_id},
+#                     "message": {
+#                         "text": text
+#                     }
+#                 }
+
+#                 logging.debug("📤 Отправка текста в Instagram...")
+#                 logging.debug(f"📦 payload_text: {json.dumps(payload_text, ensure_ascii=False)}")
+
+#                 response = await client.post(url, headers=headers, json=payload_text)
+#                 logging.debug(f"📥 Ответ на текст: {response.status_code} — {response.text}")
+#                 response.raise_for_status()
+
+#             logging.info(f"📨 Успешно отправлено в Instagram: {recipient_id}")
+#             return "ok"
+
+#         except httpx.HTTPError as exc:
+#             logging.error(f"❌ Ошибка при отправке в Instagram: {exc}")
+#             if 'response' in locals():
+#                 logging.error(f"🧾 Тело ответа: {response.status_code} — {response.text}")
+#             return None
 
 
 
@@ -1110,11 +1207,16 @@ async def determine_topics_via_gpt(
 
     topics_data = await detect_topics_gpt(
         user_message=user_message,
+        chat_history=chat_history,
         user_info=user_info,
         knowledge_base=knowledge_base,
         model_name=model_name,
         bot_context=bot_context
     )
+
+    print('!'*100)
+    print(topics_data)
+    print('!'*100)
 
     outcome_data = await detect_outcome_gpt(
         user_message=user_message,
@@ -1136,6 +1238,7 @@ async def determine_topics_via_gpt(
 
 async def detect_topics_gpt(
     user_message: str,
+    chat_history: list,
     user_info: dict,
     knowledge_base: Dict[str, Any],
     model_name: str,
@@ -1145,9 +1248,11 @@ async def detect_topics_gpt(
 
     system_prompt = AI_PROMPTS["system_topics_prompt"].format(
         user_info=user_info,
+        chat_history=chat_history,
         kb_description=kb_description,
         app_description=bot_context["app_description"],
     )
+    print(system_prompt)
 
     response = await gemini_client.chat_generate(
         model=model_name,
@@ -1389,6 +1494,10 @@ async def build_ai_response(
             else:
                 # слияние подтем
                 merged_snippet_tree[topic_name].subtopics.update(topic.subtopics)
+
+    print("^"*100)
+    print(files)
+    print("^"*100)
 
     # 🤖 Генерация текста
     final_text = await generate_ai_answer(
@@ -1670,6 +1779,9 @@ async def generate_ai_answer(
     Генерирует ответ от AI, учитывая историю чата, язык пользователя,
     сниппеты знаний и настройки бота из MongoDB, с последующей постобработкой.
     """
+    print("*"*100)
+    print(snippets)
+    print("*"*100)
     bot_context = await get_bot_context()
     chosen_model = bot_context["ai_model"]
     chosen_temp = bot_context["temperature"]
@@ -1774,7 +1886,7 @@ async def postprocess_ai_response(
 
     prompt = AI_PROMPTS["postprocess_ai_answer"].format(
         ai_generated_response=raw_text.strip(),
-        joined_snippets="\n\n".join(snippets),
+        joined_snippets=snippets,
         user_interface_language=user_interface_language,
         postprocessing_instruction=admin_instruction or "None",
         language_instruction=language_instruction or "Always reply in the same language as the user's last message.",

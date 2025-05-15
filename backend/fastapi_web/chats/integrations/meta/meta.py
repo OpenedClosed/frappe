@@ -248,7 +248,9 @@ async def handle_incoming_meta_messages(
         # ─── Определение языка ──────────────────────────────────────────────
         locale = None
         if access_token and sender_role == SenderRole.CLIENT:
-            locale = await get_meta_locale(sender_id, access_token)
+            # Потом включу не удаляй!
+            # locale = await get_meta_locale(sender_id, access_token)
+            locale = "en_EN"
         user_language = get_language_from_locale(locale) if locale else "en"
 
         if not locale:
@@ -260,7 +262,9 @@ async def handle_incoming_meta_messages(
         name = None
         avatar_url = None
         if chat_source == ChatSource.INSTAGRAM and sender_role == SenderRole.CLIENT:
-            profile = await get_instagram_user_profile(sender_id)
+            # Потом включу не удаляй!
+            # profile = await get_instagram_user_profile(sender_id)
+            profile = None
             if profile:
                 name = profile.get("name")
                 avatar_url = profile.get("profile_pic")
