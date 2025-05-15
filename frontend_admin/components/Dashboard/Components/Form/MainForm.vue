@@ -17,7 +17,6 @@
       <div v-else>
         <!-- DynamicForm component -->
         <div v-if="currentEntity === 'patients_main_info' && !isNewItem && isReadOnly">
-          {{ filteredFields }}
           <PatientsMainInfoView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
         </div>
         <div v-else-if="currentEntity === 'patients_contact_info' && !isNewItem && isReadOnly">
