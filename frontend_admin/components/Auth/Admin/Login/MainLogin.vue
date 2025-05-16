@@ -5,7 +5,7 @@
         <div class="w-full flex flex-col justify-center items-center mb-4">
           <div class="flex justify-center items-center w-full">
             <div class="h-[46px] m-3">
-              <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto block dark:hidden bg-black p-1 rounded" />
+              <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto block dark:hidden" />
               <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
             </div>
           </div>
