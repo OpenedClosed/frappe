@@ -7,8 +7,8 @@
           <div class="w-full flex flex-col justify-center items-center mb-4">
             <div class="flex justify-center items-center w-full">
               <div class="h-[46px] m-3">
-                <img src="/main/LogoMainLight.png" alt="Logo" class="w-32 h-auto block dark:hidden" />
-                <img src="/main/LogoMainDark.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
+                <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto block dark:hidden bg-black p-1 rounded" />
+                <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
               </div>
             </div>
             <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">Регистрация</p>
@@ -174,8 +174,8 @@
           <div class="w-full flex flex-col justify-center items-center mb-4">
             <div class="flex justify-center items-center w-full">
               <div class="h-[46px] m-3">
-                <img src="/main/LogoMainLight.png" alt="Logo" class="w-32 h-auto block dark:hidden" />
-                <img src="/main/LogoMainDark.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
+                <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto block dark:hidden bg-black p-1 rounded" />
+                <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
               </div>
             </div>
             <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">Подтверждение кода</p>

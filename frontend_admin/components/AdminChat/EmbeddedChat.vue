@@ -85,7 +85,7 @@
         <strong>Text:</strong> {{ selectedMsg?.message?.content || "" }}
       </p>
 
-      <ReadonlyKB v-if="selectedMsg?.message?.sources && selectedMsg?.message?.sources.kb" :sources="selectedMsg?.message.sources" />
+      <ReadonlyKB v-if="selectedMsg?.message?.sources" :sources="selectedMsg?.message.sources" />
       <div v-else>
         <p class="font-semibold text-start text-gray-500">
           Message has no sources from knowledge base
