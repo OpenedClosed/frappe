@@ -3,7 +3,7 @@
   <!-- one collapsible block per source -->
   <section v-for="(tree, sourceId) in sources" :key="sourceId" class="mb-4">
     <details class="mt-2 p-2 rounded border bg-gray-50 dark:bg-gray-800">
-      <summary class="cursor-pointer font-medium gap-2 space-x-2 ">
+      <summary class="cursor-pointer font-medium gap-2 space-x-2">
         <i class="pi pi-database" />
         <span>{{ sourceId === "kb" ? "Knowledge base" : sourceId }}</span>
       </summary>
@@ -20,8 +20,13 @@
 
             <ul class="ml-6 list-disc">
               <li v-for="(qObj, qKey) in sub.questions" :key="qKey" class="flex flex-col gap-1 mb-1">
+                <!-- название вопроса -->
                 <span class="font-semibold">{{ qKey }}</span>
 
+                <!-- сам ответ -->
+                <p class="ml-4 whitespace-pre-line">{{ qObj.text }}</p>
+
+                <!-- прикреплённые файлы (если есть) -->
                 <template v-if="qObj.files?.length">
                   <ImageLink v-for="(link, i) in qObj.files" :key="i" :fileLink="link" />
                 </template>
