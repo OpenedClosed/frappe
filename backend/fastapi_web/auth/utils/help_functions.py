@@ -9,7 +9,7 @@ from db.mongo.db_init import mongo_db
 from users.db.mongo.schemas import Settings
 from users.utils.help_functions import get_current_user
 
-
+ 
 @AuthJWT.load_config
 def get_config():
     """Конфиг для работы с jwt."""
