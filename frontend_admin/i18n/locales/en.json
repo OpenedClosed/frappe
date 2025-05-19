@@ -349,6 +349,14 @@
     "toastBody": "Referral code copied to clipboard!",
     "tooltipCopy": "Copy referral code"
   },
+  "SupportPage": {
+    "title": "Support chat"
+  },
+  "DateRangeFilter": {
+    "heading": "Date range filter:",
+    "placeholder": "Select dates",
+    "clear": "Clear date range"
+  },
 
   "additionalMessages": {
     "chatRefreshed": "Chat Refreshed",
