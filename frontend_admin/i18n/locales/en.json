@@ -1,7 +1,7 @@
 {
   "chat": "Chat",
   "newChat": "New chat",
-  "showCommands": "Show commands", 
+  "showCommands": "Show commands",
   "sendMessage": "Send a message...",
   "chatAgain": "Chat again",
   "language": "Language",
@@ -98,6 +98,28 @@
     "LAST_SEEN": "last seen ",
     "IS_TYPING": "is typing...",
     "CANCEL_SELECT_MESSAGE": "Cancel Selection"
+  },
+  "EmbeddedChat": {
+    "allLabel": "All",
+    "unreadLabel": "Unread",
+    "exportButton": "Export chats to Excel",
+    "messageDialogHeader": "Message",
+    "messageDialogId": "ID",
+    "messageDialogText": "Text",
+    "noSources": "Message has no sources from knowledge base",
+    "sourceLabel": "Source",
+    "userIdLabel": "User id",
+    "closeButton": "Close",
+
+    "seeSources": "See sources",
+    "excelSuccess": "Excel created",
+    "excelFailed": "Excel export failed",
+    "noDate": "No date provided",
+    "inFuture": "In the future",
+    "startedAgo": "Started {diffDays} days, {diffHours} hours, {diffMinutes} minutes ago",
+    "consultant": "Consultant",
+    "client": "Client",
+    "chatFallback": "Chat {index}"
   },
   "additionalMessages": {
     "chatRefreshed": "Chat Refreshed",

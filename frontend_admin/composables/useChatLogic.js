@@ -6,9 +6,10 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 
 import { debounce } from "lodash";
+import { useI18n } from "#imports";
 
 export function useChatLogic(options = {}) {
-  const { isTelegram = false } = options; // Переключение под Telegram при необходимости
+  const { isTelegram = false, locale = "en" } = options; // Переключение под Telegram при необходимости
   console.log("currentChatId.value", currentChatId.value);
   // const { t, locale } = useI18n();
   // const toast = useToast();
@@ -112,7 +113,7 @@ export function useChatLogic(options = {}) {
       chatMessages.value = [];
     }
     // const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
-    const currentLocale = "en";
+    const currentLocale = locale;
     const results = [];
     if (!apiMessages) return results;
     for (let [index, msg] of apiMessages?.entries()) {

@@ -101,6 +101,29 @@
     "IS_TYPING": "печатает...",
     "CANCEL_SELECT_MESSAGE": "Отменить выбор"
   },
+  "EmbeddedChat": {
+    "allLabel": "Все",
+    "unreadLabel": "Непрочитанные",
+    "exportButton": "Экспорт чатов в Excel",
+    "messageDialogHeader": "Сообщение",
+    "messageDialogId": "ID",
+    "messageDialogText": "Текст",
+    "noSources": "У сообщения нет источников из базы знаний",
+    "sourceLabel": "Источник",
+    "userIdLabel": "ID пользователя",
+    "closeButton": "Закрыть",
+
+    "seeSources": "Показать источники",
+    "excelSuccess": "Файл Excel создан",
+    "excelFailed": "Ошибка экспорта в Excel",
+    "noDate": "Дата не указана",
+    "inFuture": "В будущем",
+    "startedAgo": "Начато {diffDays} дн., {diffHours} ч., {diffMinutes} мин. назад",
+    "consultant": "Консультант",
+    "client": "Клиент",
+    "chatFallback": "Чат {index}"
+  },
+
   "additionalMessages": {
     "chatRefreshed": "Чат обновлен",
     "chatRefreshedSuccessfully": "Чат успешно обновлен.",
