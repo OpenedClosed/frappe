@@ -26,13 +26,13 @@
           class="p-2 bg-blue-500 text-white rounded"
           @click="saveOneInline(index)"
         >
-        Save
+       {{ t('InlineList.saveBtn') }}
         </button>
         <button
           class="p-2 bg-red-500 text-white rounded"
           @click="deleteOneInline(index)"
         >
-        Delete
+       {{ t('InlineList.deleteBtn') }}
         </button>
       </div>
     </div>
@@ -40,7 +40,7 @@
     <!-- Create new inline item -->
    <!-- Create new inline item (Only show if inline_type is "list" or no existing single item) -->
 <div v-if="!readOnly && (props.inlineDef.inline_type === 'list' || localItems.length === 0)" class="mt-4 p-4 border rounded">
-  <h4 class="font-semibold mb-2">Add New</h4>
+  <h4 class="font-semibold mb-2">	{{ t('InlineList.addNewHeader') }}</h4>
 
   <!-- DynamicForm for new item -->
   <DynamicForm
@@ -53,7 +53,7 @@
     class="mt-2 p-2 bg-green-500 text-white rounded"
     @click="addNewInline"
   >
-  Create
+  	{{ t('InlineList.createBtn') }}
   </button>
 </div>
 
@@ -65,6 +65,8 @@ import { ref, watch } from "vue";
 import { useNuxtApp, useRoute } from "#imports";
 import DynamicForm from "~/components/Dashboard/Components/Form/DynamicForm.vue";
 const { currentLanguage } = useLanguageState();
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 /**
  * Props:
  * - `inlineDef` includes info about how to render these inline items
@@ -148,7 +150,7 @@ const { currentPageName } = usePageState()
     const changes = getChangedFields(originalItem, updatedItem);
 
     if (Object.keys(changes).length === 1 && changes.id) {
-      alert("No changes detected.");
+     alert(t('InlineList.noChanges'))
       return;
     }
 
@@ -164,11 +166,11 @@ const { currentPageName } = usePageState()
       patchData
     );
 
-    alert("Inline item updated!");
+   alert(t('InlineList.updated'))
     emit("reloadParent");
   } catch (error) {
     console.error("Error saving inline item:", error);
-    alert("Error updating inline item.");
+   alert(t('InlineList.updated'))
   }
 }
 
@@ -181,7 +183,7 @@ const { currentPageName } = usePageState()
  */
 async function deleteOneInline(index) {
   // Optional: confirm before deleting
-  const confirmation = confirm("Are you sure you want to delete this item?");
+  const confirmation = confirm(t('InlineList.confirmDelete'))
   if (!confirmation) return;
 
   try {
@@ -198,11 +200,11 @@ async function deleteOneInline(index) {
       patchData
     );
 
-    alert("Inline item deleted (via parent PATCH)!");
+    alert(t('InlineList.deleted'))
     emit("reloadParent");
   } catch (error) {
     console.error("Error deleting inline item:", error);
-    alert("Error deleting inline item.");
+    alert(t('InlineList.deleteError'))
   }
 }
 
@@ -215,7 +217,7 @@ async function deleteOneInline(index) {
   try {
     // Prevent adding more than 1 element if inline_type is "single"
     if (props.inlineDef.inline_type === "single" && localItems.value.length >= 1) {
-      alert("Only one item is allowed.");
+      alert(t('InlineList.onlyOne'))
       return;
     }
 
@@ -236,11 +238,11 @@ async function deleteOneInline(index) {
 
     // Clear the create form
     newItem.value = {};
-    alert("Inline item created!");
+    alert(t('InlineList.created'))
     emit("reloadParent");
   } catch (error) {
     console.error("Error creating inline item:", error);
-    alert("Error creating inline item.");
+    alert(t('InlineList.createError'))
   }
 }
 
