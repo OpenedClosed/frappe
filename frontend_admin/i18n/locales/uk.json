@@ -1,0 +1,171 @@
+{
+  "chat": "Чат",
+  "newChat": "Новий чат",
+  "showCommands": "Показати команди", // ADDED
+  "sendMessage": "Надіслати повідомлення...",
+  "chatAgain": "Почати знову",
+  "language": "Мова",
+  // Ukrainian (uk)
+  "buttons": {
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "close": "Закрити",
+    "delete": "Видалити",
+    "edit": "Редагувати",
+    "add": "Додати",
+    "remove": "Видалити",
+    "create": "Створити",
+    "send": "Надіслати",
+    "back": "Назад",
+    "next": "Далі",
+    "finish": "Завершити",
+    "confirm": "Підтвердити",
+    "search": "Пошук",
+    "clear": "Очистити",
+    "select": "Вибрати",
+    "copy": "Копіювати",
+    // Ukrainian (uk)
+    "openTestChat": "Відкрити тестовий чат"
+  },
+  "roomActions": [
+    {
+      "name": "archiveRoom",
+      "title": "Архівувати кімнату"
+    }
+  ],
+  "menuActions": [
+    {
+      "name": "inviteUser",
+      "title": "Запросити користувача"
+    },
+    {
+      "name": "removeUser",
+      "title": "Видалити користувача"
+    },
+    {
+      "name": "deleteRoom",
+      "title": "Видалити кімнату"
+    }
+  ],
+  "messageActions": [
+    {
+      "name": "replyMessage",
+      "title": "Відповісти"
+    },
+    {
+      "name": "editMessage",
+      "title": "Редагувати повідомлення",
+      "onlyMe": true
+    },
+    {
+      "name": "deleteMessage",
+      "title": "Видалити повідомлення",
+      "onlyMe": true
+    },
+    {
+      "name": "selectMessages",
+      "title": "Вибрати"
+    }
+  ],
+  "messageSelectionActions": [
+    {
+      "name": "deleteMessages",
+      "title": "Видалити"
+    },
+    {
+      "name": "forwardMessages",
+      "title": "Переслати"
+    }
+  ],
+  "templatesText": [
+    {
+      "tag": "help",
+      "text": "Це довідка"
+    },
+    {
+      "tag": "action",
+      "text": "Це дія"
+    }
+  ],
+  "textMessages": {
+    "ROOMS_EMPTY": "Немає діалогів",
+    "ROOM_EMPTY": "Не вибрано діалог",
+    "NEW_MESSAGES": "Нові повідомлення",
+    "MESSAGE_DELETED": "Повідомлення видалено",
+    "MESSAGES_EMPTY": "Немає повідомлень",
+    "CONVERSATION_STARTED": "Розмова розпочалася:",
+    "TYPE_MESSAGE": "Введіть повідомлення",
+    "SEARCH": "Пошук",
+    "IS_ONLINE": "в мережі",
+    "LAST_SEEN": "був(ла) в мережі",
+    "IS_TYPING": "друкує...",
+    "CANCEL_SELECT_MESSAGE": "Скасувати вибір"
+  },
+  "additionalMessages": {
+    "chatRefreshed": "Чат оновлено",
+    "chatRefreshedSuccessfully": "Чат успішно оновлено.",
+    "errorRefreshingChat": "Помилка під час оновлення чату:",
+    "failedToRefreshChat": "Не вдалося оновити чат.",
+    "sendingMessage": "Надсилання повідомлення:",
+    "attention": "Увага",
+    "error": "Помилка",
+    "choiceOptions": "Варіанти вибору:",
+    "choiceOptionsFromLastMessage": "Варіанти (з останнього повідомлення):",
+    "messagesRetrieved": "Повідомлення отримано:",
+    "newMessage": "Нове повідомлення:",
+    "unknownMessageType": "Невідомий тип повідомлення:",
+    "webSocketConnectionEstablished": "Підключено WebSocket.",
+    "webSocketConnectionClosed": "З’єднання WebSocket закрито.",
+    "webSocketError": "Помилка WebSocket:",
+    "pageIsVisibleCheckingWSConnection": "Сторінка активна. Перевіряємо з'єднання...",
+    "pageIsHiddenPausingUpdates": "Сторінка неактивна. Оновлення призупинено.",
+    "windowInFocus": "Вікно у фокусі",
+    "webSocketIsNotOpenReconnecting": "WebSocket не відкритий. Повторне підключення..."
+  },
+
+  "knowledgeBase": {
+    "addTopic": "Додати тему",
+    "removeTopic": "Видалити тему",
+    "addSubtopic": "Додати підтему",
+    "removeSubtopic": "Видалити підтему",
+    "addQuestion": "Додати питання",
+    "removeQuestion": "Видалити питання",
+    "renameTopic": "Перейменувати тему",
+    "renameSubtopic": "Перейменувати підтему",
+    "saveChanges": "Зберегти зміни",
+    "discardChanges": "Скасувати зміни",
+    "exportData": "Експортувати дані",
+    "importData": "Імпортувати дані",
+    "clearPlayground": "Очистити робочий простір",
+    "confirmRemoveTopic": "Видалити тему \"{topicName}\"?",
+    "confirmRemoveSubtopic": "Видалити підтему \"{subtopicName}\" з \"{topicName}\"?",
+    "confirmRemoveQuestion": "Видалити питання \"{questionKey}\"?",
+    "unsavedChangesWarning": "У вас є незбережені зміни. Ви впевнені, що хочете вийти?",
+    "label": {
+      "promptTextarea": "Поле запиту",
+      "question": "Питання",
+      "answerText": "Текст відповіді",
+      "linksFiles": "Посилання / Файли",
+      "selectedFiles": "Вибрані файли"
+    },
+    "button": {
+      "howToUse": "Як користуватися цим інструментом?",
+      "generateSmartChange": "Згенерувати розумну зміну",
+      "openTestChat": "Відкрити тестовий чат",
+      "clearPlayground": "Очистити робочий простір",
+      "addTopic": "Додати тему",
+      "addSubtopic": "Додати підтему",
+      "addQuestion": "Додати питання",
+      "addLink": "Додати посилання",
+      "savePlayground": "Зберегти робочий простір",
+      "rejectPlayground": "Відхилити робочий простір",
+      "transferToDatabase": "Перенести в базу даних",
+      "exportJson": "Експортувати JSON",
+      "importJson": "Імпортувати JSON"
+    },
+    "header": {
+      "workspacePlayground": "Робочий простір",
+      "readonlyKnowledgeBase": "База знань (лише для читання)"
+    }
+  }
+}

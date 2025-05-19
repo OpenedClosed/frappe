@@ -29,7 +29,7 @@
     </div>
 
     <vue-advanced-chat
-      :height="'80vh'"
+      :height="'72vh'"
       :current-user-id="currentUserId"
       :rooms="JSON.stringify(displayedRooms)"
       :messages="JSON.stringify(chatMessages)"

@@ -9,7 +9,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxtjs/i18n": "^9.4.0",
+    "@nuxtjs/i18n": "9.5.4",
     "@primeuix/themes": "^1.1.1",
     "@primevue/nuxt-module": "^4.3.4",
     "@tailwindcss/typography": "^0.5.13",

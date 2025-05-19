@@ -1,0 +1,171 @@
+{
+  "chat": "Чат",
+  "newChat": "Новый чат",
+  "showCommands": "Показать команды",
+  "sendMessage": "Отправить сообщение...",
+  "chatAgain": "Начать заново",
+  "language": "Язык",
+
+  "buttons": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "add": "Добавить",
+    "remove": "Удалить",
+    "create": "Создать",
+    "send": "Отправить",
+    "back": "Назад",
+    "next": "Далее",
+    "finish": "Завершить",
+    "confirm": "Подтвердить",
+    "search": "Поиск",
+    "clear": "Очистить",
+    "select": "Выбрать",
+    "copy": "Копировать",
+    "openTestChat": "Открыть тестовый чат"
+  },
+
+  "roomActions": [
+    {
+      "name": "archiveRoom",
+      "title": "Архивировать комнату"
+    }
+  ],
+  "menuActions": [
+    {
+      "name": "inviteUser",
+      "title": "Пригласить пользователя"
+    },
+    {
+      "name": "removeUser",
+      "title": "Удалить пользователя"
+    },
+    {
+      "name": "deleteRoom",
+      "title": "Удалить комнату"
+    }
+  ],
+  "messageActions": [
+    {
+      "name": "replyMessage",
+      "title": "Ответить"
+    },
+    {
+      "name": "editMessage",
+      "title": "Редактировать",
+      "onlyMe": true
+    },
+    {
+      "name": "deleteMessage",
+      "title": "Удалить",
+      "onlyMe": true
+    },
+    {
+      "name": "selectMessages",
+      "title": "Выбрать"
+    }
+  ],
+  "messageSelectionActions": [
+    {
+      "name": "deleteMessages",
+      "title": "Удалить"
+    },
+    {
+      "name": "forwardMessages",
+      "title": "Переслать"
+    }
+  ],
+  "templatesText": [
+    {
+      "tag": "help",
+      "text": "Это справка"
+    },
+    {
+      "tag": "action",
+      "text": "Это действие"
+    }
+  ],
+  "textMessages": {
+    "ROOMS_EMPTY": "Нет диалогов",
+    "ROOM_EMPTY": "Выберите диалог",
+    "NEW_MESSAGES": "Новые сообщения",
+    "MESSAGE_DELETED": "Сообщение удалено",
+    "MESSAGES_EMPTY": "Нет сообщений",
+    "CONVERSATION_STARTED": "Разговор начался:",
+    "TYPE_MESSAGE": "Введите сообщение",
+    "SEARCH": "Поиск",
+    "IS_ONLINE": "в сети",
+    "LAST_SEEN": "был(а) в сети",
+    "IS_TYPING": "печатает...",
+    "CANCEL_SELECT_MESSAGE": "Отменить выбор"
+  },
+  "additionalMessages": {
+    "chatRefreshed": "Чат обновлен",
+    "chatRefreshedSuccessfully": "Чат успешно обновлен.",
+    "errorRefreshingChat": "Ошибка при обновлении чата:",
+    "failedToRefreshChat": "Не удалось обновить чат.",
+    "sendingMessage": "Отправка сообщения:",
+    "attention": "Внимание",
+    "error": "Ошибка",
+    "choiceOptions": "Варианты выбора:",
+    "choiceOptionsFromLastMessage": "Варианты (из последнего сообщения):",
+    "messagesRetrieved": "Сообщения получены:",
+    "newMessage": "Новое сообщение:",
+    "unknownMessageType": "Неизвестный тип сообщения:",
+    "webSocketConnectionEstablished": "WebSocket-соединение установлено.",
+    "webSocketConnectionClosed": "WebSocket-соединение закрыто.",
+    "webSocketError": "Ошибка WebSocket:",
+    "pageIsVisibleCheckingWSConnection": "Страница активна. Проверяем соединение...",
+    "pageIsHiddenPausingUpdates": "Страница скрыта. Обновления приостановлены.",
+    "windowInFocus": "Окно в фокусе",
+    "webSocketIsNotOpenReconnecting": "WebSocket не открыт. Переподключаемся..."
+  },
+
+  "knowledgeBase": {
+    "addTopic": "Добавить тему",
+    "removeTopic": "Удалить тему",
+    "addSubtopic": "Добавить подтему",
+    "removeSubtopic": "Удалить подтему",
+    "addQuestion": "Добавить вопрос",
+    "removeQuestion": "Удалить вопрос",
+    "renameTopic": "Переименовать тему",
+    "renameSubtopic": "Переименовать подтему",
+    "saveChanges": "Сохранить изменения",
+    "discardChanges": "Отменить изменения",
+    "exportData": "Экспорт данных",
+    "importData": "Импорт данных",
+    "clearPlayground": "Очистить рабочее пространство",
+    "confirmRemoveTopic": "Удалить тему \"{topicName}\"?",
+    "confirmRemoveSubtopic": "Удалить подтему \"{subtopicName}\" из \"{topicName}\"?",
+    "confirmRemoveQuestion": "Удалить вопрос \"{questionKey}\"?",
+    "unsavedChangesWarning": "У вас есть несохраненные изменения. Вы уверены, что хотите уйти?",
+    "label": {
+      "promptTextarea": "Поле запроса",
+      "question": "Вопрос",
+      "answerText": "Текст ответа",
+      "linksFiles": "Ссылки / Файлы",
+      "selectedFiles": "Выбранные файлы"
+    },
+    "button": {
+      "howToUse": "Как использовать этот инструмент?",
+      "generateSmartChange": "Сгенерировать умное изменение",
+      "openTestChat": "Открыть тестовый чат",
+      "clearPlayground": "Очистить рабочее пространство",
+      "addTopic": "Добавить тему",
+      "addSubtopic": "Добавить подтему",
+      "addQuestion": "Добавить вопрос",
+      "addLink": "Добавить ссылку",
+      "savePlayground": "Сохранить рабочее пространство",
+      "rejectPlayground": "Отклонить рабочее пространство",
+      "transferToDatabase": "Перенести в базу данных",
+      "exportJson": "Экспортировать JSON",
+      "importJson": "Импортировать JSON"
+    },
+    "header": {
+      "workspacePlayground": "Рабочее пространство",
+      "readonlyKnowledgeBase": "База знаний (только для чтения)"
+    }
+  }
+}

@@ -2,7 +2,6 @@ import { defineNuxtConfig } from "nuxt/config";
 import Aura from "@primeuix/themes/aura";
 import { definePreset } from "@primeuix/themes";
 
-
 const MyPreset = definePreset(Aura, {
   semantic: {
     colorScheme: {
@@ -13,24 +12,24 @@ const MyPreset = definePreset(Aura, {
           hoverColor: "var(--tw-color-primary-light)",
           activeColor: "var(--tw-color-primary-dark)",
           // Optional extra mapping:
-          header: "var(--tw-color-primary-header)"
+          header: "var(--tw-color-primary-header)",
         },
         highlight: {
           background: "var(--tw-color-secondary)",
           focusBackground: "var(--tw-color-secondary-dark)",
           color: "var(--tw-color-white)",
-          focusColor: "var(--tw-color-white)"
+          focusColor: "var(--tw-color-white)",
         },
         // Additional mappings based on your Tailwind theme:
         accent: {
           color: "var(--tw-color-accent)",
-          dark: "var(--tw-color-accent-dark)"
+          dark: "var(--tw-color-accent-dark)",
         },
         neutral: {
           color: "var(--tw-color-neutral)",
           dark: "var(--tw-color-neutral-dark)",
-          light: "var(--tw-color-neutral-light)"
-        }
+          light: "var(--tw-color-neutral-light)",
+        },
       },
       dark: {
         primary: {
@@ -38,26 +37,26 @@ const MyPreset = definePreset(Aura, {
           inverseColor: "var(--tw-color-white)",
           hoverColor: "var(--tw-color-primary-light)",
           activeColor: "var(--tw-color-primary-dark)",
-          header: "var(--tw-color-primary-header)"
+          header: "var(--tw-color-primary-header)",
         },
         highlight: {
           background: "var(--tw-color-secondary)",
           focusBackground: "var(--tw-color-secondary-dark)",
           color: "var(--tw-color-white)",
-          focusColor: "var(--tw-color-white)"
+          focusColor: "var(--tw-color-white)",
         },
         accent: {
           color: "var(--tw-color-accent)",
-          dark: "var(--tw-color-accent-dark)"
+          dark: "var(--tw-color-accent-dark)",
         },
         neutral: {
           color: "var(--tw-color-neutral)",
           dark: "var(--tw-color-neutral-dark)",
-          light: "var(--tw-color-neutral-light)"
-        }
-      }
-    }
-  }
+          light: "var(--tw-color-neutral-light)",
+        },
+      },
+    },
+  },
 });
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -126,7 +125,21 @@ export default defineNuxtConfig({
   },
 
   i18n: {
-    vueI18n: "./i18n.config.ts", // if you are using custom path, default
+    defaultLocale: "en",
+    locales: [
+      { code: "en", name: "English", file: "en.json" }, // English
+      { code: "pl", name: "Polski", file: "pl.json" }, // Polish
+      { code: "ru", name: "Русский", file: "ru.json" }, // Russian
+      { code: "uk", name: "Українська", file: "uk.json" }, // Ukrainian
+      { code: "ka", name: "ქართული", file: "ka.json" }, // Georgian
+    ],
+
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: "i18n_redirected",
+      alwaysRedirect: false,
+      fallbackLocale: "en",
+    },
   },
 
   pinia: {
@@ -169,10 +182,9 @@ export default defineNuxtConfig({
       theme: {
         preset: MyPreset,
         options: {
-            darkModeSelector: '.dark',
-        }
-    }
-      
+          darkModeSelector: ".dark",
+        },
+      },
     },
     //  cssLayerOrder: "reset, primevue, tailwind-base, tailwind-utilities",
     components: {

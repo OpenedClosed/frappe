@@ -1,0 +1,168 @@
+{
+  "chat": "ჩატი",
+  "newChat": "ახალი ჩატი",
+  "showCommands": "ბრძანებების ჩვენება",
+  "sendMessage": "შეიყვანეთ შეტყობინება...",
+  "chatAgain": "ხელახლა ჩატი",
+  "language": "ენა",
+  "roomActions": [
+    {
+      "name": "archiveRoom",
+      "title": "ჩატის არქივირება"
+    }
+  ],
+  "buttons": {
+    "save": "შენახვა",
+    "cancel": "გაუქმება",
+    "close": "დახურვა",
+    "delete": "წაშლა",
+    "edit": "რედაქტირება",
+    "add": "დამატება",
+    "remove": "ამოშლა",
+    "create": "შექმნა",
+    "send": "გაგზავნა",
+    "back": "დაბრუნება",
+    "next": "შემდეგი",
+    "finish": "დასრულება",
+    "confirm": "დადასტურება",
+    "search": "ძიება",
+    "clear": "გასუფთავება",
+    "select": "არჩევა",
+    "copy": "კოპირება",
+    "openTestChat": "სატესტო ჩატის გახსნა"
+  },
+  "menuActions": [
+    {
+      "name": "inviteUser",
+      "title": "მომხმარებლის მოწვევა"
+    },
+    {
+      "name": "removeUser",
+      "title": "მომხმარებლის წაშლა"
+    },
+    {
+      "name": "deleteRoom",
+      "title": "ოთახის წაშლა"
+    }
+  ],
+  "messageActions": [
+    {
+      "name": "replyMessage",
+      "title": "პასუხი"
+    },
+    {
+      "name": "editMessage",
+      "title": "შეტყობინების რედაქტირება",
+      "onlyMe": true
+    },
+    {
+      "name": "deleteMessage",
+      "title": "შეტყობინების წაშლა",
+      "onlyMe": true
+    },
+    {
+      "name": "selectMessages",
+      "title": "არჩევა"
+    }
+  ],
+  "messageSelectionActions": [
+    {
+      "name": "deleteMessages",
+      "title": "წაშლა"
+    },
+    {
+      "name": "forwardMessages",
+      "title": "გადაგზავნა"
+    }
+  ],
+  "templatesText": [
+    {
+      "tag": "help",
+      "text": "ეს არის დახმარება"
+    },
+    {
+      "tag": "action",
+      "text": "ეს არის ქმედება"
+    }
+  ],
+  "textMessages": {
+    "ROOMS_EMPTY": "საუბრები არ არის",
+    "ROOM_EMPTY": "საუბარი არ არის არჩეული",
+    "NEW_MESSAGES": "ახალი შეტყობინებები",
+    "MESSAGE_DELETED": "ეს შეტყობინება წაიშალა",
+    "MESSAGES_EMPTY": "შეტყობინებები არ არის",
+    "CONVERSATION_STARTED": "საუბარი დაიწყო:",
+    "TYPE_MESSAGE": "შეიყვანეთ თქვენი შეტყობინება",
+    "SEARCH": "ძიება",
+    "IS_ONLINE": "ონლაინ",
+    "LAST_SEEN": "ბოლოს ნანახი ",
+    "IS_TYPING": "ბეჭდავს...",
+    "CANCEL_SELECT_MESSAGE": "მონიშვნის გაუქმება"
+  },
+  "additionalMessages": {
+    "chatRefreshed": "ჩატი განახლდა",
+    "chatRefreshedSuccessfully": "ჩატი წარმატებით განახლდა.",
+    "errorRefreshingChat": "შეცდომა ჩატის განახლების დროს:",
+    "failedToRefreshChat": "ჩატის განახლება ვერ მოხერხდა.",
+    "sendingMessage": "შეტყობინების გაგზავნა:",
+    "attention": "ყურადღება",
+    "error": "შეცდომა",
+    "choiceOptions": "არჩევის ვარიანტები:",
+    "choiceOptionsFromLastMessage": "არჩევის ვარიანტები (ბოლო შეტყობინებიდან):",
+    "messagesRetrieved": "შეტყობინებები მიღებულია:",
+    "newMessage": "ახალი შეტყობინება:",
+    "unknownMessageType": "უცნობი შეტყობინების ტიპი:",
+    "webSocketConnectionEstablished": "WebSocket კავშირი დამყარდა.",
+    "webSocketConnectionClosed": "WebSocket კავშირი დაიხურა.",
+    "webSocketError": "WebSocket შეცდომა:",
+    "pageIsVisibleCheckingWSConnection": "გვერდი ხილულია. WebSocket კავშირის შემოწმება...",
+    "pageIsHiddenPausingUpdates": "გვერდი დამალულია. განახლებები შეჩერებულია.",
+    "windowInFocus": "ფანჯარა ფოკუსშია",
+    "webSocketIsNotOpenReconnecting": "WebSocket არ არის გახსნილი. კავშირი აღდგება..."
+  },
+  "knowledgeBase": {
+    "addTopic": "თემის დამატება",
+    "removeTopic": "თემის წაშლა",
+    "addSubtopic": "ქვეჯგუფის დამატება",
+    "removeSubtopic": "ქვეჯგუფის წაშლა",
+    "addQuestion": "კითხვის დამატება",
+    "removeQuestion": "კითხვის წაშლა",
+    "renameTopic": "თემის გადარქმევა",
+    "renameSubtopic": "ქვეჯგუფის გადარქმევა",
+    "saveChanges": "ცვლილებების შენახვა",
+    "discardChanges": "ცვლილებების გაუქმება",
+    "exportData": "მონაცემების ექსპორტი",
+    "importData": "მონაცემების იმპორტი",
+    "clearPlayground": "სამუშაო სივრცის გასუფთავება",
+    "confirmRemoveTopic": "წაიშალოს თემა \"{topicName}\"?",
+    "confirmRemoveSubtopic": "წაიშალოს ქვეჯგუფი \"{subtopicName}\" თემიდან \"{topicName}\"?",
+    "confirmRemoveQuestion": "წაიშალოს კითხვა \"{questionKey}\"?",
+    "unsavedChangesWarning": "თქვენ გაქვთ შეუნახავი ცვლილებები. ნამდვილად გსურთ გასვლა?",
+    "label": {
+      "promptTextarea": "საკითხის ველი",
+      "question": "კითხვა",
+      "answerText": "პასუხის ტექსტი",
+      "linksFiles": "ბმულები / ფაილები",
+      "selectedFiles": "არჩეული ფაილები"
+    },
+    "button": {
+      "howToUse": "როგორ გამოვიყენოთ ეს ინსტრუმენტი?",
+      "generateSmartChange": "ჭკვიანი ცვლილების გენერაცია",
+      "openTestChat": "სატესტო ჩატის გახსნა",
+      "clearPlayground": "სამუშაო სივრცის გასუფთავება",
+      "addTopic": "თემის დამატება",
+      "addSubtopic": "ქვეჯგუფის დამატება",
+      "addQuestion": "კითხვის დამატება",
+      "addLink": "ბმულის დამატება",
+      "savePlayground": "სამუშაო სივრცის შენახვა",
+      "rejectPlayground": "სამუშაო სივრცის უარყოფა",
+      "transferToDatabase": "ბაზაში გადატანა",
+      "exportJson": "JSON ექსპორტი",
+      "importJson": "JSON იმპორტი"
+    },
+    "header": {
+      "workspacePlayground": "სამუშაო სივრცე",
+      "readonlyKnowledgeBase": "ცოდნის ბაზა (მხოლოდ კითხვადი)"
+    }
+  }
+}

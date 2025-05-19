@@ -3,7 +3,13 @@
     <Menubar class="rounded-none bg-primaryHeader outline-none border-none">
       <template #start>
         <div class="flex flex-row items-center justify-between">
-          <Button text icon="pi pi-bars color-black dark:color-white" class="xl:!hidden !block" @click="isSidebarOpen = true" aria-label="Menu" />
+          <Button
+            text
+            icon="pi pi-bars color-black dark:color-white"
+            class="xl:!hidden !block"
+            @click="isSidebarOpen = true"
+            aria-label="Menu"
+          />
           <div v-if="currentPageName === 'admin'" class="flex items-center justify-center md:justify-start ml-2">
             <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto block dark:hidden" />
             <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto hidden dark:block" />
@@ -15,6 +21,18 @@
       </template>
       <template #end>
         <div class="flex items-center gap-2">
+          <Dropdown
+            v-model="selectedLocale"
+            :options="languageOptions"
+            optionLabel="name"
+            optionValue="code"
+            class="min-w-42 text-sm"
+            @change="onLocaleChange($event.value)"
+            :pt="{
+              input: { class: 'bg-transparent text-white border-none' },
+              panel: { class: 'min-w-[10rem]' },
+            }"
+          />
           <Button
             text
             :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
@@ -34,11 +52,11 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useI18n } from "#imports";
 import Theme from "~/components/Dashboard/Components/Theme.vue";
 
-
 const { isSidebarOpen } = useSidebarState();
-const { currentPageName } = usePageState()
+const { currentPageName } = usePageState();
 // Initialize the color mode
 const colorMode = useColorMode();
 
@@ -58,7 +76,6 @@ function updateTheme() {
   // themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
   // //console.log(themeLink)
 }
-
 
 // Logout function with API request
 async function onLogout() {
@@ -117,7 +134,6 @@ const toggle = (event) => {
   menu.value.toggle(event);
 };
 
-
 const userData = await useAsyncData("userData", getUserData);
 
 if (userData.data) {
@@ -129,7 +145,7 @@ if (userData.data) {
 function setData(data) {
   if (data) {
     console.log("userData data= ", data);
-    if (data){
+    if (data) {
       userName.value = `${data.username}`;
     }
   }
@@ -151,4 +167,18 @@ async function getUserData() {
   return responseData;
 }
 
+const { locale, locales, setLocale, setLocaleCookie } = useI18n()
+
+const selectedLocale = ref(locale.value)
+
+const languageOptions = locales.value.map((l) => ({
+  code: l.code,
+  name: l.name || l.code.toUpperCase(),
+}))
+
+function onLocaleChange(code) {
+  setLocale(code)
+  setLocaleCookie(code)
+  selectedLocale.value = code
+}
 </script>
