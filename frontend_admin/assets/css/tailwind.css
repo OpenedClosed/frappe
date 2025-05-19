@@ -386,45 +386,6 @@
   background-color: #fff;
 }
 
-/* Override PrimeVue Toast Error background */
-.p-toast-message-error {
-  background-color: #dc3545 !important; /* Solid red for error toast */
-  opacity: 1 !important; /* Ensure full opacity */
-  box-shadow: none !important; /* Optional: Remove shadow */
-  border: 1px solid #a71d2a; /* Optional: Add a darker border */
-  border-radius: 0px;
-}
-
-/* Customize the text color for better contrast on red */
-.p-toast-message-error .p-toast-summary,
-.p-toast-message-error .p-toast-detail {
-  color: #fff; /* White text for contrast */
-}
-
-/* Customize the close button */
-.p-toast-message-error .p-toast-icon-close {
-  color: #fff; /* Set close button to white */
-}
-
-/* Override PrimeVue Toast Success background */
-.p-toast-message-success {
-  background-color: #28a745 !important; /* Solid green color for success toast */
-  opacity: 1 !important; /* Ensure full opacity */
-  box-shadow: none !important; /* Optional: Remove shadow */
-  border: 1px solid #1e7e34; /* Optional: Add a darker border */
-  border-radius: 6px;
-}
-
-/* Customize the text color for better contrast on green */
-.p-toast-message-success .p-toast-summary,
-.p-toast-message-success .p-toast-detail {
-  color: #fff; /* White text for contrast */
-}
-
-/* Customize the close button for success toast */
-.p-toast-message-success .p-toast-icon-close {
-  color: #fff; /* Set close button to white */
-}
 
 .vac-chat-container .vac-rooms-container {
   display: none !important;

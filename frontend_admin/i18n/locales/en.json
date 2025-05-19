@@ -296,10 +296,58 @@
     "bonusPrefix": "Bonuses:",
     "actions": "Actions",
     "logout": "Logout",
-    "adminPanel": "Admin panel"
+    "adminPanel": "Admin panel",
+    "changeTheme": "Change theme"
   },
   "NavigationSidebarTabs": {
     "support": "Support"
+  },
+  "PatientsHealthSurveyView": {
+    "title": "Health survey",
+    "subtitle": "User medical information",
+
+    "allergies": "Allergies:",
+    "chronic": "Chronic conditions:",
+    "smoking": "Smoking status:",
+    "medications": "Current medications:",
+    "lastUpdate": "Last update:",
+    "noData": "No data",
+    "dash": "—"
+  },
+  "PatientsMainInfoView": {
+    "sectionTitle": "Basic information",
+
+    "blockPersonal": "Personal data",
+    "lastName": "Last name:",
+    "firstName": "First name:",
+    "patronymic": "Middle name:",
+    "birthDate": "Birth date:",
+    "gender": "Gender:",
+
+    "blockCompany": "Company information",
+    "companyName": "Company name:",
+
+    "blockSystem": "System information",
+    "patientId": "Patient ID:",
+    "createdAt": "Created at:",
+    "updatedAt": "Last update:",
+
+    "invalidDate": "Invalid date",
+    "dash": "—"
+  },
+  "PointsTable": {
+    "balanceCard": "Bonus account",
+    "balanceSubtitle": "User bonus information",
+    "currentBalance": "Current balance:",
+    "referralCode": "Referral code:",
+    "lastUpdate": "Last update",
+
+    "transactionsCard": "Transaction history",
+    "transactionsSubtitle": "Latest bonus operations",
+
+    "toastTitle": "Code copied",
+    "toastBody": "Referral code copied to clipboard!",
+    "tooltipCopy": "Copy referral code"
   },
 
   "additionalMessages": {

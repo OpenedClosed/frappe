@@ -164,6 +164,11 @@ const menuOpen = ref(false);
 
 // Use a computed property for the menu items so that the icon updates reactively.
 const items = computed(() => [
+   {
+      label: t('InfoHeader.changeTheme'),
+      icon: colorMode.preference === "dark" ? "pi pi-sun" : "pi pi-moon",
+      command: toggleTheme,
+    },
   {
     label: t('InfoHeader.logout'),
     icon: "pi pi-power-off",
@@ -180,6 +185,7 @@ if (isAdmin.value) {
     },
   });
 }
+
 
 // Toggle the TieredMenu popup
 const toggle = (event) => {
