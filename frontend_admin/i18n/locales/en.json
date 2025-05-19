@@ -239,6 +239,68 @@
     "created": "Inline item created!",
     "createError": "Error creating inline item."
   },
+  "MainForm": {
+    "createPrefix": "Creating new record",
+    "detailPrefix": "Record details",
+    "loading": "Loading data…",
+
+    "edit": "Edit",
+    "save": "Save",
+    "delete": "Delete",
+    "create": "Create record",
+    "openChat": "Open chat",
+    "backToList": "Back to list",
+    "backToRecord": "Back to record",
+
+    "confirmDelete": "Are you sure you want to delete this record?",
+
+    "noChanges": "There are no changes to save.",
+    "created": "Record created",
+    "deleted": "Record deleted",
+    "updateError": "Error saving changes.",
+    "createError": "Error creating record.",
+    "deleteError": "Error deleting record.",
+    "unknownError": "Unknown error"
+  },
+  "AgreesPanel": {
+    "title": "User consents",
+    "subtitle": "Information about user consents"
+  },
+  "ContactInfoView": {
+    "title": "Contact information",
+
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "pesel": "PESEL / Identifier",
+
+    "emergency": "Emergency contact",
+    "docId": "Document ID",
+    "lastUpdate": "Last update",
+
+    "invalidDate": "Invalid date",
+    "dash": "—"
+  },
+  "FamilyTable": {
+    "addMember": "Add family member",
+    "idPrefix": "ID:",
+    "nameUnknown": "Name not set",
+    "relationshipUnknown": "Relationship not set",
+    "statusUnknown": "Status not set",
+    "bonusSuffix": "bonus points",
+    "noBonus": "No bonuses",
+    "editAria": "Edit"
+  },
+  "InfoHeader": {
+    "patientIdPrefix": "Patient ID:",
+    "bonusPrefix": "Bonuses:",
+    "actions": "Actions",
+    "logout": "Logout",
+    "adminPanel": "Admin panel"
+  },
+  "NavigationSidebarTabs": {
+    "support": "Support"
+  },
 
   "additionalMessages": {
     "chatRefreshed": "Chat Refreshed",

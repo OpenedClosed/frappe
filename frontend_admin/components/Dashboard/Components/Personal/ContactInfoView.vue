@@ -1,7 +1,7 @@
 <template>
     <div class="p-4 rounded border bg-white dark:bg-secondaryDark shadow-sm">
       <!-- Заголовок страницы -->
-      <h1 class="text-xl font-bold mb-6">Контактная информация</h1>
+      <h1 class="text-xl font-bold mb-6">{{ t('ContactInfoView.title') }}</h1>
   
       <!-- Контейнер, разбивающий на 2 колонки -->
       <div class="flex flex-row gap-8">
@@ -10,7 +10,7 @@
           <!-- Email -->
           <div>
             <label class="block text-[13px] font-normal ">
-              Email
+              {{ t('ContactInfoView.email') }}
             </label>
             <span class="text-[15px] font-normal">
               {{ itemData.email }}
@@ -20,7 +20,7 @@
           <!-- Phone -->
           <div>
             <label class="block text-[13px] font-normal ">
-              Телефон
+              {{ t('ContactInfoView.phone') }}
             </label>
             <span class="text-[15px] font-bold">
               {{ itemData.phone }}
@@ -30,7 +30,7 @@
           <!-- Address -->
           <div>
             <label class="block text-[13px] font-normal ">
-              Адрес
+              {{ t('ContactInfoView.address') }}
             </label>
             <span class="text-[15px] font-normal">
               {{ itemData.address }}
@@ -40,7 +40,7 @@
           <!-- PESEL -->
           <div>
             <label class="block text-[13px] font-normal ">
-              PESEL / Идентификатор
+              {{ t('ContactInfoView.pesel') }}
             </label>
             <span class="text-[15px] font-normal">
               {{ itemData.pesel }}
@@ -53,7 +53,7 @@
           <!-- Emergency Contact -->
           <div>
             <label class="block text-[13px] font-normal ">
-              Экстренный контакт
+              {{ t('ContactInfoView.emergency') }}
             </label>
             <span class="text-[15px] font-bold">
               {{ itemData.emergency_contact }}
@@ -63,7 +63,7 @@
           <!-- Document ID -->
           <div>
             <label class="block text-[13px] font-normal ">
-              ID документа
+             {{ t('ContactInfoView.emergency') }}
             </label>
             <span class="text-[15px] font-normal">
               {{ itemData.doc_id }}
@@ -73,7 +73,7 @@
           <!-- Last Update -->
           <div>
             <label class="block text-[12px] font-normal ">
-              Последнее обновление
+             	{{ t('ContactInfoView.lastUpdate') }}
             </label>
             <span class="text-[14px] font-normal text-[#4F4F59]">
               {{ formatDate(itemData.updated_at) }}
@@ -86,7 +86,8 @@
   
   <script setup>
   import _ from 'lodash'
-
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
   /**
    * Props for receiving data from the parent component
    */

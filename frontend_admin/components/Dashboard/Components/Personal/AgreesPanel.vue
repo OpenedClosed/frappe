@@ -1,8 +1,8 @@
 <template>
   <div class="p-6 border rounded-lg shadow-sm bg-white dark:bg-secondaryDark">
     <!-- Заголовок и описание -->
-    <h2 class="text-xl font-semibold mb-1">Согласия пользователя</h2>
-    <p class=" mb-4">Информация о согласиях пользователя</p>
+    <h2 class="text-xl font-semibold mb-1">{{ t('AgreesPanel.title') }}</h2>
+    <p class=" mb-4">{{ t('AgreesPanel.subtitle') }}</p>
 
     <!-- Список согласий -->
     <ul>
@@ -21,6 +21,9 @@
 
 <script setup>
 import { defineProps, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
+
 
 const props = defineProps({
   itemData: {

@@ -5,14 +5,14 @@
     <div v-if="isForm" class="p-4">
       <!-- {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }} -->
       <h2 class="text-xl font-bold mb-4">
-        {{ isNewItem ? "Создание новой записи" : "Детальная запись" }}: {{ entityTitle[currentLanguage] || entityTitle?.en || " " }}
+        {{ isNewItem ? t('MainForm.createPrefix') : t('MainForm.detailPrefix') }}: {{ entityTitle[currentLanguage] || entityTitle?.en || " " }}
       </h2>
 
       <!-- Global error -->
       <!-- <div v-if="errorMessage" class="my-2 p-2 bg-red-100 text-red-700 rounded">
         {{ errorMessage }}
       </div> -->
-      <p v-if="isLoading">Загрузка данных...</p>
+      <p v-if="isLoading">{{ t('MainForm.loading') }}</p>
 
       <div v-else>
         <!-- DynamicForm component -->
@@ -68,22 +68,22 @@
           <!-- Existing item: edit, save and delete -->
           <template v-if="!isNewItem">
             <!-- Show edit/save only if update is allowed -->
-            <Button v-if="isReadOnly && allowCrudActions.update" label="Редактировать" icon="pi pi-pencil" @click="toggleEditMode" />
-            <Button v-else-if="!isReadOnly && allowCrudActions.update" label="Сохранить" icon="pi pi-save" @click="saveItem" />
+            <Button v-if="isReadOnly && allowCrudActions.update" :label="t('MainForm.edit')" icon="pi pi-pencil" @click="toggleEditMode" />
+            <Button v-else-if="!isReadOnly && allowCrudActions.update"	:label="t('MainForm.save')" icon="pi pi-save" @click="saveItem" />
             <!-- Show delete button only if delete is allowed -->
-            <Button v-if="allowCrudActions.delete" label="Удалить" icon="pi pi-trash" class="p-button-danger" @click="deleteItem" />
+            <Button v-if="allowCrudActions.delete" :label="t('MainForm.delete')" icon="pi pi-trash" class="p-button-danger" @click="deleteItem" />
           </template>
 
           <!-- New record: create -->
-          <Button v-else-if="allowCrudActions.create" label="Создать запись" icon="pi pi-check" @click="createItem" />
+          <Button v-else-if="allowCrudActions.create" :label="t('MainForm.create')" icon="pi pi-check" @click="createItem" />
 
           <!-- Special button for chat_sessions entity -->
-          <Button v-if="currentEntity === 'chat_sessions'" label="Открыть чат" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
+          <Button v-if="currentEntity === 'chat_sessions'" :label="t('MainForm.openChat')" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
 
           <!-- Navigation: go back to list -->
           <Button
             v-if="currentPageInstances > 1 || currentPageInstances === null"
-            label="Назад к списку"
+            :label="t('MainForm.backToList')"
             icon="pi pi-arrow-left"
             class="p-button-text"
             @click="goBack"
@@ -96,7 +96,7 @@
     <div v-else class="flex flex-col justify-between">
       <EmbeddedChat v-if="itemData.chat_id" :id="itemData.chat_id" :user_id="itemData.client[0].client_id || null" />
       <div class="w-full mt-4">
-        <Button label="Назад к записи" icon="pi pi-arrow-left" @click="goToFormView" />
+        <Button :label="t('MainForm.backToList')" icon="pi pi-arrow-left" @click="goToFormView" />
       </div>
     </div>
   </div>
@@ -114,6 +114,8 @@ import PointsTable from "~/components/Dashboard/Components/Personal/PointsTable.
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter, useAsyncData } from "#imports";
 import _ from "lodash";
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 // ------------------ State & Refs ------------------
 const route = useRoute();
@@ -368,7 +370,7 @@ async function createItem() {
 }
 
 async function deleteItem() {
-  const confirmation = confirm("Вы действительно хотите удалить эту запись?");
+  const confirmation = confirm(t('MainForm.confirmDelete'))
   if (!confirmation) return;
 
   errorMessage.value = "";
