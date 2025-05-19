@@ -16,16 +16,14 @@
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-folder-open text-[14px] 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-[10px] 2xl:text-xl">Context sources</h2>
+                  <i class="pi pi-database text-[14px] 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-[10px] 2xl:text-xl">{{ t('KnowledgeBase.contextSources') }}</h2>
                 </div>
                 <div class="flex justify-center items-center">
                   <i
                     class="pi pi-info-circle text-base cursor-pointer text-xl"
                     v-tooltip.right="
-                      'Context sources are the files, links, or text that the bot uses to answer questions. \
-       You can add, remove, or edit them as needed.  \
-       The bot will use the most relevant sources to provide accurate answers.'
+                      t('KnowledgeBase.contextInfoTip')
                     "
                   />
                 </div>
@@ -38,22 +36,20 @@
                     <InputText
                       v-model="searchTerm"
                       icon="pi pi-search"
-                      placeholder="Search of sources…"
+                      :placeholder="t('KnowledgeBase.searchPlaceholder')"
                       class="w-full"
-                      v-tooltip.bottom="
-                        'Search by source name.  Enter part of a file name, web page or text document to search through the list.'
-                      "
+                      v-tooltip.bottom="t('KnowledgeBase.searchTip')"
                     />
                   </IconField>
                 </div>
 
                 <!-- добавить -->
                 <Button
-                  label="Add context"
+                  :label="t('KnowledgeBase.addContext')"
                   icon="pi pi-plus"
                   class=""
                   @click="openContextDialog"
-                  v-tooltip.bottom="'Import a new data source: file, web page or text.'"
+                 v-tooltip.bottom="t('KnowledgeBase.addContextTip')"
                 />
               </header>
 
@@ -220,9 +216,9 @@
 
                       <!-- ░░ ACTIONS ░░ -->
                       <div class="flex justify-between items-center gap-2 mt-4">
-                        <span>Total sources: {{ totalSources }}/{{ MAX_SOURCES }}</span>
+                        <span>{{ t('KnowledgeBase.totalSources') }} {{ totalSources }}/{{ MAX_SOURCES }}</span>
                         <div class="flex items-center gap-2">
-                          <Button label="Cancel" class="p-button-text" @click="showContextDialog = false" />
+                          <Button :label="t('KnowledgeBase.exportCancel')" class="p-button-text" @click="showContextDialog = false" />
                           <Button
                             label="Add"
                             icon="pi pi-check"
@@ -241,8 +237,8 @@
             <header
               class="flex items-center justify-between px-4 py-2 text-[15px] font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-t border-secondaryDark"
             >
-              <span>Total sources: {{ totalSources }}/{{ MAX_SOURCES }}</span>
-              <span>Selected: {{ selectedSources }}</span>
+              <span>{{ t('KnowledgeBase.totalSources') }} {{ totalSources }}/{{ MAX_SOURCES }}</span>
+              <span>	{{ t('KnowledgeBase.selectedSources') }} {{ selectedSources }}</span>
             </header>
 
             <section class="flex flex-col flex-1 overflow-y-auto">
@@ -251,7 +247,7 @@
               >
                 <div class="flex items-center gap-2">
                   <i class="pi pi-pencil text-sm 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-sm 2xl:text-xl">Query field</h2>
+                  <h2 class="font-semibold text-sm 2xl:text-xl">	{{ t('KnowledgeBase.queryField') }}</h2>
                 </div>
                 <div class="flex justify-center items-center gap-2">
                   <Dropdown
@@ -260,15 +256,11 @@
                     optionLabel="label"
                     optionValue="value"
                     class="w-full text-sm 2xl:text-xl"
-                    placeholder="Select AI Model"
+                   	:placeholder="t('KnowledgeBase.aiModelPlaceholder')"
                   />
                   <i
                     class="pi pi-info-circle text-base cursor-pointer text-xl"
-                    v-tooltip.right="
-                      'Query field is where you can enter your question or request.  \
-       The AI will use the context sources to provide a relevant answer.  \
-       You can also use the \'Generate smart change\' button to create a new context based on your input.'
-                    "
+                    v-tooltip.right="t('KnowledgeBase.queryFieldTip')"
                   />
                 </div>
               </header>
@@ -278,10 +270,10 @@
                 <section class="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2">
                   <header class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
-                      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Request History</h2>
+                      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">{{ t('KnowledgeBase.requestHistory') }}</h2>
                     </div>
                     <button type="button" class="self-start text-red-600 text-sm underline" @click="clearRequestHistory">
-                      Clear History
+                     {{ t('KnowledgeBase.clearHistory') }}
                     </button>
                   </header>
 
@@ -292,12 +284,12 @@
                       type="button"
                       class="text-sm text-left px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                       @click="reuseRequest(item)"
-                      v-tooltip.bottom="'Reuse this request'"
+                     	v-tooltip.bottom="t('KnowledgeBase.reuseTip')"
                     >
                       {{ item.length > 40 ? item.slice(0, 40) + "…" : item }}
                     </button>
                   </div>
-                  <div v-else class="text-sm text-gray-500 dark:text-gray-400">No previous requests found.</div>
+                  <div v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('KnowledgeBase.noHistory') }}</div>
                 </section>
 
                 <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 gap-2">
@@ -309,15 +301,11 @@
                       autoResize
                       id="promptTextArea"
                       class="w-full"
-                      placeholder="Type here..."
+                     :placeholder="t('KnowledgeBase.typeHere')"
                       required
                       v-model="promptText"
                       size="small"
-                      v-tooltip.bottom="
-                        'Write here what the AI assistant should do with your data.  \
-     Example: “Highlight the main services from my website and create questions and answers for them”.  \
-     Press send button to convert selected sources into a structured knowledge base.'
-                      "
+                      v-tooltip.bottom="t('KnowledgeBase.typeHereTip')"
                     />
                     <Button
                       type="submit"
@@ -342,8 +330,8 @@
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-folder-open text-[14px] 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-[8px] 2xl:text-xl">Playground</h2>
+                  <i class="pi pi-sliders-h text-[14px] 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-[8px] 2xl:text-xl">{{t('KnowledgeBase.playgroundHeader')}}</h2>
                 </div>
 
                 <div class="flex justify-center items-center gap-4">
@@ -560,14 +548,14 @@
                   <!-- иконка -->
                   <i class="pi pi-th-large text-gray-500 dark:text-gray-400 text-5xl mb-6" />
                   <!-- заголовок -->
-                  <h3 class="text-2xl font-semibold text-gray-500 dark:text-gray-300 mb-2">Playground пуст</h3>
+                  <h3 class="text-2xl font-semibold text-gray-500 dark:text-gray-300 mb-2">	{{ t('KnowledgeBase.playgroundEmpty') }}</h3>
                   <!-- подпись -->
                   <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
-                    Импортируйте контент из левой панели или&nbsp;создайте новый блок
+                   {{ t('KnowledgeBase.playgroundEmptyBody') }}
                   </p>
                   <!-- кнопка -->
                   <Button
-                    label="Создать блок"
+                    :label="t('KnowledgeBase.createBlock')"
                     icon="pi pi-plus"
                     class="px-10 py-3 text-lg font-semibold bg-gray-900 border-0"
                     @click="
@@ -583,14 +571,14 @@
                 <div class="flex flex-row justify-between gap-2 my-2">
                   <Button
                     :disabled="isLoading"
-                    label="Reject"
+                    :label="t('KnowledgeBase.reject')"
                     icon="pi pi-times"
                     class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300"
                     @click="rejectPlayground"
                   />
                   <Button
                     :disabled="isLoading || !isEditMode"
-                    label="Save"
+                    :label="t('KnowledgeBase.save')"
                     icon="pi pi-save"
                     class="p-button-sm flex-1"
                     @click="savePlayground"
@@ -602,7 +590,7 @@
 
                   <Button
                     :disabled="(isLoading || !hasChanges) && isEditMode"
-                    label="Publish"
+                    :label="t('KnowledgeBase.publish')"
                     icon="pi pi-save"
                     class="p-button-sm flex-1"
                     @click="saveChanges"
@@ -626,8 +614,8 @@
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-folder-open text-[14px] 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-[10px] 2xl:text-xl">Knowledge base</h2>
+                  <i class="pi pi-book  text-[14px] 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-[10px] 2xl:text-xl">{{ t('KnowledgeBase.knowledgeBase') }}</h2>
                 </div>
                 <div class="flex justify-center items-center gap-4">
                   <!-- 🔍 search toggle -->
@@ -647,7 +635,7 @@
                 <InputText
                   ref="readonlySearchInput"
                   v-model="readonlySearchTerm"
-                  placeholder="Search knowledge base…"
+                 :placeholder="t('KnowledgeBase.searchKbPlaceholder')"
                   class="flex-1 w-full"
                 >
                 </InputText>
@@ -678,7 +666,7 @@
               </div>
               <div class="flex flex-row justify-between gap-2 p-4 my-2">
                 <Button
-                  label="Export"
+                 :label="t('KnowledgeBase.export')"
                   icon="pi pi-file-export"
                   class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300"
                   @click="showExportDialog = true"
@@ -693,35 +681,35 @@
     </div>
 
     <!-- 💾 Export-format picker -->
-    <Dialog v-model:visible="showExportDialog" header="Export Knowledge Base" :modal="true" :style="{ width: '25rem' }">
+    <Dialog v-model:visible="showExportDialog" 	:header="t('KnowledgeBase.exportDialogTitle')" :modal="true" :style="{ width: '25rem' }">
       <div class="flex flex-col gap-4 pt-2">
         <div class="flex items-center justify-center gap-3">
           <RadioButton v-model="exportFormat" inputId="exp-json" value="json" />
           <label for="exp-json" class="cursor-pointer flex-1">
-            <p class="font-semibold">JSON</p>
-            <p class="text-sm text-gray-500">Full structured data (recommended)</p>
+            <p class="font-semibold">{{t('KnowledgeBase.exportJson')}}</p>
+            <p class="text-sm text-gray-500">{{t('KnowledgeBase.exportJsonDesc')}}</p>
           </label>
         </div>
 
         <div class="flex items-center justify-center gap-3">
           <RadioButton v-model="exportFormat" inputId="exp-csv" value="csv" />
           <label for="exp-csv" class="cursor-pointer flex-1">
-            <p class="font-semibold">CSV</p>
-            <p class="text-sm text-gray-500">Spreadsheet-compatible format</p>
+            <p class="font-semibold">{{t('KnowledgeBase.exportCsv')}}</p>
+            <p class="text-sm text-gray-500">{{t('KnowledgeBase.exportCsvDesc')}}</p>
           </label>
         </div>
 
         <div class="flex items-center justify-center gap-3">
           <RadioButton v-model="exportFormat" inputId="exp-txt" value="txt" />
           <label for="exp-txt" class="cursor-pointer flex-1">
-            <p class="font-semibold">Plain Text</p>
-            <p class="text-sm text-gray-500">Simple human-readable format</p>
+            <p class="font-semibold">{{t('KnowledgeBase.exportTxt')}}</p>
+            <p class="text-sm text-gray-500">{{t('KnowledgeBase.exportTxtDesc')}}</p>
           </label>
         </div>
       </div>
 
       <template #footer>
-        <Button label="Cancel" class="p-button-text" @click="showExportDialog = false" />
+        <Button :label="t('KnowledgeBase.exportCancel')" class="p-button-text" @click="showExportDialog = false" />
         <Button label="Export" icon="pi pi-download" @click="exportData(exportFormat)" />
       </template>
     </Dialog>
