@@ -272,7 +272,7 @@
     "clear": "Clear date range"
   },
 
-   "DynamicDataTable": {
+  "DynamicDataTable": {
     "exportExcel": "Export to Excel",
     "create": "Create",
     "add": "Add",
@@ -286,6 +286,18 @@
     "searchTip": "Search by source name.  Enter part of a file, web page or text title to filter the list.",
     "addContext": "Add context",
     "addContextTip": "Import a new data source: file, web page or text.",
+
+    "addContextHeader": "Add context",
+
+    "titlePlaceholder": "Title",
+    "pasteTextPlaceholder": "Paste the text here…",
+
+    "uploadHeader": "Upload sources",
+    "uploadSub": "Select a file or drag it here.",
+    "uploadTypes": "Supported types: PDF, TXT, Images, DOCX, XLSX, images",
+
+    "dialogCancel": "Cancel",
+    "dialogAdd": "Add",
 
     "totalSources": "Total sources",
     "selectedSources": "Selected",
@@ -303,8 +315,6 @@
     "typeHere": "Type here…",
     "typeHereTip": "Describe what the AI assistant should do with your data…",
 
-
-
     "uploadSourcesTitle": "Upload sources",
     "uploadSourcesSubtitle": "Select a file or drag it here.",
     "uploadSourcesTypes": "Supported types: PDF, TXT, images, DOCX, XLSX",
@@ -320,22 +330,22 @@
 
     "querySmartChange": "Generate smart change",
 
-   "playgroundHeader":     "Playground",
+    "playgroundHeader": "Playground",
 
-    "addTopic":             "Add topic",
-    "addSubtopic":          "Add subtopic",
-    "addQuestion":          "Add question",
-    "addLink":              "Add link",
+    "addTopic": "Add topic",
+    "addSubtopic": "Add subtopic",
+    "addQuestion": "Add question",
+    "addLink": "Add link",
 
-    "questionLabel":        "Question:",
-    "answerTextLabel":      "Answer text:",
-    "linksFilesLabel":      "Links / Files:",
-    "selectedFilesLabel":   "Selected files:",
+    "questionLabel": "Question:",
+    "answerTextLabel": "Answer text:",
+    "linksFilesLabel": "Links / Files:",
+    "selectedFilesLabel": "Selected files:",
 
-    "topicTooltip":         "The main topic containing related subsections and questions.",
-    "subtopicTooltip":      "A section of a topic that groups related questions and answers.",
-    "questionTooltip":      "A question in the knowledge base that the bot will look for answers to.",
-    "answerTooltip":        "An answer to a question that the bot will use when formulating responses.",
+    "topicTooltip": "The main topic containing related subsections and questions.",
+    "subtopicTooltip": "A section of a topic that groups related questions and answers.",
+    "questionTooltip": "A question in the knowledge base that the bot will look for answers to.",
+    "answerTooltip": "An answer to a question that the bot will use when formulating responses.",
 
     "playgroundEmpty": "Playground is empty",
     "playgroundEmptyBody": "Import content from the left panel or create a new block.",
@@ -357,8 +367,6 @@
     "exportTxtDesc": "Plain text",
     "exportCancel": "Cancel",
 
-    "unsavedChanges": "You have unsaved changes. Do you really want to leave?",
-
     "removeTopic": "Delete topic «{topicName}»?",
     "removeSubtopic": "Delete subtopic «{subtopicName}» in «{topicName}»?",
     "removeQuestion": "Delete question «{questionKey}»?",
@@ -372,9 +380,70 @@
     "toastUpdated": "{what} updated successfully",
     "toastNotAdded": "{what} not added",
     "toastNotRemoved": "{what} not removed",
-    "toastNotUpdated": "{what} not updated"
+    "toastNotUpdated": "{what} not updated",
+
+    "ctxRenamePrompt": "Rename context",
+    "ctxRenamed": "Context name updated",
+    "ctxNotRenamed": "Context name not changed",
+
+    "ctxPurposeUpdated": "Purpose updated",
+    "ctxPurposeNotUpdated": "Purpose not updated",
+
+    "ctxLoadErr": "Cannot load context",
+    "ctxAddMax": "Maximum of {max} sources reached",
+    "ctxAdded": "Context added",
+    "ctxNotAdded": "Context not added",
+    "ctxDeleted": "Context deleted",
+    "ctxNotDeleted": "Context not deleted",
+
+    "menuRename": "Rename",
+    "menuDownload": "Download",
+    "menuDelete": "Delete",
+
+    "typeText": "Text",
+    "typeFile": "File / Photo",
+    "typeLink": "Link",
+
+    "purposeNone": "Don't use",
+    "purposeBot": "Bot knowledge",
+    "purposeKb": "Context only",
+    "purposeBoth": "Knowledge & context",
+
+    "purposeNoneDesc": "The source is ignored when generating answers.",
+    "purposeBotDesc": "Information is added to the knowledge base and influences general answers.",
+    "purposeKbDesc": "The source is used only to answer the specific question.",
+    "purposeBothDesc": "The source is used for both general knowledge and specific query answers.",
+
+    "topicAdded": "Topic added successfully",
+    "topicRemoved": "Topic removed successfully",
+    "topicNotRemoved": "Topic not removed",
+
+    "subtopicAdded": "Subtopic added successfully",
+    "subtopicRemoved": "Subtopic removed successfully",
+    "subtopicNotRemoved": "Subtopic not removed",
+
+    "questionAdded": "Question added successfully",
+    "questionRemoved": "Question removed successfully",
+    "questionNotRemoved": "Question not removed",
+    "questionExists": "This question already exists!",
+
+    "fileAdded": "Link / file added",
+    "fileRemoved": "Link / file removed",
+
+    "playgroundCleared": "Playground cleared successfully",
+    "playgroundUpdated": "Playground updated successfully",
+    "playgroundNotUpdated": "Playground not updated",
+    "playgroundRejected": "Playground rejected successfully",
+
+    "kbSaved": "Knowledge base saved successfully",
+    "kbNotSaved": "Knowledge base not saved",
+
+    "patchGenerated": "Patch generated successfully",
+    "patchNotGenerated": "Patch not generated",
+
+    "unsavedChanges": "You have unsaved changes – leave anyway?"
   },
-  "test":{
+  "test": {
     "test": "Test"
   }
 }

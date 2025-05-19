@@ -17,15 +17,10 @@
               >
                 <div class="flex items-center gap-2">
                   <i class="pi pi-database text-[14px] 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-[10px] 2xl:text-xl">{{ t('KnowledgeBase.contextSources') }}</h2>
+                  <h2 class="font-semibold text-[10px] 2xl:text-xl">{{ t("KnowledgeBase.contextSources") }}</h2>
                 </div>
                 <div class="flex justify-center items-center">
-                  <i
-                    class="pi pi-info-circle text-base cursor-pointer text-xl"
-                    v-tooltip.right="
-                      t('KnowledgeBase.contextInfoTip')
-                    "
-                  />
+                  <i class="pi pi-info-circle text-base cursor-pointer text-xl" v-tooltip.right="t('KnowledgeBase.contextInfoTip')" />
                 </div>
               </header>
               <header class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark">
@@ -49,7 +44,7 @@
                   icon="pi pi-plus"
                   class=""
                   @click="openContextDialog"
-                 v-tooltip.bottom="t('KnowledgeBase.addContextTip')"
+                  v-tooltip.bottom="t('KnowledgeBase.addContextTip')"
                 />
               </header>
 
@@ -139,7 +134,7 @@
                   <!-- ================= Dialog ================= -->
                   <Dialog
                     v-model:visible="showContextDialog"
-                    header="Add context"
+                    :header="t('KnowledgeBase.addContextHeader')"
                     :modal="true"
                     :closable="true"
                     :style="{ width: '40vw' }"
@@ -163,7 +158,7 @@
                         </button>
                       </div>
                       <!-- OPTIONAL TITLE (always shown) -->
-                      <InputText v-model="newCtx.title" class="w-full" placeholder="Title" />
+                      <InputText v-model="newCtx.title" class="w-full" :placeholder="t('KnowledgeBase.titlePlaceholder')" />
                       <!-- ░░ DYNAMIC FIELDS ░░ -->
                       <!-- TEXT -->
                       <Textarea
@@ -171,7 +166,7 @@
                         v-model="newCtx.text"
                         rows="6"
                         class="w-full max-h-[40vh]"
-                        placeholder="Paste the text here…"
+                        :placeholder="t('KnowledgeBase.pasteTextPlaceholder')"
                       />
 
                       <!-- SITE / URL -->
@@ -203,9 +198,9 @@
                               @click="fileUpload.choose"
                             >
                               <i class="pi pi-cloud-upload text-5xl text-gray-400 mb-4"></i>
-                              <h3 class="text-lg font-medium mb-1">Upload sources</h3>
-                              <p class="text-sm text-gray-500 mb-2">Select a file or drag it here.</p>
-                              <p class="text-xs text-gray-400">Supported types: PDF, TXT, Images, DOCX, XLSX, images</p>
+                              <h3 class="text-lg font-medium mb-1">{{ t("KnowledgeBase.uploadHeader") }}</h3>
+                              <p class="text-sm text-gray-500 mb-2">{{ t("KnowledgeBase.uploadSub") }}</p>
+                              <p class="text-xs text-gray-400">{{ t("KnowledgeBase.uploadTypes") }}</p>
                             </div>
                           </template>
                         </FileUpload>
@@ -216,11 +211,11 @@
 
                       <!-- ░░ ACTIONS ░░ -->
                       <div class="flex justify-between items-center gap-2 mt-4">
-                        <span>{{ t('KnowledgeBase.totalSources') }} {{ totalSources }}/{{ MAX_SOURCES }}</span>
+                        <span>{{ t("KnowledgeBase.totalSources") }} {{ totalSources }}/{{ MAX_SOURCES }}</span>
                         <div class="flex items-center gap-2">
-                          <Button :label="t('KnowledgeBase.exportCancel')" class="p-button-text" @click="showContextDialog = false" />
+                          <Button :label="t('KnowledgeBase.dialogCancel')" class="p-button-text" @click="showContextDialog = false" />
                           <Button
-                            label="Add"
+                            :label="t('KnowledgeBase.dialogCancel')"
                             icon="pi pi-check"
                             class="p-button-success"
                             :disabled="!canSubmitContext"
@@ -237,8 +232,8 @@
             <header
               class="flex items-center justify-between px-4 py-2 text-[15px] font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-t border-secondaryDark"
             >
-              <span>{{ t('KnowledgeBase.totalSources') }} {{ totalSources }}/{{ MAX_SOURCES }}</span>
-              <span>	{{ t('KnowledgeBase.selectedSources') }} {{ selectedSources }}</span>
+              <span>{{ t("KnowledgeBase.totalSources") }} {{ totalSources }}/{{ MAX_SOURCES }}</span>
+              <span> {{ t("KnowledgeBase.selectedSources") }} {{ selectedSources }}</span>
             </header>
 
             <section class="flex flex-col flex-1 overflow-y-auto">
@@ -247,7 +242,7 @@
               >
                 <div class="flex items-center gap-2">
                   <i class="pi pi-pencil text-sm 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-sm 2xl:text-xl">	{{ t('KnowledgeBase.queryField') }}</h2>
+                  <h2 class="font-semibold text-sm 2xl:text-xl">{{ t("KnowledgeBase.queryField") }}</h2>
                 </div>
                 <div class="flex justify-center items-center gap-2">
                   <Dropdown
@@ -256,12 +251,9 @@
                     optionLabel="label"
                     optionValue="value"
                     class="w-full text-sm 2xl:text-xl"
-                   	:placeholder="t('KnowledgeBase.aiModelPlaceholder')"
+                    :placeholder="t('KnowledgeBase.aiModelPlaceholder')"
                   />
-                  <i
-                    class="pi pi-info-circle text-base cursor-pointer text-xl"
-                    v-tooltip.right="t('KnowledgeBase.queryFieldTip')"
-                  />
+                  <i class="pi pi-info-circle text-base cursor-pointer text-xl" v-tooltip.right="t('KnowledgeBase.queryFieldTip')" />
                 </div>
               </header>
               <div class="flex flex-col p-4 h-full gap-2">
@@ -270,10 +262,10 @@
                 <section class="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-2">
                   <header class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
-                      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">{{ t('KnowledgeBase.requestHistory') }}</h2>
+                      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">{{ t("KnowledgeBase.requestHistory") }}</h2>
                     </div>
                     <button type="button" class="self-start text-red-600 text-sm underline" @click="clearRequestHistory">
-                     {{ t('KnowledgeBase.clearHistory') }}
+                      {{ t("KnowledgeBase.clearHistory") }}
                     </button>
                   </header>
 
@@ -284,12 +276,12 @@
                       type="button"
                       class="text-sm text-left px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                       @click="reuseRequest(item)"
-                     	v-tooltip.bottom="t('KnowledgeBase.reuseTip')"
+                      v-tooltip.bottom="t('KnowledgeBase.reuseTip')"
                     >
                       {{ item.length > 40 ? item.slice(0, 40) + "…" : item }}
                     </button>
                   </div>
-                  <div v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('KnowledgeBase.noHistory') }}</div>
+                  <div v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t("KnowledgeBase.noHistory") }}</div>
                 </section>
 
                 <form @submit.prevent="generatePatch" class="flex flex-col flex-grow min-h-0 gap-2">
@@ -301,7 +293,7 @@
                       autoResize
                       id="promptTextArea"
                       class="w-full"
-                     :placeholder="t('KnowledgeBase.typeHere')"
+                      :placeholder="t('KnowledgeBase.typeHere')"
                       required
                       v-model="promptText"
                       size="small"
@@ -331,7 +323,7 @@
               >
                 <div class="flex items-center gap-2">
                   <i class="pi pi-sliders-h text-[14px] 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-[8px] 2xl:text-xl">{{t('KnowledgeBase.playgroundHeader')}}</h2>
+                  <h2 class="font-semibold text-[8px] 2xl:text-xl">{{ t("KnowledgeBase.playgroundHeader") }}</h2>
                 </div>
 
                 <div class="flex justify-center items-center gap-4">
@@ -348,7 +340,13 @@
 
                     <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
                     <Button :disabled="isLoading" icon="pi pi-trash" class="p-button-sm" @click="clearPlayground" />
-                    <Button v-if="isEditMode" :label="t('KnowledgeBase.addTopic')" icon="pi pi-plus" class="p-button-sm" @click="addTopic" />
+                    <Button
+                      v-if="isEditMode"
+                      :label="t('KnowledgeBase.addTopic')"
+                      icon="pi pi-plus"
+                      class="p-button-sm"
+                      @click="addTopic"
+                    />
                   </div>
                   <i
                     class="pi pi-info-circle text-base cursor-pointer text-xl"
@@ -404,7 +402,7 @@
                           :value="topicName.includes('New Topic') ? '' : topicName"
                           @blur="renameTopic(topicName, $event.target.value)"
                           @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
-                         v-tooltip.right="t('KnowledgeBase.topicTooltip')"
+                          v-tooltip.right="t('KnowledgeBase.topicTooltip')"
                         />
                         <Button
                           icon="pi pi-arrow-up"
@@ -419,7 +417,12 @@
                           @click="moveTopic(topicName, 1)"
                         />
                         <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeTopic(topicName)" />
-                        <Button :label="t('KnowledgeBase.addSubtopic')" icon="pi pi-plus" class="p-button-sm" @click="addSubtopic(topicName)" />
+                        <Button
+                          :label="t('KnowledgeBase.addSubtopic')"
+                          icon="pi pi-plus"
+                          class="p-button-sm"
+                          @click="addSubtopic(topicName)"
+                        />
                       </div>
                       <!-- Subtopics and questions -->
                       <div
@@ -452,7 +455,7 @@
                           />
                           <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeSubtopic(topicName, subtopicName)" />
                           <Button
-                            	:label="t('KnowledgeBase.addQuestion')"
+                            :label="t('KnowledgeBase.addQuestion')"
                             icon="pi pi-plus"
                             class="p-button-sm"
                             @click="addQuestion(topicName, subtopicName)"
@@ -467,7 +470,7 @@
                           >
                             <!-- Row with label + remove button -->
                             <div class="flex items-center justify-between mb-2">
-                              <label class="font-semibold">	{{ t('KnowledgeBase.questionLabel') }}</label>
+                              <label class="font-semibold"> {{ t("KnowledgeBase.questionLabel") }}</label>
                               <div class="flex items-center gap-2">
                                 <Button
                                   icon="pi pi-arrow-up"
@@ -498,16 +501,15 @@
                             />
 
                             <!-- ANSWER TEXT -->
-                            <label class="font-semibold">{{ t('KnowledgeBase.answerTextLabel') }}</label>
+                            <label class="font-semibold">{{ t("KnowledgeBase.answerTextLabel") }}</label>
                             <Textarea
                               v-model="questionObj.text"
                               class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
                               v-tooltip.right="t('KnowledgeBase.answerTooltip')"
-
                             />
 
                             <!-- LINKS / FILES -->
-                            <label class="font-semibold">{{ t('KnowledgeBase.linksFilesLabel') }}</label>
+                            <label class="font-semibold">{{ t("KnowledgeBase.linksFilesLabel") }}</label>
                             <ul class="mb-2">
                               <li v-for="(fileLink, fileIndex) in questionObj.files" :key="fileIndex" class="flex items-center gap-2 mb-1">
                                 <input
@@ -523,14 +525,14 @@
                               </li>
                             </ul>
                             <div v-if="localFiles.length" class="mt-4">
-                              <h3>{{ t('KnowledgeBase.selectedFilesLabel') }}</h3>
+                              <h3>{{ t("KnowledgeBase.selectedFilesLabel") }}</h3>
                               <ul>
                                 <li v-for="(file, idx) in localFiles" :key="idx">{{ file.name }} - {{ file.size }} bytes</li>
                               </ul>
                             </div>
 
                             <Button
-                             :label="t('KnowledgeBase.addLink')"
+                              :label="t('KnowledgeBase.addLink')"
                               icon="pi pi-plus"
                               class="p-button-sm"
                               @click="addQuestionFile(topicName, subtopicName, questionKey)"
@@ -549,10 +551,10 @@
                   <!-- иконка -->
                   <i class="pi pi-th-large text-gray-500 dark:text-gray-400 text-5xl mb-6" />
                   <!-- заголовок -->
-                  <h3 class="text-2xl font-semibold text-gray-500 dark:text-gray-300 mb-2">	{{ t('KnowledgeBase.playgroundEmpty') }}</h3>
+                  <h3 class="text-2xl font-semibold text-gray-500 dark:text-gray-300 mb-2">{{ t("KnowledgeBase.playgroundEmpty") }}</h3>
                   <!-- подпись -->
                   <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
-                   {{ t('KnowledgeBase.playgroundEmptyBody') }}
+                    {{ t("KnowledgeBase.playgroundEmptyBody") }}
                   </p>
                   <!-- кнопка -->
                   <Button
@@ -615,8 +617,8 @@
                 class="flex items-center justify-between gap-2 px-4 py-3 border-b border-secondaryDark bg-secondaryLight max-h-[60px] h-[60px]"
               >
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-book  text-[14px] 2xl:text-2xl"></i>
-                  <h2 class="font-semibold text-[10px] 2xl:text-xl">{{ t('KnowledgeBase.knowledgeBase') }}</h2>
+                  <i class="pi pi-book text-[14px] 2xl:text-2xl"></i>
+                  <h2 class="font-semibold text-[10px] 2xl:text-xl">{{ t("KnowledgeBase.knowledgeBase") }}</h2>
                 </div>
                 <div class="flex justify-center items-center gap-4">
                   <!-- 🔍 search toggle -->
@@ -636,7 +638,7 @@
                 <InputText
                   ref="readonlySearchInput"
                   v-model="readonlySearchTerm"
-                 :placeholder="t('KnowledgeBase.searchKbPlaceholder')"
+                  :placeholder="t('KnowledgeBase.searchKbPlaceholder')"
                   class="flex-1 w-full"
                 >
                 </InputText>
@@ -667,7 +669,7 @@
               </div>
               <div class="flex flex-row justify-between gap-2 p-4 my-2">
                 <Button
-                 :label="t('KnowledgeBase.export')"
+                  :label="t('KnowledgeBase.export')"
                   icon="pi pi-file-export"
                   class="p-button-sm flex-1 bg-gray-100 text-black hover:bg-gray-300"
                   @click="showExportDialog = true"
@@ -682,29 +684,29 @@
     </div>
 
     <!-- 💾 Export-format picker -->
-    <Dialog v-model:visible="showExportDialog" 	:header="t('KnowledgeBase.exportDialogTitle')" :modal="true" :style="{ width: '25rem' }">
+    <Dialog v-model:visible="showExportDialog" :header="t('KnowledgeBase.exportDialogTitle')" :modal="true" :style="{ width: '25rem' }">
       <div class="flex flex-col gap-4 pt-2">
         <div class="flex items-center justify-center gap-3">
           <RadioButton v-model="exportFormat" inputId="exp-json" value="json" />
           <label for="exp-json" class="cursor-pointer flex-1">
-            <p class="font-semibold">{{t('KnowledgeBase.exportJson')}}</p>
-            <p class="text-sm text-gray-500">{{t('KnowledgeBase.exportJsonDesc')}}</p>
+            <p class="font-semibold">{{ t("KnowledgeBase.exportJson") }}</p>
+            <p class="text-sm text-gray-500">{{ t("KnowledgeBase.exportJsonDesc") }}</p>
           </label>
         </div>
 
         <div class="flex items-center justify-center gap-3">
           <RadioButton v-model="exportFormat" inputId="exp-csv" value="csv" />
           <label for="exp-csv" class="cursor-pointer flex-1">
-            <p class="font-semibold">{{t('KnowledgeBase.exportCsv')}}</p>
-            <p class="text-sm text-gray-500">{{t('KnowledgeBase.exportCsvDesc')}}</p>
+            <p class="font-semibold">{{ t("KnowledgeBase.exportCsv") }}</p>
+            <p class="text-sm text-gray-500">{{ t("KnowledgeBase.exportCsvDesc") }}</p>
           </label>
         </div>
 
         <div class="flex items-center justify-center gap-3">
           <RadioButton v-model="exportFormat" inputId="exp-txt" value="txt" />
           <label for="exp-txt" class="cursor-pointer flex-1">
-            <p class="font-semibold">{{t('KnowledgeBase.exportTxt')}}</p>
-            <p class="text-sm text-gray-500">{{t('KnowledgeBase.exportTxtDesc')}}</p>
+            <p class="font-semibold">{{ t("KnowledgeBase.exportTxt") }}</p>
+            <p class="text-sm text-gray-500">{{ t("KnowledgeBase.exportTxtDesc") }}</p>
           </label>
         </div>
       </div>
@@ -715,7 +717,7 @@
       </template>
     </Dialog>
     <!-- INSTRUCTIONS DIALOG -->
-    <Dialog v-model:visible="showInstructions" :header="'How to use this tool?'" :modal="true" :closable="true" :style="{ width: '50vw' }">
+    <!-- <Dialog v-model:visible="showInstructions" :header="'How to use this tool?'" :modal="true" :closable="true" :style="{ width: '50vw' }">
       <div class="wysiwyg">
         <p>Welcome to the knowledge base tool usage guide. Here are a few recommendations:</p>
         <ul>
@@ -793,7 +795,7 @@
           <li>Do not use TOO large queries.</li>
         </ul>
       </div>
-    </Dialog>
+    </Dialog> -->
 
     <SaveChangesDialog
       v-model:visible="showSaveChangesDialog"
@@ -848,26 +850,6 @@ const showContextDialog = ref(false); // диалог
 const ctxMenu = ref(null); // ссылка на меню
 const selectedCtx = ref(null); // «активный» ctx
 
-/* пункты меню */
-const menuItems = [
-  {
-    label: "Переименовать",
-    icon: "pi pi-pencil",
-    command: () => renameContext(selectedCtx.value),
-  },
-  {
-    label: "Скачать",
-    icon: "pi pi-download",
-    command: () => downloadContext(selectedCtx.value),
-  },
-  { separator: true },
-  {
-    label: "Удалить",
-    icon: "pi pi-trash",
-    class: "text-red-600",
-    command: () => deleteContext(selectedCtx.value.id),
-  },
-];
 
 const searchTerm = ref("");
 
@@ -887,16 +869,16 @@ function openCtxMenu(ctx, event) {
 }
 async function renameContext(ctx) {
   if (!ctx) return;
-  const newTitle = prompt("Rename context", ctx.title);
+  const newTitle = prompt(	t('KnowledgeBase.ctxRenamePrompt'), ctx.title);
   if (!newTitle || newTitle === ctx.title) return;
   try {
     const form = new FormData();
     form.append("title", newTitle);
     await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/rename`, form);
     ctx.title = newTitle;
-    showSuccess("Renamed");
+    showSuccess(	t('KnowledgeBase.ctxRenamed'));
   } catch (e) {
-    showError("Not renamed");
+    showError(t('KnowledgeBase.ctxNotRenamed'));
   }
 }
 
@@ -921,32 +903,28 @@ const typeIcon = (t) => {
   }
 };
 
-const contextTypes = [
-  { label: "Text", value: "text" },
-  { label: "File / Photo", value: "file" },
-  { label: "Link", value: "url" },
-];
+
 
 const contextPurposes = [
   {
-    label: "Don't use",
+    label: t('KnowledgeBase.purposeNone'),
     value: "none",
-    desc: "The source is ignored when generating answers.",
+    desc: t('KnowledgeBase.purposeNoneDesc'),
   },
   {
-    label: "Bot knowledge",
+    label: t('KnowledgeBase.purposeBot'),
     value: "bot",
-    desc: "Information is added to the knowledge base and influences general answers, but is not used in specific queries.",
+    desc: t('KnowledgeBase.purposeBotDesc'),
   },
   {
-    label: "Context only",
+    label:  t('KnowledgeBase.purposeKb'),
     value: "kb",
-    desc: "The source is used only to answer the specific question, and does not affect overall knowledge.",
+    desc: t('KnowledgeBase.purposeKbDesc'),
   },
   {
-    label: "Knowledge & context",
+    label: t('KnowledgeBase.purposeBoth'),
     value: "both",
-    desc: "The source is used for both general knowledge and specific query answers.",
+    desc: t('KnowledgeBase.purposeBothDesc'),
   },
 ];
 /* light + dark palette for the “source purpose” dropdown */
@@ -978,10 +956,10 @@ async function onPurposeChange(ctx, newPurpose) {
     const form = new FormData();
     form.append("new_purpose", newPurpose);
     await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/purpose`, form);
-    showSuccess("Purpose updated");
+    showSuccess(t('KnowledgeBase.ctxPurposeUpdated'));
   } catch (_) {
     ctx.purpose = prev; // откат при ошибке
-    showError("Purpose not updated");
+    showError(	t('KnowledgeBase.ctxPurposeNotUpdated'));
   }
 }
 
@@ -1004,7 +982,7 @@ async function fetchContextUnits() {
     console.log("contextList= ", data);
     contextList.value = data;
   } catch (_) {
-    showError("Cannot load context");
+    showError(	t('KnowledgeBase.ctxLoadErr'));
   }
 }
 
@@ -1022,7 +1000,7 @@ const ctxTabs = [
 // Prevent opening dialog if limit is reached
 function openContextDialog() {
   if (totalSources.value >= MAX_SOURCES) {
-    showError(`Maximum of ${MAX_SOURCES} sources reached`);
+    showError(t('KnowledgeBase.ctxAddMax',{max:MAX_SOURCES}));
     return;
   }
   Object.assign(newCtx, { type: "", title: "", text: "", url: "", file: null });
@@ -1064,22 +1042,22 @@ async function submitContext() {
 
     console.log("form= ", ...form);
     await useNuxtApp().$api.post("/api/knowledge/context_entity", form);
-    showSuccess("Context added");
+    showSuccess(t('KnowledgeBase.ctxAdded'));
     showContextDialog.value = false;
     fetchContextUnits();
   } catch (_) {
-    showError("Context not added");
+    showError(t('KnowledgeBase.ctxNotAdded'));
   }
 }
 
 async function deleteContext(id) {
-  if (!confirm("Delete context unit?")) return;
+  if (!confirm(t('KnowledgeBase.menuDelete') + '?')) return;
   try {
     await useNuxtApp().$api.delete(`/api/knowledge/context_entity/${id}`);
     contextList.value = contextList.value.filter((c) => c.id !== id);
-    showSuccess("Context deleted");
+    showSuccess(t('KnowledgeBase.ctxDeleted'));
   } catch (_) {
-    showError("Context not deleted");
+    showError(t('KnowledgeBase.ctxNotDeleted'));
   }
 }
 
@@ -1343,8 +1321,8 @@ function addTopic() {
         inputElement.focus();
       }
     }
-  });
-  showSuccess("Topic added successfully");
+  });topicAdded
+  showSuccess(t("knowledgeBase.topicAdded"));
 }
 
 // Удалить тему
@@ -1353,9 +1331,9 @@ function removeTopic(topicName) {
     countDeletedItemsFromTopic(topicName);
 
     delete knowledgeBaseData.value.knowledge_base[topicName];
-    showSuccess("Topic removed successfully");
+    showSuccess(t("knowledgeBase.subtopicRemoved"));
   } else {
-    showError("Topic not removed");
+    showError(t("knowledgeBase.subtopicNotRemoved"));
   }
 }
 
@@ -1411,7 +1389,7 @@ function addSubtopic(topicName) {
       }
     }
   });
-  showSuccess("Subtopic added successfully");
+  showSuccess(t("knowledgeBase.subtopicAdded"));
 }
 
 // Удалить подтему
@@ -1422,9 +1400,9 @@ function removeSubtopic(topicName, subtopicName) {
       countDeletedItemsFromSubtopic(topicName, subtopicName, topic);
 
       delete topic.subtopics[subtopicName];
-      showSuccess("Subtopic removed successfully");
+      showSuccess(t("knowledgeBase.subtopicRemoved"));
     } else {
-      showError("Subtopic not removed");
+      showError(t("knowledgeBase.subtopicNotRemoved"));
     }
   }
 }
@@ -1480,7 +1458,7 @@ function addQuestion(topicName, subtopicName) {
       }
     }
   });
-  showSuccess("Question added successfully");
+  showSuccess(t("knowledgeBase.questionAdded"));
 }
 
 function addQuestionFile(topicName, subtopicName, question) {
@@ -1504,7 +1482,7 @@ function addQuestionFile(topicName, subtopicName, question) {
     }
   });
 
-  showSuccess("File added successfully");
+  showSuccess(t("knowledgeBase.fileAdded"));
 }
 
 function removeQuestionFile(topicName, subtopicName, question, fileIndex) {
@@ -1512,7 +1490,7 @@ function removeQuestionFile(topicName, subtopicName, question, fileIndex) {
   if (questionObj?.files) {
     questionObj.files.splice(fileIndex, 1);
   }
-  showSuccess("File removed successfully");
+  showSuccess(t("knowledgeBase.fileRemoved"));
 }
 
 // Method to update the `questions` object reactively
@@ -1536,7 +1514,7 @@ function updateQuestion(topicName, subtopicName, index, newValue, field) {
     // Update answer text
     subtopic.questions[questionKey] = newValue;
   }
-  showSuccess("Question updated successfully");
+  showSuccess(t("knowledgeBase.questionUpdated"));
 }
 
 // Удалить вопрос
@@ -1552,9 +1530,9 @@ function removeQuestion(topicName, subtopicName, questionKey) {
     if (existedInOriginal) {
       deletedItemsCount.value++;
     }
-    showSuccess("Question removed successfully");
+    showSuccess(t("knowledgeBase.questionRemoved"));
   } else {
-    showError("Question not removed");
+    showError(t("knowledgeBase.questionNotRemoved"));
   }
 }
 
@@ -1637,7 +1615,7 @@ async function updatePlayground(data) {
   console.log("knowledgeBaseData.value.knowledge_base=", knowledgeBaseData.value.knowledge_base);
   console.log("changes=", changes);
   if (!changes && !data) {
-    console.log("Нет изменений для отправки.");
+    console.log(t("knowledgeBase.noChanges"));
     isEditMode.value = false;
     return;
   }
