@@ -2,25 +2,29 @@
   <div class="w-full flex items-center justify-between">
     <!-- {{ rooms }} -->
     <div class="flex flex-row items-center gap-2">
-      <!-- Left Section: Title --> 
+      <!-- Left Section: Title -->
       <!-- {{ currentUrl+botHeaderData.avatar }} -->
       <div class="min-w-[3rem] w-12 h-12 flex-shrink-0">
-        <Avatar
-          :image="currentUrl + botHeaderData?.avatar || ' '"
-          class="mr-2 w-full h-full object-cover"
-          size="large"
-          shape="circle"
-        />
+        <Avatar :image="currentUrl + botHeaderData?.avatar || ' '" class="mr-2 w-full h-full object-cover" size="large"
+          shape="circle" />
       </div>
       <div class="flex flex-row items-center gap-2">
         <h2 class="font-bold hidden md:block">{{ botHeaderData?.app_name || " " }}</h2>
         <h2 class="font-bold max-w-[100px] block md:hidden truncate text-nowrap">
           {{ botHeaderData?.app_name || " " }}
         </h2>
-        <p v-if="typingUserNames.length" class="animate-pulse hidden md:block">is typing...</p>
-        <p v-if="typingUserNames.length" class="animate-pulse block md:hidden">...</p>
+        <p v-if="typingUserNames.length" class="">
+          <span class="inline-block w-[4px] h-[4px] mx-0.5 bg-current rounded-full dot-fade" style="animation-delay: 0s"></span>
+          <span class="inline-block w-[4px] h-[4px] mx-0.5 bg-current rounded-full dot-fade"
+            style="animation-delay: 0.2s"></span>
+          <span class="inline-block w-[4px] h-[4px] mx-0.5 bg-current rounded-full dot-fade"
+            style="animation-delay: 0.4s"></span>
+          <span class="inline-block w-[4px] h-[4px] mx-0.5 bg-current rounded-full dot-fade"
+            style="animation-delay: 0.6s"></span>
+        </p>
+
       </div>
-      
+
     </div>
     <!-- Right Section: Toggle + Menu Button -->
     <div class="flex items-center gap-1">
@@ -177,4 +181,14 @@
     background-color: #4caf50;
     /* or your brand color */
   }
+
+  @keyframes dotFade {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}
+
+.dot-fade {
+  animation: dotFade 1.2s infinite;
+}
+
 </style>
