@@ -348,7 +348,7 @@
 
                     <Button v-if="!isEditMode" icon="pi pi-pencil" class="p-button-sm" @click="toggleEditMode" />
                     <Button :disabled="isLoading" icon="pi pi-trash" class="p-button-sm" @click="clearPlayground" />
-                    <Button v-if="isEditMode" label="Add topic" icon="pi pi-plus" class="p-button-sm" @click="addTopic" />
+                    <Button v-if="isEditMode" :label="t('KnowledgeBase.addTopic')" icon="pi pi-plus" class="p-button-sm" @click="addTopic" />
                   </div>
                   <i
                     class="pi pi-info-circle text-base cursor-pointer text-xl"
@@ -404,7 +404,7 @@
                           :value="topicName.includes('New Topic') ? '' : topicName"
                           @blur="renameTopic(topicName, $event.target.value)"
                           @keydown.enter.prevent="renameTopic(topicName, $event.target.value)"
-                          v-tooltip.right="'The main topic containing related subsections and questions.'"
+                         v-tooltip.right="t('KnowledgeBase.topicTooltip')"
                         />
                         <Button
                           icon="pi pi-arrow-up"
@@ -419,7 +419,7 @@
                           @click="moveTopic(topicName, 1)"
                         />
                         <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeTopic(topicName)" />
-                        <Button label="Add subtopic" icon="pi pi-plus" class="p-button-sm" @click="addSubtopic(topicName)" />
+                        <Button :label="t('KnowledgeBase.addSubtopic')" icon="pi pi-plus" class="p-button-sm" @click="addSubtopic(topicName)" />
                       </div>
                       <!-- Subtopics and questions -->
                       <div
@@ -436,7 +436,7 @@
                             :value="subtopicName.includes('New Subtopic') ? '' : subtopicName"
                             @blur="renameSubtopic(topicName, subtopicName, $event.target.value)"
                             @keydown.enter.prevent="renameSubtopic(topicName, subtopicName, $event.target.value)"
-                            v-tooltip.right="'A section of a topic that groups related questions and answers.'"
+                            v-tooltip.right="t('KnowledgeBase.subtopicTooltip')"
                           />
                           <Button
                             icon="pi pi-arrow-up"
@@ -452,7 +452,7 @@
                           />
                           <Button icon="pi pi-minus" class="p-button-sm mr-2" @click="removeSubtopic(topicName, subtopicName)" />
                           <Button
-                            label="Add question"
+                            	:label="t('KnowledgeBase.addQuestion')"
                             icon="pi pi-plus"
                             class="p-button-sm"
                             @click="addQuestion(topicName, subtopicName)"
@@ -467,7 +467,7 @@
                           >
                             <!-- Row with label + remove button -->
                             <div class="flex items-center justify-between mb-2">
-                              <label class="font-semibold">Question:</label>
+                              <label class="font-semibold">	{{ t('KnowledgeBase.questionLabel') }}</label>
                               <div class="flex items-center gap-2">
                                 <Button
                                   icon="pi pi-arrow-up"
@@ -494,19 +494,20 @@
                               :placeholder="questionKey"
                               class="block w-full mb-2 min-h-[50px] border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                               @blur="renameQuestion(topicName, subtopicName, questionKey, $event.target.value)"
-                              v-tooltip.right="'A question in the knowledge base that the bot will look for answers to.'"
+                              v-tooltip.right="t('KnowledgeBase.questionTooltip')"
                             />
 
                             <!-- ANSWER TEXT -->
-                            <label class="font-semibold">Answer text:</label>
+                            <label class="font-semibold">{{ t('KnowledgeBase.answerTextLabel') }}</label>
                             <Textarea
                               v-model="questionObj.text"
                               class="block w-full border rounded p-2 min-h-[100px] text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 mb-2"
-                              v-tooltip.right="'An answer to a question that the bot will use when formulating responses.'"
+                              v-tooltip.right="t('KnowledgeBase.answerTooltip')"
+
                             />
 
                             <!-- LINKS / FILES -->
-                            <label class="font-semibold">Links / Files:</label>
+                            <label class="font-semibold">{{ t('KnowledgeBase.linksFilesLabel') }}</label>
                             <ul class="mb-2">
                               <li v-for="(fileLink, fileIndex) in questionObj.files" :key="fileIndex" class="flex items-center gap-2 mb-1">
                                 <input
@@ -522,14 +523,14 @@
                               </li>
                             </ul>
                             <div v-if="localFiles.length" class="mt-4">
-                              <h3>Selected files:</h3>
+                              <h3>{{ t('KnowledgeBase.selectedFilesLabel') }}</h3>
                               <ul>
                                 <li v-for="(file, idx) in localFiles" :key="idx">{{ file.name }} - {{ file.size }} bytes</li>
                               </ul>
                             </div>
 
                             <Button
-                              label="Add link"
+                             :label="t('KnowledgeBase.addLink')"
                               icon="pi pi-plus"
                               class="p-button-sm"
                               @click="addQuestionFile(topicName, subtopicName, questionKey)"

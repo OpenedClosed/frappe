@@ -304,7 +304,7 @@
     "typeHereTip": "Describe what the AI assistant should do with your data…",
 
 
-    "playgroundHeader": "Playground",
+
     "uploadSourcesTitle": "Upload sources",
     "uploadSourcesSubtitle": "Select a file or drag it here.",
     "uploadSourcesTypes": "Supported types: PDF, TXT, images, DOCX, XLSX",
@@ -320,13 +320,22 @@
 
     "querySmartChange": "Generate smart change",
 
-    "playground": "Playground",
-    "reviewChanges": "Review changes",
-    "addTopic": "Add topic",
-    "addSubtopic": "Add subtopic",
-    "addQuestion": "Add question",
-    "addLink": "Add link",
-    "remove": "Remove",
+   "playgroundHeader":     "Playground",
+
+    "addTopic":             "Add topic",
+    "addSubtopic":          "Add subtopic",
+    "addQuestion":          "Add question",
+    "addLink":              "Add link",
+
+    "questionLabel":        "Question:",
+    "answerTextLabel":      "Answer text:",
+    "linksFilesLabel":      "Links / Files:",
+    "selectedFilesLabel":   "Selected files:",
+
+    "topicTooltip":         "The main topic containing related subsections and questions.",
+    "subtopicTooltip":      "A section of a topic that groups related questions and answers.",
+    "questionTooltip":      "A question in the knowledge base that the bot will look for answers to.",
+    "answerTooltip":        "An answer to a question that the bot will use when formulating responses.",
 
     "playgroundEmpty": "Playground is empty",
     "playgroundEmptyBody": "Import content from the left panel or create a new block.",
