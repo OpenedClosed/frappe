@@ -333,6 +333,7 @@
     "playgroundHeader": "Playground",
 
     "addTopic": "Add topic",
+    "addTopicDesc": "Topic – the main theme that combines related subtopics. Subtopic – a subsection of the main topic with a specific focus. Question – a typical user question within a subtopic. Answer – a detailed response to a specific question.",
     "addSubtopic": "Add subtopic",
     "addQuestion": "Add question",
     "addLink": "Add link",
@@ -359,6 +360,7 @@
     
 
     "knowledgeBase": "Knowledge base",
+    "knowledgeBaseDesc": " Knowledge base is the main source of information for the bot. It contains all the topics, subtopics, and questions that the bot can answer. You can view and search through it, but you cannot edit it directly here.",
     "searchKbPlaceholder": "Search knowledge base…",
     "export": "Export",
     "exportDialogTitle": "Export knowledge base",

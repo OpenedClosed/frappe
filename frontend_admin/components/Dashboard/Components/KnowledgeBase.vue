@@ -348,15 +348,7 @@
                       @click="addTopic"
                     />
                   </div>
-                  <i
-                    class="pi pi-info-circle text-base cursor-pointer text-xl"
-                    v-tooltip.right="
-                      'Topic – the main theme that combines related subtopics.  \
-       Subtopic – a subsection of the main topic with a specific focus.  \
-       Question – a typical user question within a subtopic.  \
-       Answer – a detailed response to a specific question.'
-                    "
-                  />
+                  <i class="pi pi-info-circle text-base cursor-pointer text-xl" v-tooltip.right="t('KnowledgeBase.addTopicDesc')" />
                 </div>
               </header>
               <div class="flex flex-col gap-4 p-4 h-full overflow-y-auto">
@@ -585,9 +577,7 @@
                     icon="pi pi-save"
                     class="p-button-sm flex-1"
                     @click="savePlayground"
-                    v-tooltip.bottom="
-                     t('KnowledgeBase.saveDesc')
-                    "
+                    v-tooltip.bottom="t('KnowledgeBase.saveDesc')"
                   />
 
                   <Button
@@ -619,14 +609,7 @@
                   <!-- 🔍 search toggle -->
                   <!-- 🔍 search toggle -->
                   <Button icon="pi pi-search text-xl" class="p-button-text p-button-rounded p-button-sm" @click="toggleReadonlySearch" />
-                  <i
-                    class="pi pi-info-circle text-base cursor-pointer text-xl"
-                    v-tooltip="
-                      'Knowledge base is the main source of information for the bot. \
-       It contains all the topics, subtopics, and questions that the bot can answer.  \
-       You can view and search through it, but you cannot edit it directly here.'
-                    "
-                  />
+                  <i class="pi pi-info-circle text-base cursor-pointer text-xl" v-tooltip="t('KnowledgeBase.knowledgeBaseDesc')" />
                 </div>
               </header>
               <div v-if="showReadonlySearch" class="px-4 py-3 bg-secondaryLight border-b border-secondaryDark flex items-center gap-2">
