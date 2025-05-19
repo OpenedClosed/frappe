@@ -5,10 +5,10 @@
       <!-- Заголовок -->
       <div class="w-full flex flex-col justify-center items-center mb-4">
         <h1 class="text-center text-[20px] text-black dark:text-white font-bold">
-          Регистрация
+          	{{ t('PersonalMainRegistration.title') }}
         </h1>
         <p class="text-gray-500 dark:text-gray-300 text-center mt-1 text-[14px]">
-          Создайте новую учетную запись
+         {{ t('PersonalMainRegistration.subtitle') }}
         </p>
       </div>
 
@@ -19,7 +19,7 @@
           <!-- Номер телефона (required) -->
           <div>
             <label for="phone" class="block mb-1 text-[14px] text-black dark:text-white">
-              Номер телефона <span class="text-red-500">*</span>
+              {{ t('PersonalMainRegistration.phone') }} <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.phone }">
               <InputMask
@@ -28,7 +28,7 @@
                 type="tel"
                 required
                 mask="+9 (999) 999-99-99"
-                placeholder="Введите ваш телефон"
+               	:placeholder="t('PersonalMainRegistration.phonePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
@@ -40,10 +40,10 @@
           <!-- Email (required) -->
           <div>
             <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
-              Email  
+              {{ t('PersonalMainRegistration.email') }}  
             </label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.email }">
-              <InputText size="small" v-model="regForm.email" type="email" id="email" placeholder="mail@example.com"
+              <InputText size="small" v-model="regForm.email" type="email" id="email" :placeholder="t('PersonalMainRegistration.emailPlaceholder')"
                  class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -54,12 +54,12 @@
           <!-- ФИО (required) -->
           <div>
             <label for="full_name" class="block mb-1 text-[14px] text-black dark:text-white">
-              ФИО <span class="text-red-500">*</span>
+              {{ t('PersonalMainRegistration.fullName') }} <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg"
               :class="{ 'p-invalid': !!regError.full_name }">
               <InputText size="small" v-model="regForm.full_name" type="text" id="full_name"
-                placeholder="Иванов Иван Иванович" required
+               :placeholder="t('PersonalMainRegistration.fullNamePlaceholder')" required
                 class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -70,22 +70,21 @@
           <!-- Пароль (required) -->
           <div>
             <label for="password" class="block mb-1 text-[14px] text-black dark:text-white">
-              Пароль <span class="text-red-500">*</span>
+              	{{ t('PersonalMainRegistration.password') }} <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg"
               :class="{ 'p-invalid': !!regError.password }">
               <InputText size="small" v-model="regForm.password" :type="passwordType" id="password"
-                placeholder="Минимум 10 символов" required
+                	:placeholder="t('PersonalMainRegistration.passwordPlaceholder')" required
                 class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
               <!-- Кнопка-переключатель для видимости пароля -->
               <button type="button" @click="togglePasswordVisibility" class="px-2 text-gray-600 dark:text-gray-300 text-[14px]">
-                <span v-if="passwordType === 'password'">Показать</span>
-                <span v-else>Скрыть</span>
+                <span v-if="passwordType === 'password'">{{ t('PersonalMainRegistration.show') }}</span>
+                <span v-else>{{ t('PersonalMainRegistration.hide') }}</span>
               </button>
             </div>
             <small class="text-gray-500 block mt-1 text-[12px]">
-              Минимум 10 символов, включая заглавные, строчные буквы, цифры
-              и спецсимволы
+             {{ t('PersonalMainRegistration.passwordHint') }}
             </small>
             <small class="text-red-500 mt-1 block text-[12px]">
               {{ regError.password }}
@@ -95,18 +94,18 @@
           <!-- Подтверждение пароля (required) -->
           <div>
             <label for="password_confirm" class="block mb-1 text-[14px] text-black dark:text-white">
-              Подтверждение пароля <span class="text-red-500">*</span>
+              {{ t('PersonalMainRegistration.passwordConfirm') }} <span class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg"
               :class="{ 'p-invalid': !!regError.password_confirm }">
               <InputText size="small" v-model="regForm.password_confirm" :type="passwordTypeConfirm"
-                id="password_confirm" placeholder="Повторите пароль" required
+                id="password_confirm" 	:placeholder="t('PersonalMainRegistration.passwordConfirmPlaceholder')" required
                 class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none text-[14px]" />
               <!-- Кнопка-переключатель для видимости пароля -->
               <button type="button" @click="togglePasswordVisibilityConfirm"
                 class="px-2 text-gray-600 dark:text-gray-300 text-[14px]">
-                <span v-if="passwordTypeConfirm === 'password'">Показать</span>
-                <span v-else>Скрыть</span>
+                <span v-if="passwordTypeConfirm === 'password'">{{ t('PersonalMainRegistration.show') }}</span>
+                <span v-else>{{ t('PersonalMainRegistration.hide') }}</span>
               </button>
             </div>
             <small class="text-red-500 mt-1 block text-[12px]">
@@ -119,13 +118,13 @@
             <div class="flex items-center">
               <Checkbox v-model="regForm.accept_terms" :binary="true" inputId="agreeTerms" required class="mr-2" />
               <label for="agreeTerms" class="text-[14px] text-black dark:text-white">
-                Я согласен с
+               	{{ t('PersonalMainRegistration.termsPrefix') }}
                 <a href="#" class="underline" target="_blank">
-                  Условиями использования
+                  {{ t('PersonalMainRegistration.termsLink') }}
                 </a>
-                и
+                {{ t('PersonalMainRegistration.privacyAnd') }}
                 <a href="#" class="underline" target="_blank">
-                  Политикой конфиденциальности
+                  {{ t('PersonalMainRegistration.privacyLink') }}
                 </a>
               </label>
             </div>
@@ -135,13 +134,13 @@
           </div>
 
           <!-- Кнопка регистрации -->
-          <Button type="submit" label="Зарегистрироваться"
+          <Button type="submit" 	:label="t('PersonalMainRegistration.registerButton')"
             class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full mt-4 border-none text-[14px]" />
 
           <!-- Ссылка на "Войти" -->
           <p class="text-center text-[14px] mt-4 text-black dark:text-white">
-            Уже есть аккаунт?
-            <span @click="goLogin" class="cursor-pointer ml-1 underline">Войти</span>
+            {{ t('PersonalMainRegistration.alreadyHave') }}
+            <span @click="goLogin" class="cursor-pointer ml-1 underline">{{ t('PersonalMainRegistration.loginLink') }}</span>
           </p>
         </form>
       </div>
@@ -150,11 +149,11 @@
       <div v-else>
 
         <h2 class="text-center text-[20px] text-black dark:text-white font-semibold mb-4">
-          Подтвердите регистрацию
+          {{ t('PersonalMainRegistration.confirmTitle') }}
         </h2>
 
         <div>
-          <h3 class="text-[18px] text-center">Тестовый код (Потом будет с почты)</h3>
+          <h3 class="text-[18px] text-center">{{ t('PersonalMainRegistration.debugCode') }}</h3>
           <div class="flex flex-row items-center gap-1">
             <InputText v-model="testCode" readonly id="code" class="w-full" />
             <Button icon="pi pi-copy" @click="onCopy"></Button>
@@ -164,20 +163,20 @@
         <form @submit.prevent="sendCode" class="flex flex-col gap-4">
           <div>
             <label for="code" class="block mb-1 text-[14px] text-black dark:text-white">
-              Код из SMS
+              {{ t('PersonalMainRegistration.smsCodeLabel') }}
             </label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.code }">
-              <InputText size="small" v-model="regForm.code" type="text" id="code" placeholder="Введите код из SMS"
+              <InputText size="small" v-model="regForm.code" type="text" id="code" :placeholder="t('PersonalMainRegistration.smsCodePlaceholder')"
                 required class="w-full bg-transparent border-none shadow-none px-2 focus:ring-0 focus:outline-none" />
             </div>
             <small class="text-red-500 mt-1">{{ regError.code }}</small>
           </div>
 
-          <Button type="submit" label="Подтвердить"
+          <Button type="submit" 	:label="t('PersonalMainRegistration.confirmButton')"
             class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full mt-4 border-none" />
 
           <!-- Кнопка для возврата к вводу данных (если нужно) -->
-          <Button type="button" label="Отменить" class="p-button-text mt-2 w-full" @click="resetForm" />
+          <Button type="button" :label="t('PersonalMainRegistration.cancelButton')" class="p-button-text mt-2 w-full" @click="resetForm" />
         </form>
       </div>
     </div>
@@ -188,7 +187,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, navigateTo, reloadNuxtApp } from '#imports';
-
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 const is_loading = ref(false);
 const loading_text_displayed = ref(false);
 const isCode = ref(false);
