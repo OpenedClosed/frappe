@@ -121,6 +121,16 @@
     "client": "Client",
     "chatFallback": "Chat {index}"
   },
+  "MainLogin": {
+    "title": "Login to your account",
+    "loginLabel": "Login",
+    "loginPlaceholder": "Enter your login",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "loginButton": "Log in",
+    "noAccount": "Don't have an account?",
+    "registerLink": "Register"
+  },
   "additionalMessages": {
     "chatRefreshed": "Chat Refreshed",
     "chatRefreshedSuccessfully": "The chat has been refreshed successfully.",
