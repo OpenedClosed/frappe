@@ -353,7 +353,10 @@
 
     "reject": "Reject",
     "save": "Save",
+    "saveDesc": "Saves the current knowledge structure as a draft. You can return to it later. The draft is not used by the bot to answer questions until you publish it.",
     "publish": "Publish",
+    "publishDesc": " 'Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions.  Changes take effect immediately.  Make sure the structure is completely ready.'",
+    
 
     "knowledgeBase": "Knowledge base",
     "searchKbPlaceholder": "Search knowledge base…",
@@ -441,7 +444,19 @@
     "patchGenerated": "Patch generated successfully",
     "patchNotGenerated": "Patch not generated",
 
-    "unsavedChanges": "You have unsaved changes – leave anyway?"
+      "noChanges"            : "No changes to save.",
+    "msgPlaygroundUpdated" : "Playground updated successfully",
+    "msgPlaygroundUpdateErr": "Playground update failed",
+    "msgDbSaved"           : "Knowledge base saved",
+    "msgDbSaveErr"         : "Failed to save knowledge base",
+    "confirmClear"         : "Clear playground?\n\nAll draft changes will be lost. This will NOT touch the real knowledge base.",
+    "msgPlaygroundCleared" : "Playground cleared",
+    "confirmReject"        : "Reject playground?\n\nDraft changes will be lost. The real knowledge base stays intact.",
+    "msgPlaygroundRejected": "Playground rejected",
+    "unsavedChanges"       : "You have unsaved changes in the playground!",
+    "msgPatchGenerated"    : "Patch generated successfully",
+    "msgPatchErr"          : "Patch generation failed"
+  
   },
   "test": {
     "test": "Test"

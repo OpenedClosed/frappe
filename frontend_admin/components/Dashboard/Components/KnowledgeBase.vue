@@ -586,8 +586,7 @@
                     class="p-button-sm flex-1"
                     @click="savePlayground"
                     v-tooltip.bottom="
-                      'Saves the current knowledge structure as a draft. You can return to it later. \
-    The draft is not used by the bot to answer questions until you publish it.'
+                     t('KnowledgeBase.saveDesc')
                     "
                   />
 
@@ -597,11 +596,7 @@
                     icon="pi pi-save"
                     class="p-button-sm flex-1"
                     @click="saveChanges"
-                    v-tooltip.bottom="
-                      'Publishes the knowledge structure to the main knowledge base, which the bot will \
-    use to answer user questions.  Changes take effect immediately.  Make sure the \
-    structure is completely ready.'
-                    "
+                    v-tooltip.bottom="t('KnowledgeBase.publishDesc')"
                   />
                 </div>
               </div>
@@ -850,7 +845,6 @@ const showContextDialog = ref(false); // диалог
 const ctxMenu = ref(null); // ссылка на меню
 const selectedCtx = ref(null); // «активный» ctx
 
-
 const searchTerm = ref("");
 
 /* 🔎 filtered list */
@@ -869,16 +863,16 @@ function openCtxMenu(ctx, event) {
 }
 async function renameContext(ctx) {
   if (!ctx) return;
-  const newTitle = prompt(	t('KnowledgeBase.ctxRenamePrompt'), ctx.title);
+  const newTitle = prompt(t("KnowledgeBase.ctxRenamePrompt"), ctx.title);
   if (!newTitle || newTitle === ctx.title) return;
   try {
     const form = new FormData();
     form.append("title", newTitle);
     await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/rename`, form);
     ctx.title = newTitle;
-    showSuccess(	t('KnowledgeBase.ctxRenamed'));
+    showSuccess(t("KnowledgeBase.ctxRenamed"));
   } catch (e) {
-    showError(t('KnowledgeBase.ctxNotRenamed'));
+    showError(t("KnowledgeBase.ctxNotRenamed"));
   }
 }
 
@@ -903,28 +897,26 @@ const typeIcon = (t) => {
   }
 };
 
-
-
 const contextPurposes = [
   {
-    label: t('KnowledgeBase.purposeNone'),
+    label: t("KnowledgeBase.purposeNone"),
     value: "none",
-    desc: t('KnowledgeBase.purposeNoneDesc'),
+    desc: t("KnowledgeBase.purposeNoneDesc"),
   },
   {
-    label: t('KnowledgeBase.purposeBot'),
+    label: t("KnowledgeBase.purposeBot"),
     value: "bot",
-    desc: t('KnowledgeBase.purposeBotDesc'),
+    desc: t("KnowledgeBase.purposeBotDesc"),
   },
   {
-    label:  t('KnowledgeBase.purposeKb'),
+    label: t("KnowledgeBase.purposeKb"),
     value: "kb",
-    desc: t('KnowledgeBase.purposeKbDesc'),
+    desc: t("KnowledgeBase.purposeKbDesc"),
   },
   {
-    label: t('KnowledgeBase.purposeBoth'),
+    label: t("KnowledgeBase.purposeBoth"),
     value: "both",
-    desc: t('KnowledgeBase.purposeBothDesc'),
+    desc: t("KnowledgeBase.purposeBothDesc"),
   },
 ];
 /* light + dark palette for the “source purpose” dropdown */
@@ -956,10 +948,10 @@ async function onPurposeChange(ctx, newPurpose) {
     const form = new FormData();
     form.append("new_purpose", newPurpose);
     await useNuxtApp().$api.patch(`/api/knowledge/context_entity/${ctx.id}/purpose`, form);
-    showSuccess(t('KnowledgeBase.ctxPurposeUpdated'));
+    showSuccess(t("KnowledgeBase.ctxPurposeUpdated"));
   } catch (_) {
     ctx.purpose = prev; // откат при ошибке
-    showError(	t('KnowledgeBase.ctxPurposeNotUpdated'));
+    showError(t("KnowledgeBase.ctxPurposeNotUpdated"));
   }
 }
 
@@ -982,7 +974,7 @@ async function fetchContextUnits() {
     console.log("contextList= ", data);
     contextList.value = data;
   } catch (_) {
-    showError(	t('KnowledgeBase.ctxLoadErr'));
+    showError(t("KnowledgeBase.ctxLoadErr"));
   }
 }
 
@@ -1000,7 +992,7 @@ const ctxTabs = [
 // Prevent opening dialog if limit is reached
 function openContextDialog() {
   if (totalSources.value >= MAX_SOURCES) {
-    showError(t('KnowledgeBase.ctxAddMax',{max:MAX_SOURCES}));
+    showError(t("KnowledgeBase.ctxAddMax", { max: MAX_SOURCES }));
     return;
   }
   Object.assign(newCtx, { type: "", title: "", text: "", url: "", file: null });
@@ -1042,22 +1034,22 @@ async function submitContext() {
 
     console.log("form= ", ...form);
     await useNuxtApp().$api.post("/api/knowledge/context_entity", form);
-    showSuccess(t('KnowledgeBase.ctxAdded'));
+    showSuccess(t("KnowledgeBase.ctxAdded"));
     showContextDialog.value = false;
     fetchContextUnits();
   } catch (_) {
-    showError(t('KnowledgeBase.ctxNotAdded'));
+    showError(t("KnowledgeBase.ctxNotAdded"));
   }
 }
 
 async function deleteContext(id) {
-  if (!confirm(t('KnowledgeBase.menuDelete') + '?')) return;
+  if (!confirm(t("KnowledgeBase.menuDelete") + "?")) return;
   try {
     await useNuxtApp().$api.delete(`/api/knowledge/context_entity/${id}`);
     contextList.value = contextList.value.filter((c) => c.id !== id);
-    showSuccess(t('KnowledgeBase.ctxDeleted'));
+    showSuccess(t("KnowledgeBase.ctxDeleted"));
   } catch (_) {
-    showError(t('KnowledgeBase.ctxNotDeleted'));
+    showError(t("KnowledgeBase.ctxNotDeleted"));
   }
 }
 
@@ -1321,7 +1313,8 @@ function addTopic() {
         inputElement.focus();
       }
     }
-  });topicAdded
+  });
+  topicAdded;
   showSuccess(t("knowledgeBase.topicAdded"));
 }
 
@@ -1638,9 +1631,9 @@ async function updatePlayground(data) {
     hasChanges.value = true;
     console.log("Успешное обновление базы знаний:", response.data);
     isEditMode.value = false;
-    showSuccess("Playground updated successfully");
+    showSuccess(t("KnowledgeBase.msgPlaygroundUpdated"));
   } catch (error) {
-    console.error("Ошибка при обновлении базы знаний:", error);
+    console.error(t("KnowledgeBase.msgPlaygroundUpdateErr"), error);
     showError("Playground not updated");
   }
 }
@@ -1662,21 +1655,21 @@ async function saveDatabase() {
       setTimeout(() => {
         isDirty.value = false; // Mark as saved
       }, 300);
-      showSuccess("Knowledge base saved successfully");
+      showSuccess(t("KnowledgeBase.msgDbSaved"));
     }
   } catch (error) {
     console.error("Ошибка при обновлении базы знаний:", error);
-    showError("Knowledge base not saved");
+    showError(t("KnowledgeBase.msgDbSaveErr"));
   }
 }
 
 function clearPlayground() {
-  if (confirm(`Clear playground?\n\nChanges in the playground will be discarded.\nThis action will NOT affect the knowledge base.`)) {
+  if (confirm(t("KnowledgeBase.confirmClear"))) {
     countDeletedItems();
     knowledgeBaseData.value.knowledge_base = {};
     calculateChanges();
 
-    showSuccess("Playground cleared successfully");
+    showSuccess(t("KnowledgeBase.msgPlaygroundCleared"));
   }
 }
 
@@ -1703,9 +1696,7 @@ function savePlayground() {
 }
 
 function rejectPlayground() {
-  const confirmation = confirm(
-    `Reject playground?\n\nChanges in the playground will be discarded.\nThis action will NOT affect the knowledge base.`
-  );
+  const confirmation = confirm(t("KnowledgeBase.confirmReject"));
   if (!confirmation) return;
 
   isEditMode.value = false;
@@ -1713,7 +1704,7 @@ function rejectPlayground() {
   clearVariables();
 
   knowledgeBaseData.value.knowledge_base = cloneDeep(readonlyData.value.knowledge_base);
-  showSuccess("Playground rejected successfully");
+  showSuccess(t("KnowledgeBase.msgPlaygroundRejected"));
 }
 let isDirty = ref(false);
 
@@ -1770,10 +1761,10 @@ async function generatePatch() {
 
     // handle success
     updatePlayground(response.data);
-    showSuccess("Patch generated successfully");
+    showSuccess(t("KnowledgeBase.msgPatchGenerated"));
   } catch (error) {
     // handle error
-    showError("Patch not generated");
+    showError(t("KnowledgeBase.msgPatchErr"));
   } finally {
     isLoading.value = false;
   }
