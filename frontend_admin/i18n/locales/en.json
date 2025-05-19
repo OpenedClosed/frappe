@@ -99,6 +99,11 @@
     "IS_TYPING": "is typing...",
     "CANCEL_SELECT_MESSAGE": "Cancel Selection"
   },
+
+
+
+
+
   "EmbeddedChat": {
     "allLabel": "All",
     "unreadLabel": "Unread",
@@ -213,6 +218,36 @@
     "confirmButton": "Confirm",
     "cancelButton": "Cancel"
   },
+   "DynamicForm": {
+    "upload": "Upload",
+    "addFiles": "Add files",
+    "addImages": "Add images",
+    "downloadFile": "Download file",
+    "delete": "Delete",
+    "enterTags": "Enter tags...",
+    "enterCountry": "Enter a country..."
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   "additionalMessages": {
     "chatRefreshed": "Chat Refreshed",
     "chatRefreshedSuccessfully": "The chat has been refreshed successfully.",
