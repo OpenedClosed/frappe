@@ -460,6 +460,118 @@
     "msgPatchErr"          : "Patch generation failed"
   
   },
+   "MainContent": {
+    "dialog": {
+      "filterOptions": "Filter Options"
+    },
+    "buttons": {
+      "fillHealthSurvey": "Fill in Health Survey",
+      "fillMainInfo": "Fill in Main Information",
+      "fillContactInfo": "Fill in Contact Information",
+      "fillConsents": "Fill in Consents"
+    },
+    "toast": {
+      "exportSuccessSummary": "Export Successful",
+      "exportSuccessDetail": "Data exported to Excel successfully",
+      "exportFailSummary": "Export Failed",
+      "exportFailDetail": "Failed to export data.",
+      "invalidGroupSummary": "Invalid Group",
+      "invalidEntitySummary": "Invalid Entity",
+      "errorSummary": "Error",
+      "noDataDetail": "No available data.",
+      "loadFailDetail": "Failed to load table data. ({status})",
+      "redirectDetail": "Redirecting to: {route}"
+    },
+
+    "playground": {
+      "saveDraft": "Saves the current knowledge structure as a draft. You will be able to continue working with it later. The draft is not used by the bot to answer questions until you publish it.",
+      "publish": "Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions. After publication, changes take effect immediately, and the bot will start responding using the new data. Make sure the structure is completely ready.",
+      "statusReady": "Ready for publication",
+      "blockType": "Topic – the main theme that combines related subtopics.\\nSubtopic – a subsection of the main topic with a specific focus.\\nQuestion – a typical user question within a subtopic.\\nAnswer – a detailed response to a specific question.",
+      "parentBlock": "Select the block to which the created element will relate.\\nFollow the correct hierarchy:\\n• Subtopics are created within Topics\\n• Questions are created within Subtopics\\n• Answers are created for specific Questions"
+    },
+
+    "import": {
+      "sourceSearch": "Search by source name. Enter part of the file name, web page, or text document to filter the list.",
+      "importNew": "Import a new data source: file, web page, or text.",
+      "aiInput": "Write here what the AI assistant should do with your data. Example: \"Highlight the main services from my website and create questions and answers for them\". Press Enter or the send button to convert selected sources into a structured knowledge base.",
+      "generator": "Write to the AI assistant specific tasks for structuring your data. Examples:\\n• \"Create Q&A pairs from a product document\"\\n• \"Divide text into subtopics\"\\n• \"Form a menu of services from my price list\"\\n• \"Extract key benefits\""
+    },
+
+    "kbBlock": {
+      "topic": "The main topic containing related subsections and questions.",
+      "subtopic": "A section of a topic that groups related questions and answers.",
+      "question": "A question in the knowledge base that the bot will look for answers to.",
+      "answer": "An answer to a question that the bot will use when formulating responses."
+    }
+  },
+   "NavigationSidebar": {
+    "tooltip": {
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "headers": {
+      "settings": "Settings",
+      "sidebar": "Sidebar"
+    },
+    "links": {
+      "knowledgeBase": "Knowledge Base",
+      "botSettings": "Bot Settings"
+    }
+  },
+  "ReadonlyKB": {
+    "summary": {
+      "knowledgeBase": "Knowledge base"
+    },
+    "buttons": {
+      "goToSource": "Go to source"
+    }
+  },
+  "SaveChangesDialog": {
+    "header": {
+      "preview": "Preview of detected changes.",
+      "savePlayground": "Do you want to save changes to playground?",
+      "saveKnowledgeBase": "Do you want to save changes to knowledge base?"
+    },
+    "info": {
+      "noChanges": "There are no changes to apply to knowledge base.",
+      "editModeNote": "It will change the playground, but WILL NOT update the knowledge base.",
+      "applyKb": "It will CHANGE the knowledge base."
+    },
+    "labels": {
+      "added": "Added:",
+      "changed": "Changed:",
+      "deleted": "Deleted:",
+      "addedItems": "Added Items",
+      "changedItems": "Changed Items",
+      "deletedItems": "Deleted Items"
+    },
+    "buttons": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
+  },
+  "Topbar": {
+    "aria": {
+      "menu": "Menu"
+    },
+    "titles": {
+      "personalAccount": "Personal Account"
+    },
+    "menu": {
+      "toPersonal": "To Personal Account",
+      "toAdmin": "To Admin Panel",
+      "changeTheme": "Change Theme",
+      "logout": "Logout"
+    },
+    "alt": {
+      "logo": "Logo"
+    },
+    "user": {
+      "defaultName": "Administrator"
+    }
+  },
   "test": {
     "test": "Test"
   }

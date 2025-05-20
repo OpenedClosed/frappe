@@ -21,19 +21,19 @@
       <div v-else-if="currentEntity === 'patients_health_survey' && !currentId"
         class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
-          label="Заполнить Анкету здоровья"></Button>
+          :label="	t('MainContent.buttons.fillHealthSurvey')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_main_info' && !currentId"
         class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить основную информацию"></Button>
+        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="	t('MainContent.buttons.fillMainInfo')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_contact_info' && !currentId"
         class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить Контактную информацию"></Button>
+        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillContactInfo')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_consents' && !currentId"
         class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" label="Заполнить Согласия"></Button>
+        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_family' && !currentId"
         class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center p-4">
@@ -85,7 +85,7 @@
     </div>
 
     <!-- Filter Dialog -->
-    <Dialog header="Filter Options" v-model:visible="showFilter" :modal="true" :closable="true"
+    <Dialog :header="t('MainContent.dialog.filterOptions')" v-model:visible="showFilter" :modal="true" :closable="true"
       :style="{ width: '25rem' }">
       <!-- Add additional filter options here -->
       <!-- <DateRangeFilter @applyFilter="applyDateFilter" /> -->
@@ -125,6 +125,8 @@ import FamilyTable from "~/components/Dashboard/Components/Personal/FamilyTable.
 import SupportPage from "~/components/Dashboard/Components/Personal/SupportPage.vue";
 import EmbeddedChat from "~/components/AdminChat/EmbeddedChat.vue";
 // ------------------ State & Refs ------------------
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 const showFilter = ref(false);
 const searchQuery = ref("");
 const dateRange = ref({ start: null, end: null });
@@ -161,43 +163,7 @@ const onClickCreate = () => {
   navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
 };
 
-const tt = {
-  /* ── PlaygroundPanel ─────────────────────────────── */
-  playground: {
-    saveDraft:
-      'Saves the current knowledge structure as a draft. You will be able to continue working with it later. The draft is not used by the bot to answer questions until you publish it.',
-    publish:
-      'Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions. After publication, changes take effect immediately, and the bot will start responding using the new data. Make sure the structure is completely ready.',
-    statusReady: 'Ready for publication',
-    blockType:
-      'Topic – the main theme that combines related subtopics.\nSubtopic – a subsection of the main topic with a specific focus.\nQuestion – a typical user question within a subtopic.\nAnswer – a detailed response to a specific question.',
-    parentBlock:
-      'Select the block to which the created element will relate.\nFollow the correct hierarchy:\n• Subtopics are created within Topics\n• Questions are created within Subtopics\n• Answers are created for specific Questions'
-  },
 
-  /* ── ImportPanel ─────────────────────────────────── */
-  import: {
-    sourceSearch:
-      'Search by source name. Enter part of the file name, web page, or text document to filter the list.',
-    importNew: 'Import a new data source: file, web page, or text.',
-    aiInput:
-      'Write here what the AI assistant should do with your data. Example: "Highlight the main services from my website and create questions and answers for them". Press Enter or the send button to convert selected sources into a structured knowledge base.',
-    generator:
-      'Write to the AI assistant specific tasks for structuring your data. Examples:\n• "Create Q&A pairs from a product document"\n• "Divide text into subtopics"\n• "Form a menu of services from my price list"\n• "Extract key benefits"'
-  },
-
-  /* ── Knowledge blocks (topic / subtopic / …) ─────── */
-  kbBlock: {
-    topic:
-      'The main topic containing related subsections and questions.',
-    subtopic:
-      'A section of a topic that groups related questions and answers.',
-    question:
-      'A question in the knowledge base that the bot will look for answers to.',
-    answer:
-      'An answer to a question that the bot will use when formulating responses.'
-  }
-} 
 
 function changeCurrentPage(page) {
   currentPage.value = page + 1;
@@ -269,16 +235,16 @@ const onExportToExcel = async () => {
 
     toast.value?.add({
       severity: "success",
-      summary: "Export Successful",
-      detail: "Data exported to Excel successfully",
+      summary: t('MainContent.toast.exportSuccessSummary'),
+      detail: 	t('MainContent.toast.exportSuccessDetail'),
       life: 3000,
     });
   } catch (error) {
     console.error("Export Error:", error);
     toast.value?.add({
       severity: "error",
-      summary: "Export Failed",
-      detail: "Failed to export data.",
+      summary: 	t('MainContent.toast.exportFailSummary'),
+      detail: t('MainContent.toast.exportFailDetail'),
       life: 3000,
     });
   } finally {
@@ -349,8 +315,8 @@ function validateRoute(data, validCombos) {
     console.error("No groups found in adminData. Nothing to display.");
     toast.value?.add({
       severity: "error",
-      summary: "Error",
-      detail: "No available data.",
+      summary: 	t('MainContent.toast.errorSummary'),
+      detail: t('MainContent.toast.noDataDetail'),
       life: 3000,
     });
     return;
@@ -363,8 +329,8 @@ function validateRoute(data, validCombos) {
     if (firstGroup && firstEntity) {
       toast.value?.add({
         severity: "warn",
-        summary: "Invalid Group",
-        detail: `Redirecting to: /${currentPageName.value}/${firstGroup}/${firstEntity}`,
+        summary:t('MainContent.toast.invalidGroupSummary') ,
+        detail: `${t('MainContent.toast.redirectDetail')} /${currentPageName.value}/${firstGroup}/${firstEntity}`,
         life: 3000,
       });
       router.replace(`/${currentPageName.value}/${firstGroup}/${firstEntity}`);
@@ -386,7 +352,7 @@ function validateRoute(data, validCombos) {
       toast.value?.add({
         severity: "warn",
         summary: "Invalid Entity",
-        detail: `Redirecting to: /${currentPageName.value}/${currentGroup.value}/${firstEntity}`,
+        detail: `${t('MainContent.toast.redirectDetail', { route })} /${currentPageName.value}/${currentGroup.value}/${firstEntity}`,
         life: 3000,
       });
       router.replace(`/${currentPageName.value}/${currentGroup.value}/${firstEntity}`);
@@ -485,7 +451,7 @@ const fetchTableData = async () => {
       toast.value?.add({
         severity: "error",
         summary: "Error",
-        detail: `Failed to load table data. (${error.status})`,
+        detail: `${t('MainContent.toast.loadFailDetail')} (${error.status})`,
         life: 3000,
       });
     }

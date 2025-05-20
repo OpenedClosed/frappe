@@ -8,14 +8,14 @@
             icon="pi pi-bars color-black dark:color-white"
             class="xl:!hidden !block"
             @click="isSidebarOpen = true"
-            aria-label="Menu"
+            :aria-label="t('Topbar.aria.menu')"
           />
           <div v-if="currentPageName === 'admin'" class="flex items-center justify-center md:justify-start ml-2">
-            <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto block dark:hidden" />
-            <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto hidden dark:block" />
+            <img src="/main/Logo.png" :alt="t('Topbar.alt.logo')" class="w-24 h-auto block dark:hidden" />
+            <img src="/main/Logo.png" :alt="t('Topbar.alt.logo')" class="w-24 h-auto hidden dark:block" />
           </div>
           <div v-else class="flex items-center justify-center md:justify-start ml-2">
-            <h3 class="text-white text-lg font-bold">Личный кабинет</h3>
+            <h3 class="text-white text-lg font-bold">{{t('Topbar.titles.personalAccount')}}</h3>
           </div>
         </div>
       </template>
@@ -53,14 +53,13 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useI18n } from "#imports";
-import Theme from "~/components/Dashboard/Components/Theme.vue";
-
+const { t } = useI18n()
 const { isSidebarOpen } = useSidebarState();
 const { currentPageName } = usePageState();
 // Initialize the color mode
 const colorMode = useColorMode();
 
-const userName = ref("Администратор");
+const userName = ref(t('Topbar.user.defaultName'));
 
 function toggleTheme() {
   colorMode.preference = colorMode.preference === "dark" ? "light" : "dark";
@@ -96,12 +95,12 @@ const menuOpen = ref(false);
 const items = computed(() => {
   const menuItems = [
     {
-      label: "Change Theme",
+      label: t('Topbar.menu.changeTheme'),
       icon: colorMode.preference === "dark" ? "pi pi-sun" : "pi pi-moon",
       command: toggleTheme,
     },
     {
-      label: "Logout",
+      label: t('Topbar.menu.logout'),
       icon: "pi pi-power-off",
       command: onLogout,
     },
@@ -109,7 +108,7 @@ const items = computed(() => {
 
   if (currentPageName.value === "admin") {
     menuItems.unshift({
-      label: "To Personal Account",
+      label: 	t('Topbar.menu.toPersonal'),
       icon: "pi pi-user",
       command: () => {
         window.location.href = "/personal_account";
@@ -117,7 +116,7 @@ const items = computed(() => {
     });
   } else {
     menuItems.unshift({
-      label: "To Admin Panel",
+      label: t('Topbar.menu.toAdmin'),
       icon: "pi pi-user",
       command: () => {
         window.location.href = "/admin";

@@ -6,7 +6,7 @@
       <button
         class="p-2 self-end text-xl hover:text-primary "
         @click="isCollapsed = !isCollapsed"
-        v-tooltip.bottom="isCollapsed ? 'Expand' : 'Collapse'"
+        v-tooltip.bottom="isCollapsed ? t('NavigationSidebar.tooltip.expand') : t('NavigationSidebar.tooltip.collapse')"
       >
         <i :class="isCollapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"></i>
       </button>
@@ -50,7 +50,7 @@
         <li v-if="currentPageName === 'admin'">
           <h3 v-if="!isCollapsed" class="text-md uppercase mb-2 flex items-center px-2 font-semibold">
             <i class="mr-2 pi pi-calendar-plus"></i>
-            Settings
+            {{t('NavigationSidebar.headers.settings')}}
           </h3>
           <ul :class="isCollapsed ? 'items-center' : 'ml-4'">
             <RouterLink
@@ -65,7 +65,7 @@
               v-tooltip.right="'Knowledge Base'"
             >
               <i class="pi pi-book"></i>
-              <span v-if="!isCollapsed" class="ml-3 text-sm">Knowledge Base</span>
+              <span v-if="!isCollapsed" class="ml-3 text-sm">{{t('NavigationSidebar.links.knowledgeBase')}}</span>
             </RouterLink>
 
             <RouterLink
@@ -80,7 +80,7 @@
               v-tooltip.right="'Bot Settings'"
             >
               <i class="pi pi-cog"></i>
-              <span v-if="!isCollapsed" class="ml-3 text-sm">Bot Settings</span>
+              <span v-if="!isCollapsed" class="ml-3 text-sm">{{t('NavigationSidebar.links.botSettings')}}</span>
             </RouterLink>
           </ul>
         </li>
@@ -90,7 +90,7 @@
 
   <!-- ░░ Mobile drawer (unchanged) ░░ -->
   <!-- Mobile Sidebar (Drawer) -->
-  <Sidebar v-model:visible="isSidebarOpen" header="Sidebar" class="!w-full md:!w-80 lg:!w-[30rem]">
+  <Sidebar v-model:visible="isSidebarOpen" :header="t('NavigationSidebar.headers.sidebar')" class="!w-full md:!w-80 lg:!w-[30rem]">
     <nav class="p-4">
       <ul class="space-y-4">
         <!-- Hardcoded Knowledge Base -->
@@ -152,6 +152,8 @@
 import { ref, computed, watch } from "vue";
 import Sidebar from "primevue/sidebar";
 import Tooltip from "primevue/tooltip";
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const { currentPageName } = usePageState();
 const { currentLanguage } = useLanguageState();

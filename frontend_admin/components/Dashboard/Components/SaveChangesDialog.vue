@@ -6,10 +6,10 @@
     :dismissableMask="true"
     :header="
       reviewOnly
-        ? 'Preview of detected changes.'
+        ? t('SaveChangesDialog.header.preview')
         : isEditMode
-        ? 'Do you want to save changes to playground?'
-        : 'Do you want to save changes to knowledge base?'
+        ? t('SaveChangesDialog.header.savePlayground')
+        : t('SaveChangesDialog.header.saveKnowledgeBase')
     "
     class="w-1/2 max-w-4xl min-w-96"
   >
@@ -19,10 +19,10 @@
         reviewOnly
           ? ''
           : !isEditMode && !hasChanges
-          ? 'There are no changes to apply to knowledge base.'
+          ? t('SaveChangesDialog.info.noChanges')
           : isEditMode
-          ? 'It will change the playground, but WILL NOT update the knowledge base.'
-          : 'It will CHANGE the knowledge base.'
+          ? t('SaveChangesDialog.info.editModeNote')
+          : t('SaveChangesDialog.info.applyKb')
       }}
     </p>
 
@@ -30,15 +30,15 @@
     <div class="p-4">
       <div class="flex flex-row justify-between items-center mb-4">
         <div class="flex items-center gap-4">
-          <div><span class="font-bold text-green-600">Added:</span> {{ changes.added }}</div>
-          <div><span class="font-bold text-blue-600">Changed:</span> {{ changes.changed }}</div>
-          <div><span class="font-bold text-red-600">Deleted:</span> {{ changes.deleted }}</div>
+          <div><span class="font-bold text-green-600">{{ t('SaveChangesDialog.labels.added') }}</span> {{ changes.added }}</div>
+          <div><span class="font-bold text-blue-600">{{t('SaveChangesDialog.labels.changed')}}</span> {{ changes.changed }}</div>
+          <div><span class="font-bold text-red-600">{{t('SaveChangesDialog.labels.deleted')}}</span> {{ changes.deleted }}</div>
         </div>
       </div>
 
       <div v-if="changes.added > 0" class="mb-6">
         <h3 class="font-semibold text-green-900 dark:text-gray-200">
-          Added Items
+          {{t('SaveChangesDialog.labels.addedItems')}}
         </h3>
 
         <div
@@ -95,7 +95,7 @@
 
       <div v-if="changes.changed > 0" class="mb-6">
         <h3 class="font-semibold text-gray-900 dark:text-gray-200">
-          Changed Items
+          {{t('SaveChangesDialog.labels.changedItems')}}
         </h3>
         <div
           v-for="(topicValue, topicName) in changedItems"
@@ -191,7 +191,7 @@
 
       <div v-if="changes.deleted > 0" class="mb-6">
         <h3 class="font-semibold text-gray-900 dark:text-gray-200">
-          Deleted Items
+        {{t('SaveChangesDialog.labels.deletedItems')}}
         </h3>
 
         <div
@@ -251,13 +251,13 @@
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button
-          :label="reviewOnly ? 'Close' : 'Cancel'"
+          :label="reviewOnly ? t('SaveChangesDialog.buttons.close') : t('SaveChangesDialog.buttons.cancel')"
           class="p-button-secondary p-button-sm"
           @click="$emit('cancel')"
         />
         <Button
           v-if="!reviewOnly"
-          label="Confirm"
+          :label="t('SaveChangesDialog.buttons.confirm')"
           class="p-button-success p-button-sm"
           :disabled="!isEditMode && !hasChanges"
           @click="$emit('save')"
@@ -270,7 +270,8 @@
 <script setup>
 import { defineProps, defineEmits } from 'vue';
 import ImageLink from './ImageLink.vue';
-
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 const props = defineProps({
   visible: { type: Boolean, required: true },
   isEditMode: { type: Boolean, default: false },

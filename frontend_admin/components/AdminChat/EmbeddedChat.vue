@@ -317,7 +317,7 @@ const stopInitWatcher = watch(
     if (!rows.length) return; // nothing to do yet
     setTimeout(() => {
       initChatLogic(rows[0].chat_id); // kick-start the logic
-    }, 300);
+    }, 500);
     stopInitWatcher(); // detach the watcher → runs only once
   },
   { immediate: true } // fire immediately on mount

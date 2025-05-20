@@ -5,14 +5,14 @@
     <details class="mt-2 p-2 rounded border bg-gray-50 dark:bg-gray-800">
       <summary class="cursor-pointer font-medium gap-2 space-x-2">
         <i class="pi pi-database" />
-        <span>{{ sourceId === "kb" ? "Knowledge base" : sourceId }}</span>
+        <span>{{ sourceId === "kb" ? 	t('ReadonlyKB.summary.knowledgeBase') : sourceId }}</span>
       </summary>
 
       <div class="mt-2 text-sm leading-5 space-y-2">
         <template v-for="(topic, topicName) in tree" :key="topicName">
           <div class="flex items-center gap-4">
             <p class="font-semibold">{{ topicName }}</p>
-            <Button disabled class="cursor-not-allowed line-through" size="small" label="Go to source" />
+            <Button disabled class="cursor-not-allowed line-through" size="small" :label="t('ReadonlyKB.buttons.goToSource')" />
           </div>
 
           <template v-for="(sub, subName) in topic.subtopics" :key="subName">
@@ -42,6 +42,8 @@
 <script setup>
 import { computed } from "vue";
 import ImageLink from "./ImageLink.vue";
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const props = defineProps({
   sources: { type: Object, required: true },
