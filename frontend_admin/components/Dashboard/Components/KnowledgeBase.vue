@@ -1018,6 +1018,17 @@ async function submitContext() {
     console.log("form= ", ...form);
     await useNuxtApp().$api.post("/api/knowledge/context_entity", form);
     showSuccess(t("KnowledgeBase.ctxAdded"));
+    /* ──── 🔽  CLEAR THE FORM ──── */
+    Object.assign(newCtx.value, {
+      type: "file", // default tab
+      title: "",
+      text: "",
+      url: "",
+      file: null,
+    });
+    fileUpload.value?.clear(); // wipe PrimeVue FileUpload preview
+    /* ─────────────────────────── */
+
     showContextDialog.value = false;
     fetchContextUnits();
   } catch (_) {
@@ -2212,8 +2223,8 @@ function csvEscape(val) {
 }
 </script>
 
-<style>
-.p-fileupload-file-details .p-badge {
+<style >
+.p-fileupload .p-badge {
   display: none !important;
 }
 .p-fileupload-file .p-fileupload-file-thumbnail {
