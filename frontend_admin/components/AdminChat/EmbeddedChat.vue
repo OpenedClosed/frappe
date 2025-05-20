@@ -261,11 +261,6 @@ function getChatId(data) {
   if (data?.detail?.[0]?.room?.roomId) {
     activeRoomId.value = data.detail[0].room.roomId;
 
-    if (currentChatId.value === activeRoomId.value) {
-      console.log("Already in the same chat, no need to reinitialize.");
-      return;
-    }
-
     currentChatId.value = activeRoomId.value;
     initChatLogic(activeRoomId.value);
     initializeWebSocket.value?.(activeRoomId.value);
@@ -309,19 +304,7 @@ watch([unreadOnly, rooms], (newVal) => {
   displayedRooms.value = filteredRooms;
 });
 
-/* ── initialise the very first chat only once ─────────────── */
-const stopInitWatcher = watch(
-  chatRows,
-  (rows) => {
-    console.log("INIT WATCHER", rows); // For debugging: log chat rows
-    if (!rows.length) return; // nothing to do yet
-    setTimeout(() => {
-      initChatLogic(rows[0].chat_id); // kick-start the logic
-    }, 500);
-    stopInitWatcher(); // detach the watcher → runs only once
-  },
-  { immediate: true } // fire immediately on mount
-);
+
 
 function formatDateEU(isoDateStr) {
   if (!isoDateStr) return "";

@@ -1,6 +1,6 @@
 <template>
   <!-- ░░ Desktop sidebar ░░ -->
-  <div class="hidden xl:flex m-4 transition-all duration-300" :class="isCollapsed ? 'w-16' : 'min-w-[200px] flex-1'">
+  <div class="hidden xl:block m-4 transition-all duration-300" :class="isCollapsed ? 'w-[60px]' : 'min-w-[200px]'">
     <div class="rounded-xl shadow-thicc p-2 flex flex-col bg-white dark:bg-secondary h-full w-full">
       <!-- collapse / expand button -->
       <button

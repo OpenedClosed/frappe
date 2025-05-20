@@ -3,40 +3,40 @@
 <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight"  :class="[currentPageName === 'personal_account' ? '' : '']">
     <!-- Main Layout with Sidebar and DataTable -->
     <div class="max-w-full flex flex-row flex-1 w-full "
-      :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-center']">
+      :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-between']">
       <!-- Navigation Sidebar Component -->
-      <NavigationSidebar v-if="currentPageName === 'admin'" :navItems="navItems" />
+      <NavigationSidebar class="flex justify-start" v-if="currentPageName === 'admin'" :navItems="navItems" />
 
       <InfoHeader v-if="currentPageName === 'personal_account'" />
       <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
 
       <!-- Check if group is "knowledge-base" -->
-      <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col basis-11/12 min-w-0 justify-start">
+      <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col flex-1 min-w-0 justify-start">
         <KnowledgeBase />
       </div>
       <div v-else-if="currentGroup === 'support'"
-        class="flex flex-col flex-1 basis-11/12 min-h-0 min-w-0 justify-start p-4">
+        class="flex flex-col flex-1 flex-1 min-h-0 min-w-0 justify-start p-4">
         <SupportPage class="m-4" />
       </div>
       <div v-else-if="currentEntity === 'patients_health_survey' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
+        class="flex flex-col flex-1 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
           :label="	t('MainContent.buttons.fillHealthSurvey')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_main_info' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
+        class="flex flex-col flex-1 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="	t('MainContent.buttons.fillMainInfo')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_contact_info' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
+        class="flex flex-col flex-1 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillContactInfo')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_consents' && !currentId"
-        class="flex flex-col basis-11/12 min-w-0 justify-center items-center p-4">
+        class="flex flex-col flex-1 min-w-0 justify-center items-center p-4">
         <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
       </div>
       <div v-else-if="currentEntity === 'patients_family' && !currentId"
-        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center p-4">
+        class="flex w-full flex-col flex-1 min-w-0 justify-center items-center p-4">
       <FamilyTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
           :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
           :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
@@ -50,7 +50,7 @@
       </div>
       <!-- <div
         v-else-if="currentEntity === 'patients_bonus_program' && !currentId"
-        class="flex w-full flex-col basis-11/12 min-w-0 justify-center items-center"
+        class="flex w-full flex-col flex-1 min-w-0 justify-center items-center"
       >
         <PointsTable
           :title="currentEntityName"
@@ -71,7 +71,7 @@
       </div> -->
 
       <!-- Default behavior: Show Data Table -->
-      <div v-else-if="currentEntity && !currentId" class="flex flex-col basis-11/12 min-w-0 justify-between m-4">
+      <div v-else-if="currentEntity && !currentId" class="flex flex-col flex-1 min-w-0 justify-between m-4">
         <DynamicDataTable v-if="currentPageInstances > 1 || currentPageName === 'admin'" :title="currentEntityName"
           :isInline="isEntityInline" :displayedColumns="displayedColumns" :tableData="filteredTableData"
           :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize" :first="(currentPage - 1) * pageSize"
@@ -79,7 +79,7 @@
           @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
       </div>
 
-      <div v-else class="flex flex-col basis-11/12 min-w-0 justify-start">
+      <div v-else class="flex flex-col flex-1 min-w-0 justify-start">
         <MainForm />
       </div>
     </div>
@@ -327,12 +327,12 @@ function validateRoute(data, validCombos) {
     const firstGroup = groupKeys[0];
     const firstEntity = data[firstGroup].entities[0]?.registered_name;
     if (firstGroup && firstEntity) {
-      toast.value?.add({
-        severity: "warn",
-        summary:t('MainContent.toast.invalidGroupSummary') ,
-        detail: `${t('MainContent.toast.redirectDetail')} /${currentPageName.value}/${firstGroup}/${firstEntity}`,
-        life: 3000,
-      });
+      // toast.value?.add({
+      //   severity: "warn",
+      //   summary:t('MainContent.toast.invalidGroupSummary') ,
+      //   detail: `${t('MainContent.toast.redirectDetail')} /${currentPageName.value}/${firstGroup}/${firstEntity}`,
+      //   life: 3000,
+      // });
       router.replace(`/${currentPageName.value}/${firstGroup}/${firstEntity}`);
     }
     return;
@@ -349,12 +349,12 @@ function validateRoute(data, validCombos) {
     // If invalid entity, pick the first entity of the group
     const firstEntity = groupConfig.entities[0]?.registered_name;
     if (firstEntity) {
-      toast.value?.add({
-        severity: "warn",
-        summary: "Invalid Entity",
-        detail: `${t('MainContent.toast.redirectDetail', { route })} /${currentPageName.value}/${currentGroup.value}/${firstEntity}`,
-        life: 3000,
-      });
+      // toast.value?.add({
+      //   severity: "warn",
+      //   summary: "Invalid Entity",
+      //   detail: `${t('MainContent.toast.redirectDetail', { route })} /${currentPageName.value}/${currentGroup.value}/${firstEntity}`,
+      //   life: 3000,
+      // });
       router.replace(`/${currentPageName.value}/${currentGroup.value}/${firstEntity}`);
     }
     return;
