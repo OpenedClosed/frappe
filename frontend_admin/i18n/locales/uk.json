@@ -1,171 +1,614 @@
 {
-  "chat": "Чат",
-  "newChat": "Новий чат",
-  "showCommands": "Показати команди", // ADDED
-  "sendMessage": "Надіслати повідомлення...",
-  "chatAgain": "Почати знову",
-  "language": "Мова",
-  // Ukrainian (uk)
-  "buttons": {
-    "save": "Зберегти",
-    "cancel": "Скасувати",
-    "close": "Закрити",
-    "delete": "Видалити",
-    "edit": "Редагувати",
-    "add": "Додати",
-    "remove": "Видалити",
-    "create": "Створити",
-    "send": "Надіслати",
-    "back": "Назад",
-    "next": "Далі",
-    "finish": "Завершити",
-    "confirm": "Підтвердити",
-    "search": "Пошук",
-    "clear": "Очистити",
-    "select": "Вибрати",
-    "copy": "Копіювати",
-    // Ukrainian (uk)
-    "openTestChat": "Відкрити тестовий чат"
-  },
-  "roomActions": [
-    {
-      "name": "archiveRoom",
-      "title": "Архівувати кімнату"
-    }
-  ],
-  "menuActions": [
-    {
-      "name": "inviteUser",
-      "title": "Запросити користувача"
-    },
-    {
-      "name": "removeUser",
-      "title": "Видалити користувача"
-    },
-    {
-      "name": "deleteRoom",
-      "title": "Видалити кімнату"
-    }
-  ],
-  "messageActions": [
-    {
-      "name": "replyMessage",
-      "title": "Відповісти"
-    },
-    {
-      "name": "editMessage",
-      "title": "Редагувати повідомлення",
-      "onlyMe": true
-    },
-    {
-      "name": "deleteMessage",
-      "title": "Видалити повідомлення",
-      "onlyMe": true
-    },
-    {
-      "name": "selectMessages",
-      "title": "Вибрати"
-    }
-  ],
-  "messageSelectionActions": [
-    {
-      "name": "deleteMessages",
-      "title": "Видалити"
-    },
-    {
-      "name": "forwardMessages",
-      "title": "Переслати"
-    }
-  ],
-  "templatesText": [
-    {
-      "tag": "help",
-      "text": "Це довідка"
-    },
-    {
-      "tag": "action",
-      "text": "Це дія"
-    }
-  ],
   "textMessages": {
-    "ROOMS_EMPTY": "Немає діалогів",
-    "ROOM_EMPTY": "Не вибрано діалог",
+    "ROOMS_EMPTY": "Немає розмов",
+    "ROOM_EMPTY": "Розмову не вибрано",
     "NEW_MESSAGES": "Нові повідомлення",
-    "MESSAGE_DELETED": "Повідомлення видалено",
-    "MESSAGES_EMPTY": "Немає повідомлень",
-    "CONVERSATION_STARTED": "Розмова розпочалася:",
+    "MESSAGE_DELETED": "Повідомлення було видалено",
+    "MESSAGES_EMPTY": "Повідомлень немає",
+    "CONVERSATION_STARTED": "Розмову розпочато:",
     "TYPE_MESSAGE": "Введіть повідомлення",
     "SEARCH": "Пошук",
-    "IS_ONLINE": "в мережі",
-    "LAST_SEEN": "був(ла) в мережі",
+    "IS_ONLINE": "у мережі",
+    "LAST_SEEN": "був(ла) онлайн ",
     "IS_TYPING": "друкує...",
     "CANCEL_SELECT_MESSAGE": "Скасувати вибір"
   },
-  "additionalMessages": {
-    "chatRefreshed": "Чат оновлено",
-    "chatRefreshedSuccessfully": "Чат успішно оновлено.",
-    "errorRefreshingChat": "Помилка під час оновлення чату:",
-    "failedToRefreshChat": "Не вдалося оновити чат.",
-    "sendingMessage": "Надсилання повідомлення:",
-    "attention": "Увага",
-    "error": "Помилка",
-    "choiceOptions": "Варіанти вибору:",
-    "choiceOptionsFromLastMessage": "Варіанти (з останнього повідомлення):",
-    "messagesRetrieved": "Повідомлення отримано:",
-    "newMessage": "Нове повідомлення:",
-    "unknownMessageType": "Невідомий тип повідомлення:",
-    "webSocketConnectionEstablished": "Підключено WebSocket.",
-    "webSocketConnectionClosed": "З’єднання WebSocket закрито.",
-    "webSocketError": "Помилка WebSocket:",
-    "pageIsVisibleCheckingWSConnection": "Сторінка активна. Перевіряємо з'єднання...",
-    "pageIsHiddenPausingUpdates": "Сторінка неактивна. Оновлення призупинено.",
-    "windowInFocus": "Вікно у фокусі",
-    "webSocketIsNotOpenReconnecting": "WebSocket не відкритий. Повторне підключення..."
+
+  "EmbeddedChat": {
+    "allLabel": "Усі",
+    "unreadLabel": "Непрочитані",
+    "exportButton": "Експортувати чати в Excel",
+    "messageDialogHeader": "Повідомлення",
+    "messageDialogId": "ID",
+    "messageDialogText": "Текст",
+    "noSources": "Повідомлення не має джерел з бази знань",
+    "sourceLabel": "Джерело",
+    "userIdLabel": "ID користувача",
+    "closeButton": "Закрити",
+
+    "seeSources": "Переглянути джерела",
+    "excelSuccess": "Excel-файл створено",
+    "excelFailed": "Не вдалося експортувати в Excel",
+    "noDate": "Дата не зазначена",
+    "inFuture": "У майбутньому",
+    "startedAgo": "Почато {diffDays} дн., {diffHours} год., {diffMinutes} хв. тому",
+    "consultant": "Консультант",
+    "client": "Клієнт",
+    "chatFallback": "Чат {index}"
   },
 
-  "knowledgeBase": {
-    "addTopic": "Додати тему",
-    "removeTopic": "Видалити тему",
-    "addSubtopic": "Додати підтему",
-    "removeSubtopic": "Видалити підтему",
-    "addQuestion": "Додати питання",
-    "removeQuestion": "Видалити питання",
-    "renameTopic": "Перейменувати тему",
-    "renameSubtopic": "Перейменувати підтему",
-    "saveChanges": "Зберегти зміни",
-    "discardChanges": "Скасувати зміни",
-    "exportData": "Експортувати дані",
-    "importData": "Імпортувати дані",
-    "clearPlayground": "Очистити робочий простір",
-    "confirmRemoveTopic": "Видалити тему \"{topicName}\"?",
-    "confirmRemoveSubtopic": "Видалити підтему \"{subtopicName}\" з \"{topicName}\"?",
-    "confirmRemoveQuestion": "Видалити питання \"{questionKey}\"?",
-    "unsavedChangesWarning": "У вас є незбережені зміни. Ви впевнені, що хочете вийти?",
-    "label": {
-      "promptTextarea": "Поле запиту",
-      "question": "Питання",
-      "answerText": "Текст відповіді",
-      "linksFiles": "Посилання / Файли",
-      "selectedFiles": "Вибрані файли"
-    },
-    "button": {
-      "howToUse": "Як користуватися цим інструментом?",
-      "generateSmartChange": "Згенерувати розумну зміну",
-      "openTestChat": "Відкрити тестовий чат",
-      "clearPlayground": "Очистити робочий простір",
-      "addTopic": "Додати тему",
-      "addSubtopic": "Додати підтему",
-      "addQuestion": "Додати питання",
-      "addLink": "Додати посилання",
-      "savePlayground": "Зберегти робочий простір",
-      "rejectPlayground": "Відхилити робочий простір",
-      "transferToDatabase": "Перенести в базу даних",
-      "exportJson": "Експортувати JSON",
-      "importJson": "Імпортувати JSON"
-    },
-    "header": {
-      "workspacePlayground": "Робочий простір",
-      "readonlyKnowledgeBase": "База знань (лише для читання)"
+  "MainLogin": {
+    "title": "Увійдіть до свого акаунту",
+    "loginLabel": "Логін",
+    "loginPlaceholder": "Введіть логін",
+    "passwordLabel": "Пароль",
+    "passwordPlaceholder": "Введіть пароль",
+    "loginButton": "Увійти",
+    "noAccount": "Немає акаунту?",
+    "registerLink": "Зареєструватися"
+  },
+
+  "MainRegistration": {
+    "titleRegister": "Реєстрація",
+    "email": "E-mail:",
+    "emailPlaceholder": "Введіть e-mail",
+    "phone": "Телефон:",
+    "phonePlaceholder": "Введіть номер телефону",
+    "firstName": "Ім’я:",
+    "firstNamePlaceholder": "Введіть ім’я",
+    "lastName": "Прізвище:",
+    "lastNamePlaceholder": "Введіть прізвище",
+    "birthDate": "Дата народження:",
+    "birthDatePlaceholder": "Введіть дату народження",
+    "city": "Місто:",
+    "cityPlaceholder": "Введіть місто",
+    "gender": "Стать:",
+    "genderPlaceholder": "Введіть стать",
+    "termsLabel": "Я згоден з",
+    "termsAnd": "та",
+    "termsLink": "Правилами користування",
+    "privacyLink": "Політикою конфіденційності",
+    "registerButton": "Зареєструватися",
+    "alreadyHaveAccount": "Уже маєте акаунт?",
+    "goToLogin": "Увійти",
+
+    "codeTitle": "Тестовий код (буде надіслано пізніше на e-mail)",
+    "codeConfirmTitle": "Підтвердження коду",
+    "enterCodePrompt": "Введіть шестизначний код із листа",
+    "codeConfirmButton": "Підтвердити",
+    "codeResendHelp1": "Якщо код не отримано —",
+    "codeResendHelp2": "перевірте спам або",
+    "resendLink": "надішліть повторно",
+
+    "error": {
+      "terms": "Необхідно погодитися з Умовами сервісу."
     }
+  },
+
+  "PersonalMainLogin": {
+    "titleLogin": "Вхід до акаунту",
+    "phone": "Телефон",
+    "phonePlaceholder": "Введіть номер телефону",
+    "password": "Пароль",
+    "passwordPlaceholder": "Введіть пароль",
+    "loginButton": "Увійти",
+    "noAccount": "Немає акаунту?",
+    "registerLink": "Зареєструватися",
+    "title2FA": "Підтвердження входу",
+    "testCode": "Тестовий код:",
+    "twofaLabel": "Код із SMS / e-mail",
+    "twofaPlaceholder": "Введіть код",
+    "confirmButton": "Підтвердити",
+    "cancelButton": "Скасувати"
+  },
+
+  "PersonalMainRegistration": {
+    "title": "Реєстрація",
+    "subtitle": "Створіть новий акаунт",
+    "phone": "Номер телефону",
+    "phonePlaceholder": "Введіть номер телефону",
+    "email": "E-mail",
+    "emailPlaceholder": "{'mail@example.com'}",
+    "fullName": "Повне ім’я",
+    "fullNamePlaceholder": "Іван Іванов",
+    "password": "Пароль",
+    "passwordPlaceholder": "Щонайменше 10 символів",
+    "show": "Показати",
+    "hide": "Приховати",
+    "passwordHint": "Щонайменше 10 символів, включаючи великі та малі літери, цифри й символи",
+    "passwordConfirm": "Підтвердіть пароль",
+    "passwordConfirmPlaceholder": "Повторіть пароль",
+    "termsPrefix": "Я згоден з",
+    "termsLink": "Правилами користування",
+    "privacyAnd": "та",
+    "privacyLink": "Політикою конфіденційності",
+    "registerButton": "Зареєструватися",
+    "alreadyHave": "Вже маєте акаунт?",
+    "loginLink": "Увійти",
+    "confirmTitle": "Підтвердьте реєстрацію",
+    "debugCode": "Тестовий код (прийде пізніше e-mail)",
+    "smsCodeLabel": "Код із SMS",
+    "smsCodePlaceholder": "Введіть код із SMS",
+    "confirmButton": "Підтвердити",
+    "cancelButton": "Скасувати"
+  },
+
+  "DynamicForm": {
+    "upload": "Завантажити",
+    "addFiles": "Додати файли",
+    "addImages": "Додати зображення",
+    "downloadFile": "Завантажити файл",
+    "delete": "Видалити",
+    "enterTags": "Введіть теги...",
+    "enterCountry": "Введіть країну..."
+  },
+
+  "InlineList": {
+    "addNewHeader": "Додати",
+    "saveBtn": "Зберегти",
+    "deleteBtn": "Видалити",
+    "createBtn": "Створити",
+
+    "confirmDelete": "Ви впевнені, що хочете видалити цей елемент?",
+    "noChanges": "Змін немає.",
+    "updated": "Елемент оновлено!",
+    "updateError": "Помилка при оновленні елемента.",
+    "deleted": "Елемент видалено!",
+    "deleteError": "Помилка при видаленні елемента.",
+    "onlyOne": "Дозволено лише один елемент.",
+    "created": "Елемент створено!",
+    "createError": "Помилка при створенні елемента."
+  },
+
+  "MainForm": {
+    "createPrefix": "Створення нового запису",
+    "detailPrefix": "Деталі запису",
+    "loading": "Завантаження даних…",
+
+    "edit": "Редагувати",
+    "save": "Зберегти",
+    "delete": "Видалити",
+    "create": "Створити запис",
+    "openChat": "Відкрити чат",
+    "backToList": "До списку",
+    "backToRecord": "До запису",
+
+    "confirmDelete": "Ви впевнені, що хочете видалити цей запис?",
+
+    "noChanges": "Немає змін для збереження.",
+    "created": "Запис створено",
+    "deleted": "Запис видалено",
+    "updateError": "Помилка збереження змін.",
+    "createError": "Помилка створення запису.",
+    "deleteError": "Помилка видалення запису.",
+    "unknownError": "Невідома помилка"
+  },
+
+  "AgreesPanel": {
+    "title": "Згоди користувача",
+    "subtitle": "Інформація про згоди користувача"
+  },
+
+  "ContactInfoView": {
+    "title": "Контактна інформація",
+
+    "email": "E-mail",
+    "phone": "Телефон",
+    "address": "Адреса",
+    "pesel": "PESEL / Ідентифікатор",
+
+    "emergency": "Контакт у разі надзвичайної ситуації",
+    "docId": "ID документа",
+    "lastUpdate": "Останнє оновлення",
+
+    "invalidDate": "Невірна дата",
+    "dash": "—"
+  },
+
+  "FamilyTable": {
+    "addMember": "Додати члена сім’ї",
+    "idPrefix": "ID:",
+    "nameUnknown": "Ім’я не зазначено",
+    "relationshipUnknown": "Стосунок не зазначено",
+    "statusUnknown": "Статус не зазначено",
+    "bonusSuffix": "бонусних балів",
+    "noBonus": "Бонусів немає",
+    "editAria": "Редагувати"
+  },
+
+  "InfoHeader": {
+    "patientIdPrefix": "ID пацієнта:",
+    "bonusPrefix": "Бонуси:",
+    "actions": "Дії",
+    "logout": "Вийти",
+    "adminPanel": "Адмін-панель",
+    "changeTheme": "Змінити тему"
+  },
+
+  "NavigationSidebarTabs": {
+    "support": "Підтримка"
+  },
+
+  "PatientsHealthSurveyView": {
+    "title": "Опитування про здоров’я",
+    "subtitle": "Медична інформація користувача",
+
+    "allergies": "Алергії:",
+    "chronic": "Хронічні захворювання:",
+    "smoking": "Статус куріння:",
+    "medications": "Поточні ліки:",
+    "lastUpdate": "Останнє оновлення:",
+    "noData": "Немає даних",
+    "dash": "—"
+  },
+
+  "PatientsMainInfoView": {
+    "sectionTitle": "Основна інформація",
+
+    "blockPersonal": "Персональні дані",
+    "lastName": "Прізвище:",
+    "firstName": "Ім’я:",
+    "patronymic": "По батькові:",
+    "birthDate": "Дата народження:",
+    "gender": "Стать:",
+
+    "blockCompany": "Інформація про компанію",
+    "companyName": "Назва компанії:",
+
+    "blockSystem": "Системна інформація",
+    "patientId": "ID пацієнта:",
+    "createdAt": "Створено:",
+    "updatedAt": "Останнє оновлення:",
+
+    "invalidDate": "Невірна дата",
+    "dash": "—"
+  },
+
+  "PointsTable": {
+    "balanceCard": "Бонусний рахунок",
+    "balanceSubtitle": "Інформація про бонуси",
+    "currentBalance": "Поточний баланс:",
+    "referralCode": "Реферальний код:",
+    "lastUpdate": "Останнє оновлення",
+
+    "transactionsCard": "Історія транзакцій",
+    "transactionsSubtitle": "Останні бонусні операції",
+
+    "toastTitle": "Код скопійовано",
+    "toastBody": "Реферальний код скопійовано!",
+    "tooltipCopy": "Скопіювати код"
+  },
+
+  "SupportPage": {
+    "title": "Чат підтримки"
+  },
+
+  "DateRangeFilter": {
+    "heading": "Фільтр діапазону дат:",
+    "placeholder": "Виберіть дати",
+    "clear": "Очистити діапазон"
+  },
+
+  "DynamicDataTable": {
+    "exportExcel": "Експорт в Excel",
+    "create": "Створити",
+    "add": "Додати",
+    "editAria": "Редагувати"
+  },
+
+  "KnowledgeBase": {
+    "contextSources": "Контекстні джерела",
+    "contextInfoTip": "Контекстні джерела — це файли, посилання або текст, які бот використовує для відповіді на запитання. Ви можете додавати, видаляти або редагувати їх за потреби. Бот використовуватиме найбільш релевантні джерела для точних відповідей.",
+
+    "searchPlaceholder": "Пошук джерел…",
+    "searchTip": "Пошук за назвою джерела. Введіть частину імені файлу, веб-сторінки або заголовка тексту, щоб відфільтрувати список.",
+    "addContext": "Додати контекст",
+    "addContextTip": "Імпортуйте нове джерело даних: файл, веб-сторінку або текст.",
+
+    "addContextHeader": "Додавання контексту",
+
+    "titlePlaceholder": "Назва",
+    "pasteTextPlaceholder": "Вставте текст тут…",
+
+    "uploadHeader": "Завантаження джерел",
+    "uploadSub": "Виберіть файл або перетягніть його сюди.",
+    "uploadTypes": "Підтримувані типи: PDF, TXT, зображення, DOCX, XLSX",
+
+    "dialogCancel": "Скасувати",
+    "dialogAdd": "Додати",
+
+    "totalSources": "Загалом джерел",
+    "selectedSources": "Вибрано",
+
+    "queryField": "Поле запиту",
+    "queryFieldTip": "Введіть своє запитання або запит. ІІ використає контекстні джерела для релевантної відповіді.",
+
+    "aiModelPlaceholder": "Виберіть модель ІІ",
+
+    "requestHistory": "Історія запитів",
+    "clearHistory": "Очистити історію",
+    "noHistory": "Попередні запити відсутні.",
+    "reuseTip": "Повторно використати цей запит",
+
+    "typeHere": "Пишіть тут…",
+    "typeHereTip": "Опишіть, що має зробити ІІ-асистент із вашими даними…",
+
+    "uploadSourcesTitle": "Завантаження джерел",
+    "uploadSourcesSubtitle": "Виберіть файл або перетягніть його сюди.",
+    "uploadSourcesTypes": "Підтримувані типи: PDF, TXT, зображення, DOCX, XLSX",
+
+    "files": "Файли",
+    "site": "Сайт",
+    "text": "Текст",
+
+    "dontUse": "Не використовувати",
+    "botKnowledge": "Знання бота",
+    "contextOnly": "Лише контекст",
+    "knowledgeAndContext": "Знання й контекст",
+
+    "querySmartChange": "Згенерувати розумну зміну",
+
+    "playgroundHeader": "Пісочниця",
+
+    "addTopic": "Додати тему",
+    "addTopicDesc": "Тема — головна тема, що об’єднує пов’язані підтеми. Підтема — підрозділ теми з конкретним фокусом. Запитання — типове запитання користувача в підтемі. Відповідь — детальна відповідь на конкретне запитання.",
+    "addSubtopic": "Додати підтему",
+    "addQuestion": "Додати запитання",
+    "addLink": "Додати посилання",
+
+    "questionLabel": "Запитання:",
+    "answerTextLabel": "Текст відповіді:",
+    "linksFilesLabel": "Посилання / файли:",
+    "selectedFilesLabel": "Вибрані файли:",
+
+    "topicTooltip": "Головна тема, що містить підтеми та запитання.",
+    "subtopicTooltip": "Частина теми, що групує пов’язані запитання й відповіді.",
+    "questionTooltip": "Запитання в базі знань, на яке бот шукатиме відповідь.",
+    "answerTooltip": "Відповідь, яку бот використає для формулювання.",
+
+    "playgroundEmpty": "Пісочниця порожня",
+    "playgroundEmptyBody": "Імпортуйте вміст із лівої панелі або створіть новий блок.",
+    "createBlock": "Створити блок",
+
+    "reject": "Відхилити",
+    "save": "Зберегти",
+    "saveDesc": "Зберігає поточну структуру знань як чернетку. Ви зможете повернутися пізніше. Чернетка не використовується ботом для відповідей, доки ви її не опублікуєте.",
+    "publish": "Опублікувати",
+    "publishDesc": "Публікує структуру знань до основної бази, яку бот використовує для відповідей. Зміни набувають чинності одразу. Переконайтеся, що структура повністю готова.",
+    
+
+    "knowledgeBase": "База знань",
+    "knowledgeBaseDesc": "База знань — головне джерело інформації для бота. Містить усі теми, підтеми та запитання. Ви можете переглядати й шукати, але не можете редагувати тут напряму.",
+    "searchKbPlaceholder": "Пошук у базі знань…",
+    "export": "Експорт",
+    "exportDialogTitle": "Експорт бази знань",
+    "exportJson": "JSON",
+    "exportJsonDesc": "Повні структуровані дані (рекомендовано)",
+    "exportCsv": "CSV",
+    "exportCsvDesc": "Формат для таблиць",
+    "exportTxt": "Текст",
+    "exportTxtDesc": "Звичайний текст",
+    "exportCancel": "Скасувати",
+
+    "removeTopic": "Видалити тему «{topicName}»?",
+    "removeSubtopic": "Видалити підтему «{subtopicName}» у «{topicName}»?",
+    "removeQuestion": "Видалити запитання «{questionKey}»?",
+
+    "newTopic": "Нова тема",
+    "newSubtopic": "Нова підтема",
+    "newQuestion": "Нове запитання",
+
+    "toastAdded": "{what} успішно додано",
+    "toastRemoved": "{what} успішно видалено",
+    "toastUpdated": "{what} успішно оновлено",
+    "toastNotAdded": "{what} не додано",
+    "toastNotRemoved": "{what} не видалено",
+    "toastNotUpdated": "{what} не оновлено",
+
+    "ctxRenamePrompt": "Перейменувати контекст",
+    "ctxRenamed": "Назву контексту оновлено",
+    "ctxNotRenamed": "Назву контексту не змінено",
+
+    "ctxPurposeUpdated": "Призначення оновлено",
+    "ctxPurposeNotUpdated": "Призначення не оновлено",
+
+    "ctxLoadErr": "Не вдається завантажити контекст",
+    "ctxAddMax": "Досягнуто максимуму {max} джерел",
+    "ctxAdded": "Контекст додано",
+    "ctxNotAdded": "Контекст не додано",
+    "ctxDeleted": "Контекст видалено",
+    "ctxNotDeleted": "Контекст не видалено",
+
+    "menuRename": "Перейменувати",
+    "menuDownload": "Завантажити",
+    "menuDelete": "Видалити",
+
+    "typeText": "Текст",
+    "typeFile": "Файл / фото",
+    "typeLink": "Посилання",
+
+    "purposeNone": "Не використовувати",
+    "purposeBot": "Знання бота",
+    "purposeKb": "Лише контекст",
+    "purposeBoth": "Знання й контекст",
+
+    "purposeNoneDesc": "Джерело ігнорується при генерації відповідей.",
+    "purposeBotDesc": "Інформація додається до бази знань і впливає на загальні відповіді.",
+    "purposeKbDesc": "Джерело використовується лише для конкретного запитання.",
+    "purposeBothDesc": "Джерело використовується для загальних знань і конкретних відповідей.",
+
+    "topicAdded": "Тему успішно додано",
+    "topicRemoved": "Тему успішно видалено",
+    "topicNotRemoved": "Тему не видалено",
+
+    "subtopicAdded": "Підтему успішно додано",
+    "subtopicRemoved": "Підтему успішно видалено",
+    "subtopicNotRemoved": "Підтему не видалено",
+
+    "questionAdded": "Запитання успішно додано",
+    "questionRemoved": "Запитання успішно видалено",
+    "questionNotRemoved": "Запитання не видалено",
+    "questionExists": "Таке запитання вже існує!",
+
+    "fileAdded": "Посилання / файл додано",
+    "fileRemoved": "Посилання / файл видалено",
+
+    "playgroundCleared": "Пісочницю успішно очищено",
+    "playgroundUpdated": "Пісочницю успішно оновлено",
+    "playgroundNotUpdated": "Пісочницю не оновлено",
+    "playgroundRejected": "Пісочницю успішно відхилено",
+
+    "kbSaved": "Базу знань успішно збережено",
+    "kbNotSaved": "Базу знань не збережено",
+
+    "patchGenerated": "Патч успішно згенеровано",
+    "patchNotGenerated": "Не вдалося згенерувати патч",
+
+    "noChanges": "Немає змін для збереження.",
+    "msgPlaygroundUpdated": "Пісочницю успішно оновлено",
+    "msgPlaygroundUpdateErr": "Не вдалося оновити пісочницю",
+    "msgDbSaved": "База знань збережена",
+    "msgDbSaveErr": "Не вдалося зберегти базу знань",
+    "confirmClear": "Очистити пісочницю?\n\nУсі чернетки буде втрачено. Це НЕ торкнеться справжньої бази знань.",
+    "msgPlaygroundCleared": "Пісочницю очищено",
+    "confirmReject": "Відхилити пісочницю?\n\nЧернетки буде втрачено. Справжня база знань не зміниться.",
+    "msgPlaygroundRejected": "Пісочницю відхилено",
+    "unsavedChanges": "У вас є незбережені зміни в пісочниці!",
+    "msgPatchGenerated": "Патч успішно згенеровано",
+    "msgPatchErr": "Не вдалося згенерувати патч"
+  
+  },
+
+  "MainContent": {
+    "dialog": {
+      "filterOptions": "Параметри фільтру"
+    },
+    "buttons": {
+      "fillHealthSurvey": "Заповнити анкету здоров’я",
+      "fillMainInfo": "Заповнити основну інформацію",
+      "fillContactInfo": "Заповнити контактну інформацію",
+      "fillConsents": "Заповнити згоди"
+    },
+    "toast": {
+      "exportSuccessSummary": "Експорт успішний",
+      "exportSuccessDetail": "Дані успішно експортовано до Excel",
+      "exportFailSummary": "Експорт не вдався",
+      "exportFailDetail": "Не вдалося експортувати дані.",
+      "invalidGroupSummary": "Невірна група",
+      "invalidEntitySummary": "Невірна сутність",
+      "errorSummary": "Помилка",
+      "noDataDetail": "Немає доступних даних.",
+      "loadFailDetail": "Не вдалося завантажити дані таблиці. ({status})",
+      "redirectDetail": "Перенаправлення на: {route}"
+    },
+
+    "playground": {
+      "saveDraft": "Зберігає поточну структуру знань як чернетку. Ви зможете продовжити пізніше. Чернетка не використовується ботом для відповідей, доки ви її не опублікуєте.",
+      "publish": "Публікує структуру знань до основної бази, яку бот використовує для відповідей користувачам. Після публікації зміни набувають чинності одразу, і бот почне відповідати з використанням нових даних. Переконайтеся, що структура повністю готова.",
+      "statusReady": "Готово до публікації",
+      "blockType": "Тема – головна тема, що об’єднує підтеми.\nПідтема – підрозділ теми з конкретним фокусом.\nЗапитання – типове запитання користувача в підтемі.\nВідповідь – детальна відповідь на конкретне запитання.",
+      "parentBlock": "Виберіть блок, до якого належатиме створюваний елемент.\nДотримуйтеся ієрархії:\n• Підтеми створюються в Темах\n• Запитання створюються в Підтемах\n• Відповіді створюються для конкретних Запитань"
+    },
+
+    "import": {
+      "sourceSearch": "Пошук за назвою джерела. Введіть частину імені файлу, веб-сторінки чи текстового документа для фільтрації.",
+      "importNew": "Імпортувати нове джерело: файл, веб-сторінка або текст.",
+      "aiInput": "Напишіть тут, що має зробити ІІ-асистент із вашими даними. Приклад: «Виділіть основні послуги з мого сайту та створіть запитання й відповіді». Натисніть Enter або кнопку відправки, щоб перетворити вибрані джерела на структуровану базу знань.",
+      "generator": "Напишіть ІІ-асистенту конкретні задачі для структуризації даних. Приклади:\n• «Створи пари Q&A з продуктового документа»\n• «Розділи текст на підтеми»\n• «Сформуй меню послуг із прайс-листа»\n• «Виділи ключові переваги»"
+    },
+
+    "kbBlock": {
+      "topic": "Головна тема, що містить підтеми та запитання.",
+      "subtopic": "Частина теми, що групує запитання та відповіді.",
+      "question": "Запитання у базі знань, на яке бот шукає відповідь.",
+      "answer": "Відповідь, яку бот використовує."
+    }
+  },
+
+  "NavigationSidebar": {
+    "tooltip": {
+      "expand": "Розгорнути",
+      "collapse": "Згорнути"
+    },
+    "headers": {
+      "settings": "Налаштування",
+      "sidebar": "Бічна панель"
+    },
+    "links": {
+      "knowledgeBase": "База знань",
+      "botSettings": "Налаштування бота"
+    }
+  },
+
+  "ReadonlyKB": {
+    "summary": {
+      "knowledgeBase": "База знань"
+    },
+    "buttons": {
+      "goToSource": "Перейти до джерела"
+    }
+  },
+
+  "SaveChangesDialog": {
+    "header": {
+      "preview": "Перегляд виявлених змін.",
+      "savePlayground": "Зберегти зміни в пісочниці?",
+      "saveKnowledgeBase": "Зберегти зміни в базі знань?"
+    },
+    "info": {
+      "noChanges": "Немає змін для внесення до бази знань.",
+      "editModeNote": "Змінить пісочницю, але НЕ оновить базу знань.",
+      "applyKb": "Змінить базу знань."
+    },
+    "labels": {
+      "added": "Додано:",
+      "changed": "Змінено:",
+      "deleted": "Видалено:",
+      "addedItems": "Додані елементи",
+      "changedItems": "Змінені елементи",
+      "deletedItems": "Видалені елементи"
+    },
+    "buttons": {
+      "close": "Закрити",
+      "cancel": "Скасувати",
+      "confirm": "Підтвердити"
+    }
+  },
+
+  "Topbar": {
+    "aria": {
+      "menu": "Меню"
+    },
+    "titles": {
+      "personalAccount": "Особистий кабінет"
+    },
+    "menu": {
+      "toPersonal": "До особистого кабінету",
+      "toAdmin": "До адмін-панелі",
+      "changeTheme": "Змінити тему",
+      "logout": "Вийти"
+    },
+    "alt": {
+      "logo": "Логотип"
+    },
+    "user": {
+      "defaultName": "Адміністратор"
+    }
+  },
+
+  "AdminChat": {
+    "buttons": {
+      "trainBot": "Навчити бота",
+      "closeChat": "Закрити чат",
+      "openTestChat": "Відкрити тестовий чат"
+    }
+  },
+
+  "LoaderOverlay": {
+    "loadingCompleted": "Завантаження завершено!"
+  },
+
+  "test": {
+    "test": "Тест"
   }
 }

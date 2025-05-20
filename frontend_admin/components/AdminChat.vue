@@ -1,7 +1,7 @@
 <template>
    <div class="flex ">
 
-    <Button label="Train AI bot"
+    <Button :label="t('AdminChat.buttons.trainBot')"
                     icon="pi pi-user" class="p-button-sm w-full" @click="toggleChat" />
     <div v-if="currentPageName === 'admin' && currentGroup === 'knowledge-base'" class="chat-overlay-container">
         <!-- Chat toggle button (always visible) -->
@@ -12,7 +12,7 @@
             <!-- The actual chat box (visible only if `showChat` is true) -->
             <div v-if="isChatOpen" class="chat-box " :class="{ 'chat-overlay-mobile': isMobile }">
                 <iframe :src="chatUrl" class="flex-1" style="border: none; z-index: 9999"></iframe>
-                <Button @click="onClose" icon="pi pi-times" label="Close chat"></Button>
+                <Button @click="onClose" icon="pi pi-times" :label="t('AdminChat.buttons.closeChat')"></Button>
             </div>
         </transition>
     </div>
@@ -59,8 +59,6 @@ function onClose() {
 
 
 const { t } = useI18n();
-
-let openLabel = computed(() => (isMobile.value ? "" : 'Open test chat'));
 </script>
 
 <style scoped>

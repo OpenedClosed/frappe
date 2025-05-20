@@ -62,7 +62,7 @@
                   ? 'border-2 border-primary'
                   : 'hover:text-primary ',
               ]"
-              v-tooltip.right="'Knowledge Base'"
+              v-tooltip.right="t('NavigationSidebar.links.knowledgeBase')"
             >
               <i class="pi pi-book"></i>
               <span v-if="!isCollapsed" class="ml-3 text-sm">{{t('NavigationSidebar.links.knowledgeBase')}}</span>
@@ -77,7 +77,7 @@
                   ? 'border-2 border-primary'
                   : 'hover:text-primary ',
               ]"
-              v-tooltip.right="'Bot Settings'"
+              v-tooltip.right="t('NavigationSidebar.links.botSettings')"
             >
               <i class="pi pi-cog"></i>
               <span v-if="!isCollapsed" class="ml-3 text-sm">{{t('NavigationSidebar.links.botSettings')}}</span>
@@ -128,7 +128,7 @@
               :class="{ 'border-2 border-primary': isActiveRoute(`/${currentPageName}/knowledge-base`) }"
             >
               <i class="pi pi-book mr-3"></i>
-              <span class="text-sm">Knowledge Base</span>
+              <span class="text-sm">{{t('NavigationSidebar.links.knowledgeBase')}}</span>
             </RouterLink>
           </ul>
           <ul class="ml-4">
@@ -139,7 +139,7 @@
               :class="{ 'border-2 border-primary': isActiveRoute(`/${currentPageName}/knowledge/bot_settings`) }"
             >
               <i class="pi pi-cog mr-3"></i>
-              <span class="text-sm">Bot Settings</span>
+              <span class="text-sm">{{t('NavigationSidebar.links.botSettings')}}</span>
             </RouterLink>
           </ul>
         </li>

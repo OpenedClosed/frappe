@@ -572,6 +572,16 @@
       "defaultName": "Administrator"
     }
   },
+   "AdminChat": {
+    "buttons": {
+      "trainBot": "Train AI bot",
+      "closeChat": "Close chat",
+      "openTestChat": "Open test chat"
+    }
+  },
+  "LoaderOverlay": {
+    "loadingCompleted":  "Loading completed!"
+  },
   "test": {
     "test": "Test"
   }

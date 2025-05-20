@@ -1,168 +1,614 @@
 {
-  "chat": "ჩატი",
-  "newChat": "ახალი ჩატი",
-  "showCommands": "ბრძანებების ჩვენება",
-  "sendMessage": "შეიყვანეთ შეტყობინება...",
-  "chatAgain": "ხელახლა ჩატი",
-  "language": "ენა",
-  "roomActions": [
-    {
-      "name": "archiveRoom",
-      "title": "ჩატის არქივირება"
-    }
-  ],
-  "buttons": {
-    "save": "შენახვა",
-    "cancel": "გაუქმება",
-    "close": "დახურვა",
-    "delete": "წაშლა",
-    "edit": "რედაქტირება",
-    "add": "დამატება",
-    "remove": "ამოშლა",
-    "create": "შექმნა",
-    "send": "გაგზავნა",
-    "back": "დაბრუნება",
-    "next": "შემდეგი",
-    "finish": "დასრულება",
-    "confirm": "დადასტურება",
-    "search": "ძიება",
-    "clear": "გასუფთავება",
-    "select": "არჩევა",
-    "copy": "კოპირება",
-    "openTestChat": "სატესტო ჩატის გახსნა"
-  },
-  "menuActions": [
-    {
-      "name": "inviteUser",
-      "title": "მომხმარებლის მოწვევა"
-    },
-    {
-      "name": "removeUser",
-      "title": "მომხმარებლის წაშლა"
-    },
-    {
-      "name": "deleteRoom",
-      "title": "ოთახის წაშლა"
-    }
-  ],
-  "messageActions": [
-    {
-      "name": "replyMessage",
-      "title": "პასუხი"
-    },
-    {
-      "name": "editMessage",
-      "title": "შეტყობინების რედაქტირება",
-      "onlyMe": true
-    },
-    {
-      "name": "deleteMessage",
-      "title": "შეტყობინების წაშლა",
-      "onlyMe": true
-    },
-    {
-      "name": "selectMessages",
-      "title": "არჩევა"
-    }
-  ],
-  "messageSelectionActions": [
-    {
-      "name": "deleteMessages",
-      "title": "წაშლა"
-    },
-    {
-      "name": "forwardMessages",
-      "title": "გადაგზავნა"
-    }
-  ],
-  "templatesText": [
-    {
-      "tag": "help",
-      "text": "ეს არის დახმარება"
-    },
-    {
-      "tag": "action",
-      "text": "ეს არის ქმედება"
-    }
-  ],
   "textMessages": {
-    "ROOMS_EMPTY": "საუბრები არ არის",
-    "ROOM_EMPTY": "საუბარი არ არის არჩეული",
+    "ROOMS_EMPTY": "საუბრები არ არსებობს",
+    "ROOM_EMPTY": "საუბარი არჩეული არ არის",
     "NEW_MESSAGES": "ახალი შეტყობინებები",
-    "MESSAGE_DELETED": "ეს შეტყობინება წაიშალა",
+    "MESSAGE_DELETED": "ეს შეტყობინება წაშლილია",
     "MESSAGES_EMPTY": "შეტყობინებები არ არის",
     "CONVERSATION_STARTED": "საუბარი დაიწყო:",
-    "TYPE_MESSAGE": "შეიყვანეთ თქვენი შეტყობინება",
+    "TYPE_MESSAGE": "შეიყვანეთ შეტყობინება",
     "SEARCH": "ძიება",
-    "IS_ONLINE": "ონლაინ",
-    "LAST_SEEN": "ბოლოს ნანახი ",
+    "IS_ONLINE": "ონლაინშია",
+    "LAST_SEEN": "ბოლო შესვლა ",
     "IS_TYPING": "ბეჭდავს...",
-    "CANCEL_SELECT_MESSAGE": "მონიშვნის გაუქმება"
+    "CANCEL_SELECT_MESSAGE": "შეტყობინების არჩევის გაუქმება"
   },
-  "additionalMessages": {
-    "chatRefreshed": "ჩატი განახლდა",
-    "chatRefreshedSuccessfully": "ჩატი წარმატებით განახლდა.",
-    "errorRefreshingChat": "შეცდომა ჩატის განახლების დროს:",
-    "failedToRefreshChat": "ჩატის განახლება ვერ მოხერხდა.",
-    "sendingMessage": "შეტყობინების გაგზავნა:",
-    "attention": "ყურადღება",
-    "error": "შეცდომა",
-    "choiceOptions": "არჩევის ვარიანტები:",
-    "choiceOptionsFromLastMessage": "არჩევის ვარიანტები (ბოლო შეტყობინებიდან):",
-    "messagesRetrieved": "შეტყობინებები მიღებულია:",
-    "newMessage": "ახალი შეტყობინება:",
-    "unknownMessageType": "უცნობი შეტყობინების ტიპი:",
-    "webSocketConnectionEstablished": "WebSocket კავშირი დამყარდა.",
-    "webSocketConnectionClosed": "WebSocket კავშირი დაიხურა.",
-    "webSocketError": "WebSocket შეცდომა:",
-    "pageIsVisibleCheckingWSConnection": "გვერდი ხილულია. WebSocket კავშირის შემოწმება...",
-    "pageIsHiddenPausingUpdates": "გვერდი დამალულია. განახლებები შეჩერებულია.",
-    "windowInFocus": "ფანჯარა ფოკუსშია",
-    "webSocketIsNotOpenReconnecting": "WebSocket არ არის გახსნილი. კავშირი აღდგება..."
+
+  "EmbeddedChat": {
+    "allLabel": "ყველა",
+    "unreadLabel": "წაუკითხავი",
+    "exportButton": "ექსპორტი Excel-ში",
+    "messageDialogHeader": "შეტყობინება",
+    "messageDialogId": "ID",
+    "messageDialogText": "ტექსტი",
+    "noSources": "შეტყობინებას არ აქვს წყაროები ცოდნის ბაზიდან",
+    "sourceLabel": "წყარო",
+    "userIdLabel": "მომხმარებლის ID",
+    "closeButton": "დახურვა",
+
+    "seeSources": "იხილეთ წყაროები",
+    "excelSuccess": "Excel ფაილი შექმნილია",
+    "excelFailed": "Excel-ში ექსპორტი ვერ მომხდარა",
+    "noDate": "თარიღი მითითებული არაა",
+    "inFuture": "მომავალში",
+    "startedAgo": "დაიწყო {diffDays} დღე, {diffHours} საათი, {diffMinutes} წუთის წინ",
+    "consultant": "კონსულტანტი",
+    "client": "კლიენტი",
+    "chatFallback": "ჩატი {index}"
   },
-  "knowledgeBase": {
-    "addTopic": "თემის დამატება",
-    "removeTopic": "თემის წაშლა",
-    "addSubtopic": "ქვეჯგუფის დამატება",
-    "removeSubtopic": "ქვეჯგუფის წაშლა",
-    "addQuestion": "კითხვის დამატება",
-    "removeQuestion": "კითხვის წაშლა",
-    "renameTopic": "თემის გადარქმევა",
-    "renameSubtopic": "ქვეჯგუფის გადარქმევა",
-    "saveChanges": "ცვლილებების შენახვა",
-    "discardChanges": "ცვლილებების გაუქმება",
-    "exportData": "მონაცემების ექსპორტი",
-    "importData": "მონაცემების იმპორტი",
-    "clearPlayground": "სამუშაო სივრცის გასუფთავება",
-    "confirmRemoveTopic": "წაიშალოს თემა \"{topicName}\"?",
-    "confirmRemoveSubtopic": "წაიშალოს ქვეჯგუფი \"{subtopicName}\" თემიდან \"{topicName}\"?",
-    "confirmRemoveQuestion": "წაიშალოს კითხვა \"{questionKey}\"?",
-    "unsavedChangesWarning": "თქვენ გაქვთ შეუნახავი ცვლილებები. ნამდვილად გსურთ გასვლა?",
-    "label": {
-      "promptTextarea": "საკითხის ველი",
-      "question": "კითხვა",
-      "answerText": "პასუხის ტექსტი",
-      "linksFiles": "ბმულები / ფაილები",
-      "selectedFiles": "არჩეული ფაილები"
-    },
-    "button": {
-      "howToUse": "როგორ გამოვიყენოთ ეს ინსტრუმენტი?",
-      "generateSmartChange": "ჭკვიანი ცვლილების გენერაცია",
-      "openTestChat": "სატესტო ჩატის გახსნა",
-      "clearPlayground": "სამუშაო სივრცის გასუფთავება",
-      "addTopic": "თემის დამატება",
-      "addSubtopic": "ქვეჯგუფის დამატება",
-      "addQuestion": "კითხვის დამატება",
-      "addLink": "ბმულის დამატება",
-      "savePlayground": "სამუშაო სივრცის შენახვა",
-      "rejectPlayground": "სამუშაო სივრცის უარყოფა",
-      "transferToDatabase": "ბაზაში გადატანა",
-      "exportJson": "JSON ექსპორტი",
-      "importJson": "JSON იმპორტი"
-    },
-    "header": {
-      "workspacePlayground": "სამუშაო სივრცე",
-      "readonlyKnowledgeBase": "ცოდნის ბაზა (მხოლოდ კითხვადი)"
+
+  "MainLogin": {
+    "title": "ანგარიშში შესვლა",
+    "loginLabel": "ლოგინი",
+    "loginPlaceholder": "შეიყვანეთ ლოგინი",
+    "passwordLabel": "პაროლი",
+    "passwordPlaceholder": "შეიყვანეთ პაროლი",
+    "loginButton": "შესვლა",
+    "noAccount": "არ გაქვთ ანგარიში?",
+    "registerLink": "რეგისტრაცია"
+  },
+
+  "MainRegistration": {
+    "titleRegister": "რეგისტრაცია",
+    "email": "ელ-ფოსტა:",
+    "emailPlaceholder": "შეიყვანეთ ელ-ფოსტა",
+    "phone": "ტელეფონი:",
+    "phonePlaceholder": "შეიყვანეთ ტელეფონის ნომერი",
+    "firstName": "სახელი:",
+    "firstNamePlaceholder": "შეიყვანეთ სახელი",
+    "lastName": "გვარი:",
+    "lastNamePlaceholder": "შეიყვანეთ გვარი",
+    "birthDate": "დაბ. თარიღი:",
+    "birthDatePlaceholder": "შეიყვანეთ დაბადების თარიღი",
+    "city": "ქალაქი:",
+    "cityPlaceholder": "შეიყვანეთ ქალაქი",
+    "gender": "სქესი:",
+    "genderPlaceholder": "შეიყვანეთ სქესი",
+    "termsLabel": "ვეთანხმები",
+    "termsAnd": "და",
+    "termsLink": "გამოყენების პირობებს",
+    "privacyLink": "კონფიდენციალურობის პოლიტიკას",
+    "registerButton": "რეგისტრაცია",
+    "alreadyHaveAccount": "უკვე გაქვთ ანგარიში?",
+    "goToLogin": "შესვლა",
+
+    "codeTitle": "სასაცნობად კოდი (მოგვიანებით ელ-ფოსტით მოვა)",
+    "codeConfirmTitle": "კოდის დადასტურება",
+    "enterCodePrompt": "შეიყვანეთ ექვსნიშნა კოდი ელ-ფოსტიდან",
+    "codeConfirmButton": "დადასტურება",
+    "codeResendHelp1": "თუ კოდი არ მიგიღიათ —",
+    "codeResendHelp2": "შეამოწმეთ სპამი ან",
+    "resendLink": "გაიგზავნეთ ხელახლა",
+
+    "error": {
+      "terms": "გამოყენების პირობებზე დათანხმება სავალდებულოა."
     }
+  },
+
+  "PersonalMainLogin": {
+    "titleLogin": "ანგარიშში შესვლა",
+    "phone": "ტელეფონი",
+    "phonePlaceholder": "შეიყვანეთ ტელეფონის ნომერი",
+    "password": "პაროლი",
+    "passwordPlaceholder": "შეიყვანეთ პაროლი",
+    "loginButton": "შესვლა",
+    "noAccount": "არ გაქვთ ანგარიში?",
+    "registerLink": "რეგისტრაცია",
+    "title2FA": "შესვლის დადასტურება",
+    "testCode": "სასაცნობად კოდი:",
+    "twofaLabel": "SMS / ელ-ფოსტის კოდი",
+    "twofaPlaceholder": "შეიყვანეთ კოდი",
+    "confirmButton": "დადასტურება",
+    "cancelButton": "გაუქმება"
+  },
+
+  "PersonalMainRegistration": {
+    "title": "რეგისტრაცია",
+    "subtitle": "შექმენით ახალი ანგარიში",
+    "phone": "ტელეფონის ნომერი",
+    "phonePlaceholder": "შეიყვანეთ ტელეფონის ნომერი",
+    "email": "ელ-ფოსტა",
+    "emailPlaceholder": "{'mail@example.com'}",
+    "fullName": "სრული სახელი",
+    "fullNamePlaceholder": "ჯონ დოუ",
+    "password": "პაროლი",
+    "passwordPlaceholder": "მინიმუმ 10 სიმბოლო",
+    "show": "ჩვენება",
+    "hide": "დამალვა",
+    "passwordHint": "მინიმუმ 10 სიმბოლო: დიდი/პატარა ასოები, ციფრი და სიმბოლოები",
+    "passwordConfirm": "პაროლის დადასტურება",
+    "passwordConfirmPlaceholder": "გაიმეორეთ პაროლი",
+    "termsPrefix": "ვეთანხმები",
+    "termsLink": "გამოყენების პირობებს",
+    "privacyAnd": "და",
+    "privacyLink": "კონფიდენციალურობის პოლიტიკას",
+    "registerButton": "რეგისტრაცია",
+    "alreadyHave": "უკვე გაქვთ ანგარიში?",
+    "loginLink": "შესვლა",
+    "confirmTitle": "რეგისტრაციის დადასტურება",
+    "debugCode": "სასაცნობად კოდი (ელ-ფოსტით მოგვიანებით მოვა)",
+    "smsCodeLabel": "SMS კოდი",
+    "smsCodePlaceholder": "შეიყვანეთ SMS კოდი",
+    "confirmButton": "დადასტურება",
+    "cancelButton": "გაუქმება"
+  },
+
+  "DynamicForm": {
+    "upload": "ატვირთვა",
+    "addFiles": "ფაილების დამატება",
+    "addImages": "სურათების დამატება",
+    "downloadFile": "ფაილის ჩამოტვირთვა",
+    "delete": "წაშლა",
+    "enterTags": "შეიყვანეთ ტეგები...",
+    "enterCountry": "შეიყვანეთ ქვეყანა..."
+  },
+
+  "InlineList": {
+    "addNewHeader": "ახლის დამატება",
+    "saveBtn": "შენახვა",
+    "deleteBtn": "წაშლა",
+    "createBtn": "შექმნა",
+
+    "confirmDelete": "დარწმუნებული ხართ, რომ წაშალოთ ეს ელემენტი?",
+    "noChanges": "ცვლილებები არ აღმოჩნდა.",
+    "updated": "ჩანაწერი განახლდა!",
+    "updateError": "შეცდომა ჩანაწერის განახლებისას.",
+    "deleted": "ჩანაწერი წაიშალა!",
+    "deleteError": "შეცდომა ჩანაწერის წაშლისას.",
+    "onlyOne": "დაშვებულია მხოლოდ ერთი ელემენტი.",
+    "created": "ჩანაწერი შექმნილია!",
+    "createError": "შეცდომა ჩანაწერის შექმნისას."
+  },
+
+  "MainForm": {
+    "createPrefix": "ახალი ჩანაწერის შექმნა",
+    "detailPrefix": "ჩანაწერის დეტალები",
+    "loading": "მონაცემების ჩატვირთვა…",
+
+    "edit": "რედაქტირება",
+    "save": "შენახვა",
+    "delete": "წაშლა",
+    "create": "ჩანაწერის შექმნა",
+    "openChat": "ჩატის გახსნა",
+    "backToList": "სიისკენ დაბრუნება",
+    "backToRecord": "ჩანაწერისკენ დაბრუნება",
+
+    "confirmDelete": "დარწმუნებული ხართ, რომ წაშალოთ ეს ჩანაწერი?",
+
+    "noChanges": "შენახვისთვის ცვლილებები არ არის.",
+    "created": "ჩანაწერი შექმნილია",
+    "deleted": "ჩანაწერი წაიშალა",
+    "updateError": "შეცდომა შენახვისას.",
+    "createError": "შეცდომა შექმნისას.",
+    "deleteError": "შეცდომა წაშლისას.",
+    "unknownError": "უცნობი შეცდომა"
+  },
+
+  "AgreesPanel": {
+    "title": "მომხმარებლის თანხმობები",
+    "subtitle": "ინფორმაცია მომხმარებლის თანხმობებზე"
+  },
+
+  "ContactInfoView": {
+    "title": "საკონტაქტო ინფორმაცია",
+
+    "email": "ელ-ფოსტა",
+    "phone": "ტელეფონი",
+    "address": "მისამართი",
+    "pesel": "PESEL / იდენტიფიკატორი",
+
+    "emergency": "საგანგებო контакт",
+    "docId": "დოკ. ID",
+    "lastUpdate": "ბოლო განახლება",
+
+    "invalidDate": "არასწორი თარიღი",
+    "dash": "—"
+  },
+
+  "FamilyTable": {
+    "addMember": "ოჯახის წევრის დამატება",
+    "idPrefix": "ID:",
+    "nameUnknown": "სახელი არაა მითითებული",
+    "relationshipUnknown": "ურთიერთობა არაა მითითებული",
+    "statusUnknown": "სტატუსი არაა მითითებული",
+    "bonusSuffix": "ბონუს ქულა",
+    "noBonus": "ბონუსები არ არის",
+    "editAria": "რედაქტირება"
+  },
+
+  "InfoHeader": {
+    "patientIdPrefix": "პაციენტის ID:",
+    "bonusPrefix": "ბონუსები:",
+    "actions": "ქმედებები",
+    "logout": "გასვლა",
+    "adminPanel": "ადმინ პანელი",
+    "changeTheme": "თემის შეცვლა"
+  },
+
+  "NavigationSidebarTabs": {
+    "support": "მხარდაჭერა"
+  },
+
+  "PatientsHealthSurveyView": {
+    "title": "ჯანმრთელობის კითხვარი",
+    "subtitle": "მომხმარებლის სამედიცინო ინფორმაცია",
+
+    "allergies": "ალერგიები:",
+    "chronic": "ქრონიკული მდგომარეობა:",
+    "smoking": "მწეველობის სტატუსი:",
+    "medications": "მედიკამენტები:",
+    "lastUpdate": "ბოლო განახლება:",
+    "noData": "მონაცემები არ არის",
+    "dash": "—"
+  },
+
+  "PatientsMainInfoView": {
+    "sectionTitle": "ძირითადი ინფორმაცია",
+
+    "blockPersonal": "პერსონალური მონაცემები",
+    "lastName": "გვარი:",
+    "firstName": "სახელი:",
+    "patronymic": "მამის სახელი:",
+    "birthDate": "დაბ. თარიღი:",
+    "gender": "სქესი:",
+
+    "blockCompany": "კომპანიის ინფორმაცია",
+    "companyName": "კომპანიის სახელი:",
+
+    "blockSystem": "სისტემური ინფორმაცია",
+    "patientId": "პაციენტის ID:",
+    "createdAt": "შექმნილია:",
+    "updatedAt": "ბოლო განახლება:",
+
+    "invalidDate": "არასწორი თარიღი",
+    "dash": "—"
+  },
+
+  "PointsTable": {
+    "balanceCard": "ბონუს ანგარიში",
+    "balanceSubtitle": "მომხმარებლის ბონუს ინფორმაცია",
+    "currentBalance": "მიმდინარე ბალანსი:",
+    "referralCode": "რეფერალის კოდი:",
+    "lastUpdate": "ბოლო განახლება",
+
+    "transactionsCard": "ტრანზაქციების ისტორია",
+    "transactionsSubtitle": "ბოლო ბონუს ოპერაციები",
+
+    "toastTitle": "კოდი დაკოპირდა",
+    "toastBody": "რეფერალის კოდი დაკოპირდა!",
+    "tooltipCopy": "კოდის კოპირება"
+  },
+
+  "SupportPage": {
+    "title": "საპორტ ჩატი"
+  },
+
+  "DateRangeFilter": {
+    "heading": "დროის ინტერვალის ფილტრი:",
+    "placeholder": "აირჩიეთ თარიღები",
+    "clear": "გასუფთავება"
+  },
+
+  "DynamicDataTable": {
+    "exportExcel": "Excel-ში ექსპორტი",
+    "create": "შექმნა",
+    "add": "დამატება",
+    "editAria": "რედაქტირება"
+  },
+
+  "KnowledgeBase": {
+    "contextSources": "კონტექსტური წყაროები",
+    "contextInfoTip": "კონტექსტური წყაროები არის ფაილები, ბმულები ან ტექსტი, რომელსაც ბოტი იყენებს კითხვებზე პასუხისთვის. შეგიძლიათ დაამატოთ, წაშალოთ ან ჩაასწოროთ ისინი საჭიროებისამებრ. ბოტი გამოიყენებს ყველაზე რელევანტურ წყაროებს ზუსტი პასუხებისთვის.",
+
+    "searchPlaceholder": "წყაროების ძიება…",
+    "searchTip": "ძებნა წყაროს სახელით.  შეიყვანეთ ფაილის, ვებ-გვერდის ან ტექსტის სათაურის ნაწილი ფილტრისთვის.",
+    "addContext": "კონტექსტის დამატება",
+    "addContextTip": "მონაცემთა ახალი წყაროს იმპორტი: ფაილი, ვებ-გვერდი ან ტექსტი.",
+
+    "addContextHeader": "კონტექსტის დამატება",
+
+    "titlePlaceholder": "სათაური",
+    "pasteTextPlaceholder": "ჩასვით ტექსტი აქ…",
+
+    "uploadHeader": "წყაროების ატვირთვა",
+    "uploadSub": "აირჩიეთ ფაილი ან გადმოაგდეთ აქ.",
+    "uploadTypes": "მხარდაჭერილი ფორმატები: PDF, TXT, სურათები, DOCX, XLSX, სურათები",
+
+    "dialogCancel": "გაუქმება",
+    "dialogAdd": "დამატება",
+
+    "totalSources": "ჯამური წყაროები",
+    "selectedSources": "არჩეული",
+
+    "queryField": "კითხვა",
+    "queryFieldTip": "შეიყვანეთ კითხვა ან მოთხოვნა. AI გამოიყენებს კონტექსტურ წყაროებს შესაბამისი პასუხისთვის.",
+
+    "aiModelPlaceholder": "აირჩიეთ AI მოდელი",
+
+    "requestHistory": "მოთხოვნების ისტორია",
+    "clearHistory": "ისტორიის გასუფთავება",
+    "noHistory": "წინა მოთხოვნები ვერ მოიძებნა.",
+    "reuseTip": "ამ მოთხოვნის გამოყენება",
+
+    "typeHere": "დაწერეთ აქ…",
+    "typeHereTip": "აღწერეთ რა უნდა გააკეთოს AI ასისტენტმა თქვენს მონაცემებთან…",
+
+    "uploadSourcesTitle": "წყაროების ატვირთვა",
+    "uploadSourcesSubtitle": "აირჩიეთ ფაილი ან გადმოაგდეთ აქ.",
+    "uploadSourcesTypes": "მხარდაჭერილი ფორმატები: PDF, TXT, სურათები, DOCX, XLSX",
+
+    "files": "ფაილები",
+    "site": "საიტი",
+    "text": "ტექსტი",
+
+    "dontUse": "არ გამოიყენო",
+    "botKnowledge": "ბოტის ცოდნა",
+    "contextOnly": "მხოლოდ კონტექსტი",
+    "knowledgeAndContext": "ცოდნა და კონტექსტი",
+
+    "querySmartChange": "ჭკვიანი ცვლილების გენერაცია",
+
+    "playgroundHeader": "სათამაშო სივრცე",
+
+    "addTopic": "თემის დამატება",
+    "addTopicDesc": "თემა – მთავარი საკითხი, რომელიც აერთიანებს დაკავშირებულ ქვეთემებს. ქვეთემა – თემის ქვესექცია კონკრეტული აქცენტით. კითხვა – ტიპიური მომხმარებლის კითხვა ქვეთემაში. პასუხი – დეტალური პასუხი კონკრეტულ კითხვაზე.",
+    "addSubtopic": "ქვეთემის დამატება",
+    "addQuestion": "კითხვის დამატება",
+    "addLink": "ბმულის დამატება",
+
+    "questionLabel": "კითხვა:",
+    "answerTextLabel": "პასუხის ტექსტი:",
+    "linksFilesLabel": "ბმულები / ფაილები:",
+    "selectedFilesLabel": "არჩეული ფაილები:",
+
+    "topicTooltip": "მთავარი თემა, რომელიც შეიცავს დაკავშირებულ ქვეთემებსა და კითხვებს.",
+    "subtopicTooltip": "თემის ნაწილი, რომელიც ჯგუფავს დაკავშირებულ კითხვებსა და პასუხებს.",
+    "questionTooltip": "კითხვა ცოდნის ბაზაში, რომელსაც ბოტი პასუხისას მოძებნის.",
+    "answerTooltip": "კონკრეტული კითხვის პასუხი, რომელსაც ბოტი გამოიყენებს პასუხის ფორმულირებისას.",
+
+    "playgroundEmpty": "სათამაშო სივრცე ცარიელიაა",
+    "playgroundEmptyBody": "დაიმპორტეთ კონტენტი მარცხენა პანელიდან ან შექმენით ახალი ბლოკი.",
+    "createBlock": "ბლოკის შექმნა",
+
+    "reject": "უარყოფა",
+    "save": "შენახვა",
+    "saveDesc": "ინახავს მიმდინარე ცოდნის სტრუქტურას როგორც მონახაზს. შეგიძლიათ მოგვიანებით დაუბრუნდეთ. მონახაზი არ გამოიყენება ბოტის მიერ პასუხებისთვის, სანამ არ გამოაქვეყნებთ.",
+    "publish": "გამოქვეყნება",
+    "publishDesc": " \"გამოქვეყნებს ცოდნის სტრუქტურას მთავარ ბაზაში, რომლის მიხედვითაც ბოტი უპასუხებს კითხვებს. ცვლილებები ძალაში შედის დაუყოვნებლივ. დარწმუნდით, რომ სტრუქტურა სრულად მზად არის.\"",
+    
+
+    "knowledgeBase": "ცოდნის ბაზა",
+    "knowledgeBaseDesc": " ცოდნის ბაზა არის ბოტის მთავარი ინფორმაციის წყარო. იგი შეიცავს ყველა თემას, ქვეთემასა და კითხვას, რომლებსაც ბოტი უპასუხებს. შეგიძლიათ დაათვალიეროთ და მოძებნოთ, თუმცა პირდაპირ რედაქტირება აქ შეუძლებელია.",
+    "searchKbPlaceholder": "ძებნა ცოდნის ბაზაში…",
+    "export": "ექსპორტი",
+    "exportDialogTitle": "ცოდნის ბაზის ექსპორტი",
+    "exportJson": "JSON",
+    "exportJsonDesc": "სრული სტრუქტურირებული მონაცემები (რეკომენდებულია)",
+    "exportCsv": "CSV",
+    "exportCsvDesc": "ცხრილთან თავსებადი ფორმატი",
+    "exportTxt": "სუფთა ტექსტი",
+    "exportTxtDesc": "სუფთა ტექსტი",
+    "exportCancel": "გაუქმება",
+
+    "removeTopic": "წაიშალოს თემა «{topicName}»?",
+    "removeSubtopic": "წაიშალოს ქვეთემა «{subtopicName}» თემაში «{topicName}»?",
+    "removeQuestion": "წაიშალოს კითხვა «{questionKey}»?",
+
+    "newTopic": "ახალი თემა",
+    "newSubtopic": "ახალი ქვეთემა",
+    "newQuestion": "ახალი კითხვა",
+
+    "toastAdded": "{what} წარმატებით დაემატა",
+    "toastRemoved": "{what} წარმატებით წაიშალა",
+    "toastUpdated": "{what} წარმატებით განახლდა",
+    "toastNotAdded": "{what} არ დამატებულა",
+    "toastNotRemoved": "{what} არ წაშლილა",
+    "toastNotUpdated": "{what} არ განახლებულა",
+
+    "ctxRenamePrompt": "კონტექსტის გადარქმევა",
+    "ctxRenamed": "კონტექსტის სახელი განახლდა",
+    "ctxNotRenamed": "კონტექსტის სახელი არ შეცვლილა",
+
+    "ctxPurposeUpdated": "დანიშნულება განახლდა",
+    "ctxPurposeNotUpdated": "დანიშნულება არ შეცვლილა",
+
+    "ctxLoadErr": "კონტექსტის ჩატვირთვა შეუძლებელია",
+    "ctxAddMax": "მაქსიმუმ {max} წყაროა",
+    "ctxAdded": "კონტექსტი დამატებულია",
+    "ctxNotAdded": "კონტექსტი არ დამატებულა",
+    "ctxDeleted": "კონტექსტი წაიშალა",
+    "ctxNotDeleted": "კონტექსტი არ წაშლილა",
+
+    "menuRename": "გადარქმევა",
+    "menuDownload": "ჩამოტვირთვა",
+    "menuDelete": "წაშლა",
+
+    "typeText": "ტექსტი",
+    "typeFile": "ფაილი / ფოტო",
+    "typeLink": "ბმული",
+
+    "purposeNone": "არ გამოიყენო",
+    "purposeBot": "ბოტის ცოდნა",
+    "purposeKb": "მხოლოდ კონტექსტი",
+    "purposeBoth": "ცოდნა და კონტექსტი",
+
+    "purposeNoneDesc": "წყარო იგნორირებულია პასუხების გენერაციაში.",
+    "purposeBotDesc": "ინფორმაცია ემატება ცოდნის ბაზას და გავლენას ახდენს ზოგად პასუხებზე.",
+    "purposeKbDesc": "წყარო გამოიყენება მხოლოდ კონკრეტული კითხვის პასუხისთვის.",
+    "purposeBothDesc": "წყარო გამოიყენება ზოგადი ცოდნისა და კონკრეტული პასუხებისთვის.",
+
+    "topicAdded": "თემა დამატებულია",
+    "topicRemoved": "თემა წაიშალა",
+    "topicNotRemoved": "თემა არ წაშლილა",
+
+    "subtopicAdded": "ქვეთემა დამატებულია",
+    "subtopicRemoved": "ქვეთემა წაიშალა",
+    "subtopicNotRemoved": "ქვეთემა არ წაშლილა",
+
+    "questionAdded": "კითხვა დამატებულია",
+    "questionRemoved": "კითხვა წაიშალა",
+    "questionNotRemoved": "კითხვა არ წაშლილა",
+    "questionExists": "ეს კითხვა უკვე არსებობს!",
+
+    "fileAdded": "ბმული / ფაილი დამატებულია",
+    "fileRemoved": "ბმული / ფაილი წაიშალა",
+
+    "playgroundCleared": "სათამაშო სივრცე გასუფთავდა",
+    "playgroundUpdated": "სათამაშო სივრცე განახლდა",
+    "playgroundNotUpdated": "სათამაშო სივრცე არ განახლდა",
+    "playgroundRejected": "სათამაშო სივრცე უარყოფილია",
+
+    "kbSaved": "ცოდნის ბაზა შენახულია",
+    "kbNotSaved": "ცოდნის ბაზა არ შენახულა",
+
+    "patchGenerated": "Patch წარმატებით გენერირდა",
+    "patchNotGenerated": "Patch გენერირება ვერ მოხერხდა",
+
+    "noChanges": "შენახვისთვის ცვლილებები არ არის.",
+    "msgPlaygroundUpdated": "სათამაშო სივრცე განახლდა",
+    "msgPlaygroundUpdateErr": "სათამაშო სივრცის განახლება ვერ მოხერხდა",
+    "msgDbSaved": "ცოდნის ბაზა შენახულია",
+    "msgDbSaveErr": "ცოდნის ბაზის შენახვა ვერ მოხერხდა",
+    "confirmClear": "გასუფთავდეს სათამაშო სივრცე?\n\nყველა მონახაზი დაიკარგება. ეს არ შეეხება რეალურ ცოდნის ბაზას.",
+    "msgPlaygroundCleared": "სათამაშო სივრცე გასუფთავდა",
+    "confirmReject": "უარყოფა სათამაშო სივრცისთვის?\n\nმონახაზი დაიკარგება. რეალური ცოდნის ბაზა უცვლელი დარჩება.",
+    "msgPlaygroundRejected": "სათამაშო სივრცე უარყოფილია",
+    "unsavedChanges": "სათამაშო სივრცეში შეუნახავი ცვლილებები გაქვთ!",
+    "msgPatchGenerated": "Patch წარმატებით გენერირდა",
+    "msgPatchErr": "Patch გენერირება ვერ მოხერხდა"
+  
+  },
+
+  "MainContent": {
+    "dialog": {
+      "filterOptions": "ფილტრის პარამეტრები"
+    },
+    "buttons": {
+      "fillHealthSurvey": "ჯანმრთელობის კითხვარის შევსება",
+      "fillMainInfo": "ძირითადი ინფორმაციის შევსება",
+      "fillContactInfo": "საკონტაქტო ინფორმაციის შევსება",
+      "fillConsents": "თანხმობების შევსება"
+    },
+    "toast": {
+      "exportSuccessSummary": "ექსპორტი წარმატებით დასრულდა",
+      "exportSuccessDetail": "მონაცემები წარმატებით ექსპორტდა Excel-ში",
+      "exportFailSummary": "ექსპორტი ვერ დასრულდა",
+      "exportFailDetail": "მონაცემების ექსპორტი ვერ მოხერხდა.",
+      "invalidGroupSummary": "არასწორი ჯგუფი",
+      "invalidEntitySummary": "არასწორი ერთეული",
+      "errorSummary": "შეცდომა",
+      "noDataDetail": "მონაცემები არ არსებობს.",
+      "loadFailDetail": "ცხრილის მონაცემების ჩატვირთვა ვერ მოხერხდა. ({status})",
+      "redirectDetail": "გადამისამართება: {route}"
+    },
+
+    "playground": {
+      "saveDraft": "ინახავს ამჟამინდელ სტრუქტურას, როგორც მონახაზს. მოგვიანებით შეძლებთ გაგრძელებას. მონახაზი არ გამოიყენება ბოტის მიერ პასუხებისთვის, სანამ არ გამოაქვეყნებთ.",
+      "publish": "გამოაქვეყნებს სტრუქტურას მთავარ ცოდნის ბაზაში. ცვლილებები დაუყოვნებლივ ამოქმედდება, და ბოტი დაიწყებს პასუხებს ახალი მონაცემებით. დარწმუნდით, რომ ყველაფერი მზადაა.",
+      "statusReady": "გამოქვეყნებისათვის მზად",
+      "blockType": "თემა – მთავარი თემა, რომელიც აერთიანებს ქვეთემებს.\nქვეთემა – თემის ნაწილი კონკრეტული აქცენტით.\nკითხვა – ტიპიური კითხვა ქვეთემაში.\nპასუხი – დეტალური პასუხი კონკრეტულ კითხვაზე.",
+      "parentBlock": "აირჩიეთ ბლოკი, რომელსაც შეესაბამება ახალი ელემენტი.\nდაიცავით იერარქია:\n• ქვეთემა თემაში\n• კითხვა ქვეთემაში\n• პასუხი კონკრეტულ კითხვაზე"
+    },
+
+    "import": {
+      "sourceSearch": "ძებნა წყაროს სახელით. შეიყვანეთ ფაილის, ვებ-გვერდის ან ტექსტის ნაწილი.",
+      "importNew": "დაამატეთ ახალი წყარო: ფაილი, ვებ-გვერდი ან ტექსტი.",
+      "aiInput": "მიუთითეთ AI-ს კონკრეტული დავალება. მაგალითი: \"გამოყავი ძირითადი სერვისები ჩემი საიტიდან და შექმენი Q&A\". Enter ან გაგზავნა.",
+      "generator": "მიუთითეთ AI-ს დავალებები სტრუქტურირებისთვის. მაგალითები:\n• \"შექმენი Q&A პროდუქტის დოკუმენტიდან\"\n• \"დაყავი ტექსტი ქვეთემებად\"\n• \"შეცადე მენიუს ფორმირება ფასების ჩამონათვალიდან\"\n• \"გამოიტანე ძირითადი უპირატესობები\""
+    },
+
+    "kbBlock": {
+      "topic": "მთავარი თემა დაკავშირებული ქვეთემებითა და კითხვებით.",
+      "subtopic": "თემის ნაწილი, რომელიც ჯგუფავს კითხვებსა და პასუხებს.",
+      "question": "კითხვა ცოდნის ბაზაში, რომელსაც ბოტი უპასუხებს.",
+      "answer": "კითხვაზე დეტალური პასუხი, რომელსაც ბოტი გამოიყენებს."
+    }
+  },
+
+  "NavigationSidebar": {
+    "tooltip": {
+      "expand": "გაფართოება",
+      "collapse": "ჩაკეცვა"
+    },
+    "headers": {
+      "settings": "პარამეტრები",
+      "sidebar": "გვერდითი პანელი"
+    },
+    "links": {
+      "knowledgeBase": "ცოდნის ბაზა",
+      "botSettings": "ბოტის პარამეტრები"
+    }
+  },
+
+  "ReadonlyKB": {
+    "summary": {
+      "knowledgeBase": "ცოდნის ბაზა"
+    },
+    "buttons": {
+      "goToSource": "გადასვლა წყაროზე"
+    }
+  },
+
+  "SaveChangesDialog": {
+    "header": {
+      "preview": "დetected changes-ის გადახედვა.",
+      "savePlayground": "შევინახოთ ცვლილებები სათამაშო სივრცეში?",
+      "saveKnowledgeBase": "შევინახოთ ცვლილებები ცოდნის ბაზაში?"
+    },
+    "info": {
+      "noChanges": "ცოდნის ბაზაში შესაცვლელი არაფერია.",
+      "editModeNote": "შეიცვლება სათამაშო სივრცე, მაგრამ არა ცოდნის ბაზა.",
+      "applyKb": "შეცვლის ცოდნის ბაზას."
+    },
+    "labels": {
+      "added": "დამატებული:",
+      "changed": "შეცვლილი:",
+      "deleted": "წაშლილი:",
+      "addedItems": "დამატებული ელემენტები",
+      "changedItems": "შეცვლილი ელემენტები",
+      "deletedItems": "წაშლილი ელემენტები"
+    },
+    "buttons": {
+      "close": "დახურვა",
+      "cancel": "გაუქმება",
+      "confirm": "დადასტურება"
+    }
+  },
+
+  "Topbar": {
+    "aria": {
+      "menu": "მენიუ"
+    },
+    "titles": {
+      "personalAccount": "პირადი კაბინეტი"
+    },
+    "menu": {
+      "toPersonal": "პირად კაბინეტში",
+      "toAdmin": "ადმინ პანელში",
+      "changeTheme": "თემის შეცვლა",
+      "logout": "გასვლა"
+    },
+    "alt": {
+      "logo": "ლოგო"
+    },
+    "user": {
+      "defaultName": "ადმინისტრატორი"
+    }
+  },
+
+  "AdminChat": {
+    "buttons": {
+      "trainBot": "AI ბოტის ტრენინგი",
+      "closeChat": "ჩატის დახურვა",
+      "openTestChat": "სატესტო ჩატის გახსნა"
+    }
+  },
+
+  "LoaderOverlay": {
+    "loadingCompleted":  "ჩატვირთვა დასრულდა!"
+  },
+
+  "test": {
+    "test": "ტესტი"
   }
 }

@@ -1,126 +1,614 @@
 {
-  "chat": "Czat",
-  "newChat": "Nowy czat",
-  "showCommands": "Pokaż polecenia", // ADDED
-  "sendMessage": "Wyślij wiadomość...",
-  "chatAgain": "Rozpocznij ponownie",
-  "language": "Język",
-  // Polish (pl)
-  "buttons": {
-    "save": "Zapisz",
-    "cancel": "Anuluj",
-    "close": "Zamknij",
-    "delete": "Usuń",
-    "edit": "Edytuj",
-    "add": "Dodaj",
-    "remove": "Usuń",
-    "create": "Utwórz",
-    "send": "Wyślij",
-    "back": "Wstecz",
-    "next": "Dalej",
-    "finish": "Zakończ",
-    "confirm": "Potwierdź",
-    "search": "Szukaj",
-    "clear": "Wyczyść",
-    "select": "Wybierz",
-    "copy": "Kopiuj",
-    // Polish (pl)
-    "openTestChat": "Otwórz czat testowy"
-  },
-
-  "roomActions": [
-    {
-      "name": "archiveRoom",
-      "title": "Archiwizuj pokój"
-    }
-  ],
-  "menuActions": [
-    {
-      "name": "inviteUser",
-      "title": "Zaproś użytkownika"
-    },
-    {
-      "name": "removeUser",
-      "title": "Usuń użytkownika"
-    },
-    {
-      "name": "deleteRoom",
-      "title": "Usuń pokój"
-    }
-  ],
-  "messageActions": [
-    {
-      "name": "replyMessage",
-      "title": "Odpowiedz"
-    },
-    {
-      "name": "editMessage",
-      "title": "Edytuj wiadomość",
-      "onlyMe": true
-    },
-    {
-      "name": "deleteMessage",
-      "title": "Usuń wiadomość",
-      "onlyMe": true
-    },
-    {
-      "name": "selectMessages",
-      "title": "Wybierz"
-    }
-  ],
-  "messageSelectionActions": [
-    {
-      "name": "deleteMessages",
-      "title": "Usuń"
-    },
-    {
-      "name": "forwardMessages",
-      "title": "Prześlij"
-    }
-  ],
-  "templatesText": [
-    {
-      "tag": "help",
-      "text": "To jest pomoc"
-    },
-    {
-      "tag": "action",
-      "text": "To jest działanie"
-    }
-  ],
   "textMessages": {
-    "ROOMS_EMPTY": "Brak konwersacji",
-    "ROOM_EMPTY": "Brak wybranej konwersacji",
+    "ROOMS_EMPTY": "Brak rozmów",
+    "ROOM_EMPTY": "Nie wybrano konwersacji",
     "NEW_MESSAGES": "Nowe wiadomości",
-    "MESSAGE_DELETED": "Wiadomość została usunięta",
+    "MESSAGE_DELETED": "Ta wiadomość została usunięta",
     "MESSAGES_EMPTY": "Brak wiadomości",
     "CONVERSATION_STARTED": "Rozmowa rozpoczęła się:",
-    "TYPE_MESSAGE": "Wpisz swoją wiadomość",
+    "TYPE_MESSAGE": "Wpisz wiadomość",
     "SEARCH": "Szukaj",
     "IS_ONLINE": "jest online",
-    "LAST_SEEN": "ostatnio widziano ",
+    "LAST_SEEN": "ostatnio widziany ",
     "IS_TYPING": "pisze...",
-    "CANCEL_SELECT_MESSAGE": "Anuluj wybór"
+    "CANCEL_SELECT_MESSAGE": "Anuluj zaznaczenie"
   },
-  "additionalMessages": {
-    "chatRefreshed": "Czat odświeżony",
-    "chatRefreshedSuccessfully": "Czat został pomyślnie odświeżony.",
-    "errorRefreshingChat": "Błąd podczas odświeżania czatu:",
-    "failedToRefreshChat": "Nie udało się odświeżyć czatu.",
-    "sendingMessage": "Wysyłanie wiadomości:",
-    "attention": "Uwaga",
-    "error": "Błąd",
-    "choiceOptions": "Opcje wyboru:",
-    "choiceOptionsFromLastMessage": "Opcje (z ostatniej wiadomości):",
-    "messagesRetrieved": "Odebrano wiadomości:",
-    "newMessage": "Nowa wiadomość:",
-    "unknownMessageType": "Nieznany typ wiadomości:",
-    "webSocketConnectionEstablished": "Połączono z WebSocket.",
-    "webSocketConnectionClosed": "Połączenie WebSocket zostało zamknięte.",
-    "webSocketError": "Błąd WebSocket:",
-    "pageIsVisibleCheckingWSConnection": "Strona jest widoczna. Sprawdzanie połączenia...",
-    "pageIsHiddenPausingUpdates": "Strona jest ukryta. Wstrzymano aktualizacje.",
-    "windowInFocus": "Okno w fokuse",
-    "webSocketIsNotOpenReconnecting": "WebSocket nie jest otwarty. Ponowne łączenie..."
+
+  "EmbeddedChat": {
+    "allLabel": "Wszystkie",
+    "unreadLabel": "Nieprzeczytane",
+    "exportButton": "Eksportuj czaty do Excela",
+    "messageDialogHeader": "Wiadomość",
+    "messageDialogId": "ID",
+    "messageDialogText": "Tekst",
+    "noSources": "Wiadomość nie ma źródeł w bazie wiedzy",
+    "sourceLabel": "Źródło",
+    "userIdLabel": "ID użytkownika",
+    "closeButton": "Zamknij",
+
+    "seeSources": "Zobacz źródła",
+    "excelSuccess": "Plik Excel utworzony",
+    "excelFailed": "Eksport do Excela nie powiódł się",
+    "noDate": "Brak daty",
+    "inFuture": "W przyszłości",
+    "startedAgo": "Rozpoczęto {diffDays} dni, {diffHours} godz., {diffMinutes} min temu",
+    "consultant": "Konsultant",
+    "client": "Klient",
+    "chatFallback": "Czat {index}"
+  },
+
+  "MainLogin": {
+    "title": "Zaloguj się do konta",
+    "loginLabel": "Login",
+    "loginPlaceholder": "Wprowadź login",
+    "passwordLabel": "Hasło",
+    "passwordPlaceholder": "Wprowadź hasło",
+    "loginButton": "Zaloguj się",
+    "noAccount": "Nie masz konta?",
+    "registerLink": "Zarejestruj się"
+  },
+
+  "MainRegistration": {
+    "titleRegister": "Rejestracja",
+    "email": "E-mail:",
+    "emailPlaceholder": "Wprowadź e-mail",
+    "phone": "Telefon:",
+    "phonePlaceholder": "Wprowadź numer telefonu",
+    "firstName": "Imię:",
+    "firstNamePlaceholder": "Wprowadź imię",
+    "lastName": "Nazwisko:",
+    "lastNamePlaceholder": "Wprowadź nazwisko",
+    "birthDate": "Data urodzenia:",
+    "birthDatePlaceholder": "Wprowadź datę urodzenia",
+    "city": "Miasto:",
+    "cityPlaceholder": "Wprowadź miasto",
+    "gender": "Płeć:",
+    "genderPlaceholder": "Wprowadź płeć",
+    "termsLabel": "Akceptuję",
+    "termsAnd": "oraz",
+    "termsLink": "Regulamin",
+    "privacyLink": "Politykę prywatności",
+    "registerButton": "Zarejestruj się",
+    "alreadyHaveAccount": "Masz już konto?",
+    "goToLogin": "Przejdź do logowania",
+
+    "codeTitle": "Kod testowy (przyjdzie później e-mailem)",
+    "codeConfirmTitle": "Potwierdzenie kodu",
+    "enterCodePrompt": "Wprowadź sześciocyfrowy kod z e-maila",
+    "codeConfirmButton": "Potwierdź",
+    "codeResendHelp1": "Jeśli nie otrzymałeś kodu —",
+    "codeResendHelp2": "sprawdź spam lub",
+    "resendLink": "wyślij ponownie",
+
+    "error": {
+      "terms": "Musisz zaakceptować Regulamin."
+    }
+  },
+
+  "PersonalMainLogin": {
+    "titleLogin": "Logowanie do konta",
+    "phone": "Telefon",
+    "phonePlaceholder": "Wprowadź numer telefonu",
+    "password": "Hasło",
+    "passwordPlaceholder": "Wprowadź hasło",
+    "loginButton": "Zaloguj się",
+    "noAccount": "Nie masz konta?",
+    "registerLink": "Zarejestruj się",
+    "title2FA": "Potwierdzenie logowania",
+    "testCode": "Kod testowy:",
+    "twofaLabel": "Kod z SMS / e-maila",
+    "twofaPlaceholder": "Wprowadź kod",
+    "confirmButton": "Potwierdź",
+    "cancelButton": "Anuluj"
+  },
+
+  "PersonalMainRegistration": {
+    "title": "Rejestracja",
+    "subtitle": "Utwórz nowe konto",
+    "phone": "Numer telefonu",
+    "phonePlaceholder": "Wprowadź numer telefonu",
+    "email": "E-mail",
+    "emailPlaceholder": "{'mail@example.com'}",
+    "fullName": "Imię i nazwisko",
+    "fullNamePlaceholder": "John Doe",
+    "password": "Hasło",
+    "passwordPlaceholder": "Minimum 10 znaków",
+    "show": "Pokaż",
+    "hide": "Ukryj",
+    "passwordHint": "Minimum 10 znaków, w tym wielkie i małe litery, cyfry i symbole",
+    "passwordConfirm": "Potwierdź hasło",
+    "passwordConfirmPlaceholder": "Powtórz hasło",
+    "termsPrefix": "Akceptuję",
+    "termsLink": "Regulamin",
+    "privacyAnd": "oraz",
+    "privacyLink": "Politykę prywatności",
+    "registerButton": "Zarejestruj się",
+    "alreadyHave": "Masz już konto?",
+    "loginLink": "Logowanie",
+    "confirmTitle": "Potwierdź rejestrację",
+    "debugCode": "Kod testowy (przyjdzie później e-mailem)",
+    "smsCodeLabel": "Kod z SMS",
+    "smsCodePlaceholder": "Wprowadź kod SMS",
+    "confirmButton": "Potwierdź",
+    "cancelButton": "Anuluj"
+  },
+
+  "DynamicForm": {
+    "upload": "Prześlij",
+    "addFiles": "Dodaj pliki",
+    "addImages": "Dodaj obrazy",
+    "downloadFile": "Pobierz plik",
+    "delete": "Usuń",
+    "enterTags": "Wprowadź tagi...",
+    "enterCountry": "Wprowadź kraj..."
+  },
+
+  "InlineList": {
+    "addNewHeader": "Dodaj nowy",
+    "saveBtn": "Zapisz",
+    "deleteBtn": "Usuń",
+    "createBtn": "Utwórz",
+
+    "confirmDelete": "Czy na pewno chcesz usunąć ten element?",
+    "noChanges": "Brak zmian.",
+    "updated": "Element zaktualizowany!",
+    "updateError": "Błąd podczas aktualizacji elementu.",
+    "deleted": "Element usunięty!",
+    "deleteError": "Błąd podczas usuwania elementu.",
+    "onlyOne": "Dozwolony jest tylko jeden element.",
+    "created": "Element utworzony!",
+    "createError": "Błąd podczas tworzenia elementu."
+  },
+
+  "MainForm": {
+    "createPrefix": "Tworzenie nowego rekordu",
+    "detailPrefix": "Szczegóły rekordu",
+    "loading": "Ładowanie danych…",
+
+    "edit": "Edytuj",
+    "save": "Zapisz",
+    "delete": "Usuń",
+    "create": "Utwórz rekord",
+    "openChat": "Otwórz czat",
+    "backToList": "Wróć do listy",
+    "backToRecord": "Wróć do rekordu",
+
+    "confirmDelete": "Czy na pewno chcesz usunąć ten rekord?",
+
+    "noChanges": "Brak zmian do zapisania.",
+    "created": "Rekord utworzony",
+    "deleted": "Rekord usunięty",
+    "updateError": "Błąd podczas zapisywania zmian.",
+    "createError": "Błąd podczas tworzenia rekordu.",
+    "deleteError": "Błąd podczas usuwania rekordu.",
+    "unknownError": "Nieznany błąd"
+  },
+
+  "AgreesPanel": {
+    "title": "Zgody użytkownika",
+    "subtitle": "Informacje o zgodach użytkownika"
+  },
+
+  "ContactInfoView": {
+    "title": "Informacje kontaktowe",
+
+    "email": "E-mail",
+    "phone": "Telefon",
+    "address": "Adres",
+    "pesel": "PESEL / Identyfikator",
+
+    "emergency": "Kontakt awaryjny",
+    "docId": "ID dokumentu",
+    "lastUpdate": "Ostatnia aktualizacja",
+
+    "invalidDate": "Nieprawidłowa data",
+    "dash": "—"
+  },
+
+  "FamilyTable": {
+    "addMember": "Dodaj członka rodziny",
+    "idPrefix": "ID:",
+    "nameUnknown": "Imię nieustawione",
+    "relationshipUnknown": "Relacja nieustawiona",
+    "statusUnknown": "Status nieustawiony",
+    "bonusSuffix": "punktów bonusowych",
+    "noBonus": "Brak bonusów",
+    "editAria": "Edytuj"
+  },
+
+  "InfoHeader": {
+    "patientIdPrefix": "ID pacjenta:",
+    "bonusPrefix": "Bonusy:",
+    "actions": "Akcje",
+    "logout": "Wyloguj",
+    "adminPanel": "Panel administracyjny",
+    "changeTheme": "Zmień motyw"
+  },
+
+  "NavigationSidebarTabs": {
+    "support": "Wsparcie"
+  },
+
+  "PatientsHealthSurveyView": {
+    "title": "Ankieta zdrowotna",
+    "subtitle": "Informacje medyczne użytkownika",
+
+    "allergies": "Alergie:",
+    "chronic": "Choroby przewlekłe:",
+    "smoking": "Status palenia:",
+    "medications": "Aktualne leki:",
+    "lastUpdate": "Ostatnia aktualizacja:",
+    "noData": "Brak danych",
+    "dash": "—"
+  },
+
+  "PatientsMainInfoView": {
+    "sectionTitle": "Informacje podstawowe",
+
+    "blockPersonal": "Dane osobowe",
+    "lastName": "Nazwisko:",
+    "firstName": "Imię:",
+    "patronymic": "Drugie imię:",
+    "birthDate": "Data urodzenia:",
+    "gender": "Płeć:",
+
+    "blockCompany": "Informacje o firmie",
+    "companyName": "Nazwa firmy:",
+
+    "blockSystem": "Informacje systemowe",
+    "patientId": "ID pacjenta:",
+    "createdAt": "Utworzono:",
+    "updatedAt": "Ostatnia aktualizacja:",
+
+    "invalidDate": "Nieprawidłowa data",
+    "dash": "—"
+  },
+
+  "PointsTable": {
+    "balanceCard": "Konto bonusowe",
+    "balanceSubtitle": "Informacje o bonusach",
+    "currentBalance": "Aktualny stan:",
+    "referralCode": "Kod polecający:",
+    "lastUpdate": "Ostatnia aktualizacja",
+
+    "transactionsCard": "Historia transakcji",
+    "transactionsSubtitle": "Ostatnie operacje bonusowe",
+
+    "toastTitle": "Kod skopiowany",
+    "toastBody": "Kod polecający skopiowany do schowka!",
+    "tooltipCopy": "Kopiuj kod"
+  },
+
+  "SupportPage": {
+    "title": "Czat wsparcia"
+  },
+
+  "DateRangeFilter": {
+    "heading": "Filtr zakresu dat:",
+    "placeholder": "Wybierz daty",
+    "clear": "Wyczyść zakres dat"
+  },
+
+  "DynamicDataTable": {
+    "exportExcel": "Eksport do Excela",
+    "create": "Utwórz",
+    "add": "Dodaj",
+    "editAria": "Edytuj"
+  },
+
+  "KnowledgeBase": {
+    "contextSources": "Źródła kontekstu",
+    "contextInfoTip": "Źródła kontekstu to pliki, linki lub tekst, których bot używa do odpowiadania na pytania. Możesz je dodawać, usuwać lub edytować według potrzeb. Bot wykorzysta najbardziej odpowiednie źródła, aby zapewnić dokładne odpowiedzi.",
+
+    "searchPlaceholder": "Szukaj źródeł…",
+    "searchTip": "Wyszukaj po nazwie źródła. Wpisz część nazwy pliku, strony lub tytułu tekstu, aby przefiltrować listę.",
+    "addContext": "Dodaj kontekst",
+    "addContextTip": "Zaimportuj nowe źródło danych: plik, strona internetowa lub tekst.",
+
+    "addContextHeader": "Dodaj kontekst",
+
+    "titlePlaceholder": "Tytuł",
+    "pasteTextPlaceholder": "Wklej tekst tutaj…",
+
+    "uploadHeader": "Prześlij źródła",
+    "uploadSub": "Wybierz plik lub upuść go tutaj.",
+    "uploadTypes": "Obsługiwane typy: PDF, TXT, obrazy, DOCX, XLSX",
+
+    "dialogCancel": "Anuluj",
+    "dialogAdd": "Dodaj",
+
+    "totalSources": "Łącznie źródeł",
+    "selectedSources": "Wybrane",
+
+    "queryField": "Pole zapytania",
+    "queryFieldTip": "Wpisz swoje pytanie lub prośbę. AI użyje źródeł kontekstu, aby dostarczyć odpowiednią odpowiedź.",
+
+    "aiModelPlaceholder": "Wybierz model AI",
+
+    "requestHistory": "Historia zapytań",
+    "clearHistory": "Wyczyść historię",
+    "noHistory": "Brak wcześniejszych zapytań.",
+    "reuseTip": "Użyj ponownie tego zapytania",
+
+    "typeHere": "Pisz tutaj…",
+    "typeHereTip": "Opisz, co asystent AI powinien zrobić z Twoimi danymi…",
+
+    "uploadSourcesTitle": "Prześlij źródła",
+    "uploadSourcesSubtitle": "Wybierz plik lub upuść go tutaj.",
+    "uploadSourcesTypes": "Obsługiwane typy: PDF, TXT, obrazy, DOCX, XLSX",
+
+    "files": "Pliki",
+    "site": "Strona",
+    "text": "Tekst",
+
+    "dontUse": "Nie używaj",
+    "botKnowledge": "Wiedza bota",
+    "contextOnly": "Tylko kontekst",
+    "knowledgeAndContext": "Wiedza i kontekst",
+
+    "querySmartChange": "Generuj inteligentną zmianę",
+
+    "playgroundHeader": "Plac zabaw",
+
+    "addTopic": "Dodaj temat",
+    "addTopicDesc": "Temat – główny wątek łączący powiązane podtematy. Podtemat – podsekcja głównego tematu o określonym zakresie. Pytanie – typowe pytanie użytkownika w podtemacie. Odpowiedź – szczegółowa odpowiedź na konkretne pytanie.",
+    "addSubtopic": "Dodaj podtemat",
+    "addQuestion": "Dodaj pytanie",
+    "addLink": "Dodaj link",
+
+    "questionLabel": "Pytanie:",
+    "answerTextLabel": "Tekst odpowiedzi:",
+    "linksFilesLabel": "Linki / Pliki:",
+    "selectedFilesLabel": "Wybrane pliki:",
+
+    "topicTooltip": "Główny temat zawierający powiązane podtematy i pytania.",
+    "subtopicTooltip": "Część tematu grupująca powiązane pytania i odpowiedzi.",
+    "questionTooltip": "Pytanie w bazie wiedzy, którego odpowiedzi szuka bot.",
+    "answerTooltip": "Odpowiedź na pytanie, której bot użyje przy formułowaniu odpowiedzi.",
+
+    "playgroundEmpty": "Plac zabaw jest pusty",
+    "playgroundEmptyBody": "Zaimportuj zawartość z lewego panelu lub utwórz nowy blok.",
+    "createBlock": "Utwórz blok",
+
+    "reject": "Odrzuć",
+    "save": "Zapisz",
+    "saveDesc": "Zapisuje aktualną strukturę wiedzy jako szkic. Możesz do niego wrócić później. Szkic nie jest używany przez bota do odpowiedzi, dopóki go nie opublikujesz.",
+    "publish": "Opublikuj",
+    "publishDesc": "Publikuje strukturę wiedzy do głównej bazy, której bot używa do odpowiadania na pytania użytkowników. Zmiany wchodzą w życie natychmiast. Upewnij się, że struktura jest w pełni gotowa.",
+    
+
+    "knowledgeBase": "Baza wiedzy",
+    "knowledgeBaseDesc": "Baza wiedzy jest głównym źródłem informacji dla bota. Zawiera wszystkie tematy, podtematy i pytania, na które bot może odpowiedzieć. Możesz ją przeglądać i wyszukiwać, ale nie możesz jej bezpośrednio edytować tutaj.",
+    "searchKbPlaceholder": "Szukaj w bazie wiedzy…",
+    "export": "Eksportuj",
+    "exportDialogTitle": "Eksport bazy wiedzy",
+    "exportJson": "JSON",
+    "exportJsonDesc": "Pełne dane strukturalne (zalecane)",
+    "exportCsv": "CSV",
+    "exportCsvDesc": "Format zgodny z arkuszami kalkulacyjnymi",
+    "exportTxt": "Czysty tekst",
+    "exportTxtDesc": "Czysty tekst",
+    "exportCancel": "Anuluj",
+
+    "removeTopic": "Usunąć temat «{topicName}»?",
+    "removeSubtopic": "Usunąć podtemat «{subtopicName}» w «{topicName}»?",
+    "removeQuestion": "Usunąć pytanie «{questionKey}»?",
+
+    "newTopic": "Nowy temat",
+    "newSubtopic": "Nowy podtemat",
+    "newQuestion": "Nowe pytanie",
+
+    "toastAdded": "{what} dodano pomyślnie",
+    "toastRemoved": "{what} usunięto pomyślnie",
+    "toastUpdated": "{what} zaktualizowano pomyślnie",
+    "toastNotAdded": "{what} nie dodano",
+    "toastNotRemoved": "{what} nie usunięto",
+    "toastNotUpdated": "{what} nie zaktualizowano",
+
+    "ctxRenamePrompt": "Zmień nazwę kontekstu",
+    "ctxRenamed": "Nazwa kontekstu zaktualizowana",
+    "ctxNotRenamed": "Nazwa kontekstu nie została zmieniona",
+
+    "ctxPurposeUpdated": "Cel zaktualizowany",
+    "ctxPurposeNotUpdated": "Cel nie został zaktualizowany",
+
+    "ctxLoadErr": "Nie można załadować kontekstu",
+    "ctxAddMax": "Osiągnięto maksymalnie {max} źródeł",
+    "ctxAdded": "Kontekst dodany",
+    "ctxNotAdded": "Kontekst nie dodany",
+    "ctxDeleted": "Kontekst usunięty",
+    "ctxNotDeleted": "Kontekst nie usunięty",
+
+    "menuRename": "Zmień nazwę",
+    "menuDownload": "Pobierz",
+    "menuDelete": "Usuń",
+
+    "typeText": "Tekst",
+    "typeFile": "Plik / Zdjęcie",
+    "typeLink": "Link",
+
+    "purposeNone": "Nie używaj",
+    "purposeBot": "Wiedza bota",
+    "purposeKb": "Tylko kontekst",
+    "purposeBoth": "Wiedza i kontekst",
+
+    "purposeNoneDesc": "Źródło ignorowane przy generowaniu odpowiedzi.",
+    "purposeBotDesc": "Informacje dodawane do bazy wiedzy i wpływają na ogólne odpowiedzi.",
+    "purposeKbDesc": "Źródło używane tylko do odpowiedzi na konkretne pytanie.",
+    "purposeBothDesc": "Źródło używane zarówno do ogólnej wiedzy, jak i konkretnych odpowiedzi.",
+
+    "topicAdded": "Temat dodany pomyślnie",
+    "topicRemoved": "Temat usunięty pomyślnie",
+    "topicNotRemoved": "Temat nie usunięty",
+
+    "subtopicAdded": "Podtemat dodany pomyślnie",
+    "subtopicRemoved": "Podtemat usunięty pomyślnie",
+    "subtopicNotRemoved": "Podtemat nie usunięty",
+
+    "questionAdded": "Pytanie dodane pomyślnie",
+    "questionRemoved": "Pytanie usunięte pomyślnie",
+    "questionNotRemoved": "Pytanie nie usunięte",
+    "questionExists": "To pytanie już istnieje!",
+
+    "fileAdded": "Link / plik dodany",
+    "fileRemoved": "Link / plik usunięty",
+
+    "playgroundCleared": "Plac zabaw wyczyszczony pomyślnie",
+    "playgroundUpdated": "Plac zabaw zaktualizowany pomyślnie",
+    "playgroundNotUpdated": "Plac zabaw nie zaktualizowany",
+    "playgroundRejected": "Plac zabaw odrzucony pomyślnie",
+
+    "kbSaved": "Baza wiedzy zapisana pomyślnie",
+    "kbNotSaved": "Baza wiedzy nie zapisana",
+
+    "patchGenerated": "Patch wygenerowany pomyślnie",
+    "patchNotGenerated": "Patch nie wygenerowany",
+
+    "noChanges": "Brak zmian do zapisania.",
+    "msgPlaygroundUpdated": "Plac zabaw zaktualizowany pomyślnie",
+    "msgPlaygroundUpdateErr": "Aktualizacja placu zabaw nie powiodła się",
+    "msgDbSaved": "Baza wiedzy zapisana",
+    "msgDbSaveErr": "Nie udało się zapisać bazy wiedzy",
+    "confirmClear": "Wyczyścić plac zabaw?\n\nWszystkie szkice zostaną utracone. To NIE wpłynie na prawdziwą bazę wiedzy.",
+    "msgPlaygroundCleared": "Plac zabaw wyczyszczony",
+    "confirmReject": "Odrzucić plac zabaw?\n\nSzkic zostanie utracony. Prawdziwa baza wiedzy pozostanie bez zmian.",
+    "msgPlaygroundRejected": "Plac zabaw odrzucony",
+    "unsavedChanges": "Masz niezapisane zmiany w placu zabaw!",
+    "msgPatchGenerated": "Patch wygenerowany pomyślnie",
+    "msgPatchErr": "Generowanie patcha nie powiodło się"
+  
+  },
+
+  "MainContent": {
+    "dialog": {
+      "filterOptions": "Opcje filtru"
+    },
+    "buttons": {
+      "fillHealthSurvey": "Wypełnij ankietę zdrowotną",
+      "fillMainInfo": "Wypełnij informacje podstawowe",
+      "fillContactInfo": "Wypełnij informacje kontaktowe",
+      "fillConsents": "Wypełnij zgody"
+    },
+    "toast": {
+      "exportSuccessSummary": "Eksport zakończony sukcesem",
+      "exportSuccessDetail": "Dane pomyślnie wyeksportowane do Excela",
+      "exportFailSummary": "Eksport nieudany",
+      "exportFailDetail": "Nie udało się wyeksportować danych.",
+      "invalidGroupSummary": "Nieprawidłowa grupa",
+      "invalidEntitySummary": "Nieprawidłowa jednostka",
+      "errorSummary": "Błąd",
+      "noDataDetail": "Brak dostępnych danych.",
+      "loadFailDetail": "Nie udało się załadować danych tabeli. ({status})",
+      "redirectDetail": "Przekierowanie do: {route}"
+    },
+
+    "playground": {
+      "saveDraft": "Zapisuje bieżącą strukturę wiedzy jako szkic. Będziesz mógł kontynuować później. Szkic nie jest używany przez bota do odpowiedzi, dopóki go nie opublikujesz.",
+      "publish": "Publikuje strukturę wiedzy do głównej bazy, której bot używa do odpowiadania na pytania użytkowników. Po publikacji zmiany wchodzą w życie natychmiast, a bot zaczyna odpowiadać, używając nowych danych. Upewnij się, że struktura jest całkowicie gotowa.",
+      "statusReady": "Gotowe do publikacji",
+      "blockType": "Temat – główny wątek łączący powiązane podtematy.\nPodtemat – podsekcja głównego tematu o określonym zakresie.\nPytanie – typowe pytanie użytkownika w podtemacie.\nOdpowiedź – szczegółowa odpowiedź na konkretne pytanie.",
+      "parentBlock": "Wybierz blok, do którego zostanie przypisany tworzony element.\nZachowaj prawidłową hierarchię:\n• Podtematy są tworzone w Tematach\n• Pytania są tworzone w Podtematach\n• Odpowiedzi są tworzone dla konkretnych Pytań"
+    },
+
+    "import": {
+      "sourceSearch": "Wyszukaj po nazwie źródła. Wpisz część nazwy pliku, strony internetowej lub dokumentu tekstowego, aby przefiltrować listę.",
+      "importNew": "Zaimportuj nowe źródło danych: plik, strona internetowa lub tekst.",
+      "aiInput": "Napisz tutaj, co asystent AI ma zrobić z Twoimi danymi. Przykład: \"Wyróżnij główne usługi z mojej strony i utwórz pytania i odpowiedzi\". Naciśnij Enter lub przycisk wyślij, aby zamienić wybrane źródła w ustrukturyzowaną bazę wiedzy.",
+      "generator": "Napisz do asystenta AI konkretne zadania dotyczące strukturyzacji danych. Przykłady:\n• \"Utwórz pary Q&A z dokumentu produktu\"\n• \"Podziel tekst na podtematy\"\n• \"Utwórz menu usług z mojego cennika\"\n• \"Wypisz kluczowe korzyści\""
+    },
+
+    "kbBlock": {
+      "topic": "Główny temat zawierający powiązane podtematy i pytania.",
+      "subtopic": "Część tematu grupująca powiązane pytania i odpowiedzi.",
+      "question": "Pytanie w bazie wiedzy, którego odpowiedzi szuka bot.",
+      "answer": "Szczegółowa odpowiedź na pytanie, której bot użyje."
+    }
+  },
+
+  "NavigationSidebar": {
+    "tooltip": {
+      "expand": "Rozwiń",
+      "collapse": "Zwiń"
+    },
+    "headers": {
+      "settings": "Ustawienia",
+      "sidebar": "Pasek boczny"
+    },
+    "links": {
+      "knowledgeBase": "Baza wiedzy",
+      "botSettings": "Ustawienia bota"
+    }
+  },
+
+  "ReadonlyKB": {
+    "summary": {
+      "knowledgeBase": "Baza wiedzy"
+    },
+    "buttons": {
+      "goToSource": "Przejdź do źródła"
+    }
+  },
+
+  "SaveChangesDialog": {
+    "header": {
+      "preview": "Podgląd wykrytych zmian.",
+      "savePlayground": "Czy zapisać zmiany w placu zabaw?",
+      "saveKnowledgeBase": "Czy zapisać zmiany w bazie wiedzy?"
+    },
+    "info": {
+      "noChanges": "Brak zmian do zastosowania w bazie wiedzy.",
+      "editModeNote": "Zmieni plac zabaw, ale NIE zaktualizuje bazy wiedzy.",
+      "applyKb": "Zmieni bazę wiedzy."
+    },
+    "labels": {
+      "added": "Dodano:",
+      "changed": "Zmieniono:",
+      "deleted": "Usunięto:",
+      "addedItems": "Dodane elementy",
+      "changedItems": "Zmienione elementy",
+      "deletedItems": "Usunięte elementy"
+    },
+    "buttons": {
+      "close": "Zamknij",
+      "cancel": "Anuluj",
+      "confirm": "Potwierdź"
+    }
+  },
+
+  "Topbar": {
+    "aria": {
+      "menu": "Menu"
+    },
+    "titles": {
+      "personalAccount": "Konto osobiste"
+    },
+    "menu": {
+      "toPersonal": "Do konta osobistego",
+      "toAdmin": "Do panelu admina",
+      "changeTheme": "Zmień motyw",
+      "logout": "Wyloguj"
+    },
+    "alt": {
+      "logo": "Logo"
+    },
+    "user": {
+      "defaultName": "Administrator"
+    }
+  },
+
+  "AdminChat": {
+    "buttons": {
+      "trainBot": "Trenuj bota AI",
+      "closeChat": "Zamknij czat",
+      "openTestChat": "Otwórz czat testowy"
+    }
+  },
+
+  "LoaderOverlay": {
+    "loadingCompleted": "Ładowanie zakończone!"
+  },
+
+  "test": {
+    "test": "Test"
   }
 }

@@ -1,110 +1,23 @@
 {
-  "chat": "Чат",
-  "newChat": "Новый чат",
-  "showCommands": "Показать команды",
-  "sendMessage": "Отправить сообщение...",
-  "chatAgain": "Начать заново",
-  "language": "Язык",
-
-  "buttons": {
-    "save": "Сохранить",
-    "cancel": "Отмена",
-    "close": "Закрыть",
-    "delete": "Удалить",
-    "edit": "Редактировать",
-    "add": "Добавить",
-    "remove": "Удалить",
-    "create": "Создать",
-    "send": "Отправить",
-    "back": "Назад",
-    "next": "Далее",
-    "finish": "Завершить",
-    "confirm": "Подтвердить",
-    "search": "Поиск",
-    "clear": "Очистить",
-    "select": "Выбрать",
-    "copy": "Копировать",
-    "openTestChat": "Открыть тестовый чат"
-  },
-
-  "roomActions": [
-    {
-      "name": "archiveRoom",
-      "title": "Архивировать комнату"
-    }
-  ],
-  "menuActions": [
-    {
-      "name": "inviteUser",
-      "title": "Пригласить пользователя"
-    },
-    {
-      "name": "removeUser",
-      "title": "Удалить пользователя"
-    },
-    {
-      "name": "deleteRoom",
-      "title": "Удалить комнату"
-    }
-  ],
-  "messageActions": [
-    {
-      "name": "replyMessage",
-      "title": "Ответить"
-    },
-    {
-      "name": "editMessage",
-      "title": "Редактировать",
-      "onlyMe": true
-    },
-    {
-      "name": "deleteMessage",
-      "title": "Удалить",
-      "onlyMe": true
-    },
-    {
-      "name": "selectMessages",
-      "title": "Выбрать"
-    }
-  ],
-  "messageSelectionActions": [
-    {
-      "name": "deleteMessages",
-      "title": "Удалить"
-    },
-    {
-      "name": "forwardMessages",
-      "title": "Переслать"
-    }
-  ],
-  "templatesText": [
-    {
-      "tag": "help",
-      "text": "Это справка"
-    },
-    {
-      "tag": "action",
-      "text": "Это действие"
-    }
-  ],
   "textMessages": {
-    "ROOMS_EMPTY": "Нет диалогов",
-    "ROOM_EMPTY": "Выберите диалог",
+    "ROOMS_EMPTY": "Нет разговоров",
+    "ROOM_EMPTY": "Беседа не выбрана",
     "NEW_MESSAGES": "Новые сообщения",
-    "MESSAGE_DELETED": "Сообщение удалено",
-    "MESSAGES_EMPTY": "Нет сообщений",
+    "MESSAGE_DELETED": "Это сообщение было удалено",
+    "MESSAGES_EMPTY": "Сообщений нет",
     "CONVERSATION_STARTED": "Разговор начался:",
     "TYPE_MESSAGE": "Введите сообщение",
     "SEARCH": "Поиск",
     "IS_ONLINE": "в сети",
-    "LAST_SEEN": "был(а) в сети",
+    "LAST_SEEN": "был(а) в сети ",
     "IS_TYPING": "печатает...",
     "CANCEL_SELECT_MESSAGE": "Отменить выбор"
   },
+
   "EmbeddedChat": {
     "allLabel": "Все",
     "unreadLabel": "Непрочитанные",
-    "exportButton": "Экспорт чатов в Excel",
+    "exportButton": "Экспортировать чаты в Excel",
     "messageDialogHeader": "Сообщение",
     "messageDialogId": "ID",
     "messageDialogText": "Текст",
@@ -115,80 +28,587 @@
 
     "seeSources": "Показать источники",
     "excelSuccess": "Файл Excel создан",
-    "excelFailed": "Ошибка экспорта в Excel",
+    "excelFailed": "Не удалось экспортировать в Excel",
     "noDate": "Дата не указана",
     "inFuture": "В будущем",
-    "startedAgo": "Начато {diffDays} дн., {diffHours} ч., {diffMinutes} мин. назад",
+    "startedAgo": "Началось {diffDays} дн., {diffHours} ч, {diffMinutes} мин назад",
     "consultant": "Консультант",
     "client": "Клиент",
     "chatFallback": "Чат {index}"
   },
 
-  "additionalMessages": {
-    "chatRefreshed": "Чат обновлен",
-    "chatRefreshedSuccessfully": "Чат успешно обновлен.",
-    "errorRefreshingChat": "Ошибка при обновлении чата:",
-    "failedToRefreshChat": "Не удалось обновить чат.",
-    "sendingMessage": "Отправка сообщения:",
-    "attention": "Внимание",
-    "error": "Ошибка",
-    "choiceOptions": "Варианты выбора:",
-    "choiceOptionsFromLastMessage": "Варианты (из последнего сообщения):",
-    "messagesRetrieved": "Сообщения получены:",
-    "newMessage": "Новое сообщение:",
-    "unknownMessageType": "Неизвестный тип сообщения:",
-    "webSocketConnectionEstablished": "WebSocket-соединение установлено.",
-    "webSocketConnectionClosed": "WebSocket-соединение закрыто.",
-    "webSocketError": "Ошибка WebSocket:",
-    "pageIsVisibleCheckingWSConnection": "Страница активна. Проверяем соединение...",
-    "pageIsHiddenPausingUpdates": "Страница скрыта. Обновления приостановлены.",
-    "windowInFocus": "Окно в фокусе",
-    "webSocketIsNotOpenReconnecting": "WebSocket не открыт. Переподключаемся..."
+  "MainLogin": {
+    "title": "Вход в аккаунт",
+    "loginLabel": "Логин",
+    "loginPlaceholder": "Введите логин",
+    "passwordLabel": "Пароль",
+    "passwordPlaceholder": "Введите пароль",
+    "loginButton": "Войти",
+    "noAccount": "Нет аккаунта?",
+    "registerLink": "Зарегистрироваться"
   },
 
-  "knowledgeBase": {
-    "addTopic": "Добавить тему",
-    "removeTopic": "Удалить тему",
-    "addSubtopic": "Добавить подтему",
-    "removeSubtopic": "Удалить подтему",
-    "addQuestion": "Добавить вопрос",
-    "removeQuestion": "Удалить вопрос",
-    "renameTopic": "Переименовать тему",
-    "renameSubtopic": "Переименовать подтему",
-    "saveChanges": "Сохранить изменения",
-    "discardChanges": "Отменить изменения",
-    "exportData": "Экспорт данных",
-    "importData": "Импорт данных",
-    "clearPlayground": "Очистить рабочее пространство",
-    "confirmRemoveTopic": "Удалить тему \"{topicName}\"?",
-    "confirmRemoveSubtopic": "Удалить подтему \"{subtopicName}\" из \"{topicName}\"?",
-    "confirmRemoveQuestion": "Удалить вопрос \"{questionKey}\"?",
-    "unsavedChangesWarning": "У вас есть несохраненные изменения. Вы уверены, что хотите уйти?",
-    "label": {
-      "promptTextarea": "Поле запроса",
-      "question": "Вопрос",
-      "answerText": "Текст ответа",
-      "linksFiles": "Ссылки / Файлы",
-      "selectedFiles": "Выбранные файлы"
-    },
-    "button": {
-      "howToUse": "Как использовать этот инструмент?",
-      "generateSmartChange": "Сгенерировать умное изменение",
-      "openTestChat": "Открыть тестовый чат",
-      "clearPlayground": "Очистить рабочее пространство",
-      "addTopic": "Добавить тему",
-      "addSubtopic": "Добавить подтему",
-      "addQuestion": "Добавить вопрос",
-      "addLink": "Добавить ссылку",
-      "savePlayground": "Сохранить рабочее пространство",
-      "rejectPlayground": "Отклонить рабочее пространство",
-      "transferToDatabase": "Перенести в базу данных",
-      "exportJson": "Экспортировать JSON",
-      "importJson": "Импортировать JSON"
-    },
-    "header": {
-      "workspacePlayground": "Рабочее пространство",
-      "readonlyKnowledgeBase": "База знаний (только для чтения)"
+  "MainRegistration": {
+    "titleRegister": "Регистрация",
+    "email": "E-mail:",
+    "emailPlaceholder": "Введите e-mail",
+    "phone": "Телефон:",
+    "phonePlaceholder": "Введите номер телефона",
+    "firstName": "Имя:",
+    "firstNamePlaceholder": "Введите имя",
+    "lastName": "Фамилия:",
+    "lastNamePlaceholder": "Введите фамилию",
+    "birthDate": "Дата рождения:",
+    "birthDatePlaceholder": "Введите дату рождения",
+    "city": "Город:",
+    "cityPlaceholder": "Введите город",
+    "gender": "Пол:",
+    "genderPlaceholder": "Введите пол",
+    "termsLabel": "Я согласен с",
+    "termsAnd": "и",
+    "termsLink": "условиями использования",
+    "privacyLink": "политикой конфиденциальности",
+    "registerButton": "Зарегистрироваться",
+    "alreadyHaveAccount": "Уже есть аккаунт?",
+    "goToLogin": "Войти",
+
+    "codeTitle": "Тестовый код (будет отправлен позже на e-mail)",
+    "codeConfirmTitle": "Подтверждение кода",
+    "enterCodePrompt": "Введите шестизначный код из письма",
+    "codeConfirmButton": "Подтвердить",
+    "codeResendHelp1": "Если код не пришёл —",
+    "codeResendHelp2": "проверьте спам или",
+    "resendLink": "отправьте заново",
+
+    "error": {
+      "terms": "Необходимо согласиться с условиями обслуживания."
     }
+  },
+
+  "PersonalMainLogin": {
+    "titleLogin": "Вход в аккаунт",
+    "phone": "Телефон",
+    "phonePlaceholder": "Введите номер телефона",
+    "password": "Пароль",
+    "passwordPlaceholder": "Введите пароль",
+    "loginButton": "Войти",
+    "noAccount": "Нет аккаунта?",
+    "registerLink": "Регистрация",
+    "title2FA": "Подтверждение входа",
+    "testCode": "Тестовый код:",
+    "twofaLabel": "Код из SMS / e-mail",
+    "twofaPlaceholder": "Введите код",
+    "confirmButton": "Подтвердить",
+    "cancelButton": "Отмена"
+  },
+
+  "PersonalMainRegistration": {
+    "title": "Регистрация",
+    "subtitle": "Создайте новый аккаунт",
+    "phone": "Номер телефона",
+    "phonePlaceholder": "Введите номер телефона",
+    "email": "E-mail",
+    "emailPlaceholder": "{'mail@example.com'}",
+    "fullName": "Полное имя",
+    "fullNamePlaceholder": "Иван Иванов",
+    "password": "Пароль",
+    "passwordPlaceholder": "Минимум 10 символов",
+    "show": "Показать",
+    "hide": "Скрыть",
+    "passwordHint": "Минимум 10 символов, включая заглавные и строчные буквы, цифры и символы",
+    "passwordConfirm": "Подтвердите пароль",
+    "passwordConfirmPlaceholder": "Повторите пароль",
+    "termsPrefix": "Я согласен с",
+    "termsLink": "условиями использования",
+    "privacyAnd": "и",
+    "privacyLink": "политикой конфиденциальности",
+    "registerButton": "Зарегистрироваться",
+    "alreadyHave": "Уже есть аккаунт?",
+    "loginLink": "Войти",
+    "confirmTitle": "Подтвердите регистрацию",
+    "debugCode": "Тестовый код (придёт позже на e-mail)",
+    "smsCodeLabel": "Код из SMS",
+    "smsCodePlaceholder": "Введите код из SMS",
+    "confirmButton": "Подтвердить",
+    "cancelButton": "Отмена"
+  },
+
+  "DynamicForm": {
+    "upload": "Загрузить",
+    "addFiles": "Добавить файлы",
+    "addImages": "Добавить изображения",
+    "downloadFile": "Скачать файл",
+    "delete": "Удалить",
+    "enterTags": "Введите теги...",
+    "enterCountry": "Введите страну..."
+  },
+
+  "InlineList": {
+    "addNewHeader": "Добавить",
+    "saveBtn": "Сохранить",
+    "deleteBtn": "Удалить",
+    "createBtn": "Создать",
+
+    "confirmDelete": "Вы уверены, что хотите удалить этот элемент?",
+    "noChanges": "Изменений нет.",
+    "updated": "Элемент обновлён!",
+    "updateError": "Ошибка при обновлении элемента.",
+    "deleted": "Элемент удалён!",
+    "deleteError": "Ошибка при удалении элемента.",
+    "onlyOne": "Разрешён только один элемент.",
+    "created": "Элемент создан!",
+    "createError": "Ошибка при создании элемента."
+  },
+
+  "MainForm": {
+    "createPrefix": "Создание новой записи",
+    "detailPrefix": "Детали записи",
+    "loading": "Загрузка данных…",
+
+    "edit": "Редактировать",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "create": "Создать запись",
+    "openChat": "Открыть чат",
+    "backToList": "К списку",
+    "backToRecord": "К записи",
+
+    "confirmDelete": "Вы уверены, что хотите удалить эту запись?",
+
+    "noChanges": "Нет изменений для сохранения.",
+    "created": "Запись создана",
+    "deleted": "Запись удалена",
+    "updateError": "Ошибка сохранения изменений.",
+    "createError": "Ошибка создания записи.",
+    "deleteError": "Ошибка удаления записи.",
+    "unknownError": "Неизвестная ошибка"
+  },
+
+  "AgreesPanel": {
+    "title": "Согласия пользователя",
+    "subtitle": "Информация о согласиях пользователя"
+  },
+
+  "ContactInfoView": {
+    "title": "Контактная информация",
+
+    "email": "E-mail",
+    "phone": "Телефон",
+    "address": "Адрес",
+    "pesel": "PESEL / Идентификатор",
+
+    "emergency": "Экстренный контакт",
+    "docId": "ID документа",
+    "lastUpdate": "Последнее обновление",
+
+    "invalidDate": "Неверная дата",
+    "dash": "—"
+  },
+
+  "FamilyTable": {
+    "addMember": "Добавить члена семьи",
+    "idPrefix": "ID:",
+    "nameUnknown": "Имя не указано",
+    "relationshipUnknown": "Отношение не указано",
+    "statusUnknown": "Статус не указан",
+    "bonusSuffix": "бонусных баллов",
+    "noBonus": "Нет бонусов",
+    "editAria": "Редактировать"
+  },
+
+  "InfoHeader": {
+    "patientIdPrefix": "ID пациента:",
+    "bonusPrefix": "Бонусы:",
+    "actions": "Действия",
+    "logout": "Выход",
+    "adminPanel": "Админ-панель",
+    "changeTheme": "Сменить тему"
+  },
+
+  "NavigationSidebarTabs": {
+    "support": "Поддержка"
+  },
+
+  "PatientsHealthSurveyView": {
+    "title": "Опрос о здоровье",
+    "subtitle": "Медицинская информация пользователя",
+
+    "allergies": "Аллергии:",
+    "chronic": "Хронические заболевания:",
+    "smoking": "Статус курения:",
+    "medications": "Текущие лекарства:",
+    "lastUpdate": "Последнее обновление:",
+    "noData": "Нет данных",
+    "dash": "—"
+  },
+
+  "PatientsMainInfoView": {
+    "sectionTitle": "Основная информация",
+
+    "blockPersonal": "Персональные данные",
+    "lastName": "Фамилия:",
+    "firstName": "Имя:",
+    "patronymic": "Отчество:",
+    "birthDate": "Дата рождения:",
+    "gender": "Пол:",
+
+    "blockCompany": "Информация о компании",
+    "companyName": "Название компании:",
+
+    "blockSystem": "Системная информация",
+    "patientId": "ID пациента:",
+    "createdAt": "Создано:",
+    "updatedAt": "Последнее обновление:",
+
+    "invalidDate": "Неверная дата",
+    "dash": "—"
+  },
+
+  "PointsTable": {
+    "balanceCard": "Бонусный счёт",
+    "balanceSubtitle": "Информация о бонусах",
+    "currentBalance": "Текущий баланс:",
+    "referralCode": "Реферальный код:",
+    "lastUpdate": "Последнее обновление",
+
+    "transactionsCard": "История транзакций",
+    "transactionsSubtitle": "Последние бонусные операции",
+
+    "toastTitle": "Код скопирован",
+    "toastBody": "Реферальный код скопирован!",
+    "tooltipCopy": "Скопировать код"
+  },
+
+  "SupportPage": {
+    "title": "Чат поддержки"
+  },
+
+  "DateRangeFilter": {
+    "heading": "Фильтр диапазона дат:",
+    "placeholder": "Выберите даты",
+    "clear": "Сбросить диапазон"
+  },
+
+  "DynamicDataTable": {
+    "exportExcel": "Экспорт в Excel",
+    "create": "Создать",
+    "add": "Добавить",
+    "editAria": "Редактировать"
+  },
+
+  "KnowledgeBase": {
+    "contextSources": "Контекстные источники",
+    "contextInfoTip": "Контекстные источники — это файлы, ссылки или текст, которые бот использует для ответов на вопросы. Вы можете добавлять, удалять или редактировать их по необходимости. Бот будет использовать наиболее релевантные источники для точных ответов.",
+
+    "searchPlaceholder": "Поиск источников…",
+    "searchTip": "Поиск по названию источника. Введите часть имени файла, веб-страницы или названия текста, чтобы отфильтровать список.",
+    "addContext": "Добавить контекст",
+    "addContextTip": "Импорт нового источника данных: файл, веб-страница или текст.",
+
+    "addContextHeader": "Добавление контекста",
+
+    "titlePlaceholder": "Название",
+    "pasteTextPlaceholder": "Вставьте текст здесь…",
+
+    "uploadHeader": "Загрузка источников",
+    "uploadSub": "Выберите файл или перетащите его сюда.",
+    "uploadTypes": "Поддерживаемые типы: PDF, TXT, изображения, DOCX, XLSX",
+
+    "dialogCancel": "Отмена",
+    "dialogAdd": "Добавить",
+
+    "totalSources": "Всего источников",
+    "selectedSources": "Выбрано",
+
+    "queryField": "Поле запроса",
+    "queryFieldTip": "Введите свой вопрос или запрос. ИИ использует контекстные источники для релевантного ответа.",
+
+    "aiModelPlaceholder": "Выберите модель ИИ",
+
+    "requestHistory": "История запросов",
+    "clearHistory": "Очистить историю",
+    "noHistory": "Предыдущие запросы не найдены.",
+    "reuseTip": "Повторно использовать этот запрос",
+
+    "typeHere": "Пишите здесь…",
+    "typeHereTip": "Опишите, что должен сделать ИИ-ассистент с вашими данными…",
+
+    "uploadSourcesTitle": "Загрузка источников",
+    "uploadSourcesSubtitle": "Выберите файл или перетащите его сюда.",
+    "uploadSourcesTypes": "Поддерживаемые типы: PDF, TXT, изображения, DOCX, XLSX",
+
+    "files": "Файлы",
+    "site": "Сайт",
+    "text": "Текст",
+
+    "dontUse": "Не использовать",
+    "botKnowledge": "Знания бота",
+    "contextOnly": "Только контекст",
+    "knowledgeAndContext": "Знания и контекст",
+
+    "querySmartChange": "Сгенерировать умное изменение",
+
+    "playgroundHeader": "Песочница",
+
+    "addTopic": "Добавить тему",
+    "addTopicDesc": "Тема — основная тема, объединяющая связанные подтемы. Подтема — подраздел основной темы с конкретным фокусом. Вопрос — типичный пользовательский вопрос в подтеме. Ответ — подробный ответ на конкретный вопрос.",
+    "addSubtopic": "Добавить подтему",
+    "addQuestion": "Добавить вопрос",
+    "addLink": "Добавить ссылку",
+
+    "questionLabel": "Вопрос:",
+    "answerTextLabel": "Текст ответа:",
+    "linksFilesLabel": "Ссылки / файлы:",
+    "selectedFilesLabel": "Выбранные файлы:",
+
+    "topicTooltip": "Основная тема, содержащая связанные подтемы и вопросы.",
+    "subtopicTooltip": "Часть темы, группирующая связанные вопросы и ответы.",
+    "questionTooltip": "Вопрос в базе знаний, на который бот найдёт ответ.",
+    "answerTooltip": "Ответ на вопрос, который бот использует при формулировке ответов.",
+
+    "playgroundEmpty": "Песочница пуста",
+    "playgroundEmptyBody": "Импортируйте содержимое из левой панели или создайте новый блок.",
+    "createBlock": "Создать блок",
+
+    "reject": "Отклонить",
+    "save": "Сохранить",
+    "saveDesc": "Сохраняет текущую структуру знаний как черновик. Вы сможете вернуться к нему позже. Черновик не используется ботом для ответов, пока вы его не опубликуете.",
+    "publish": "Опубликовать",
+    "publishDesc": "Публикует структуру знаний в основную базу, которую бот использует для ответов на вопросы. Изменения вступают в силу немедленно. Убедитесь, что структура полностью готова.",
+    
+
+    "knowledgeBase": "База знаний",
+    "knowledgeBaseDesc": "База знаний — основной источник информации для бота. Содержит все темы, подтемы и вопросы, на которые бот может ответить. Вы можете просматривать и искать её, но не можете редактировать напрямую здесь.",
+    "searchKbPlaceholder": "Поиск в базе знаний…",
+    "export": "Экспорт",
+    "exportDialogTitle": "Экспорт базы знаний",
+    "exportJson": "JSON",
+    "exportJsonDesc": "Полные структурированные данные (рекомендуется)",
+    "exportCsv": "CSV",
+    "exportCsvDesc": "Формат, совместимый с таблицами",
+    "exportTxt": "Текст",
+    "exportTxtDesc": "Чистый текст",
+    "exportCancel": "Отмена",
+
+    "removeTopic": "Удалить тему «{topicName}»?",
+    "removeSubtopic": "Удалить подтему «{subtopicName}» в «{topicName}»?",
+    "removeQuestion": "Удалить вопрос «{questionKey}»?",
+
+    "newTopic": "Новая тема",
+    "newSubtopic": "Новая подтема",
+    "newQuestion": "Новый вопрос",
+
+    "toastAdded": "{what} успешно добавлено",
+    "toastRemoved": "{what} успешно удалено",
+    "toastUpdated": "{what} успешно обновлено",
+    "toastNotAdded": "{what} не добавлено",
+    "toastNotRemoved": "{what} не удалено",
+    "toastNotUpdated": "{what} не обновлено",
+
+    "ctxRenamePrompt": "Переименовать контекст",
+    "ctxRenamed": "Название контекста обновлено",
+    "ctxNotRenamed": "Название контекста не изменено",
+
+    "ctxPurposeUpdated": "Назначение обновлено",
+    "ctxPurposeNotUpdated": "Назначение не обновлено",
+
+    "ctxLoadErr": "Не удаётся загрузить контекст",
+    "ctxAddMax": "Достигнут максимум {max} источников",
+    "ctxAdded": "Контекст добавлен",
+    "ctxNotAdded": "Контекст не добавлен",
+    "ctxDeleted": "Контекст удалён",
+    "ctxNotDeleted": "Контекст не удалён",
+
+    "menuRename": "Переименовать",
+    "menuDownload": "Скачать",
+    "menuDelete": "Удалить",
+
+    "typeText": "Текст",
+    "typeFile": "Файл / фото",
+    "typeLink": "Ссылка",
+
+    "purposeNone": "Не использовать",
+    "purposeBot": "Знания бота",
+    "purposeKb": "Только контекст",
+    "purposeBoth": "Знания и контекст",
+
+    "purposeNoneDesc": "Источник игнорируется при генерации ответов.",
+    "purposeBotDesc": "Информация добавляется в базу знаний и влияет на общие ответы.",
+    "purposeKbDesc": "Источник используется только для ответа на конкретный вопрос.",
+    "purposeBothDesc": "Источник используется как для общих знаний, так и для конкретных ответов.",
+
+    "topicAdded": "Тема успешно добавлена",
+    "topicRemoved": "Тема успешно удалена",
+    "topicNotRemoved": "Тему не удалено",
+
+    "subtopicAdded": "Подтема успешно добавлена",
+    "subtopicRemoved": "Подтема успешно удалена",
+    "subtopicNotRemoved": "Подтему не удалено",
+
+    "questionAdded": "Вопрос успешно добавлен",
+    "questionRemoved": "Вопрос успешно удалён",
+    "questionNotRemoved": "Вопрос не удалён",
+    "questionExists": "Такой вопрос уже существует!",
+
+    "fileAdded": "Ссылка / файл добавлен",
+    "fileRemoved": "Ссылка / файл удалён",
+
+    "playgroundCleared": "Песочница успешно очищена",
+    "playgroundUpdated": "Песочница успешно обновлена",
+    "playgroundNotUpdated": "Песочница не обновлена",
+    "playgroundRejected": "Песочница успешно отклонена",
+
+    "kbSaved": "База знаний успешно сохранена",
+    "kbNotSaved": "База знаний не сохранена",
+
+    "patchGenerated": "Патч успешно сгенерирован",
+    "patchNotGenerated": "Не удалось сгенерировать патч",
+
+    "noChanges": "Нет изменений для сохранения.",
+    "msgPlaygroundUpdated": "Песочница успешно обновлена",
+    "msgPlaygroundUpdateErr": "Не удалось обновить песочницу",
+    "msgDbSaved": "База знаний сохранена",
+    "msgDbSaveErr": "Не удалось сохранить базу знаний",
+    "confirmClear": "Очистить песочницу?\n\nВсе черновые изменения будут потеряны. Это НЕ затронет реальную базу знаний.",
+    "msgPlaygroundCleared": "Песочница очищена",
+    "confirmReject": "Отклонить песочницу?\n\nЧерновые изменения будут потеряны. Реальная база знаний останется без изменений.",
+    "msgPlaygroundRejected": "Песочница отклонена",
+    "unsavedChanges": "У вас есть несохранённые изменения в песочнице!",
+    "msgPatchGenerated": "Патч успешно сгенерирован",
+    "msgPatchErr": "Не удалось сгенерировать патч"
+  
+  },
+
+  "MainContent": {
+    "dialog": {
+      "filterOptions": "Параметры фильтра"
+    },
+    "buttons": {
+      "fillHealthSurvey": "Заполнить анкету здоровья",
+      "fillMainInfo": "Заполнить основную информацию",
+      "fillContactInfo": "Заполнить контактную информацию",
+      "fillConsents": "Заполнить согласия"
+    },
+    "toast": {
+      "exportSuccessSummary": "Экспорт выполнен",
+      "exportSuccessDetail": "Данные успешно экспортированы в Excel",
+      "exportFailSummary": "Экспорт неудачен",
+      "exportFailDetail": "Не удалось экспортировать данные.",
+      "invalidGroupSummary": "Неверная группа",
+      "invalidEntitySummary": "Неверная сущность",
+      "errorSummary": "Ошибка",
+      "noDataDetail": "Нет доступных данных.",
+      "loadFailDetail": "Не удалось загрузить данные таблицы. ({status})",
+      "redirectDetail": "Переход по маршруту: {route}"
+    },
+
+    "playground": {
+      "saveDraft": "Сохраняет текущую структуру знаний как черновик. Вы сможете продолжить работу позже. Черновик не используется ботом для ответов, пока вы не опубликуете его.",
+      "publish": "Публикует структуру знаний в основную базу, которую бот использует для ответов пользователя. После публикации изменения вступают в силу сразу, и бот начнёт отвечать, используя новые данные. Убедитесь, что структура полностью готова.",
+      "statusReady": "Готово к публикации",
+      "blockType": "Тема – основная тема, объединяющая связанные подтемы.\\nПодтема – подраздел темы с конкретным фокусом.\\nВопрос – типичный вопрос пользователя в подтеме.\\nОтвет – подробный ответ на конкретный вопрос.",
+      "parentBlock": "Выберите блок, к которому будет относиться создаваемый элемент.\\nСоблюдайте иерархию:\\n• Подтемы создаются внутри Тем\\n• Вопросы создаются внутри Подтем\\n• Ответы создаются для конкретных Вопросов"
+    },
+
+    "import": {
+      "sourceSearch": "Поиск по названию источника. Введите часть имени файла, веб-страницы или текстового документа для фильтрации.",
+      "importNew": "Импортировать новый источник данных: файл, веб-страница или текст.",
+      "aiInput": "Напишите здесь, что должен сделать ИИ-ассистент с вашими данными. Пример: \"Выдели основные услуги с моего сайта и создай вопросы и ответы\". Нажмите Enter или кнопку отправки для преобразования выбранных источников в структурированную базу знаний.",
+      "generator": "Напишите ассистенту ИИ конкретные задачи по структурированию данных. Примеры:\\n• \"Создай пары Q&A из документа продукта\"\\n• \"Раздели текст на подтемы\"\\n• \"Сформируй меню услуг из прайс-листа\"\\n• \"Выдели ключевые преимущества\""
+    },
+
+    "kbBlock": {
+      "topic": "Основная тема, содержащая связанные подтемы и вопросы.",
+      "subtopic": "Часть темы, группирующая связанные вопросы и ответы.",
+      "question": "Вопрос в базе знаний, на который бот будет искать ответ.",
+      "answer": "Ответ на вопрос, который бот использует."
+    }
+  },
+
+  "NavigationSidebar": {
+    "tooltip": {
+      "expand": "Развернуть",
+      "collapse": "Свернуть"
+    },
+    "headers": {
+      "settings": "Настройки",
+      "sidebar": "Боковая панель"
+    },
+    "links": {
+      "knowledgeBase": "База знаний",
+      "botSettings": "Настройки бота"
+    }
+  },
+
+  "ReadonlyKB": {
+    "summary": {
+      "knowledgeBase": "База знаний"
+    },
+    "buttons": {
+      "goToSource": "Перейти к источнику"
+    }
+  },
+
+  "SaveChangesDialog": {
+    "header": {
+      "preview": "Предпросмотр обнаруженных изменений.",
+      "savePlayground": "Сохранить изменения в песочнице?",
+      "saveKnowledgeBase": "Сохранить изменения в базе знаний?"
+    },
+    "info": {
+      "noChanges": "Нет изменений для применения к базе знаний.",
+      "editModeNote": "Изменит песочницу, но НЕ обновит базу знаний.",
+      "applyKb": "Изменит базу знаний."
+    },
+    "labels": {
+      "added": "Добавлено:",
+      "changed": "Изменено:",
+      "deleted": "Удалено:",
+      "addedItems": "Добавленные элементы",
+      "changedItems": "Изменённые элементы",
+      "deletedItems": "Удалённые элементы"
+    },
+    "buttons": {
+      "close": "Закрыть",
+      "cancel": "Отмена",
+      "confirm": "Подтвердить"
+    }
+  },
+
+  "Topbar": {
+    "aria": {
+      "menu": "Меню"
+    },
+    "titles": {
+      "personalAccount": "Личный кабинет"
+    },
+    "menu": {
+      "toPersonal": "В личный кабинет",
+      "toAdmin": "В админ-панель",
+      "changeTheme": "Сменить тему",
+      "logout": "Выход"
+    },
+    "alt": {
+      "logo": "Логотип"
+    },
+    "user": {
+      "defaultName": "Администратор"
+    }
+  },
+
+  "AdminChat": {
+    "buttons": {
+      "trainBot": "Обучить бота",
+      "closeChat": "Закрыть чат",
+      "openTestChat": "Открыть тестовый чат"
+    }
+  },
+
+  "LoaderOverlay": {
+    "loadingCompleted": "Загрузка завершена!"
+  },
+
+  "test": {
+    "test": "Тест"
   }
 }

@@ -29,11 +29,6 @@ export function useChatLogic(options = {}) {
         { _id: "1234", username: "User" },
         { _id: "4321", username: "Consultant" },
       ],
-      roomActions: [
-        { name: "inviteUser", title: "Invite User" },
-        { name: "removeUser", title: "Remove User" },
-        { name: "deleteRoom", title: "Delete Room" },
-      ],
       typingUsers: [],
     },
   ];
@@ -52,22 +47,6 @@ export function useChatLogic(options = {}) {
   // WebSocket-соединение и chatId
   const websocket = ref(null);
 
-  // Текстовые сообщения для vue-advanced-chat (i18n)
-  const textMessagesObject = computed(() => ({
-    SEARCH: "Search",
-    TYPE_MESSAGE: "Type a message",
-    ROOM_EMPTY: "This room is empty",
-    ROOMS_EMPTY: "No rooms available",
-    MESSAGES_EMPTY: "No messages yet",
-    MESSAGE_DELETED: "Message deleted",
-    NEW_MESSAGES: "New messages",
-    IS_ONLINE: "is online",
-    IS_TYPING: "is typing...",
-    LAST_SEEN: "Last seen",
-    CONVERSATION_STARTED: "Conversation started",
-    CANCEL_SELECT_MESSAGE: "Cancel message selection",
-  }));
-  const textMessagesJson = computed(() => JSON.stringify(textMessagesObject.value));
 
   /**
    * Проверка, содержит ли текст ссылку (URL).
@@ -529,7 +508,6 @@ export function useChatLogic(options = {}) {
     choiceOptions,
     isChoiceStrict,
     timerExpired,
-    textMessagesJson,
 
     // Методы
     fetchMessages: messagesFetcher,
