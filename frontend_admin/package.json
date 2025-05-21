@@ -17,6 +17,7 @@
     "axios": "^1.6.8",
     "chart.js": "^4.4.5",
     "docx": "^9.0.2",
+    "file-saver": "^2.0.5",
     "isomorphic-dompurify": "^2.9.0",
     "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",

@@ -18,6 +18,9 @@
     "allLabel": "All",
     "unreadLabel": "Unread",
     "exportButton": "Export chats to Excel",
+    "exportCSV": "Export chats to CSV",
+    "csvSuccess": "CSV created",
+    "csvFailed": "CSV export failed",
     "messageDialogHeader": "Message",
     "messageDialogId": "ID",
     "messageDialogText": "Text",
@@ -357,7 +360,6 @@
     "saveDesc": "Saves the current knowledge structure as a draft. You can return to it later. The draft is not used by the bot to answer questions until you publish it.",
     "publish": "Publish",
     "publishDesc": " 'Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions.  Changes take effect immediately.  Make sure the structure is completely ready.'",
-    
 
     "knowledgeBase": "Knowledge base",
     "knowledgeBaseDesc": " Knowledge base is the main source of information for the bot. It contains all the topics, subtopics, and questions that the bot can answer. You can view and search through it, but you cannot edit it directly here.",
@@ -446,21 +448,20 @@
     "patchGenerated": "Patch generated successfully",
     "patchNotGenerated": "Patch not generated",
 
-      "noChanges"            : "No changes to save.",
-    "msgPlaygroundUpdated" : "Playground updated successfully",
+    "noChanges": "No changes to save.",
+    "msgPlaygroundUpdated": "Playground updated successfully",
     "msgPlaygroundUpdateErr": "Playground update failed",
-    "msgDbSaved"           : "Knowledge base saved",
-    "msgDbSaveErr"         : "Failed to save knowledge base",
-    "confirmClear"         : "Clear playground?\n\nAll draft changes will be lost. This will NOT touch the real knowledge base.",
-    "msgPlaygroundCleared" : "Playground cleared",
-    "confirmReject"        : "Reject playground?\n\nDraft changes will be lost. The real knowledge base stays intact.",
+    "msgDbSaved": "Knowledge base saved",
+    "msgDbSaveErr": "Failed to save knowledge base",
+    "confirmClear": "Clear playground?\n\nAll draft changes will be lost. This will NOT touch the real knowledge base.",
+    "msgPlaygroundCleared": "Playground cleared",
+    "confirmReject": "Reject playground?\n\nDraft changes will be lost. The real knowledge base stays intact.",
     "msgPlaygroundRejected": "Playground rejected",
-    "unsavedChanges"       : "You have unsaved changes in the playground!",
-    "msgPatchGenerated"    : "Patch generated successfully",
-    "msgPatchErr"          : "Patch generation failed"
-  
+    "unsavedChanges": "You have unsaved changes in the playground!",
+    "msgPatchGenerated": "Patch generated successfully",
+    "msgPatchErr": "Patch generation failed"
   },
-   "MainContent": {
+  "MainContent": {
     "dialog": {
       "filterOptions": "Filter Options"
     },
@@ -505,7 +506,7 @@
       "answer": "An answer to a question that the bot will use when formulating responses."
     }
   },
-   "NavigationSidebar": {
+  "NavigationSidebar": {
     "tooltip": {
       "expand": "Expand",
       "collapse": "Collapse"
@@ -572,7 +573,7 @@
       "defaultName": "Administrator"
     }
   },
-   "AdminChat": {
+  "AdminChat": {
     "buttons": {
       "trainBot": "Train AI bot",
       "closeChat": "Close chat",
@@ -580,7 +581,7 @@
     }
   },
   "LoaderOverlay": {
-    "loadingCompleted":  "Loading completed!"
+    "loadingCompleted": "Loading completed!"
   },
   "test": {
     "test": "Test"

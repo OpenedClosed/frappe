@@ -20,10 +20,12 @@
         <!-- “Unread” label -->
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.unreadLabel") }} </span>
       </div>
-      <Button
+      <SplitButton
         :label="t('EmbeddedChat.exportButton')"
         icon="pi pi-file-excel"
-        class="p-button-success p-button-sm bg-green-600 hover:bg-green-500 text-white min-w-[14rem] xl:min-w-[8rem] my-2 mx-3"
+        :model="exportItems"
+        severity="success"
+        class="m-2"
         @click="onExportToExcel"
       />
     </div>
@@ -108,6 +110,7 @@ import LoaderOverlay from "../LoaderOverlay.vue";
 import LoaderSmall from "../LoaderSmall.vue";
 import ReadonlyKB from "~/components/Dashboard/Components/ReadonlyKB.vue";
 import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { useI18n } from "#imports";
 const { t, locale } = useI18n();
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
@@ -154,6 +157,52 @@ watch(props, () => {
 });
 
 const toast = useToast();
+
+/* ── dropdown items for SplitButton ───────────────── */
+const exportItems = [
+  {
+    label: t("EmbeddedChat.exportCSV"), // add this key to i18n files
+    icon: "pi pi-file",
+    command: onExportToCSV,
+  },
+];
+
+/* ── CSV export handler ──────────────────────────── */
+async function onExportToCSV() {
+  try {
+    const { utils } = await import("xlsx");
+
+    /* gather rows exactly like onExportToExcel() */
+    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/?order=-1`);
+
+    const rows = response.data.flatMap((chat) =>
+      chat.messages.map((m) => ({
+        ChatID: chat.chat_id,
+        Time: m.timestamp,
+        Sender: m.sender_role?.en || "",
+        Text: m.message,
+        ReadBy: (m.read_by_display || []).join(", "),
+      }))
+    );
+
+    const ws = utils.json_to_sheet(rows);
+    const csv = utils.sheet_to_csv(ws); // convert sheet → CSV string
+
+    /* trigger download */
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`);
+
+    toast.add({ severity: "success", summary: t("EmbeddedChat.csvSuccess"), life: 3000 });
+  } catch (err) {
+    console.error("CSV export failed:", err);
+    toast.add({
+      severity: "error",
+      summary: t("EmbeddedChat.csvFailed"),
+      detail: err.message || err,
+      life: 5000,
+    });
+  }
+}
 
 async function onExportToExcel() {
   try {
@@ -304,8 +353,6 @@ watch([unreadOnly, rooms], (newVal) => {
   displayedRooms.value = filteredRooms;
 });
 
-
-
 function formatDateEU(isoDateStr) {
   if (!isoDateStr) return "";
 
@@ -368,7 +415,7 @@ function buildRooms(chats, consultantId) {
 
     const consultantUser = {
       _id: consultantId,
-      username:  t("EmbeddedChat.consultant"),
+      username: t("EmbeddedChat.consultant"),
       avatar: "/avatars/consultant.png", // or whatever default you want
     };
 
