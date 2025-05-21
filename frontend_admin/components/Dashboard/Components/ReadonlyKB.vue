@@ -18,7 +18,7 @@
           >
             <i class="pi pi-database text-lg 2xl:text-xl" />
           </div>
-          <p class="">
+          <p class=" ">
             {{ t("ReadonlyKB.summary.knowledgeBase") }}
           </p>
         </div>
