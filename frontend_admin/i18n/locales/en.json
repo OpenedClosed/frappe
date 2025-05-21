@@ -343,7 +343,7 @@
 
     "questionLabel": "Question:",
     "answerTextLabel": "Answer text:",
-    "linksFilesLabel": "Links / Files:",
+    "linksFilesLabel": "Photos (Links):",
     "selectedFilesLabel": "Selected files:",
 
     "topicTooltip": "The main topic containing related subsections and questions.",
