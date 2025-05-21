@@ -215,7 +215,7 @@
                         <div class="flex items-center gap-2">
                           <Button :label="t('KnowledgeBase.dialogCancel')" class="p-button-text" @click="showContextDialog = false" />
                           <Button
-                            :label="t('KnowledgeBase.dialogCancel')"
+                            :label="t('KnowledgeBase.dialogAdd')"
                             icon="pi pi-check"
                             class="p-button-success"
                             :disabled="!canSubmitContext"
