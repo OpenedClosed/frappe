@@ -64,7 +64,7 @@ class MasterClient(BaseValidatedIdModel):
     """Информация о клиенте."""
     client_id: str
     source: ChatSource
-    external_id: str
+    external_id: Optional[str] = None
     name: str | None = None
     avatar_url: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)

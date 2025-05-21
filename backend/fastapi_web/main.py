@@ -29,10 +29,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi import FastAPI
 
 
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-# )
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 
 import logging
 

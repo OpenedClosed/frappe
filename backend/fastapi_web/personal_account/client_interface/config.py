@@ -5,9 +5,8 @@ verbose_name = {
     "en": "Personal Account",
     "pl": "Konto osobiste",
     "uk": "Особистий кабінет",
-    "zh": "个人账户",
-    "es": "Cuenta personal",
-    "ru": "Личный кабинет"
+    "ru": "Личный кабинет",
+    "ka": "პირადი კაბინეტი"
 }
 icon = "pi pi-user"
 color = "#2ecc71"

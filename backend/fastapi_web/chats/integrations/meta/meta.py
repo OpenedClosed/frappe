@@ -163,9 +163,6 @@ async def verify_meta_webhook(
 
 
 
-# ---------------------------------------------------------------------------
-# 2. chats.integrations.meta.handle_incoming_meta_messages
-# ---------------------------------------------------------------------------
 async def handle_incoming_meta_messages(
     messages_info: List[Dict[str, Any]],
     request: Request,

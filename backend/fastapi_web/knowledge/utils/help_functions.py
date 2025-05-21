@@ -15,13 +15,11 @@ import httpx
 import openpyxl
 import pdfplumber
 from bs4 import BeautifulSoup
-from fastapi import HTTPException, UploadFile
-
 from chats.db.mongo.schemas import ChatMessage
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
+from fastapi import HTTPException, UploadFile
 from gemini_base.gemini_init import gemini_client
-
 from infra import settings
 from knowledge.db.mongo.enums import ContextPurpose, ContextType
 from knowledge.db.mongo.schemas import ContextEntry, KnowledgeBase
@@ -98,6 +96,9 @@ def merge_external_structures(main_kb: dict, externals: list[dict]) -> dict:
     merged = deepcopy(main_kb)
     for ext in externals:
         merged = deep_merge(merged, ext)
+    print('*1*'*30)
+    print(merged)
+    print('*1*'*30)
     return merged
 
 
@@ -347,14 +348,28 @@ def build_messages_for_model(
     user_message: str,
     model: str,
 ) -> Dict[str, Any]:
-    """Формирует payload сообщений для конкретного LLM."""
+    """Формирует payload сообщений для конкретного LLM с поддержкой разделения статики и динамики."""
     messages, system_instruction = [], None
 
+    static_part, dynamic_part = "", ""
     if system_prompt:
-        if model.startswith("gpt"):
-            messages.append({"role": "system", "content": system_prompt})
+        if "<<<STATIC>>>" in system_prompt and "<<<DYNAMIC>>>" in system_prompt:
+            static_part = system_prompt.split("<<<DYNAMIC>>>")[0].replace("<<<STATIC>>>", "").strip()
+            dynamic_part = system_prompt.split("<<<DYNAMIC>>>")[1].strip()
         else:
-            system_instruction = system_prompt
+            static_part = system_prompt.strip()
+
+    if model.startswith("gpt"):
+        if static_part:
+            messages.append({"role": "system", "content": static_part})
+        if dynamic_part:
+            messages.append({"role": "system", "content": dynamic_part})
+    elif model.startswith("gemini"):
+        full_prompt = f"{static_part}\n\n{dynamic_part}".strip()
+        messages.append({"role": "user", "parts": [{"text": full_prompt}]})
+    else:
+        full_prompt = f"{static_part}\n\n{dynamic_part}".strip()
+        system_instruction = full_prompt
 
     for raw in messages_data:
         role_raw, content = ("user", raw)
@@ -402,6 +417,7 @@ def build_messages_for_model(
             messages.append({"role": "user", "parts": [{"text": user_message}]})
 
     return {"messages": messages, "system_instruction": system_instruction}
+
 
 
 async def build_gpt_message_blocks(user_message: str, files: List[UploadFile]) -> List[dict]:
@@ -536,7 +552,7 @@ async def collect_context_blocks(
         elif e.type == ContextType.FILE and e.file_path:
             ext = Path(e.file_path).suffix.lower()
 
-            if ext in IMG_EXT:  # image → image_url
+            if ext in IMG_EXT:  # image -> image_url
                 mime = mimetypes.guess_type(e.file_path)[0] or "image/jpeg"
                 async with aiofiles.open(e.file_path, "rb") as f:
                     b64 = base64.b64encode(await f.read()).decode()
@@ -544,7 +560,7 @@ async def collect_context_blocks(
                     {"sender_role": "Context", "image_url": {"url": f"data:{mime};base64,{b64}"}}
                 )
 
-            elif ext in DOC_EXT:  # doc/pdf/xls → text
+            elif ext in DOC_EXT:  # doc/pdf/xls -> text
                 txt = await parse_file_from_path(e.file_path)
                 if txt:
                     blocks.append({"sender_role": "Context", "text": txt})

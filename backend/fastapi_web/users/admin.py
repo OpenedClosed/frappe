@@ -23,12 +23,16 @@ class UserAdmin(BaseAdmin):
     verbose_name = {
         "en": "User",
         "ru": "Пользователь",
-        "pl": "Użytkownik"
+        "pl": "Użytkownik",
+        "uk": "Користувач",
+        "ka": "მომხმარებელი"
     }
     plural_name = {
         "en": "Users",
         "ru": "Пользователи",
-        "pl": "Użytkownicy"
+        "pl": "Użytkownicy",
+        "uk": "Користувачі",
+        "ka": "მომხმარებლები"
     }
 
     icon = "pi pi-user"
@@ -36,7 +40,9 @@ class UserAdmin(BaseAdmin):
     description = {
         "en": "Manage users in the system",
         "ru": "Управление пользователями в системе",
-        "pl": "Zarządzanie użytkownikami w systemie"
+        "pl": "Zarządzanie użytkownikami w systemie",
+        "uk": "Керування користувачами в системі",
+        "ka": "მომხმარებლების მართვა სისტემაში"
     }
 
     list_display = ["username", "role", "created_at"]
@@ -47,22 +53,30 @@ class UserAdmin(BaseAdmin):
         "username": {
             "en": "Username",
             "ru": "Имя пользователя",
-            "pl": "Nazwa użytkownika"
+            "pl": "Nazwa użytkownika",
+            "uk": "Ім’я користувача",
+            "ka": "მომხმარებლის სახელი"
         },
         "password": {
             "en": "Password (hashed)",
             "ru": "Хешированный пароль",
-            "pl": "Hasło (zhashowane)"
+            "pl": "Hasło (zhashowane)",
+            "uk": "Пароль (хешований)",
+            "ka": "პაროლი (დაშიფრული)"
         },
         "role": {
             "en": "Role",
             "ru": "Роль",
-            "pl": "Rola"
+            "pl": "Rola",
+            "uk": "Роль",
+            "ka": "როლი"
         },
         "created_at": {
             "en": "Created at",
             "ru": "Дата создания",
-            "pl": "Data utworzenia"
+            "pl": "Data utworzenia",
+            "uk": "Дата створення",
+            "ka": "შექმნის თარიღი"
         }
     }
 

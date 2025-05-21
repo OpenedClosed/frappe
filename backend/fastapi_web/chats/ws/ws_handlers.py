@@ -9,23 +9,23 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 import httpx
-from pydantic import ValidationError
-
-from knowledge.db.mongo.schemas import Answer, Subtopic, Topic
 from chats.integrations.constructor_chat.handlers import push_to_constructor
-from utils.help_functions import try_parse_json
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
+from chats.utils.help_functions import get_master_client_by_id
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
 from gemini_base.gemini_init import gemini_client
 from infra import settings
+from knowledge.db.mongo.schemas import Answer, Subtopic, Topic
 from knowledge.utils.help_functions import (build_messages_for_model,
                                             collect_kb_structures_from_context,
                                             get_knowledge_base,
                                             merge_external_structures,
                                             pick_model_and_client)
 from openai_base.openai_init import openai_client
+from pydantic import ValidationError
 from users.db.mongo.enums import RoleEnum
+from utils.help_functions import try_parse_json
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
@@ -34,13 +34,12 @@ from ..utils.help_functions import (clean_markdown, find_last_bot_message,
                                     get_bot_context, get_weather_by_address,
                                     send_message_to_bot,
                                     split_text_into_chunks,
-                                    update_read_state_for_client)
+                                    update_read_state_for_client, format_chat_history_from_models)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
 from .ws_helpers import (ConnectionManager, TypingManager, custom_json_dumps,
                          gpt_task_manager)
-from chats.utils.help_functions import get_master_client_by_id
 
 # ==============================
 # БЛОК: Обработка входящих сообщений (router)
@@ -74,16 +73,26 @@ async def handle_message(
 
     handler = handlers.get(data.get("type"), handle_unknown_type)
 
+    # 💬 Получаем MasterClient из БД
+    doc = await mongo_db.clients.find_one({"client_id": client_id})
+    preferred_lang = (
+        doc.get("metadata", {}).get("user_language")
+        if doc else None
+    ) or user_language  # если в БД нет — fallback
+
     if handler == handle_new_message:
         async with await mongo_client.start_session() as session:
             await handler(
                 manager, chat_id, client_id, redis_session_key, redis_flood_key,
-                data, is_superuser, user_language, typing_manager,
+                data, is_superuser, preferred_lang, typing_manager,
                 gpt_lock, user_data
             )
     elif handler == handle_get_messages:
         await handler(manager, chat_id, redis_session_key, data, user_data)
-    elif handler in {handle_start_typing, handle_stop_typing, handle_get_typing_users, handle_get_my_id}:
+    elif handler in {
+        handle_start_typing, handle_stop_typing,
+        handle_get_typing_users, handle_get_my_id
+    }:
         await handler(typing_manager, chat_id, client_id, manager)
     else:
         await handler(manager, chat_id, redis_session_key)
@@ -303,9 +312,9 @@ async def send_instagram_message(recipient_id: str, message_obj: ChatMessage) ->
             return None
 
 
-import httpx
 import logging
 
+import httpx
 
 # async def send_instagram_message(recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
 #     """
@@ -1130,14 +1139,20 @@ async def process_user_query_after_brief(
             knowledge_base = kb_doc["knowledge_base"]
 
             external_structs, _ = await collect_kb_structures_from_context(knowledge_base_model.context)
-            merged_kb = merge_external_structures(
-                knowledge_base, external_structs)
+            merged_kb = merge_external_structures(knowledge_base, external_structs)
+
+            # 💬 Получаем client_id, если доступен
+            client_id = (
+                chat_session.client.client_id
+                if chat_session.client else None
+            )
 
             gpt_data = await determine_topics_via_gpt(
                 user_message=user_msg.message,
                 user_info=user_data,
                 knowledge_base=merged_kb,
-                chat_history=chat_history
+                chat_history=chat_history,
+                client_id=client_id
             )
 
             user_msg.gpt_evaluation = GptEvaluation(
@@ -1153,6 +1168,9 @@ async def process_user_query_after_brief(
                 user_msg.gpt_evaluation
             )
 
+            # 💬 Приоритет: язык из gpt_data -> входной user_language
+            lang = gpt_data.get("user_language") or user_language
+
             ai_msg = await build_ai_response(
                 manager=manager,
                 chat_session=chat_session,
@@ -1160,7 +1178,7 @@ async def process_user_query_after_brief(
                 user_data=user_data,
                 chat_history=chat_history,
                 redis_key_session=redis_key_session,
-                user_language=user_language,
+                user_language=lang,
                 typing_manager=typing_manager,
                 chat_id=chat_id
             )
@@ -1175,8 +1193,7 @@ async def process_user_query_after_brief(
         return None
 
     except Exception as e:
-        logging.error(
-            f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
+        logging.error(f"[GPT] Ошибка обработки сообщения в чате {chat_id}: {e}")
         bot_context = await get_bot_context()
         fallback_text = bot_context.get("fallback_ai_error_message", {}).get(
             user_language, "The assistant is currently unavailable."
@@ -1193,15 +1210,16 @@ async def process_user_query_after_brief(
 async def determine_topics_via_gpt(
     user_message: str,
     user_info: dict,
-    knowledge_base: Dict[str, Any],
+    knowledge_base: dict[str, Any],
     chat_history: list[ChatMessage] = None,
     model_name: str = "gemini-2.0-flash",
     history_tail: int = 5,
-) -> Dict[str, Any]:
+    client_id: Optional[str] = None,
+) -> dict[str, Any]:
     """
     Двухэтапный анализ:
     1. Определение тем и confidence.
-    2. Выявление out_of_scope и consultant_call на основе сниппетов и истории.
+    2. Выявление out_of_scope, consultant_call и языка пользователя.
     """
     bot_context = await get_bot_context()
 
@@ -1214,10 +1232,6 @@ async def determine_topics_via_gpt(
         bot_context=bot_context
     )
 
-    print('!'*100)
-    print(topics_data)
-    print('!'*100)
-
     outcome_data = await detect_outcome_gpt(
         user_message=user_message,
         topics=topics_data.get("topics", []),
@@ -1225,51 +1239,70 @@ async def determine_topics_via_gpt(
         chat_history=chat_history,
         model_name=model_name,
         history_tail=history_tail,
-        bot_context=bot_context
+        bot_context=bot_context,
+        client_id=client_id  # 💬 для сохранения языка
     )
 
     return {
         "topics": topics_data.get("topics", []),
         "confidence": topics_data.get("confidence", 0.0),
         "out_of_scope": outcome_data.get("out_of_scope", False),
-        "consultant_call": outcome_data.get("consultant_call", False)
+        "consultant_call": outcome_data.get("consultant_call", False),
+        "user_language": outcome_data.get("user_language")  # 💬 возвращаем язык
     }
 
 
 async def detect_topics_gpt(
-    user_message: str,
-    chat_history: list,
+    user_message,
+    chat_history: List[ChatMessage],
     user_info: dict,
     knowledge_base: Dict[str, Any],
     model_name: str,
     bot_context: dict
 ) -> Dict[str, Any]:
-    kb_description = build_kb_description(knowledge_base)
 
-    system_prompt = AI_PROMPTS["system_topics_prompt"].format(
-        user_info=user_info,
-        chat_history=chat_history,
-        kb_description=kb_description,
+    formatted_history = format_chat_history_from_models(chat_history)
+
+    full_prompt = AI_PROMPTS["system_topics_prompt"].format(
+        user_info=json.dumps(user_info, ensure_ascii=False, indent=2),
+        chat_history=formatted_history,
+        kb_description=knowledge_base,
         app_description=bot_context["app_description"],
     )
-    print(system_prompt)
 
-    response = await gemini_client.chat_generate(
-        model=model_name,
-        messages=[
-            {"role": "user", "parts": [{"text": system_prompt}]},
-            {"role": "user", "parts": [{"text": user_message}]}
-        ],
-        temperature=0.1,
-        system_instruction=system_prompt
+    if "<<<STATIC>>>" in full_prompt and "<<<DYNAMIC>>>" in full_prompt:
+        static_part = full_prompt.split("<<<DYNAMIC>>>")[0].replace("<<<STATIC>>>", "").strip()
+        dynamic_part = full_prompt.split("<<<DYNAMIC>>>")[1].strip()
+    else:
+        static_part = full_prompt.strip()
+        dynamic_part = ""
+
+    client, real_model = pick_model_and_client(model_name)
+    temperature = 0.1
+
+    if real_model.startswith("gpt"):
+        messages = [{"role": "system", "content": static_part}]
+        if dynamic_part:
+            messages.append({"role": "system", "content": dynamic_part})
+    elif real_model.startswith("gemini"):
+        merged_prompt = f"{static_part}\n\n{dynamic_part}".strip()
+        messages = [{"role": "user", "parts": [{"text": merged_prompt}]}]
+    else:
+        messages = [{"role": "system", "content": full_prompt}]
+
+    print('*2*'*100)
+    print(messages)
+    print('*2*'*100)
+
+    response = await client.chat_generate(
+        model=real_model,
+        messages=messages,
+        temperature=temperature,
     )
 
     raw = response["candidates"][0]["content"]["parts"][0]["text"]
     match = re.search(r"\{.*\}", raw, re.DOTALL)
-    result = json.loads(
-        match.group(0).replace(
-            "None",
-            "null")) if match else {}
+    result = json.loads(match.group(0).replace("None", "null")) if match else {}
 
     return {
         "topics": result.get("topics", []),
@@ -1277,44 +1310,62 @@ async def detect_topics_gpt(
     }
 
 
+
 async def detect_outcome_gpt(
     user_message: str,
-    topics: List[Dict[str, Any]],
-    knowledge_base: Dict[str, Any],
+    topics: list[dict[str, Any]],
+    knowledge_base: dict[str, Any],
     chat_history: list[ChatMessage],
     model_name: str,
     history_tail: int,
-    bot_context: dict
-) -> Dict[str, bool]:
-    forbidden_topics = bot_context.get("forbidden_topics", [])
+    bot_context: dict,
+    client_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Возвращает признаки out_of_scope, consultant_call и сохраняет язык пользователя."""
 
+    forbidden_topics = bot_context.get("forbidden_topics", [])
     snippets = await extract_knowledge(topics, user_message, knowledge_base)
     last_messages = chat_history[-history_tail:] if chat_history else []
 
     history_text = "\n".join(
-        f"- {m.sender_role.value}: {m.message}" for m in last_messages)
+        f"- {m.timestamp.isoformat()} {m.sender_role.value}: {m.message}"
+        for m in last_messages
+    )
 
     prompt = AI_PROMPTS["system_outcome_analysis_prompt"].format(
         forbidden_topics=json.dumps(forbidden_topics, ensure_ascii=False),
         snippets=json.dumps(snippets, ensure_ascii=False),
-        chat_history=history_text
+        additional_instructions=bot_context.get("app_description"),
+        chat_history=history_text,
     )
+    print(prompt)
+    
 
     response = await gemini_client.chat_generate(
         model=model_name,
         messages=[{"role": "user", "parts": [{"text": prompt}]}],
         temperature=0.1,
-        system_instruction=prompt
+        system_instruction=prompt,
     )
 
     raw = response["candidates"][0]["content"]["parts"][0]["text"]
     match = re.search(r"\{.*\}", raw, re.DOTALL)
     result = json.loads(match.group(0)) if match else {}
 
+    user_language = result.get("user_language")
+    if client_id and user_language:
+        await mongo_db.clients.update_one(
+            {"client_id": client_id},
+            {"$set": {"metadata.user_language": user_language}}
+        )
+
     return {
         "out_of_scope": result.get("out_of_scope", False),
-        "consultant_call": result.get("consultant_call", False)
+        "consultant_call": result.get("consultant_call", False),
+        "user_language": user_language,
     }
+
+
 
 
 # ==============================
@@ -1802,7 +1853,8 @@ async def generate_ai_answer(
     )
 
     await typing_manager.add_typing(chat_id, "ai_bot", manager)
-    await simulate_delay()
+    # Пока отключу фейк-задержу
+    # await simulate_delay()
 
     client, real_model = pick_model_and_client(chosen_model)
 
@@ -1840,7 +1892,9 @@ async def generate_ai_answer(
         await typing_manager.remove_typing(chat_id, "ai_bot", manager)
         return ai_text
     
-    logging.debug("===== Ответ до обработки =====")
+    print("===== Ответ до обработки =====")
+    print(ai_text)
+    
 
     ai_text = await postprocess_ai_response(
         raw_text=ai_text,
@@ -1850,8 +1904,10 @@ async def generate_ai_answer(
         user_interface_language=user_language,
 
     )
+    
 
-    logging.debug("===== Ответ после обработки =====")
+    print("===== Ответ после обработки =====")
+    print(ai_text)
 
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
 
@@ -1873,7 +1929,6 @@ async def postprocess_ai_response(
     Проверяет, соответствует ли ответ языку пользователя, не содержит ли он фейковые ссылки
     или вымышленные факты. Исправляет, если требуется.
     """
-
     admin_instruction = bot_context.get("postprocessing_instruction", "").strip()
     language_instruction = bot_context.get("language_instruction", "").strip()
 
@@ -1882,9 +1937,7 @@ async def postprocess_ai_response(
         for msg in chat_history[-10:]
     )
 
-    # user_interface_language = "en"
-
-    prompt = AI_PROMPTS["postprocess_ai_answer"].format(
+    full_prompt = AI_PROMPTS["postprocess_ai_answer"].format(
         ai_generated_response=raw_text.strip(),
         joined_snippets=snippets,
         user_interface_language=user_interface_language,
@@ -1893,15 +1946,35 @@ async def postprocess_ai_response(
         conversation_history=conversation_history
     )
 
+    static_part, dynamic_part = "", ""
+    if "<<<STATIC>>>" in full_prompt and "<<<DYNAMIC>>>" in full_prompt:
+        static_part = full_prompt.split("<<<DYNAMIC>>>")[0].replace("<<<STATIC>>>", "").strip()
+        dynamic_part = full_prompt.split("<<<DYNAMIC>>>")[1].strip()
+    else:
+        static_part = full_prompt.strip()
+
     model_name = bot_context.get("ai_model", "gpt-4o")
     temperature = 0.2
     client, real_model = pick_model_and_client(model_name)
 
     try:
         if real_model.startswith("gpt"):
+            messages = [{"role": "system", "content": static_part}]
+            if dynamic_part:
+                messages.append({"role": "system", "content": dynamic_part})
+
+        elif real_model.startswith("gemini"):
+            merged_prompt = f"{static_part}\n\n{dynamic_part}".strip()
+            messages = [{"role": "user", "parts": [{"text": merged_prompt}]}]
+
+        else:
+            # fallback: всё в одном system
+            messages = [{"role": "system", "content": full_prompt}]
+
+        if real_model.startswith("gpt"):
             result = await client.chat.completions.create(
                 model=real_model,
-                messages=[{"role": "system", "content": prompt}],
+                messages=messages,
                 temperature=temperature
             )
             return result.choices[0].message.content.strip()
@@ -1909,7 +1982,7 @@ async def postprocess_ai_response(
         elif real_model.startswith("gemini"):
             result = await client.chat_generate(
                 model=real_model,
-                messages=[{"role": "system", "content": prompt}],
+                messages=messages,
                 temperature=temperature
             )
             return result["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -1917,7 +1990,7 @@ async def postprocess_ai_response(
         else:
             result = await openai_client.chat.completions.create(
                 model=real_model,
-                messages=[{"role": "system", "content": prompt}],
+                messages=messages,
                 temperature=temperature
             )
             return result.choices[0].message.content.strip()
@@ -1925,6 +1998,7 @@ async def postprocess_ai_response(
     except Exception as e:
         logging.warning(f"Ошибка постобработки: {e}")
         return raw_text
+
 
 
 
@@ -1945,6 +2019,17 @@ def assemble_system_prompt(
         f"- Always respond in the last user's (NOT BOT) message language. PLEASE!!!\n"
     )
 
+    print(":"*100)
+    print(AI_PROMPTS["system_ai_answer"].format(
+        settings_context=bot_context["prompt_text"],
+        current_datetime=current_datetime,
+        weather_info=weather_info,
+        user_info=user_info,
+        joined_snippets=snippets,
+        system_language_instruction=system_language_instruction
+    ))
+    print(":"*100)
+
     return AI_PROMPTS["system_ai_answer"].format(
         settings_context=bot_context["prompt_text"],
         current_datetime=current_datetime,
@@ -1964,16 +2049,29 @@ async def simulate_delay() -> None:
 
 async def check_relevance_to_brief(question: str, user_message: str) -> bool:
     """Проверяет, связано ли сообщение пользователя с вопросом брифа (через GPT)."""
-    system_prompt = AI_PROMPTS["system_brief_relevance"].format(
+    full_prompt = AI_PROMPTS["system_brief_relevance"].format(
         question=question,
         user_message=user_message
     )
+
+    static_part, dynamic_part = "", ""
+    if "<<<STATIC>>>" in full_prompt and "<<<DYNAMIC>>>" in full_prompt:
+        static_part = full_prompt.split("<<<DYNAMIC>>>")[0].replace("<<<STATIC>>>", "").strip()
+        dynamic_part = full_prompt.split("<<<DYNAMIC>>>")[1].strip()
+    else:
+        static_part = full_prompt.strip()
+
+    messages = [{"role": "system", "content": static_part}]
+    if dynamic_part:
+        messages.append({"role": "system", "content": dynamic_part})
+
     response = await openai_client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[{"role": "system", "content": system_prompt.strip()}],
+        messages=messages,
         temperature=0.1
     )
     return response.choices[0].message.content.strip().lower() == "yes"
+
 
 
 # ==============================

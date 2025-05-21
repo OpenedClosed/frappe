@@ -26,14 +26,17 @@ class ChatMessageInline(InlineAdmin):
         "en": "Chat Message",
         "pl": "Wiadomość czatu",
         "uk": "Повідомлення чату",
-        "ru": "Сообщение чата"
+        "ru": "Сообщение чата",
+        "ka": "ჩეთის შეტყობინება"
     }
     plural_name = {
         "en": "Chat Messages",
         "pl": "Wiadomości czatu",
         "uk": "Повідомлення чату",
-        "ru": "Сообщения чата"
+        "ru": "Сообщения чата",
+        "ka": "ჩეთის შეტყობინებები"
     }
+
     icon = "pi pi-send"
 
     detail_fields = [
@@ -58,25 +61,43 @@ class ChatMessageInline(InlineAdmin):
 
     field_titles = {
         "message": {
-            "en": "Message", "pl": "Wiadomość",
-            "uk": "Повідомлення", "ru": "Сообщение"
+            "en": "Message",
+            "pl": "Wiadomość",
+            "uk": "Повідомлення",
+            "ru": "Сообщение",
+            "ka": "შეტყობინება"
         },
         "sender_role": {
-            "en": "Sender Role", "pl": "Rola nadawcy",
-            "uk": "Роль відправника", "ru": "Роль отправителя"
+            "en": "Sender Role",
+            "pl": "Rola nadawcy",
+            "uk": "Роль відправника",
+            "ru": "Роль отправителя",
+            "ka": "გამგზავნის როლი"
         },
         "timestamp": {
-            "en": "Timestamp", "pl": "Znacznik czasu",
-            "uk": "Часова мітка", "ru": "Метка времени"
+            "en": "Timestamp",
+            "pl": "Znacznik czasu",
+            "uk": "Часова мітка",
+            "ru": "Метка времени",
+            "ka": "დროის შტამპი"
         },
         "confidence_status": {
-            "en": "Confidence Status", "pl": "Poziom pewności",
-            "uk": "Рівень впевненості", "ru": "Уровень уверенности"
+            "en": "Confidence Status",
+            "pl": "Poziom pewności",
+            "uk": "Рівень впевненості",
+            "ru": "Уровень уверенности",
+            "ka": "დაჯერებულობის დონე"
         },
         "read_by_display": {
-            "en": "Read By", "ru": "Прочитано кем"
-        },
+            "en": "Read By",
+            "pl": "Przeczytane przez",
+            "uk": "Прочитано ким",
+            "ru": "Прочитано кем",
+            "ka": "ვის მიერ წაკითხულია"
+        }
     }
+
+
 
     async def get_queryset(
         self,
@@ -111,24 +132,55 @@ class ChatMessageInline(InlineAdmin):
 
         status = {
             "en": "Unknown",
-            "ru": "Неизвестно"
+            "pl": "Nieznany",
+            "uk": "Невідомо",
+            "ru": "Неизвестно",
+            "ka": "უცნობია"
         }
 
         if evaluation:
             confidence = evaluation.get("confidence", 0)
 
             if evaluation.get("out_of_scope"):
-                status = {"en": "Out of Scope", "ru": "Вне компетенции"}
+                status = {
+                    "en": "Out of Scope",
+                    "pl": "Poza zakresem",
+                    "uk": "Поза межами",
+                    "ru": "Вне компетенции",
+                    "ka": "გარეშე თემატიკაა"
+                }
             elif evaluation.get("consultant_call"):
                 status = {
                     "en": "Consultant Call",
-                    "ru": "Требуется консультация"}
+                    "pl": "Wymagana konsultacja",
+                    "uk": "Потрібна консультація",
+                    "ru": "Требуется консультация",
+                    "ka": "საჭიროა კონსულტაცია"
+                }
             elif confidence >= 0.7:
-                status = {"en": "Confident", "ru": "Уверенный"}
+                status = {
+                    "en": "Confident",
+                    "pl": "Pewny",
+                    "uk": "Впевнений",
+                    "ru": "Уверенный",
+                    "ka": "დაჯერებული"
+                }
             elif 0.3 <= confidence < 0.7:
-                status = {"en": "Uncertain", "ru": "Неуверенный"}
+                status = {
+                    "en": "Uncertain",
+                    "pl": "Niepewny",
+                    "uk": "Невпевнений",
+                    "ru": "Неуверенный",
+                    "ka": "არაჯეროვანი"
+                }
             else:
-                status = {"en": "Low Confidence", "ru": "Низкая уверенность"}
+                status = {
+                    "en": "Low Confidence",
+                    "pl": "Niska pewność",
+                    "uk": "Низька впевненість",
+                    "ru": "Низкая уверенность",
+                    "ka": "დაბალი დარწმუნებულობა"
+                }
 
         return json.dumps(status, ensure_ascii=False)
 
@@ -164,11 +216,20 @@ class ClientInline(InlineAdmin):
     permission_class = OperatorPermission()
 
     verbose_name = {
-        "en": "Client", "pl": "Klient", "uk": "Клієнт", "zh": "客户", "es": "Cliente", "ru": "Клиент"
+        "en": "Client",
+        "pl": "Klient",
+        "uk": "Клієнт",
+        "ru": "Клиент",
+        "ka": "კლიენტი"
     }
     plural_name = {
-        "en": "Clients", "pl": "Klienci", "uk": "Клієнти", "zh": "客户", "es": "Clientes", "ru": "Клиенты"
+        "en": "Clients",
+        "pl": "Klienci",
+        "uk": "Клієнти",
+        "ru": "Клиенты",
+        "ka": "კლიენტები"
     }
+
     icon = "pi pi-user"
 
     detail_fields = ["client_id", "source", "external_id", "metadata_display"]
@@ -178,18 +239,35 @@ class ClientInline(InlineAdmin):
 
     field_titles = {
         "client_id": {
-            "en": "Client ID", "pl": "ID klienta", "uk": "Ідентифікатор клієнта", "zh": "客户ID", "es": "ID de cliente", "ru": "ID клиента"
+            "en": "Client ID",
+            "pl": "ID klienta",
+            "uk": "Ідентифікатор клієнта",
+            "ru": "ID клиента",
+            "ka": "კლიენტის ID"
         },
         "source": {
-            "en": "Source", "pl": "Źródło", "uk": "Джерело", "zh": "来源", "es": "Fuente", "ru": "Источник"
+            "en": "Source",
+            "pl": "Źródło",
+            "uk": "Джерело",
+            "ru": "Источник",
+            "ka": "წყარო"
         },
         "external_id": {
-            "en": "External ID", "pl": "Zewnętrzny ID", "uk": "Зовнішній ID", "zh": "外部ID", "es": "ID externo", "ru": "Внешний ID"
+            "en": "External ID",
+            "pl": "Zewnętrzny ID",
+            "uk": "Зовнішній ID",
+            "ru": "Внешний ID",
+            "ka": "გარე ID"
         },
         "metadata_display": {
-            "en": "Metadata", "pl": "Metadane", "uk": "Метадані", "zh": "元数据", "es": "Metadatos", "ru": "Метаданные"
+            "en": "Metadata",
+            "pl": "Metadane",
+            "uk": "Метадані",
+            "ru": "Метаданные",
+            "ka": "მეტამონაცემები"
         },
     }
+
 
     async def get_queryset(
         self,
@@ -233,13 +311,20 @@ class ChatSessionAdmin(BaseAdmin):
     permission_class = OperatorPermission()
 
     verbose_name = {
-        "en": "Chat Session", "pl": "Sesja czatu", "uk": "Сесія чату", "ru": "Сессия чата",
-        "zh": "聊天会话", "es": "Sesión de chat"
+        "en": "Chat Session",
+        "pl": "Sesja czatu",
+        "uk": "Сесія чату",
+        "ru": "Сессия чата",
+        "ka": "ჩეთის სესია"
     }
     plural_name = {
-        "en": "Chat Sessions", "pl": "Sesje czatu", "uk": "Сесії чату", "ru": "Сессии чата",
-        "zh": "聊天会话", "es": "Sesiones de chat"
+        "en": "Chat Sessions",
+        "pl": "Sesje czatu",
+        "uk": "Сесії чату",
+        "ru": "Сессии чата",
+        "ka": "ჩეთის სესიები"
     }
+
     icon = "pi pi-comments"
 
     list_display = [
@@ -257,36 +342,77 @@ class ChatSessionAdmin(BaseAdmin):
 
     field_titles = {
         "chat_id": {
-            "en": "Chat ID", "ru": "ID чата"
+            "en": "Chat ID",
+            "pl": "ID czatu",
+            "uk": "ID чату",
+            "ru": "ID чата",
+            "ka": "ჩეთის ID"
         },
         "client_id_display": {
-            "en": "Client ID", "ru": "ID клиента"
+            "en": "Client ID",
+            "pl": "ID klienta",
+            "uk": "ID клієнта",
+            "ru": "ID клиента",
+            "ka": "კლიენტის ID"
         },
         "client_source_display": {
-            "en": "Client Source", "ru": "Источник клиента"
+            "en": "Client Source",
+            "pl": "Źródło klienta",
+            "uk": "Джерело клієнта",
+            "ru": "Источник клиента",
+            "ka": "კლიენტის წყარო"
         },
         "company_name": {
-            "en": "Company Name", "ru": "Название компании"
+            "en": "Company Name",
+            "pl": "Nazwa firmy",
+            "uk": "Назва компанії",
+            "ru": "Название компании",
+            "ka": "კომპანიის სახელი"
         },
         "status_display": {
-            "en": "Status", "ru": "Статус"
+            "en": "Status",
+            "pl": "Status",
+            "uk": "Статус",
+            "ru": "Статус",
+            "ka": "სტატუსი"
         },
         "duration_display": {
-            "en": "Duration", "ru": "Длительность"
+            "en": "Duration",
+            "pl": "Czas trwania",
+            "uk": "Тривалість",
+            "ru": "Длительность",
+            "ka": "ხანგრძლივობა"
         },
         "created_at": {
-            "en": "Created At", "ru": "Создано"
+            "en": "Created At",
+            "pl": "Utworzono",
+            "uk": "Створено",
+            "ru": "Создано",
+            "ka": "შექმნის დრო"
         },
         "last_activity": {
-            "en": "Last Activity", "ru": "Последняя активность"
+            "en": "Last Activity",
+            "pl": "Ostatnia aktywność",
+            "uk": "Остання активність",
+            "ru": "Последняя активность",
+            "ka": "ბოლო აქტივობა"
         },
         "admin_marker": {
-            "en": "Admin Marker", "ru": "Админская метка"
+            "en": "Admin Marker",
+            "pl": "Znacznik administratora",
+            "uk": "Позначка адміністратора",
+            "ru": "Админская метка",
+            "ka": "ადმინის მარკერი"
         },
         "read_state": {
-            "en": "Read Status", "ru": "Прочитано кем"
+            "en": "Read Status",
+            "pl": "Stan przeczytania",
+            "uk": "Статус прочитання",
+            "ru": "Прочитано кем",
+            "ka": "წაკითხვის სტატუსი"
         }
     }
+
 
     inlines = {
         "messages": ChatMessageInline,

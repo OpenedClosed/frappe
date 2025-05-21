@@ -10,15 +10,12 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import httpx
-from fastapi import HTTPException, Request, WebSocket
-from pymongo import DESCENDING
-from telegram_bot.infra import settings as bot_settings
-
 from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from chats.db.mongo.schemas import (ChatMessage, ChatReadInfo, ChatSession,
                                     Client, MasterClient)
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
+from fastapi import HTTPException, Request, WebSocket
 from infra import settings
 from knowledge.admin import BotSettingsAdmin
 from knowledge.db.mongo.enums import (AIModelEnum, BotColorEnum,
@@ -28,7 +25,8 @@ from knowledge.db.mongo.mapping import (COMMUNICATION_STYLE_DETAILS,
                                         FUNCTIONALITY_DETAILS,
                                         PERSONALITY_TRAITS_DETAILS)
 from knowledge.db.mongo.schemas import BotSettings
-
+from pymongo import DESCENDING
+from telegram_bot.infra import settings as bot_settings
 
 # ===== Основные функции для работы с сессией чата =====
 
@@ -57,7 +55,7 @@ async def generate_client_id(
     except (json.JSONDecodeError, TypeError):
         pass
 
-    if external_id:
+    if external_id and external_id != "anonymous":
         return f"{chat_source_value}_{external_id}"
 
     if not isinstance(source, (Request, WebSocket)):
@@ -76,7 +74,7 @@ async def generate_client_id(
         hashlib.sha256(hash_input.encode()).digest()
     ).decode()[:12]
 
-    return f"{chat_source_value}_{short_hash}"
+    return f"{chat_source_value.upper()}_{short_hash}"
 
 
 async def get_client_id(websocket: WebSocket, chat_id: str, is_superuser: bool) -> str:
@@ -207,47 +205,172 @@ async def serialize_active_chat(chat_data: dict, ttl: int) -> Dict[str, Any]:
     }
 
 
+
 async def get_or_create_master_client(
     source: ChatSource,
     external_id: str,
+    internal_client_id: str,
     name: Optional[str] = None,
     avatar_url: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None
 ) -> MasterClient:
     """Создаёт/возвращает MasterClient, «чистит» metadata."""
-    client_id = f"{source.name}_{external_id}"
     col = mongo_db.clients
 
-    doc = await col.find_one({"source": source.value, "external_id": external_id})
+    is_internal = source == ChatSource.INTERNAL
+    is_anonymous = not external_id or external_id == "anonymous"
+
+    logging.debug("📥 [MasterClient] Входные данные:")
+    logging.debug(f"  source: {source}")
+    logging.debug(f"  external_id: {external_id!r}")
+    logging.debug(f"  internal_client_id: {internal_client_id}")
+    logging.debug(f"  name: {name}")
+    logging.debug(f"  avatar_url: {avatar_url}")
+    logging.debug(f"  metadata: {metadata}")
+
+    client_id = internal_client_id
+    logging.debug(f"🔑 [MasterClient] Используем client_id: {client_id}")
+
+    # 🔍 Стратегия поиска
+    if is_internal and is_anonymous:
+        logging.debug("🔍 [MasterClient] Ищем по client_id (внутренний анонимный клиент)")
+        doc = await col.find_one({"client_id": client_id})
+    else:
+        logging.debug("🔍 [MasterClient] Ищем по source + external_id")
+        doc = await col.find_one({"source": source.value, "external_id": external_id})
+
     if doc:
-        # обновляем имя/аватар при изменении
+        logging.info(f"✅ [MasterClient] Найден клиент: client_id={doc.get('client_id')}")
         update_fields: dict[str, Any] = {}
         if name and name != doc.get("name"):
             update_fields["name"] = name
         if avatar_url and avatar_url != doc.get("avatar_url"):
             update_fields["avatar_url"] = avatar_url
+        if metadata:
+            lang = metadata.get("user_language")
+            if lang and lang != doc.get("metadata", {}).get("user_language"):
+                update_fields["metadata.user_language"] = lang
         if update_fields:
+            logging.info(f"🛠 [MasterClient] Обновляем поля: {update_fields}")
             await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
             doc = await col.find_one({"_id": doc["_id"]})
+        doc.pop("id", None)
         return MasterClient(**doc)
 
-    # ――― сохраняем ТОЛЬКО «паспортные» данные в metadata
+    # ――― Сохраняем только чистые паспортные данные
     safe_meta: dict[str, Any] = {}
-    for key in ("locale", "ig_username"):
+    for key in ("locale", "ig_username", "user_language"):
         if metadata and key in metadata:
             safe_meta[key] = metadata[key]
+
+    if not external_id or external_id == "anonymous":
+        save_external_id = "anonymous"
+    else:
+        save_external_id = external_id
+
+    logging.debug(f"📄 [MasterClient] save_external_id: {save_external_id}")
 
     client = MasterClient(
         client_id=client_id,
         source=source,
-        external_id=external_id,
+        external_id=save_external_id,
         name=name,
         avatar_url=avatar_url,
         metadata=safe_meta,
         created_at=datetime.utcnow()
     )
-    await col.insert_one(client.dict())
+
+    logging.info(f"🆕 [MasterClient] Создаём нового клиента: client={client.dict(exclude={'id'})}")
+    await col.insert_one(client.dict(exclude={"id"}))
     return client
+
+
+
+
+# async def handle_chat_creation(
+#     mode: Optional[str] = None,
+#     chat_source: ChatSource = ChatSource.INTERNAL,
+#     chat_external_id: Optional[str] = None,
+#     client_external_id: Optional[str] = None,
+#     company_name: Optional[str] = None,
+#     bot_id: Optional[str] = None,
+#     metadata: Optional[Dict[str, Any]] = None,
+#     request: Optional[Request] = None
+# ) -> dict:
+#     """Создаёт или получает чат-сессию, используя Redis и MongoDB."""
+#     metadata = metadata or {}
+
+#     if chat_source != ChatSource.INTERNAL:
+#         master_client = await get_or_create_master_client(
+#             source=chat_source,
+#             external_id=client_external_id,
+#             name=metadata.get("name"),
+#             avatar_url=metadata.get("avatar_url"),
+#             metadata=metadata
+#         )
+#         client_id = master_client.client_id
+#     else:
+#         client_id = await generate_client_id(
+#             request, chat_source=chat_source, external_id=client_external_id
+#         )
+
+
+#     active_chats = await get_active_chats_for_client(client_id)
+
+#     if mode != "new" and active_chats:
+#         chat_data, ttl = active_chats[0]
+#         return await serialize_active_chat(chat_data, ttl)
+
+#     if mode == "new":
+#         for chat_data, _ in active_chats:
+#             await mongo_db.chats.update_one(
+#                 {"chat_id": chat_data["chat_id"]},
+#                 {"$set": {"closed_by_request": True, "last_activity": datetime.utcnow()}}
+#             )
+
+#     if chat_source != ChatSource.INTERNAL:
+#         if chat_data := await mongo_db.chats.find_one({"client.client_id": client_id}):
+#             chat_session = ChatSession(**chat_data)
+#             await redis_db.set(
+#                 f"chat:session:{chat_session.chat_id}",
+#                 "1",
+#                 ex=int(settings.CHAT_TIMEOUT.total_seconds())
+#             )
+#             return {
+#                 "message": "Chat session restored from MongoDB.",
+#                 "chat_id": chat_session.chat_id,
+#                 "client_id": client_id,
+#                 "status": chat_session.compute_status(settings.CHAT_TIMEOUT.total_seconds()).value,
+#             }
+
+#     client = Client(
+#         client_id=client_id,
+#         source=chat_source
+#     )
+#     chat_id = generate_chat_id()
+
+#     chat_session = ChatSession(
+#         chat_id=chat_id,
+#         client=client,
+#         bot_id=bot_id,
+#         company_name=company_name,
+#         last_activity=datetime.utcnow(),
+#         external_id=chat_external_id if chat_source != ChatSource.INTERNAL else None
+#     )
+
+#     await mongo_db.chats.insert_one(chat_session.dict())
+#     await redis_db.set(
+#         f"chat:session:{chat_id}",
+#         "1",
+#         ex=int(settings.CHAT_TIMEOUT.total_seconds())
+#     )
+
+#     return {
+#         "message": "New chat session created.",
+#         "chat_id": chat_id,
+#         "client_id": client_id,
+#         "status": ChatStatus.IN_PROGRESS.value,
+#     }
 
 
 
@@ -265,21 +388,28 @@ async def handle_chat_creation(
     """Создаёт или получает чат-сессию, используя Redis и MongoDB."""
     metadata = metadata or {}
 
-    if chat_source != ChatSource.INTERNAL:
-        master_client = await get_or_create_master_client(
-            source=chat_source,
-            external_id=client_external_id,
-            name=metadata.get("name"),
-            avatar_url=metadata.get("avatar_url"),
-            metadata=metadata
-        )
-        client_id = master_client.client_id
-    else:
-        client_id = await generate_client_id(
-            request, chat_source=chat_source, external_id=client_external_id
-        )
+    # 🔐 Генерируем client_id (всегда)
+    if not client_external_id:
+        client_external_id = "anonymous"
+    client_id = await generate_client_id(
+        request,
+        chat_source=chat_source,
+        external_id=client_external_id
+    )
 
+    # 🎯 Получаем или создаём MasterClient
+    master_client = await get_or_create_master_client(
+        source=chat_source,
+        external_id=client_external_id,
+        internal_client_id=client_id,
+        name=metadata.get("name"),
+        avatar_url=metadata.get("avatar_url"),
+        metadata=metadata
+    )
 
+    client_id = master_client.client_id  # гарантированно из БД
+
+    # 🔄 Проверка на активный чат
     active_chats = await get_active_chats_for_client(client_id)
 
     if mode != "new" and active_chats:
@@ -293,6 +423,7 @@ async def handle_chat_creation(
                 {"$set": {"closed_by_request": True, "last_activity": datetime.utcnow()}}
             )
 
+    # 🔁 Восстановление для внешних
     if chat_source != ChatSource.INTERNAL:
         if chat_data := await mongo_db.chats.find_one({"client.client_id": client_id}):
             chat_session = ChatSession(**chat_data)
@@ -308,34 +439,30 @@ async def handle_chat_creation(
                 "status": chat_session.compute_status(settings.CHAT_TIMEOUT.total_seconds()).value,
             }
 
-    client = Client(
-        client_id=client_id,
-        source=chat_source
-    )
-    chat_id = generate_chat_id()
-
-    chat_session = ChatSession(
-        chat_id=chat_id,
-        client=client,
+    # 🆕 Создание новой сессии
+    chat = ChatSession(
+        chat_id=generate_chat_id(),
+        client=Client(client_id=client_id, source=chat_source),
         bot_id=bot_id,
         company_name=company_name,
-        last_activity=datetime.utcnow(),
-        external_id=chat_external_id if chat_source != ChatSource.INTERNAL else None
+        external_id=chat_external_id if chat_source != ChatSource.INTERNAL else client_external_id,
+        last_activity=datetime.utcnow()
     )
 
-    await mongo_db.chats.insert_one(chat_session.dict())
+    await mongo_db.chats.insert_one(chat.dict())
     await redis_db.set(
-        f"chat:session:{chat_id}",
+        f"chat:session:{chat.chat_id}",
         "1",
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
 
     return {
         "message": "New chat session created.",
-        "chat_id": chat_id,
+        "chat_id": chat.chat_id,
         "client_id": client_id,
         "status": ChatStatus.IN_PROGRESS.value,
     }
+
 
 
 
@@ -385,6 +512,11 @@ async def update_read_state_for_client(
 
 locale.setlocale(locale.LC_TIME, "C")
 
+def format_chat_history_from_models(chat_history: List[ChatMessage]) -> str:
+    return "\n".join(
+        f"[{msg.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}] [{msg.sender_role.name}] {msg.message}"
+        for msg in chat_history
+    )
 
 def get_current_datetime() -> str:
     """Возвращает текущее время в формате 'Monday, 08-02-2025 14:30:00 UTC'."""
@@ -523,18 +655,33 @@ async def get_bot_context() -> Dict[str, Any]:
             core_principles=None,
             special_instructions=[],
             forbidden_topics=[],
-            greeting={
+            greeting = {
                 "en": "Hello! How can I assist you?",
-                "ru": "Здравствуйте! Чем могу помочь?"},
-            error_message={
+                "pl": "Cześć! W czym mogę pomóc?",
+                "uk": "Вітаю! Чим я можу допомогти?",
+                "ru": "Здравствуйте! Чем могу помочь?",
+                "ka": "გამარჯობა! რით შემიძლია დაგეხმარო?"
+            },
+            error_message = {
                 "en": "Please wait for a consultant.",
-                "ru": "Пожалуйста, подождите, консультант скоро ответит."},
-            farewell_message={
+                "pl": "Proszę poczekać na konsultanta.",
+                "uk": "Будь ласка, зачекайте на консультанта.",
+                "ru": "Пожалуйста, подождите, консультант скоро ответит.",
+                "ka": "გთხოვთ, დაელოდოთ კონსულტანტს."
+            },
+            farewell_message = {
                 "en": "Goodbye! Feel free to ask anything else.",
-                "ru": "До свидания! Если вам что-то понадобится, обращайтесь."},
-            fallback_ai_error_message={
+                "pl": "Do widzenia! Jeśli masz pytania, śmiało pytaj.",
+                "uk": "До побачення! Звертайтесь, якщо виникнуть питання.",
+                "ru": "До свидания! Если вам что-то понадобится, обращайтесь.",
+                "ka": "ნახვამდის! თავისუფლად შეგიძლიათ კიდევ რაღაც მკითხოთ."
+            },
+            fallback_ai_error_message = {
                 "en": "Unfortunately, I'm having trouble generating a response right now. Please try again later.",
-                "ru": "К сожалению, я не могу сейчас сгенерировать ответ. Пожалуйста, попробуйте позже."
+                "pl": "Niestety, mam teraz problem z wygenerowaniem odpowiedzi. Spróbuj ponownie później.",
+                "uk": "На жаль, зараз виникла проблема з генерацією відповіді. Спробуйте пізніше.",
+                "ru": "К сожалению, я не могу сейчас сгенерировать ответ. Пожалуйста, попробуйте позже.",
+                "ka": "სამწუხაროდ, ახლა ვერ ვქმნი პასუხს. გთხოვთ, სცადეთ მოგვიანებით."
             },
             ai_model=AIModelEnum.GPT_4_O,
             created_at=datetime.utcnow()
@@ -692,21 +839,47 @@ def split_text_into_chunks(text, max_length=998) -> List[str]:
 
 def clean_markdown(text: str) -> str:
     """
-    Удаляет markdown-разметку и сохраняет ссылки в читаемом виде.
-    Markdown-ссылки [текст](ссылка) → ссылка.
-    Заголовки (#, ##, ###) → удаляются.
+    Превращает markdown-текст в аккуратный читаемый текст:
+    - удаляет жирный, курсив, заголовки, код, ссылки, списки;
+    - сохраняет только понятный текст без форматирования.
     """
     if not text:
         return ""
 
-    text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\2', text)
+    # Ссылки вида [текст](https://...) -> просто текст
+    text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1', text)
+
+    # Удаляем заголовки (#, ## и т.п.)
     text = re.sub(r'^\s*#{1,6}\s*', '', text, flags=re.MULTILINE)
+
+    # Блоки кода (```...```)
     text = re.sub(r'```[\s\S]*?```', '', text)
+
+    # Моноширинный (`текст`)
     text = re.sub(r'`([^`]*)`', r'\1', text)
+
+    # Жирный и курсив любой вложенности — три символа (***)
+    text = re.sub(r'\*\*\*([^*]+)\*\*\*', r'\1', text)
+    text = re.sub(r'___([^_]+)___', r'\1', text)
+
+    # Двойной жирный: **текст** или __текст__
     text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'__([^_]+)__', r'\1', text)
+
+    # Одиночный курсив: *текст* или _текст_
     text = re.sub(r'\*([^*]+)\*', r'\1', text)
     text = re.sub(r'_([^_]+)_', r'\1', text)
+
+    # Зачёркивание: ~текст~
     text = re.sub(r'~([^~]+)~', r'\1', text)
 
+    # Списки: удаляем символы -, *, +, • в начале строки
+    text = re.sub(r'^\s*[-*+•]\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
 
-    return text.strip()
+    # Удаляем лишние пробелы и пустые строки
+    text = re.sub(r'\n{2,}', '\n', text)  # двойные \n -> один
+    text = re.sub(r'[ \t]+', ' ', text)   # табы и многопробелы -> один пробел
+    text = text.strip()
+
+    return text

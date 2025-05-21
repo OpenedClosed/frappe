@@ -5,9 +5,8 @@ verbose_name = {
     "en": "Users",
     "pl": "Użytkownicy",
     "uk": "Користувачі",
-    "zh": "用户",
-    "es": "Usuarios",
-    "ru": "Пользователи"
+    "ru": "Пользователи",
+    "ka": "მომხმარებლები"
 }
 icon = "pi pi-user"
 color = "#3498db"
