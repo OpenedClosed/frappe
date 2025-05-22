@@ -32,7 +32,7 @@ from utils.errors import (general_exception_handler,
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d — %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )

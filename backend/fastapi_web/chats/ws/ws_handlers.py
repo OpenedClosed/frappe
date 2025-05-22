@@ -200,47 +200,6 @@ async def save_and_broadcast_new_message(
 # БЛОК: Интеграция с Meta
 # ==============================
 
-async def send_message_to_external_meta_channel(
-    chat_session: ChatSession,
-    new_msg: ChatMessage
-) -> None:
-    """Отправляет сообщение в Instagram, WhatsApp или Facebook."""
-
-    source = chat_session.client.source
-    client_id = chat_session.client.client_id
-    master_client = await get_master_client_by_id(client_id)
-    if not master_client:
-        return
-
-    external_id = master_client.external_id
-    is_echo = new_msg.metadata.get("is_echo") if new_msg.metadata else False
-    has_external_id = (
-        (new_msg.metadata.get("message_id") if new_msg.metadata else None)
-        or new_msg.external_id
-    )
-
-
-    # Loop protection: Instagram и Facebook
-    if source in {ChatSource.INSTAGRAM, ChatSource.FACEBOOK}:
-        if not has_external_id:
-            return
-
-    send_func_map = {
-        ChatSource.INSTAGRAM: send_instagram_message,
-        ChatSource.WHATSAPP: send_whatsapp_message,
-        ChatSource.FACEBOOK: send_facebook_message,
-    }
-
-    send_func = send_func_map.get(source)
-    if not send_func:
-        return
-
-    message_id = await send_func(external_id, new_msg)
-    if message_id:
-        await mongo_db.chats.update_one(
-            {"chat_id": chat_session.chat_id, "messages.id": new_msg.id},
-            {"$set": {"messages.$.external_id": message_id}}
-        )
 
 async def send_message_to_external_meta_channel(
     chat_session: ChatSession,
@@ -548,7 +507,7 @@ async def handle_get_messages(
             "messages": [],
             "remaining_time": remaining
         }))
-        return True
+        return False
 
     last_id = messages[-1]["id"]
     client_id = user_data["client_id"]
