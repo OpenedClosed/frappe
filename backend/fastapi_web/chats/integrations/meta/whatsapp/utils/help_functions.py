@@ -1,21 +1,13 @@
 """Вспомогательные функции интеграции WhatsApp."""
-import asyncio
 from typing import Any, Dict, List
 
 from chats.db.mongo.enums import ChatSource, SenderRole
-from chats.db.mongo.schemas import ChatSession
-from chats.routers import handle_chat_creation
-from chats.ws.ws_handlers import handle_message
-from chats.ws.ws_helpers import (get_typing_manager, get_ws_manager,
-                                 gpt_task_manager)
-from db.mongo.db_init import mongo_db
+from chats.integrations.meta.meta import process_meta_message
 
 
 def parse_whatsapp_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Разбирает JSON, приходящий от WhatsApp Cloud API.
-    """
-    results = []
+    """Разбирает JSON, приходящий от WhatsApp Cloud API."""
+    results: List[Dict[str, Any]] = []
 
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
@@ -27,12 +19,17 @@ def parse_whatsapp_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
             messages = value.get("messages", [])
 
             for message in messages:
+                message_type = message.get("type")
+                if message_type not in {
+                        "text", "image", "video", "audio", "document"}:
+                    continue
+
                 sender_id = message.get("from")
                 message_id = message.get("id")
                 timestamp = message.get("timestamp")
 
                 message_text = ""
-                if message.get("type") == "text":
+                if message_type == "text":
                     message_text = message.get("text", {}).get("body", "")
 
                 client_id = contacts[0].get("wa_id") if contacts else None
@@ -45,7 +42,10 @@ def parse_whatsapp_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
                     actual_recipient = client_id
 
                 meta = {
-                    "type": message.get("type"),
+                    "type": message_type,
+                    "is_echo": False,
+                    "raw_metadata": None,
+                    "attachments": message.get(message_type),
                     "profile_name": contacts[0].get("profile", {}).get("name") if contacts else None,
                     "display_phone_number": bot_display_phone,
                     "phone_number_id": bot_wa_id,
@@ -69,68 +69,21 @@ async def process_whatsapp_message(
     message_text: str,
     bot_id: str,
     client_external_id: str,
-    metadata: dict,
+    metadata: Dict[str, Any],
     sender_role: SenderRole,
     external_id: str,
-    user_language: str
+    user_language: str,
 ):
-    """
-    Обрабатывает сообщение из WhatsApp и передаёт его в систему чатов.
-    """
-    chat_data = await handle_chat_creation(
-        mode=None,
+    """Обрабатывает сообщение из WhatsApp и передаёт его в систему чатов."""
+    await process_meta_message(
+        platform="whatsapp",
         chat_source=ChatSource.WHATSAPP,
-        chat_external_id=bot_id,
-        client_external_id=client_external_id,
-        company_name=bot_id,
+        sender_id=sender_id,
+        message_text=message_text,
         bot_id=bot_id,
+        client_external_id=client_external_id,
         metadata=metadata,
-        request=None
-    )
-
-    chat_id = chat_data["chat_id"]
-    client_id = chat_data["client_id"]
-
-    chat_session_data = await mongo_db.chats.find_one({"chat_id": chat_id})
-    if not chat_session_data:
-        return
-
-    chat_session = ChatSession(**chat_session_data)
-    manager = await get_ws_manager(chat_id)
-    typing_manager = await get_typing_manager(chat_id)
-    gpt_lock = gpt_task_manager.get_lock(chat_id)
-
-    data = {
-        "type": "new_message",
-        "message": message_text,
-        "sender_role": sender_role,
-        "external_id": external_id
-    }
-
-    redis_session_key = f"chat:session:{chat_id}"
-    redis_flood_key = f"flood:{client_id}"
-
-    user_data = {
-        "platform": "instagram",
-        "sender_id": sender_id,
-        "external_id": external_id,
-        "client_external_id": client_external_id,
-        "metadata": metadata,
-        "is_superuser": sender_role == SenderRole.CONSULTANT
-    }
-
-    asyncio.create_task(
-        handle_message(
-            manager=manager,
-            typing_manager=typing_manager,
-            chat_id=chat_id,
-            client_id=client_id,
-            redis_session_key=redis_session_key,
-            redis_flood_key=redis_flood_key,
-            data=data,
-            is_superuser=(sender_role == SenderRole.CONSULTANT),
-            user_language=user_language,
-            gpt_lock=gpt_lock,
-            user_data=user_data
-        )
+        sender_role=sender_role,
+        external_id=external_id,
+        user_language=user_language,
     )

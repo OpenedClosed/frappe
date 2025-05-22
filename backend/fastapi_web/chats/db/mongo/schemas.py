@@ -38,6 +38,7 @@ class BriefAnswer(IdModel):
 class ChatMessage(BaseValidatedIdModel):
     """Сообщение в чате."""
     message: str
+    message_before_postprocessing: Optional[str] = None
     sender_role: SenderRole
     sender_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -49,7 +50,7 @@ class ChatMessage(BaseValidatedIdModel):
     external_id: Optional[str] = None
     synced_to_constructor: bool = False
     files: Optional[List[str]] = None
-    metadata: Optional[Dict[str, Any]] | None = None 
+    metadata: Optional[Dict[str, Any]] | None = {}
 
     @field_validator("message")
     @classmethod
@@ -59,6 +60,7 @@ class ChatMessage(BaseValidatedIdModel):
             raise ValueError(
                 f"Сообщение превышает допустимую длину {MAX_MESSAGE_LENGTH} символов.")
         return v
+
 
 class MasterClient(BaseValidatedIdModel):
     """Информация о клиенте."""
@@ -109,7 +111,7 @@ class ChatSession(BaseValidatedModel):
 
     def calculate_mode(self, brief_questions: List[BriefQuestion]) -> str:
         """Определяет текущий режим работы чата."""
-        return "brief" if not self._is_brief_completed(brief_questions) else (
+        return "brief" if not self.is_brief_completed(brief_questions) else (
             "manual" if self.manual_mode else "automatic"
         )
 
@@ -121,7 +123,7 @@ class ChatSession(BaseValidatedModel):
             return ChatStatus.IN_PROGRESS
         if not self.messages:
             return ChatStatus.CLOSED_WITHOUT_RESPONSE
-        return self._determine_final_status()
+        return self.determine_final_status()
 
     def get_current_question(
             self, brief_questions: List[BriefQuestion]) -> Optional[BriefQuestion]:
@@ -130,13 +132,13 @@ class ChatSession(BaseValidatedModel):
         return next(
             (q for q in brief_questions if q.question not in answered_questions), None)
 
-    def _is_brief_completed(
+    def is_brief_completed(
             self, brief_questions: List[BriefQuestion]) -> bool:
         """Проверяет, все ли вопросы брифа получили ответы."""
         return {a.question for a in self.brief_answers}.issuperset(
             q.question for q in brief_questions)
 
-    def _determine_final_status(self) -> ChatStatus:
+    def determine_final_status(self) -> ChatStatus:
         """Возвращает финальный статус чата в зависимости от последнего сообщения."""
         return (
             ChatStatus.SUCCESSFULLY_CLOSED

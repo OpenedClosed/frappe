@@ -23,6 +23,7 @@ class GenderEnum(BaseJsonEnumMixin, str, Enum):
         "settings": {}
     })
 
+
 class AccountVerificationEnum(str, Enum):
     UNVERIFIED = "unverified"
     VERIFIED = "verified"
@@ -196,4 +197,3 @@ class ConsentEnum(BaseJsonEnumMixin, str, Enum):
 # ==========
 # Встречи
 # ==========
-

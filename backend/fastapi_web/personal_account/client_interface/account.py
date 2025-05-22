@@ -4,18 +4,18 @@ from typing import Any, List, Optional
 
 from fastapi import HTTPException
 
-# from crud_core.permissions import AdminPanelPermission
-from integrations.panamedica.client import CRMError, get_client
 from crud_core.registry import account_registry
 from db.mongo.db_init import mongo_db
+# from crud_core.permissions import AdminPanelPermission
+from integrations.panamedica.client import CRMError, get_client
 from personal_account.base_account import BaseAccount, InlineAccount
 
-from .db.mongo.enums import (AccountVerificationEnum, FamilyStatusEnum, HealthFormStatus,
-                             TransactionTypeEnum)
-from .db.mongo.schemas import (AppointmentSchema, BonusProgramSchema, BonusTransactionSchema,
-                               ConsentSchema, ContactInfoSchema,
-                               FamilyMemberSchema, HealthSurveySchema,
-                               MainInfoSchema)
+from .db.mongo.enums import (AccountVerificationEnum, FamilyStatusEnum,
+                             HealthFormStatus, TransactionTypeEnum)
+from .db.mongo.schemas import (AppointmentSchema, BonusProgramSchema,
+                               BonusTransactionSchema, ConsentSchema,
+                               ContactInfoSchema, FamilyMemberSchema,
+                               HealthSurveySchema, MainInfoSchema)
 
 # ==========
 # Основная информация
@@ -342,7 +342,8 @@ class MainInfoAccount(BaseAccount):
 
         # crm = get_client()
         # pid = await crm.find_or_create_patient(local_data=created, contact_data={})
-        # await self.db.update_one({"_id": ObjectId(created["id"])}, {"$set": {"patient_id": pid}})
+        # await self.db.update_one({"_id": ObjectId(created["id"])}, {"$set":
+        # {"patient_id": pid}})
 
         return created
 
@@ -354,7 +355,8 @@ class MainInfoAccount(BaseAccount):
 
         # if updated.get("patient_id"):
         #     crm_patch = {"phone": updated.get("phone"), "email": updated.get("email")}
-        #     await get_client().patch_patient(int(updated["patient_id"]), crm_patch)
+        # await get_client().patch_patient(int(updated["patient_id"]),
+        # crm_patch)
 
         return updated
 
@@ -377,8 +379,6 @@ class MainInfoAccount(BaseAccount):
         except Exception as e:
             # print(e)
             return "PAT-123456"
-
-
 
 
 # ==========
@@ -415,25 +415,24 @@ class ContactInfoAccount(BaseAccount):
     read_only_fields = ["doc_id", "updated_at"]
 
     field_titles = {
-        "email":             {"en": "Email",              "ru": "Email",     "pl": "E-mail"},
-        "phone":             {"en": "Phone",              "ru": "Телефон",   "pl": "Telefon"},
-        "address":           {"en": "Address",            "ru": "Адрес",     "pl": "Adres"},
-        "pesel":             {"en": "PESEL",              "ru": "PESEL",     "pl": "PESEL"},
-        "emergency_contact": {"en": "Emergency contact",  "ru": "Экстренный контакт", "pl": "Kontakt awaryjny"},
-        "doc_id":            {"en": "Document ID",        "ru": "ID документа",       "pl": "ID dokumentu"},
-        "updated_at":        {"en": "Last update",        "ru": "Последнее обновление","pl": "Ostatnia aktualizacja"},
+        "email": {"en": "Email", "ru": "Email", "pl": "E-mail"},
+        "phone": {"en": "Phone", "ru": "Телефон", "pl": "Telefon"},
+        "address": {"en": "Address", "ru": "Адрес", "pl": "Adres"},
+        "pesel": {"en": "PESEL", "ru": "PESEL", "pl": "PESEL"},
+        "emergency_contact": {"en": "Emergency contact", "ru": "Экстренный контакт", "pl": "Kontakt awaryjny"},
+        "doc_id": {"en": "Document ID", "ru": "ID документа", "pl": "ID dokumentu"},
+        "updated_at": {"en": "Last update", "ru": "Последнее обновление", "pl": "Ostatnia aktualizacja"},
     }
 
     help_texts = {
-        "email":             {"en": "Valid e-mail",        "ru": "Действующий e-mail",  "pl": "Poprawny e-mail"},
-        "phone":             {"en": "Primary phone",       "ru": "Основной телефон",    "pl": "Główny telefon"},
-        "address":           {"en": "Postal address",      "ru": "Адрес проживания",    "pl": "Adres zamieszkania"},
-        "pesel":             {"en": "National ID",         "ru": "Нац. идентификатор",  "pl": "Numer PESEL"},
-        "emergency_contact": {"en": "Emergency phone",     "ru": "Телефон для экстренной связи", "pl": "Telefon awaryjny"},
-        "doc_id":            {"en": "Passport / ID",       "ru": "Паспорт / ID",        "pl": "Paszport / ID"},
-        "updated_at":        {"en": "Timestamp",           "ru": "Отметка времени",     "pl": "Znacznik czasu"},
+        "email": {"en": "Valid e-mail", "ru": "Действующий e-mail", "pl": "Poprawny e-mail"},
+        "phone": {"en": "Primary phone", "ru": "Основной телефон", "pl": "Główny telefon"},
+        "address": {"en": "Postal address", "ru": "Адрес проживания", "pl": "Adres zamieszkania"},
+        "pesel": {"en": "National ID", "ru": "Нац. идентификатор", "pl": "Numer PESEL"},
+        "emergency_contact": {"en": "Emergency phone", "ru": "Телефон для экстренной связи", "pl": "Telefon awaryjny"},
+        "doc_id": {"en": "Passport / ID", "ru": "Паспорт / ID", "pl": "Paszport / ID"},
+        "updated_at": {"en": "Timestamp", "ru": "Отметка времени", "pl": "Znacznik czasu"},
     }
-
 
     field_groups = [
         {
@@ -556,14 +555,15 @@ class ContactInfoAccount(BaseAccount):
 
     async def create(self, data: dict, current_user=None):
         created = await super().create(data, current_user)
-        # await self.patch_crm(current_user.id, {"phone": created["phone"], "email": created["email"]})
+        # await self.patch_crm(current_user.id, {"phone": created["phone"],
+        # "email": created["email"]})
         return created
 
     async def update(self, object_id: str, data: dict, current_user=None):
         updated = await super().update(object_id, data, current_user)
-        # await self.patch_crm(current_user.id, {"phone": updated["phone"], "email": updated["email"]})
+        # await self.patch_crm(current_user.id, {"phone": updated["phone"],
+        # "email": updated["email"]})
         return updated
-
 
     async def get_doc_id(self, obj: dict) -> str:
         """
@@ -1357,6 +1357,7 @@ class ConsentAccount(BaseAccount):
 # Встречи
 # ==========
 
+
 class AppointmentAccount(BaseAccount):
     """
     Только для чтения: встречи пользователя, полученные из CRM.
@@ -1431,7 +1432,8 @@ class AppointmentAccount(BaseAccount):
     #     patient_id = info["patient_id"]
     #     created = info.get("created_at", date.today())
 
-    #     appointments = await get_client().future_appointments(patient_id, from_date=created.date())
+    # appointments = await get_client().future_appointments(patient_id,
+    # from_date=created.date())
 
     #     def to_result(raw: dict) -> dict:
     #         return {

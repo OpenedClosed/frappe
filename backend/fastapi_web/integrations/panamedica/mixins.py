@@ -1,8 +1,11 @@
+"""Миксины для удобной работы с PaNa."""
 from datetime import date
 
 from fastapi import HTTPException
 
-from personal_account.client_interface.db.mongo.enums import AccountVerificationEnum
+from personal_account.client_interface.db.mongo.enums import \
+    AccountVerificationEnum
+
 from .client import CRMError, get_client
 
 
@@ -32,7 +35,8 @@ class CRMIntegrationMixin:
         valid["account_status"] = AccountVerificationEnum.unverified
         return valid
 
-    async def patch_contacts_in_crm(self, patient_id: int, patch: dict) -> None:
+    async def patch_contacts_in_crm(
+            self, patient_id: int, patch: dict) -> None:
         """
         Отправляет изменения телефона или email в CRM, если `patch` не пустой.
         Не вызывает исключений при ошибке — только логирует.
@@ -44,7 +48,8 @@ class CRMIntegrationMixin:
         except CRMError:
             pass
 
-    async def calc_account_status(self, patient_id: int) -> AccountVerificationEnum:
+    async def calc_account_status(
+            self, patient_id: int) -> AccountVerificationEnum:
         """
         Проверяет наличие закрытых визитов в CRM:
         - Если хотя бы один визит со статусом 'closed' — статус 'verified';

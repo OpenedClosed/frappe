@@ -14,6 +14,7 @@ from .enums import (AIModelEnum, BotColorEnum, CommunicationStyleEnum,
 # БЛОК: Контекст
 # ==============================
 
+
 class ContextEntry(IdModel):
     """Универсальная единица контекста."""
 

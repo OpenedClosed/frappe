@@ -43,4 +43,3 @@ class ChatSource(BaseJsonEnumMixin, str, Enum):
     INSTAGRAM = json.dumps({"en": "Instagram", "ru": "Инстаграм"})
     FACEBOOK = json.dumps({"en": "Facebook", "ru": "Фейсбук"})
     WHATSAPP = json.dumps({"en": "WhatsApp", "ru": "Вотсап"})
-

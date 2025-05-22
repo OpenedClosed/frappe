@@ -97,8 +97,6 @@ class ChatMessageInline(InlineAdmin):
         }
     }
 
-
-
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
@@ -184,7 +182,6 @@ class ChatMessageInline(InlineAdmin):
 
         return json.dumps(status, ensure_ascii=False)
 
-
     async def get_read_by_display(self, obj: dict) -> str:
         parent = getattr(self, "parent_document", None)
         if not parent:
@@ -267,7 +264,6 @@ class ClientInline(InlineAdmin):
             "ka": "მეტამონაცემები"
         },
     }
-
 
     async def get_queryset(
         self,
@@ -413,7 +409,6 @@ class ChatSessionAdmin(BaseAdmin):
         }
     }
 
-
     inlines = {
         "messages": ChatMessageInline,
         "client": ClientInline
@@ -482,7 +477,6 @@ class ChatSessionAdmin(BaseAdmin):
                 value = master.external_id or master.client_id
 
         return json.dumps({"en": value, "ru": value}, ensure_ascii=False)
-
 
     async def get_client_source_display(self, obj: dict) -> str:
         """Источник клиента (в виде JSON строки)."""

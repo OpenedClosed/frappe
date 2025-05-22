@@ -250,7 +250,7 @@ def generate_base_routes(registry: BaseRegistry):
                 has_page_size_in_query = ('page_size' in request.query_params)
 
                 if instance.max_instances_per_user == 1:
-                    
+
                     items = await instance.get_queryset(current_user=user_doc)
                     item = None
                     if items:
@@ -429,7 +429,7 @@ def map_python_type_to_ui(py_type):
     return "unknown"
 
 
-def _get_schema_data(instance):
+def get_schema_data(instance):
     """
     Возвращает свойства (properties) и список обязательных полей (required) схемы модели.
     """
@@ -440,7 +440,7 @@ def _get_schema_data(instance):
         return {}, []
 
 
-def _get_instance_attributes(instance):
+def get_instance_attributes(instance):
     """
     Извлекает атрибуты модели, используемые при построении схемы.
     """
@@ -458,7 +458,7 @@ def _get_instance_attributes(instance):
     }
 
 
-def _determine_field_type_and_choices(py_type, field, read_only_fields):
+def determine_field_type_and_choices(py_type, field, read_only_fields):
     """
     Определяет UI-тип и возможные варианты выбора (choices) для поля.
     """
@@ -497,7 +497,7 @@ def _determine_field_type_and_choices(py_type, field, read_only_fields):
     return auto_ui if auto_ui != "unknown" else py_type, None
 
 
-def _get_schema_data(instance):
+def get_schema_data(instance):
     """Возвращает свойства (properties) и список обязательных полей (required) схемы модели."""
     try:
         schema = instance.model.schema(by_alias=False)
@@ -506,7 +506,7 @@ def _get_schema_data(instance):
         return {}, []
 
 
-def _extract_default_value_and_settings(instance, field_name, default_value):
+def extract_default_value_and_settings(instance, field_name, default_value):
     """
     Определяет значение по умолчанию и settings для поля:
     - из обычного словаря (default={'settings': {...}})
@@ -535,15 +535,15 @@ def _extract_default_value_and_settings(instance, field_name, default_value):
     return default_value, {}
 
 
-def _build_field_schema(instance, field, schema_props, model_annotations,
-                        read_only_fields, computed_fields, help_texts, field_titles):
+def build_field_schema(instance, field, schema_props, model_annotations,
+                       read_only_fields, computed_fields, help_texts, field_titles):
     """
     Создаёт структуру данных для одного поля, корректно извлекая тип, настройки, стандартное значение и обязательность.
     """
     field_info = schema_props.get(field, {})
     field_title = field_titles.get(field, field_info.get("title", {}))
 
-    field_default, field_settings = _extract_default_value_and_settings(
+    field_default, field_settings = extract_default_value_and_settings(
         instance, field, field_info.get("default")
     )
 
@@ -560,7 +560,7 @@ def _build_field_schema(instance, field, schema_props, model_annotations,
     else:
         inner_type = None
 
-    field_type, choices = _determine_field_type_and_choices(
+    field_type, choices = determine_field_type_and_choices(
         py_type, field, read_only_fields
     )
 
@@ -602,7 +602,7 @@ def _build_field_schema(instance, field, schema_props, model_annotations,
     }
 
 
-def _build_inlines(instance, inlines_dict, model_annotations):
+def build_inlines(instance, inlines_dict, model_annotations):
     """
     Формирует список inlines (вложенных моделей), учитывая их тип (single или list).
     """
@@ -630,7 +630,7 @@ def _build_inlines(instance, inlines_dict, model_annotations):
     return inlines_list
 
 
-def _build_field_groups(field_groups):
+def build_field_groups(field_groups):
     """
     Собирает структуру групп полей.
     """
@@ -645,12 +645,12 @@ def _build_field_groups(field_groups):
     ]
 
 
-def _build_model_info(instance) -> dict:
+def build_model_info(instance) -> dict:
     """
     Формирует структуру описания админ-модели или инлайна.
     """
-    attrs = _get_instance_attributes(instance)
-    schema_props, _ = _get_schema_data(instance)
+    attrs = get_instance_attributes(instance)
+    schema_props, _ = get_schema_data(instance)
     model_annotations = getattr(instance.model, "__annotations__", {})
 
     combined_fields = list(
@@ -658,13 +658,13 @@ def _build_model_info(instance) -> dict:
             attrs["list_display"] +
             attrs["detail_fields"]))
     fields_schema = [
-        _build_field_schema(instance, field, schema_props, model_annotations, attrs["read_only_fields"],
-                            attrs["computed_fields"], attrs["help_texts"], attrs["field_titles"])
+        build_field_schema(instance, field, schema_props, model_annotations, attrs["read_only_fields"],
+                           attrs["computed_fields"], attrs["help_texts"], attrs["field_titles"])
         for field in combined_fields
     ]
 
-    groups_schema = _build_field_groups(attrs["field_groups"])
-    inlines_list = _build_inlines(
+    groups_schema = build_field_groups(attrs["field_groups"])
+    inlines_list = build_inlines(
         instance,
         attrs["inlines_dict"],
         model_annotations)
@@ -691,13 +691,13 @@ def _build_model_info(instance) -> dict:
 def build_inline_schema(inline_field: str, inline_instance,
                         inline_type: str) -> dict:
     """Формирует схему для инлайна с учётом вложений и типа (single или list)."""
-    base_schema = _build_model_info(inline_instance)
+    base_schema = build_model_info(inline_instance)
     base_schema["field"] = inline_field
     base_schema["inline_type"] = inline_type
     return base_schema
 
 
-def _get_app_info(module_path: str, registry_name: str) -> tuple:
+def get_app_info(module_path: str, registry_name: str) -> tuple:
     """Определяет имя приложения, его verbose_name, иконку и цвет."""
     mod_parts = module_path.split(".")
     app_name = mod_parts[-1]
@@ -720,7 +720,7 @@ def _get_app_info(module_path: str, registry_name: str) -> tuple:
         return app_name, app_name, "", ""
 
 
-def _get_model_routes(api_prefix: str, registered_name: str, instance) -> list:
+def get_model_routes(api_prefix: str, registered_name: str, instance) -> list:
     """
     Создаёт список маршрутов для модели, используя snake_case.
     Учитывает разрешённые действия из allow_crud_actions.
@@ -764,13 +764,13 @@ def _get_model_routes(api_prefix: str, registered_name: str, instance) -> list:
     return routes
 
 
-def _build_model_entry(instance, api_prefix,
-                       registered_name) -> Dict[str, Any]:
+def build_model_entry(instance, api_prefix,
+                      registered_name) -> Dict[str, Any]:
     """Формирует информацию о модели, включая маршруты."""
     return {
         "registered_name": registered_name,
-        "model": _build_model_info(instance),
-        "routes": _get_model_routes(api_prefix, registered_name, instance)
+        "model": build_model_info(instance),
+        "routes": get_model_routes(api_prefix, registered_name, instance)
     }
 
 
@@ -787,7 +787,7 @@ def get_routes_by_apps(registry, current_user) -> Dict[str, Any]:
         except HTTPException:
             continue
 
-        app_name, verbose_name, icon, color = _get_app_info(
+        app_name, verbose_name, icon, color = get_app_info(
             module_path, registry.name)
 
         if app_name not in apps:
@@ -798,7 +798,7 @@ def get_routes_by_apps(registry, current_user) -> Dict[str, Any]:
                 "entities": []}
 
         apps[app_name]["entities"].append(
-            _build_model_entry(
+            build_model_entry(
                 instance,
                 api_prefix,
                 registered_name))

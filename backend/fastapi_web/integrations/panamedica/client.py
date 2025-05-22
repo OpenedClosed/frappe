@@ -1,9 +1,13 @@
-import httpx, asyncio, logging
+"""Клиент для взаимодействия с PaNa."""
+import asyncio
+import logging
 from datetime import date
 from functools import lru_cache
 from uuid import uuid4
 
+import httpx
 from fastapi import HTTPException, status
+
 from infra import settings
 from utils.help_functions import normalize_numbers
 
@@ -41,12 +45,16 @@ class CRMClient:
                 },
             )
             if resp.status_code >= 400:
-                logging.error("CRM token error %s %s", resp.status_code, resp.text)
+                logging.error(
+                    "CRM token error %s %s",
+                    resp.status_code,
+                    resp.text)
                 raise CRMError(status.HTTP_502_BAD_GATEWAY, "CRM auth failed")
 
             data = resp.json()
             self.token_data = data["access_token"]
-            self.token_expiration = asyncio.get_event_loop().time() + int(data["expires_in"]) - 60
+            self.token_expiration = asyncio.get_event_loop().time() + \
+                int(data["expires_in"]) - 60
             return self.token_data
 
     async def get_token(self) -> str:
@@ -87,8 +95,15 @@ class CRMClient:
             )
 
             if resp.status_code >= 400:
-                logging.error("CRM %s %s -> %s %s", method, path, resp.status_code, resp.text)
-                raise CRMError(status.HTTP_502_BAD_GATEWAY, "CRM request failed")
+                logging.error(
+                    "CRM %s %s -> %s %s",
+                    method,
+                    path,
+                    resp.status_code,
+                    resp.text)
+                raise CRMError(
+                    status.HTTP_502_BAD_GATEWAY,
+                    "CRM request failed")
 
             return resp.json()
 
@@ -154,7 +169,8 @@ class CRMClient:
         """
         await self.call("PATCH", f"/patients/{patient_id}", json=patch)
 
-    async def future_appointments(self, patient_id: int, *, from_date: date) -> list[dict]:
+    async def future_appointments(
+            self, patient_id: int, *, from_date: date) -> list[dict]:
         """
         Возвращает список будущих визитов пациента, начиная с указанной даты.
         """
@@ -165,7 +181,8 @@ class CRMClient:
         )
         return result["data"]
 
-    async def find_or_create_patient(self, *, local_data: dict, contact_data: dict) -> int:
+    async def find_or_create_patient(
+            self, *, local_data: dict, contact_data: dict) -> int:
         """
         Находит пациента в CRM или создаёт, если его нет.
         Использует local_data (имя, дата рождения, пол) и contact_data (телефон, email, PESEL).
@@ -177,7 +194,9 @@ class CRMClient:
         bdate = bdate_raw.strftime("%Y-%m-%d") if bdate_raw else None
 
         if not phone or not gender or not bdate:
-            raise CRMError(status.HTTP_400_BAD_REQUEST, "Not enough data to identify patient")
+            raise CRMError(
+                status.HTTP_400_BAD_REQUEST,
+                "Not enough data to identify patient")
 
         patient_id = await self.find_patient(
             phone=phone,
@@ -198,7 +217,6 @@ class CRMClient:
             gender=gender,
             pesel=pesel
         )
-
 
 
 @lru_cache

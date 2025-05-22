@@ -1,8 +1,7 @@
 """Обработчики маршрутов приложения Чаты."""
-from fastapi import HTTPException
 from typing import Optional
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from chats.utils.commands import COMMAND_HANDLERS
 from db.mongo.db_init import mongo_db

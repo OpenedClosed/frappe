@@ -5,12 +5,13 @@ from datetime import datetime
 from typing import Dict
 
 from bson import ObjectId
-from crud_core.registry import BaseRegistry
-from crud_core.routes_generator import generate_base_routes
-from db.mongo.db_init import mongo_db
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
+
+from crud_core.registry import BaseRegistry
+from crud_core.routes_generator import generate_base_routes
+from db.mongo.db_init import mongo_db
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User
 from utils.help_functions import normalize_numbers, send_sms
@@ -86,7 +87,8 @@ def generate_base_account_routes(registry) -> APIRouter:
 
         user = User(password=data.password, role=RoleEnum.CLIENT)
         user.set_password()
-        user_doc = user.model_dump(mode="python") | {"created_at": datetime.utcnow()}
+        user_doc = user.model_dump(mode="python") | {
+            "created_at": datetime.utcnow()}
         user_id = (await mongo_db["users"].insert_one(user_doc)).inserted_id
 
         ln, fn, *rest = data.full_name.split()
@@ -96,7 +98,8 @@ def generate_base_account_routes(registry) -> APIRouter:
             "patronymic": rest[0] if rest else "",
             "phone": phone_key,
             "user_id": str(user_id),
-            "metadata": dict(request.query_params),   # сохраняем query-параметры
+            # сохраняем query-параметры
+            "metadata": dict(request.query_params),
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
@@ -117,11 +120,21 @@ def generate_base_account_routes(registry) -> APIRouter:
         #     {"user_id": str(user_id)}, {"$set": {"patient_id": pid}}
         # )
 
-        access_token  = Authorize.create_access_token(subject=str(user_id))
+        access_token = Authorize.create_access_token(subject=str(user_id))
         refresh_token = Authorize.create_refresh_token(subject=str(user_id))
 
-        response.set_cookie("access_token", access_token,  httponly=False, secure=True, samesite="None")
-        response.set_cookie("refresh_token", refresh_token, httponly=False, secure=True, samesite="None")
+        response.set_cookie(
+            "access_token",
+            access_token,
+            httponly=False,
+            secure=True,
+            samesite="None")
+        response.set_cookie(
+            "refresh_token",
+            refresh_token,
+            httponly=False,
+            secure=True,
+            samesite="None")
 
         return {"message": "Registered", "user_id": str(user_id)}
 
@@ -185,11 +198,21 @@ def generate_base_account_routes(registry) -> APIRouter:
             raise HTTPException(404, detail={"phone": "User not found"})
 
         user_id = str(user_main["user_id"])
-        access_token  = Authorize.create_access_token(subject=user_id)
+        access_token = Authorize.create_access_token(subject=user_id)
         refresh_token = Authorize.create_refresh_token(subject=user_id)
 
-        response.set_cookie("access_token",  access_token,  httponly=False, secure=True, samesite="None")
-        response.set_cookie("refresh_token", refresh_token, httponly=False, secure=True, samesite="None")
+        response.set_cookie(
+            "access_token",
+            access_token,
+            httponly=False,
+            secure=True,
+            samesite="None")
+        response.set_cookie(
+            "refresh_token",
+            refresh_token,
+            httponly=False,
+            secure=True,
+            samesite="None")
 
         return {"message": "Logged in", "access_token": access_token}
 

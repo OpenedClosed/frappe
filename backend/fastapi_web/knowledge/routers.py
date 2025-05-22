@@ -17,12 +17,10 @@ from knowledge.db.mongo.enums import ContextPurpose, ContextType
 
 from .db.mongo.schemas import (ContextEntry, KnowledgeBase,
                                PatchKnowledgeRequest, UpdateResponse)
-from .utils.help_functions import (build_gpt_message_blocks,
-                                   deep_merge,
+from .utils.help_functions import (build_gpt_message_blocks, deep_merge,
                                    diff_with_tags, ensure_entry_processed,
                                    generate_patch_body_via_gpt,
-                                   get_knowledge_base,
-                                   save_kb_doc,
+                                   get_knowledge_base, save_kb_doc,
                                    save_uploaded_file)
 
 knowledge_base_router = APIRouter()
@@ -160,9 +158,6 @@ async def get_bot_info(
 # БЛОК: Работа с контекстом
 # ==============================
 
-
-# @knowledge_base_router.post("/context_entity",
-#                             response_model=ContextEntry, status_code=201)
 @knowledge_base_router.post("/context_entity", status_code=201)
 @jwt_required()
 @permission_required(AdminPanelPermission)

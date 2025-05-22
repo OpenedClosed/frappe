@@ -30,9 +30,7 @@ async def verify_whatsapp_webhook(
 
 @whatsapp_router.post("/webhook")
 async def handle_whatsapp_messages(request: Request):
-    """
-    Обрабатывает входящие сообщения из WhatsApp с проверкой подписи.
-    """
+    """Обрабатывает входящие сообщения из WhatsApp с проверкой подписи."""
     await verify_meta_signature(request, settings.WHATSAPP_APP_SECRET)
 
     payload = await request.json()

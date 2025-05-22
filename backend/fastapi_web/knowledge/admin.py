@@ -44,13 +44,13 @@ class BotSettingsAdmin(BaseAdmin):
 
     field_titles = {
         "project_name": {
-            "en": "Project Name",           "pl": "Nazwa projektu",
-            "uk": "Назва проєкту",          "ru": "Название проекта",
+            "en": "Project Name", "pl": "Nazwa projektu",
+            "uk": "Назва проєкту", "ru": "Название проекта",
             "ka": "პროექტის სახელი"
         },
         "employee_name": {
-            "en": "Employee Name",          "pl": "Imię pracownika",
-            "uk": "Ім'я співробітника",     "ru": "Имя сотрудника",
+            "en": "Employee Name", "pl": "Imię pracownika",
+            "uk": "Ім'я співробітника", "ru": "Имя сотрудника",
             "ka": "თანამშრომლის სახელი"
         },
         "mention_name": {
@@ -61,13 +61,13 @@ class BotSettingsAdmin(BaseAdmin):
             "ka": "დაასახელოს თუ არა ბოტმა თავისი სახელი"
         },
         "avatar": {
-            "en": "Avatar",                 "pl": "Avatar",
-            "uk": "Аватар",                 "ru": "Аватар",
+            "en": "Avatar", "pl": "Avatar",
+            "uk": "Аватар", "ru": "Аватар",
             "ka": "ავატარი"
         },
         "bot_color": {
-            "en": "Bot Color",              "pl": "Kolor bota",
-            "uk": "Колір бота",             "ru": "Цвет бота",
+            "en": "Bot Color", "pl": "Kolor bota",
+            "uk": "Колір бота", "ru": "Цвет бота",
             "ka": "ბოტის ფერი"
         },
         "communication_tone": {
@@ -78,68 +78,68 @@ class BotSettingsAdmin(BaseAdmin):
             "ka": "აირჩიეთ კომუნიკაციის ტონი"
         },
         "personality_traits": {
-            "en": "Personality Traits",     "pl": "Cechy osobowości",
-            "uk": "Риси характеру",         "ru": "Особенности характера",
+            "en": "Personality Traits", "pl": "Cechy osobowości",
+            "uk": "Риси характеру", "ru": "Особенности характера",
             "ka": "პერსონალური თვისებები"
         },
         "additional_instructions": {
-            "en": "Additional Instructions","pl": "Dodatkowe instrukcje",
-            "uk": "Додаткові інструкції",   "ru": "Дополнительные инструкции",
+            "en": "Additional Instructions", "pl": "Dodatkowe instrukcje",
+            "uk": "Додаткові інструкції", "ru": "Дополнительные инструкции",
             "ka": "დამატებითი ინსტრუქციები"
         },
         "role": {
-            "en": "Role",                   "pl": "Rola",
-            "uk": "Роль",                   "ru": "Роль",
+            "en": "Role", "pl": "Rola",
+            "uk": "Роль", "ru": "Роль",
             "ka": "როლი"
         },
         "target_action": {
-            "en": "Target Action",          "pl": "Docelowe działanie",
-            "uk": "Цільова дія",            "ru": "Целевое действие",
+            "en": "Target Action", "pl": "Docelowe działanie",
+            "uk": "Цільова дія", "ru": "Целевое действие",
             "ka": "სამიზნე ქმედება"
         },
         "core_principles": {
-            "en": "Core Principles",        "pl": "Podstawowe zasady",
-            "uk": "Основні принципи",       "ru": "Ключевые принципы",
+            "en": "Core Principles", "pl": "Podstawowe zasady",
+            "uk": "Основні принципи", "ru": "Ключевые принципы",
             "ka": "ძირითადი პრინციპები"
         },
         "special_instructions": {
-            "en": "Special Instructions",   "pl": "Specjalne instrukcje",
-            "uk": "Спеціальні інструкції",  "ru": "Специальные инструкции",
+            "en": "Special Instructions", "pl": "Specjalne instrukcje",
+            "uk": "Спеціальні інструкції", "ru": "Специальные инструкции",
             "ka": "სპეციალური ინსტრუქციები"
         },
         "forbidden_topics": {
-            "en": "Forbidden Topics",       "pl": "Tematy zakazane",
-            "uk": "Заборонені теми",        "ru": "Запретные темы",
+            "en": "Forbidden Topics", "pl": "Tematy zakazane",
+            "uk": "Заборонені теми", "ru": "Запретные темы",
             "ka": "აკრძალული თემები"
         },
         "greeting": {
-            "en": "Greeting",               "pl": "Powitanie",
-            "uk": "Привітання",            "ru": "Приветствие",
+            "en": "Greeting", "pl": "Powitanie",
+            "uk": "Привітання", "ru": "Приветствие",
             "ka": "მისალმება"
         },
         "error_message": {
-            "en": "Error Message",          "pl": "Komunikat błędu",
-            "uk": "Повідомлення про помилку","ru": "Ошибка",
+            "en": "Error Message", "pl": "Komunikat błędu",
+            "uk": "Повідомлення про помилку", "ru": "Ошибка",
             "ka": "შეცდომის შეტყობინება"
         },
         "farewell_message": {
-            "en": "Farewell Message",       "pl": "Pożegnanie",
+            "en": "Farewell Message", "pl": "Pożegnanie",
             "uk": "Прощальне повідомлення", "ru": "Прощание",
             "ka": "სამამშვიდობო შეტყობინება"
         },
         "fallback_ai_error_message": {
-            "en": "AI Error Fallback",      "pl": "Komunikat o błędzie AI",
+            "en": "AI Error Fallback", "pl": "Komunikat o błędzie AI",
             "uk": "Повідомлення при помилці ІІ",
             "ru": "Сообщение при ошибке ИИ", "ka": "AI-ის შეცდომის შეტყობინება"
         },
         "ai_model": {
-            "en": "AI Model",              "pl": "Model AI",
-            "uk": "Модель ІІ",             "ru": "Выбор модели",
+            "en": "AI Model", "pl": "Model AI",
+            "uk": "Модель ІІ", "ru": "Выбор модели",
             "ka": "AI მოდელი"
         },
         "created_at": {
-            "en": "Created At",             "pl": "Data utworzenia",
-            "uk": "Дата створення",         "ru": "Дата создания",
+            "en": "Created At", "pl": "Data utworzenia",
+            "uk": "Дата створення", "ru": "Дата создания",
             "ka": "შექმნის თარიღი"
         }
     }

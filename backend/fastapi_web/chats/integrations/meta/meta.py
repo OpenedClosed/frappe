@@ -1,17 +1,21 @@
 """Интеграция с Meta."""
-import json
-import logging
-from typing import Any, Dict, List
+import asyncio
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, Request, Response
 
-from utils.help_functions import get_language_from_locale
-
-from .instagram.utils.help_functions import get_instagram_user_profile
-from .utils.help_functions import get_meta_locale
 from chats.db.mongo.enums import ChatSource, SenderRole
+from chats.db.mongo.schemas import ChatSession
+from chats.utils.help_functions import handle_chat_creation
+from chats.ws.ws_handlers import handle_message
+from chats.ws.ws_helpers import (get_typing_manager, get_ws_manager,
+                                 gpt_task_manager)
 from db.mongo.db_init import mongo_db
 from infra import settings
+from utils.help_functions import get_language_from_locale
+
+# from .instagram.utils.help_functions import get_instagram_user_profile
+# from .utils.help_functions import get_meta_locale
 
 
 async def verify_meta_webhook(
@@ -20,147 +24,10 @@ async def verify_meta_webhook(
     hub_verify_token: str,
     expected_token: str,
 ) -> Response:
-    """
-    Универсальная функция, которая проверяет вебхук Meta-сервисов (Instagram, WhatsApp).
-    """
+    """Универсальная функция, которая проверяет вебхук Meta-сервисов (Instagram, WhatsApp)."""
     if hub_mode == "subscribe" and hub_verify_token == expected_token:
         return Response(content=str(hub_challenge), media_type="text/plain")
     raise HTTPException(status_code=403, detail="Verification failed")
-
-
-# async def handle_incoming_meta_messages(
-#     messages_info: List[Dict[str, Any]],
-#     request: Request,
-#     settings_bot_id: str,
-#     chat_source: ChatSource,
-#     process_fn,
-# ):
-#     """Проходит по сообщениям Meta и отправляет их в обработку."""
-
-#     token_key = f"{chat_source.name.upper()}_ACCESS_TOKEN"
-#     access_token = getattr(settings, token_key, None)
-#     logging.debug(f"🛠️ Используется токен {token_key} (начало: {access_token[:12]}...)")
-
-#     for msg in messages_info:
-#         sender_id = msg["sender_id"]
-#         recipient_id = msg["recipient_id"]
-#         message_text = msg["message_text"]
-#         message_id = msg["message_id"]
-#         timestamp = msg["timestamp"]
-#         meta = msg["metadata"] or {}
-
-#         is_echo = meta.get("is_echo")
-#         is_broadcast = meta.get("metadata") == "broadcast"
-
-#         logging.debug(
-#             f"📨 [Meta] Входящее сообщение:\n"
-#             f"  • sender_id: {sender_id}\n"
-#             f"  • recipient_id: {recipient_id}\n"
-#             f"  • message_id: {message_id}\n"
-#             f"  • is_echo: {is_echo} | is_broadcast: {is_broadcast}\n"
-#             f"  • text: {message_text}\n"
-#             f"  • metadata: {json.dumps(meta, ensure_ascii=False)}"
-#         )
-
-#         # 🛡️ КРИТИЧНО: пропускаем любые эхо-сообщения, чтобы не зациклиться
-#         if is_echo:
-#             logging.debug(f"⛔ [Meta] Пропущено эхо-сообщение (message_id={message_id})")
-#             continue
-
-#         # 🧠 Определение ролей
-#         if chat_source == ChatSource.INSTAGRAM:
-#             if recipient_id == settings_bot_id:
-#                 sender_role = SenderRole.CLIENT
-#                 bot_id, client_id = recipient_id, sender_id
-#             else:
-#                 sender_role = SenderRole.CONSULTANT
-#                 bot_id, client_id = sender_id, recipient_id
-#         else:
-#             if sender_id == settings_bot_id:
-#                 sender_role = SenderRole.AI
-#                 bot_id, client_id = sender_id, recipient_id
-#             else:
-#                 sender_role = SenderRole.CLIENT
-#                 bot_id, client_id = settings_bot_id, sender_id
-
-#         logging.debug(f"🧾 [Meta] Роль определена как {sender_role.name} | bot_id={bot_id} | client_id={client_id}")
-
-#         # 🔁 Дубликат
-#         if message_id:
-#             duplicate = await mongo_db.chats.find_one({
-#                 "external_id": settings_bot_id,
-#                 "messages.external_id": message_id
-#             })
-#             if duplicate:
-#                 logging.debug(f"⛔ [Meta] Пропущено дублирующее сообщение message_id={message_id}")
-#                 continue
-#         else:
-#             logging.warning(f"⚠️ [Meta] message_id отсутствует — нет проверки на дубликаты")
-
-#         # 🌍 Определение языка
-#         locale = None
-#         if access_token and sender_role == SenderRole.CLIENT:
-#             locale = await get_meta_locale(sender_id, access_token)
-#         user_language = get_language_from_locale(locale) if locale else "en"
-
-#         if not locale:
-#             logging.warning(f"🌐 [Meta] locale не получена для {sender_id} — используется язык по умолчанию: en")
-#         else:
-#             logging.info(f"🌐 [Meta] Язык: {user_language} (locale={locale}) для sender_id={sender_id}")
-
-#         # 👤 Профиль Instagram
-#         name = None
-#         avatar_url = None
-#         if chat_source == ChatSource.INSTAGRAM and sender_role == SenderRole.CLIENT:
-#             profile = await get_instagram_user_profile(sender_id)
-
-#             if not profile:
-#                 logging.info(f"🙈 [IG] Профиль {sender_id} пуст — возможно пользователь ограничил доступ")
-#             else:
-#                 name = profile.get("name")
-#                 avatar_url = profile.get("profile_pic")
-
-#                 if not name:
-#                     logging.info(f"📛 [IG] Имя отсутствует для {sender_id}")
-#                 if not avatar_url:
-#                     logging.info(f"🖼️ [IG] Аватар отсутствует для {sender_id}")
-
-#         # 💥 Защита от некорректного типа avatar_url
-#         if avatar_url is not None and not isinstance(avatar_url, str):
-#             logging.warning(f"⚠️ [Meta] avatar_url не строка: {avatar_url}")
-#             avatar_url = None
-
-#         # 🧩 Метаданные
-#         metadata_dict = {
-#             "sender_id": sender_id,
-#             "bot_id": bot_id,
-#             "client_id": client_id,
-#             "timestamp": timestamp,
-#             "message_id": message_id,
-#             "name": name,
-#             "avatar_url": avatar_url
-#         }
-#         metadata_dict.update(meta)
-#         metadata_dict = {k: v for k, v in metadata_dict.items() if v is not None}
-
-#         logging.info(
-#             f"🚀 [Meta] Передаём на обработку: sender_role={sender_role.name} | sender_id={sender_id} | "
-#             f"message_id={message_id} | язык={user_language}"
-#         )
-
-#         # 🔄 Передаём в обработку
-#         await process_fn(
-#             sender_id=sender_id,
-#             message_text=message_text,
-#             bot_id=bot_id,
-#             client_external_id=client_id,
-#             metadata=metadata_dict,
-#             sender_role=sender_role,
-#             external_id=message_id,
-#             user_language=user_language
-#         )
-
-
 
 
 async def handle_incoming_meta_messages(
@@ -171,78 +38,57 @@ async def handle_incoming_meta_messages(
     process_fn,
 ):
     """Проходит по сообщениям Meta и отправляет их в обработку."""
-
     token_key = f"{chat_source.name.upper()}_ACCESS_TOKEN"
     access_token = getattr(settings, token_key, None)
-    logging.debug(f"🛠️ Используется токен {token_key} (начало: {access_token[:12]}...)")
 
     for msg in messages_info:
-        sender_id     = msg["sender_id"]
-        recipient_id  = msg["recipient_id"]
-        message_text  = msg["message_text"]
-        message_id    = msg["message_id"]
-        timestamp     = msg["timestamp"]
-        meta          = msg.get("metadata") or {}
+        sender_id = msg["sender_id"]
+        recipient_id = msg["recipient_id"]
+        message_text = msg["message_text"]
+        message_id = msg["message_id"]
+        timestamp = msg["timestamp"]
+        meta = msg.get("metadata") or {}
 
-        # Принудительно восстанавливаем важные поля
-        meta.setdefault("is_echo", msg.get("is_echo", True))  # echo по умолчанию True, если пришёл с is_echo
+        meta.setdefault("is_echo", msg.get("is_echo", True))
         meta.setdefault("message_id", message_id)
         meta.setdefault("raw_metadata", None)
 
-        is_echo       = meta.get("is_echo")
-        raw_metadata  = meta.get("raw_metadata")
-        is_broadcast  = raw_metadata == "broadcast"
+        is_echo = meta.get("is_echo")
+        raw_metadata = meta.get("raw_metadata")
+        is_broadcast = raw_metadata == "broadcast"
 
-        logging.debug(
-            f"📨 [Meta] Входящее сообщение:\n"
-            f"  • sender_id: {sender_id}\n"
-            f"  • recipient_id: {recipient_id}\n"
-            f"  • message_id: {message_id}\n"
-            f"  • is_echo: {is_echo} | is_broadcast: {is_broadcast}\n"
-            f"  • text: {message_text}\n"
-            f"  • metadata: {json.dumps(meta, ensure_ascii=False)}"
-        )
-
-        # ─── Защита от лупов ────────────────────────────────────────────────
         if message_id:
             duplicate = await mongo_db.chats.find_one(
                 {"messages.external_id": message_id},
                 {"_id": 1}
             )
             if duplicate:
-                logging.debug(f"⛔ [Meta] Loop-protect: duplicate message_id={message_id} — skip")
                 continue
         else:
-            logging.warning("⚠️ [Meta] message_id отсутствует — нет проверки на дубликаты")
+            pass
 
         if is_echo and is_broadcast:
-            logging.debug(f"⛔ [Meta] echo+broadcast — skip message_id={message_id}")
             continue
-        # ────────────────────────────────────────────────────────────────────
 
-        # ─── Определение роли ───────────────────────────────────────────────
         if chat_source == ChatSource.INSTAGRAM:
             if is_echo:
                 sender_role = SenderRole.CONSULTANT
-                bot_id      = sender_id
-                client_id   = recipient_id
+                bot_id = sender_id
+                client_id = recipient_id
             else:
                 sender_role = SenderRole.CLIENT
-                bot_id      = settings_bot_id
-                client_id   = sender_id
+                bot_id = settings_bot_id
+                client_id = sender_id
         else:
             if sender_id == settings_bot_id:
                 sender_role = SenderRole.AI
-                bot_id      = sender_id
-                client_id   = recipient_id
+                bot_id = sender_id
+                client_id = recipient_id
             else:
                 sender_role = SenderRole.CLIENT
-                bot_id      = settings_bot_id
-                client_id   = sender_id
+                bot_id = settings_bot_id
+                client_id = sender_id
 
-        logging.debug(f"🧾 [Meta] Роль определена как {sender_role.name} | bot_id={bot_id} | client_id={client_id}")
-
-        # ─── Определение языка ──────────────────────────────────────────────
         locale = None
         if access_token and sender_role == SenderRole.CLIENT:
             # Потом включу не удаляй!
@@ -250,12 +96,6 @@ async def handle_incoming_meta_messages(
             locale = "en_EN"
         user_language = get_language_from_locale(locale) if locale else "en"
 
-        if not locale:
-            logging.warning(f"🌐 [Meta] locale не получена для {sender_id} — используется язык по умолчанию: en")
-        else:
-            logging.info(f"🌐 [Meta] Язык: {user_language} (locale={locale}) для sender_id={sender_id}")
-
-        # ─── Профиль пользователя IG (только для клиента) ───────────────────
         name = None
         avatar_url = None
         if chat_source == ChatSource.INSTAGRAM and sender_role == SenderRole.CLIENT:
@@ -267,10 +107,8 @@ async def handle_incoming_meta_messages(
                 avatar_url = profile.get("profile_pic")
 
         if avatar_url is not None and not isinstance(avatar_url, str):
-            logging.warning(f"⚠️ [Meta] avatar_url не строка: {avatar_url}")
             avatar_url = None
 
-        # ─── Финальные метаданные ───────────────────────────────────────────
         metadata_dict = {
             "sender_id": sender_id,
             "bot_id": bot_id,
@@ -283,12 +121,9 @@ async def handle_incoming_meta_messages(
             "is_echo": is_echo
         }
         metadata_dict.update({k: v for k, v in meta.items() if v is not None})
-        metadata_dict = {k: v for k, v in metadata_dict.items() if v is not None}
-
-        logging.info(
-            f"🚀 [Meta] Передаём на обработку: sender_role={sender_role.name} | sender_id={sender_id} | "
-            f"message_id={message_id} | язык={user_language}"
-        )
+        metadata_dict = {
+            k: v for k,
+            v in metadata_dict.items() if v is not None}
 
         await process_fn(
             sender_id=sender_id,
@@ -300,3 +135,99 @@ async def handle_incoming_meta_messages(
             external_id=message_id,
             user_language=user_language
         )
+
+
+def build_meta_metadata(
+    sender_id: str,
+    bot_id: str,
+    client_id: str,
+    timestamp: int | str | None,
+    message_id: str | None,
+    base_meta: Dict[str, Any],
+    extra_meta: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Собирает унифицированный словарь метаданных сообщения Meta."""
+    meta: Dict[str, Any] = {
+        "sender_id": sender_id,
+        "bot_id": bot_id,
+        "client_id": client_id,
+        "timestamp": timestamp,
+        "message_id": message_id,
+    }
+    meta.update({k: v for k, v in base_meta.items() if v is not None})
+    if extra_meta:
+        meta.update({k: v for k, v in extra_meta.items() if v is not None})
+    return {k: v for k, v in meta.items() if v is not None}
+
+
+async def process_meta_message(
+    platform: str,
+    chat_source: ChatSource,
+    sender_id: str,
+    message_text: str,
+    bot_id: str,
+    client_external_id: str,
+    metadata: Dict[str, Any],
+    sender_role: SenderRole,
+    external_id: str,
+    user_language: str,
+):
+    """Обрабатывает сообщение Meta и передаёт его в систему чатов."""
+    chat_data = await handle_chat_creation(
+        mode=None,
+        chat_source=chat_source,
+        chat_external_id=bot_id,
+        client_external_id=client_external_id,
+        company_name=bot_id,
+        bot_id=bot_id,
+        metadata=metadata,
+        request=None,
+    )
+
+    chat_id = chat_data["chat_id"]
+    client_id = chat_data["client_id"]
+
+    chat_session_data = await mongo_db.chats.find_one({"chat_id": chat_id})
+    if not chat_session_data:
+        return
+
+    chat_session = ChatSession(**chat_session_data)
+    manager = await get_ws_manager(chat_id)
+    typing_manager = await get_typing_manager(chat_id)
+    gpt_lock = gpt_task_manager.get_lock(chat_id)
+
+    data = {
+        "type": "new_message",
+        "message": message_text,
+        "sender_role": sender_role,
+        "external_id": external_id,
+        "metadata": metadata,
+    }
+
+    redis_session_key = f"chat:session:{chat_id}"
+    redis_flood_key = f"flood:{client_id}"
+
+    user_data = {
+        "platform": platform,
+        "sender_id": sender_id,
+        "external_id": external_id,
+        "client_external_id": client_external_id,
+        "metadata": metadata,
+        "is_superuser": sender_role == SenderRole.CONSULTANT,
+    }
+
+    asyncio.create_task(
+        handle_message(
+            manager=manager,
+            typing_manager=typing_manager,
+            chat_id=chat_id,
+            client_id=client_id,
+            redis_session_key=redis_session_key,
+            redis_flood_key=redis_flood_key,
+            data=data,
+            is_superuser=(sender_role == SenderRole.CONSULTANT),
+            user_language=user_language,
+            gpt_lock=gpt_lock,
+            user_data=user_data,
+        )
+    )

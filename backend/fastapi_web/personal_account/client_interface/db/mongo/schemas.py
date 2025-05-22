@@ -1,16 +1,17 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
-from datetime import datetime, time, date
+from datetime import date, datetime, time
 from typing import Any, Dict, List, Optional
 
 from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr, Field
 
-from utils.help_functions import normalize_numbers
-from integrations.panamedica.client import get_client
 from db.mongo.base.schemas import BaseValidatedModel, Photo
+from integrations.panamedica.client import get_client
+from utils.help_functions import normalize_numbers
 
-from .enums import (AccountVerificationEnum, ConditionEnum, ConsentEnum, FamilyStatusEnum, GenderEnum,
-                    RelationshipEnum, TransactionTypeEnum)
+from .enums import (AccountVerificationEnum, ConditionEnum, ConsentEnum,
+                    FamilyStatusEnum, GenderEnum, RelationshipEnum,
+                    TransactionTypeEnum)
 
 # ==========
 # Регистрация
@@ -185,7 +186,8 @@ class MainInfoSchema(BaseValidatedModel):
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    async def get_patient_id_from_crm(self, contact_data: dict) -> Optional[int]:
+    async def get_patient_id_from_crm(
+            self, contact_data: dict) -> Optional[int]:
         """
         Получает ID пациента из CRM, если он существует. Возвращает None, если не найден.
         Используется при логине или синхронизации.
@@ -657,6 +659,7 @@ class ConsentSchema(BaseValidatedModel):
 # ==========
 # Встречи
 # ==========
+
 
 class AppointmentSchema(BaseModel):
     """

@@ -1,10 +1,10 @@
 """Промпты для ИИ в приложении Знания."""
 
 AI_PROMPTS = {
-   # --------------------------------------------------
-   # 1. Анализ базы знаний и сниппетов для обновления
-   # --------------------------------------------------
-   "analyze_update_snippets_prompt": """
+    # --------------------------------------------------
+    # 1. Анализ базы знаний и сниппетов для обновления
+    # --------------------------------------------------
+    "analyze_update_snippets_prompt": """
 <<<STATIC>>>
 You are an AI assistant specialized in analyzing a knowledge base.
 Your task is to extract only the relevant existing topics, subtopics, and questions from the knowledge base that match the user's request.
@@ -102,10 +102,10 @@ If the user requests adding media:
 }})
 """,
 
-   # --------------------------------------------------
-   # 2. Промпт генерации патча для обновления базы знаний
-   # --------------------------------------------------
-   "patch_body_prompt": """
+    # --------------------------------------------------
+    # 2. Промпт генерации патча для обновления базы знаний
+    # --------------------------------------------------
+    "patch_body_prompt": """
 <<<STATIC>>>
 You are an AI assistant that generates a patch request body for updating a knowledge base.
 
@@ -185,10 +185,10 @@ Return only valid JSON. No comments, formatting, or metadata.
 {kb_snippets_text}
 """,
 
-   # --------------------------------------------------
-   # 3. Промпт генерации новой структуры базы знаний
-   # --------------------------------------------------
-   "kb_structure_prompt": """
+    # --------------------------------------------------
+    # 3. Промпт генерации новой структуры базы знаний
+    # --------------------------------------------------
+    "kb_structure_prompt": """
 <<<STATIC>>>
 You are an assistant that creates a fresh knowledge-base section from unstructured text.
 
