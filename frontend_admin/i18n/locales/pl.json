@@ -479,7 +479,10 @@
     "msgPlaygroundRejected": "Plac zabaw odrzucony",
     "unsavedChanges": "Masz niezapisane zmiany w placu zabaw!",
     "msgPatchGenerated": "Patch wygenerowany pomyślnie",
-    "msgPatchErr": "Generowanie patcha nie powiodło się"
+    "msgPatchErr": "Generowanie patcha nie powiodło się",
+    "redactTopic": "Edytuj ten temat",
+    "redactSubtopic": "Edytuj ten podtemat",
+    "redactQuestion": "Edytuj to pytanie"
   },
 
   "MainContent": {

@@ -479,7 +479,10 @@
     "msgPlaygroundRejected": "Пісочницю відхилено",
     "unsavedChanges": "У вас є незбережені зміни в пісочниці!",
     "msgPatchGenerated": "Патч успішно згенеровано",
-    "msgPatchErr": "Не вдалося згенерувати патч"
+    "msgPatchErr": "Не вдалося згенерувати патч",
+    "redactTopic": "Редагувати цю тему",
+    "redactSubtopic": "Редагувати цей підрозділ",
+    "redactQuestion": "Редагувати це питання"
   },
 
   "MainContent": {

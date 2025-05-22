@@ -480,7 +480,10 @@
     "msgPlaygroundRejected": "სათამაშო სივრცე უარყოფილია",
     "unsavedChanges": "სათამაშო სივრცეში შეუნახავი ცვლილებები გაქვთ!",
     "msgPatchGenerated": "Patch წარმატებით გენერირდა",
-    "msgPatchErr": "Patch გენერირება ვერ მოხერხდა"
+    "msgPatchErr": "Patch გენერირება ვერ მოხერხდა",
+    "redactTopic": "თემის რედაქტირება",
+    "redactSubtopic": "ქვეთემის რედაქტირება",
+    "redactQuestion": "კითხვაზე რედაქტირება"
   },
 
   "MainContent": {
