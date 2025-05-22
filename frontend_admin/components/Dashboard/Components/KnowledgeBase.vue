@@ -363,7 +363,7 @@
                         <Button
                           v-if="!isEditMode"
                           icon="pi pi-pencil"
-                          class="opacity-0 group-hover:opacity-100 transition p-button-text p-button-rounded p-button-sm"
+                          class="smooth-redact p-button-text p-button-rounded p-button-sm"
                           @click="redactElement(`topic-${topicName}`)"
                           v-tooltip.right="t('KnowledgeBase.redactTopic')"
                         />
@@ -375,7 +375,7 @@
                             <Button
                               v-if="!isEditMode"
                               icon="pi pi-pencil"
-                              class="opacity-0 group-hover:opacity-100 transition p-button-text p-button-rounded p-button-sm"
+                              class="smooth-redact p-button-text p-button-rounded p-button-sm"
                               @click="redactElement(`subtopic-${topicName}-${subtopicName}`)"
                               v-tooltip.right="t('KnowledgeBase.redactSubtopic')"
                             />
@@ -390,7 +390,7 @@
                                 <Button
                                   v-if="!isEditMode"
                                   icon="pi pi-pencil"
-                                  class="opacity-0 group-hover:opacity-100 transition p-button-text p-button-rounded p-button-sm shrink-0"
+                                  class="smooth-redact p-button-text p-button-rounded p-button-sm shrink-0"
                                   @click="redactElement(`question-${topicName}-${subtopicName}-${questionKey}`)"
                                   v-tooltip.right="t('KnowledgeBase.redactQuestion')"
                                 />
@@ -2306,5 +2306,22 @@ function csvEscape(val) {
 }
 .p-fileupload-file .p-fileupload-file-thumbnail {
   display: none !important;
+}
+</style>
+<style scoped>
+/* ─── Smooth show / hide for redact buttons ─── */
+.group .smooth-redact {
+  /* start hidden */
+  opacity: 0;
+  transform: translateY(0px);          /* tiny slide down */
+  transition:
+    opacity   300ms ease-in-out,
+    transform 300ms ease-in-out;       /* ← adjust speed as you like */
+}
+
+/* reveal on hover of ANY ancestor with .group  */
+.group:hover .smooth-redact {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>
