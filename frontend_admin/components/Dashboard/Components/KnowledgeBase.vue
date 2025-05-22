@@ -355,16 +355,45 @@
                 <div class="flex flex-1 min-h-0 overflow-y-auto" v-if="Object.keys(knowledgeBaseData.knowledge_base).length || isEditMode">
                   <!-- Read-only display if not editing -->
                   <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
-                    <div v-for="(topicValue, topicName) in filteredPlaygroundData" :key="topicName" class="mb-6">
-                      <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
+                    <div v-for="(topicValue, topicName) in filteredPlaygroundData" :key="topicName" class="mb-6 group">
+                      <div class="flex justify-between items-center">
+                        <div>
+                          <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
+                        </div>
+                        <Button
+                          v-if="!isEditMode"
+                          icon="pi pi-pencil"
+                          class="opacity-0 group-hover:opacity-100 transition p-button-text p-button-rounded p-button-sm"
+                          @click="redactElement(`topic-${topicName}`)"
+                          v-tooltip.right="t('KnowledgeBase.redactTopic')"
+                        />
+                      </div>
                       <div v-if="topicValue.subtopics">
-                        <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4">
-                          <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
+                        <div v-for="(subtopicValue, subtopicName) in topicValue.subtopics" :key="subtopicName" class="ml-4 mb-4 group">
+                          <div class="flex justify-between items-center">
+                            <h4 class="font-medium text-gray-800 dark:text-gray-300">{{ subtopicName }}</h4>
+                            <Button
+                              v-if="!isEditMode"
+                              icon="pi pi-pencil"
+                              class="opacity-0 group-hover:opacity-100 transition p-button-text p-button-rounded p-button-sm"
+                              @click="redactElement(`subtopic-${topicName}-${subtopicName}`)"
+                              v-tooltip.right="t('KnowledgeBase.redactSubtopic')"
+                            />
+                          </div>
                           <ul v-if="subtopicValue.questions" class="ml-4 list-disc text-sm text-gray-700 dark:text-gray-400">
-                            <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4">
-                              <div>
-                                <span class="font-semibold">{{ questionKey }}: </span>
-                                <span> {{ qObj.text }}</span>
+                            <li v-for="(qObj, questionKey) in subtopicValue.questions" :key="questionKey" class="mb-4 group">
+                              <div class="flex justify-between items-center gap-1">
+                                <div class="flex-col">
+                                  <span class="font-semibold">{{ questionKey }}: </span>
+                                  <span>{{ qObj.text }}</span>
+                                </div>
+                                <Button
+                                  v-if="!isEditMode"
+                                  icon="pi pi-pencil"
+                                  class="opacity-0 group-hover:opacity-100 transition p-button-text p-button-rounded p-button-sm shrink-0"
+                                  @click="redactElement(`question-${topicName}-${subtopicName}-${questionKey}`)"
+                                  v-tooltip.right="t('KnowledgeBase.redactQuestion')"
+                                />
                               </div>
                               <div v-if="qObj.files && qObj.files.length" class="mt-2 ml-2">
                                 <div v-for="(fileLink, fileIndex) in qObj.files" :key="fileIndex" class="mb-1">
@@ -818,6 +847,15 @@ const aiModels = ref([
   { label: "gemini-2.0-flash", value: "gemini-2.0-flash" },
 ]);
 
+function redactElement(elId) {
+  if (isEditMode.value) return;          // already editing
+  isEditMode.value = true;               // flip the switch
+  nextTick(() => {
+    document.getElementById(elId)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
 import AdminChat from "~/components/AdminChat.vue";
 
 const reviewOnly = ref(false);
@@ -1147,7 +1185,6 @@ function resetReadonlySearch() {
 }
 const chatUrl = isLocalhost ? `${currentFrontendUrl.value}/chats/telegram-chat` : `${currentFrontendUrl.value}/chats/telegram-chat`;
 
-
 /* generic filter → reused by both columns */
 function filterKB(dataObj, term) {
   if (!term.trim()) return dataObj;
@@ -1185,13 +1222,8 @@ function filterKB(dataObj, term) {
   return out;
 }
 
-
 /* centre-column read-only view should use the same term as the right column */
-const filteredPlaygroundData = computed(() =>
-  filterKB(knowledgeBaseData.value.knowledge_base, readonlySearchTerm.value)
-);
-
-
+const filteredPlaygroundData = computed(() => filterKB(knowledgeBaseData.value.knowledge_base, readonlySearchTerm.value));
 
 async function isImage(url) {
   try {
@@ -1206,8 +1238,6 @@ async function isImage(url) {
     return false;
   }
 }
-
-
 
 const knowledgeBaseData = ref({
   knowledge_base: {
@@ -2270,7 +2300,7 @@ function csvEscape(val) {
 }
 </script>
 
-<style >
+<style>
 .p-fileupload .p-badge {
   display: none !important;
 }

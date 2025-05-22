@@ -465,7 +465,10 @@
     "msgPlaygroundRejected": "Playground rejected",
     "unsavedChanges": "You have unsaved changes in the playground!",
     "msgPatchGenerated": "Patch generated successfully",
-    "msgPatchErr": "Patch generation failed"
+    "msgPatchErr": "Patch generation failed",
+    "redactTopic": "Redact this topic",
+    "redactSubtopic": "Redact this subtopic",
+    "redactQuestion": "Redact this question"
   },
   "MainContent": {
     "dialog": {
