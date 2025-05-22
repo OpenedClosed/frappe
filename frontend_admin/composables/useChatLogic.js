@@ -9,10 +9,8 @@ import { debounce } from "lodash";
 import { useI18n } from "#imports";
 
 export function useChatLogic(options = {}) {
-  const { isTelegram = false, locale = "en" } = options; // Переключение под Telegram при необходимости
+  const { isTelegram = false, locale = "en", chatRoles } = options; // Переключение под Telegram при необходимости
   console.log("currentChatId.value", currentChatId.value);
-  // const { t, locale } = useI18n();
-  // const toast = useToast();
 
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
@@ -46,7 +44,6 @@ export function useChatLogic(options = {}) {
 
   // WebSocket-соединение и chatId
   const websocket = ref(null);
-
 
   /**
    * Проверка, содержит ли текст ссылку (URL).
@@ -163,19 +160,20 @@ export function useChatLogic(options = {}) {
       // Determine senderId and username
       let senderId;
       let username;
+      console.log("chatRoles", chatRoles);
       console.log("roleEn", roleEn);
       if (roleEn === "Client") {
         senderId = "1234";
-        username = "Client";
+        username = chatRoles.client;
       } else if (roleEn === "AI Assistant") {
         senderId = "4321";
-        username = "AI Assistant";
+        username = chatRoles.aiAssistant;
       } else if (roleEn === "Consultant") {
         senderId = "4321";
-        username = "Consultant";
+        username = chatRoles.consultant;
       } else {
         senderId = "4321";
-        username = "Unknown";
+        username = chatRoles.unknown;
       }
 
       // Determine if the message should appear on the right (sent) or left
@@ -188,10 +186,12 @@ export function useChatLogic(options = {}) {
         console.log("sources", sources);
       }
 
+      const displayContent = `**${username}:** \n ${contentString}`;
+
       results.push({
         _id: msg._id ?? index,
         backend_id: msg.id,
-        content: contentString,
+        content: displayContent,
         senderId,
         username,
         date: formattedDate,

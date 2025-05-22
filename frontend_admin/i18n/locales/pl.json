@@ -36,7 +36,12 @@
     "client": "Klient",
     "chatFallback": "Czat {index}"
   },
-
+  "UseChatLogic": {
+    "client": "👤 Klient",
+    "aiAssistant": "🤖 Asystent AI",
+    "consultant": "👀 Konsultant",
+    "unknown": "❓ Nieznany"
+  },
   "MainLogin": {
     "title": "Zaloguj się do konta",
     "loginLabel": "Login",
@@ -375,7 +380,6 @@
     "saveDesc": "Zapisuje aktualną strukturę wiedzy jako szkic. Możesz do niego wrócić później. Szkic nie jest używany przez bota do odpowiedzi, dopóki go nie opublikujesz.",
     "publish": "Opublikuj",
     "publishDesc": "Publikuje strukturę wiedzy do głównej bazy, której bot używa do odpowiadania na pytania użytkowników. Zmiany wchodzą w życie natychmiast. Upewnij się, że struktura jest w pełni gotowa.",
-    
 
     "knowledgeBase": "Baza wiedzy",
     "knowledgeBaseDesc": "Baza wiedzy jest głównym źródłem informacji dla bota. Zawiera wszystkie tematy, podtematy i pytania, na które bot może odpowiedzieć. Możesz ją przeglądać i wyszukiwać, ale nie możesz jej bezpośrednio edytować tutaj.",
@@ -476,7 +480,6 @@
     "unsavedChanges": "Masz niezapisane zmiany w placu zabaw!",
     "msgPatchGenerated": "Patch wygenerowany pomyślnie",
     "msgPatchErr": "Generowanie patcha nie powiodło się"
-  
   },
 
   "MainContent": {

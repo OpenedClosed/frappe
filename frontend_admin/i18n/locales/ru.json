@@ -37,6 +37,12 @@
     "chatFallback": "Чат {index}"
   },
 
+  "UseChatLogic": {
+    "client": "👤 Клиент",
+    "aiAssistant": "🤖 AI-ассистент",
+    "consultant": "👀 Консультант",
+    "unknown": "❓ Неизвестно"
+  },
   "MainLogin": {
     "title": "Вход в аккаунт",
     "loginLabel": "Логин",

@@ -303,6 +303,13 @@ const textMessagesObject = computed(() => ({
   CANCEL_SELECT_MESSAGE: t("textMessages.CANCEL_SELECT_MESSAGE"),
 }));
 
+const chatRoles = computed(() => ({
+  client: t("UseChatLogic.client"),
+  aiAssistant: t("UseChatLogic.aiAssistant"),
+  consultant: t("UseChatLogic.consultant"),
+  unknown: t("UseChatLogic.unknown"),
+}));
+
 const textMessagesJson = computed(() => JSON.stringify(textMessagesObject.value));
 
 function getChatId(data) {
@@ -338,7 +345,7 @@ function initChatLogic(chat_id) {
   if (chatLogic.value && chatLogic.value.chatId === chat_id) return;
 
   // создаём новую и сразу открываем сокет внутри самого хука
-  chatLogic.value = useChatLogic({ chatId: chat_id, locale: locale.value });
+  chatLogic.value = useChatLogic({ chatId: chat_id, locale: locale.value, chatRoles: chatRoles.value });
 }
 
 const displayedRooms = ref([]);
