@@ -827,6 +827,7 @@ import cloneDeep from "lodash/cloneDeep";
 import ImageLink from "./ImageLink.vue";
 import { useI18n } from "vue-i18n"; // Добавляем i18n
 import SaveChangesDialog from "./SaveChangesDialog.vue";
+import { debounce } from 'lodash-es'
 
 const { t } = useI18n(); // Получаем функцию перевода
 const toast = useToast();
@@ -1147,43 +1148,10 @@ function toggleReadonlySearch() {
   }
 }
 
-/* ▼ Filtered readonly copy */
-const filteredReadonlyData = computed(() => {
-  const src = readonlyData.value.knowledge_base;
-  const q = readonlySearchTerm.value.trim().toLowerCase();
-  if (!q) return src;
-
-  const out = {};
-  for (const [topic, tVal] of Object.entries(src)) {
-    let topicMatch = topic.toLowerCase().includes(q);
-    const subOut = {};
-
-    for (const [sub, sVal] of Object.entries(tVal.subtopics || {})) {
-      let subMatch = sub.toLowerCase().includes(q);
-      const qsOut = {};
-
-      for (const [qKey, qObj] of Object.entries(sVal.questions || {})) {
-        const text = `${qKey} ${qObj.text || ""}`.toLowerCase();
-        if (text.includes(q)) qsOut[qKey] = qObj;
-      }
-
-      if (subMatch || Object.keys(qsOut).length) {
-        subOut[sub] = { ...sVal, questions: Object.keys(qsOut).length ? qsOut : sVal.questions };
-      }
-    }
-
-    if (topicMatch || Object.keys(subOut).length) {
-      out[topic] = { ...tVal, subtopics: Object.keys(subOut).length ? subOut : tVal.subtopics };
-    }
-  }
-  return out;
-});
-
 function resetReadonlySearch() {
   readonlySearchTerm.value = "";
   nextTick(() => readonlySearchInput.value?.focus());
 }
-const chatUrl = isLocalhost ? `${currentFrontendUrl.value}/chats/telegram-chat` : `${currentFrontendUrl.value}/chats/telegram-chat`;
 
 /* generic filter → reused by both columns */
 function filterKB(dataObj, term) {
@@ -1222,8 +1190,21 @@ function filterKB(dataObj, term) {
   return out;
 }
 
+// Debounced search term
+const debouncedSearchTerm = ref('')
+
+// Watch the raw search term and debounce it
+const updateDebouncedSearchTerm = debounce((value) => {
+  debouncedSearchTerm.value = value
+}, 300) // 300ms debounce
+
+watch(readonlySearchTerm, (newVal) => {
+  updateDebouncedSearchTerm(newVal)
+})
+
 /* centre-column read-only view should use the same term as the right column */
-const filteredPlaygroundData = computed(() => filterKB(knowledgeBaseData.value.knowledge_base, readonlySearchTerm.value));
+const filteredPlaygroundData = computed(() => filterKB(knowledgeBaseData.value.knowledge_base, debouncedSearchTerm.value));
+const filteredReadonlyData = computed(() => filterKB(readonlyData.value.knowledge_base, debouncedSearchTerm.value));
 
 async function isImage(url) {
   try {
