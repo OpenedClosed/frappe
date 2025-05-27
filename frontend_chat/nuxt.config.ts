@@ -58,8 +58,8 @@ export default defineNuxtConfig({
 
   colorMode: {
     classSuffix: "",
-    preference: "system",
-    fallback: "system",
+    preference: "light",
+    fallback: "light",
   },
 
   i18n: {
