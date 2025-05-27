@@ -55,6 +55,7 @@
       :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
       :text-messages="textMessagesJson"
+      
     >
       <div slot="room-header-avatar">
         <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
@@ -472,8 +473,18 @@ watch([chatRows], async ([rows]) => {
 onBeforeUnmount(() => chatLogic.value?.destroy?.());
 </script>
 
-<style scoped>
+<style >
 .vue-advanced-chat {
   box-shadow: none !important;
+}
+/* global stylesheet (or <style> block without "scoped") */
+.vac-image-buttons .vac-button-download {
+  display: none !important;   /* hides the ⬇️ button everywhere */
+}
+
+</style>
+<style scoped>
+:deep(.vac-button-download) {
+  display: none !important;
 }
 </style>

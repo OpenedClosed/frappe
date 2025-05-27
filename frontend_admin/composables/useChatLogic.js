@@ -101,12 +101,14 @@ export function useChatLogic(options = {}) {
       if (detectUrl(contentString)) {
         const previewData = await fetchLinkPreview(contentString);
         if (previewData?.data?.image) {
-          files.push({
-            type: "png",
-            name: "Preview",
-            url: previewData.data.image,
-            preview: previewData.data.image,
-          });
+          files
+            .filter((u) => typeof u === "string" && u.trim().length)
+            .push({
+              type: "png",
+              name: "Preview",
+              url: previewData.data.image,
+              preview: previewData.data.image,
+            });
         }
       }
       // 2. Обрабатываем attachments, пришедшие сразу в msg.files

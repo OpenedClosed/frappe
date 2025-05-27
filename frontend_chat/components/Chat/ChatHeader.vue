@@ -19,8 +19,6 @@
             style="animation-delay: 0.2s"></span>
           <span class="inline-block w-[4px] h-[4px] mx-0.5 bg-current rounded-full dot-fade"
             style="animation-delay: 0.4s"></span>
-          <span class="inline-block w-[4px] h-[4px] mx-0.5 bg-current rounded-full dot-fade"
-            style="animation-delay: 0.6s"></span>
         </p>
 
       </div>

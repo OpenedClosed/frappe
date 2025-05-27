@@ -126,7 +126,9 @@ export function useChatLogic(options = {}) {
       let files = [];
       // 2. Обрабатываем attachments, пришедшие сразу в msg.files
       if (Array.isArray(msg.files) && msg.files.length) {
-        msg.files.forEach((url, i) => {
+        msg.files
+        .filter((u) => typeof u === "string" && u.trim().length)
+        .forEach((url, i) => {
           const ext = getExtFromUrl(url);                         // jpg / png / pdf …
           files.push({
             type: ext.startsWith("image/") ? ext : "image/" + ext,
