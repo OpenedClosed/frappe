@@ -78,7 +78,13 @@
   --tw-color-black: #000000;
 }
 
-
+/* make any PrimeVue button truncate its label when it runs out of space */
+.p-button-label {
+  max-width: 100%;          /* respect the button’s current width   */
+  overflow: hidden;         /* cut off the excess characters        */
+  white-space: nowrap;      /* keep the text on one line            */
+  text-overflow: ellipsis;  /* show “…” at the cut-off              */
+}
 
 /*! wysiwyg.css v0.0.3 | MIT License | github.com/jgthms/wysiwyg.css */
 .wysiwyg {
