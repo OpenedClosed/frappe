@@ -468,7 +468,12 @@
     "msgPatchErr": "Patch generation failed",
     "redactTopic": "Redact this topic",
     "redactSubtopic": "Redact this subtopic",
-    "redactQuestion": "Redact this question"
+    "redactQuestion": "Redact this question",
+    "tabFiles": "Files",
+    "tabSite": "Site",
+    "tabText": "Text",
+    "download": "Download",
+    "delete": "Delete"
   },
   "MainContent": {
     "dialog": {

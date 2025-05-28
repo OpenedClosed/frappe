@@ -82,20 +82,7 @@
                       </div>
 
                       <!-- Actions -->
-                      <div class="flex items-center gap-1 2xl:gap-2">
-                        <div class="flex flex-col 2xl:flex-row items-center gap-1 2xl:gap-2">
-                          <Button
-                            v-if="ctx.type === 'file'"
-                            icon="pi pi-download text-xs 2xl:text-base"
-                            class="p-button-rounded p-button-text p-button-xs 2xl:p-button-sm"
-                            @click="downloadContext(ctx)"
-                          />
-                          <Button
-                            icon="pi pi-trash text-xs 2xl:text-base"
-                            class="p-button-rounded p-button-text p-button-xs 2xl:p-button-sm"
-                            @click="deleteContext(ctx.id)"
-                          />
-                        </div>
+                      <div class="flex items-center gap-2 2xl:gap-2">
                         <Dropdown
                           v-model="ctx.purpose"
                           :options="contextPurposes"
@@ -127,6 +114,13 @@
                             </div>
                           </template>
                         </Dropdown>
+                        <div class="flex items-center">
+                          <!-- Кнопка -->
+                          <Button size="medium" icon="pi pi-ellipsis-v" @click="(e) => openRowMenu(idx, ctx, e)" />
+
+                          <!-- TieredMenu -->
+                          <TieredMenu :model="source_items" popup :ref="(el) => (rowMenus[idx] = el)" />
+                        </div>
                       </div>
                     </li>
                   </ul>
@@ -827,7 +821,7 @@ import cloneDeep from "lodash/cloneDeep";
 import ImageLink from "./ImageLink.vue";
 import { useI18n } from "vue-i18n"; // Добавляем i18n
 import SaveChangesDialog from "./SaveChangesDialog.vue";
-import { debounce } from 'lodash-es'
+import { debounce } from "lodash-es";
 
 const { t } = useI18n(); // Получаем функцию перевода
 const toast = useToast();
@@ -849,11 +843,10 @@ const aiModels = ref([
 ]);
 
 function redactElement(elId) {
-  if (isEditMode.value) return;          // already editing
-  isEditMode.value = true;               // flip the switch
+  if (isEditMode.value) return; // already editing
+  isEditMode.value = true; // flip the switch
   nextTick(() => {
-    document.getElementById(elId)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById(elId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -1004,12 +997,37 @@ const MAX_SOURCES = 50;
 
 const totalSources = computed(() => contextList.value.length);
 const selectedSources = computed(() => contextList.value.filter((c) => c.purpose !== "none").length);
-
 const ctxTabs = [
-  { label: "Files", value: "file", icon: "pi pi-upload" },
-  { label: "Site", value: "url", icon: "pi pi-link" },
-  { label: "Text", value: "text", icon: "pi pi-file" },
+  { label: t("KnowledgeBase.tabFiles"), value: "file", icon: "pi pi-upload" },
+  { label: t("KnowledgeBase.tabSite"), value: "url", icon: "pi pi-link" },
+  { label: t("KnowledgeBase.tabText"), value: "text", icon: "pi pi-file" },
 ];
+
+const rowMenus = ref([]); // массив TieredMenu
+const currentCtx = ref(null); // ctx currently in focus
+const source_items = [
+  {
+    label: t('KnowledgeBase.download'),
+    icon: 'pi pi-download',
+    command() {
+      downloadContext(currentCtx.value);
+    },
+  },
+  {
+    label: t('KnowledgeBase.delete'),
+    icon: 'pi pi-trash',
+    command() {
+      deleteContext(currentCtx.value.id);
+    },
+  },
+];
+
+/* открываем меню над строкой */
+function openRowMenu(idx, ctx, event) {
+  currentCtx.value = ctx;
+  source_items[0].visible = ctx.type === "file";              // показ первой команды
+  rowMenus.value[idx]?.toggle(event);                  // ← .value[idx]
+}
 
 // Prevent opening dialog if limit is reached
 function openContextDialog() {
@@ -1191,16 +1209,16 @@ function filterKB(dataObj, term) {
 }
 
 // Debounced search term
-const debouncedSearchTerm = ref('')
+const debouncedSearchTerm = ref("");
 
 // Watch the raw search term and debounce it
 const updateDebouncedSearchTerm = debounce((value) => {
-  debouncedSearchTerm.value = value
-}, 300) // 300ms debounce
+  debouncedSearchTerm.value = value;
+}, 300); // 300ms debounce
 
 watch(readonlySearchTerm, (newVal) => {
-  updateDebouncedSearchTerm(newVal)
-})
+  updateDebouncedSearchTerm(newVal);
+});
 
 /* centre-column read-only view should use the same term as the right column */
 const filteredPlaygroundData = computed(() => filterKB(knowledgeBaseData.value.knowledge_base, debouncedSearchTerm.value));
@@ -2294,10 +2312,8 @@ function csvEscape(val) {
 .group .smooth-redact {
   /* start hidden */
   opacity: 0;
-  transform: translateY(0px);          /* tiny slide down */
-  transition:
-    opacity   300ms ease-in-out,
-    transform 300ms ease-in-out;       /* ← adjust speed as you like */
+  transform: translateY(0px); /* tiny slide down */
+  transition: opacity 300ms ease-in-out, transform 300ms ease-in-out; /* ← adjust speed as you like */
 }
 
 /* reveal on hover of ANY ancestor with .group  */

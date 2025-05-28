@@ -320,6 +320,8 @@ export function useChatLogic(options = {}) {
 
     websocket.value.onmessage = async (event) => {
       const data = JSON.parse(event.data);
+
+      if (data.chat_id && data.chat_id !== currentChatId.value) return;
       console.log("Получено сообщение:", data);
       // Показываем toast при определённых типах
       if (data.type === "attention") {

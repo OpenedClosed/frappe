@@ -34,7 +34,8 @@
     "startedAgo": "Rozpoczęto {diffDays} dni, {diffHours} godz., {diffMinutes} min temu",
     "consultant": "Konsultant",
     "client": "Klient",
-    "chatFallback": "Czat {index}"
+    "chatFallback": "Czat {index}",
+    "exportCSV": "Eksportuj czaty do CSV"
   },
   "UseChatLogic": {
     "client": "👤 Klient",
@@ -482,7 +483,12 @@
     "msgPatchErr": "Generowanie patcha nie powiodło się",
     "redactTopic": "Edytuj ten temat",
     "redactSubtopic": "Edytuj ten podtemat",
-    "redactQuestion": "Edytuj to pytanie"
+    "redactQuestion": "Edytuj to pytanie",
+    "tabFiles": "Pliki",
+    "tabSite": "Strona",
+    "tabText": "Tekst",
+    "download": "Pobierz",
+    "delete": "Usuń"
   },
 
   "MainContent": {

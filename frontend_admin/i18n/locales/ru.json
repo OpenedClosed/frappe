@@ -34,7 +34,8 @@
     "startedAgo": "Началось {diffDays} дн., {diffHours} ч, {diffMinutes} мин назад",
     "consultant": "Консультант",
     "client": "Клиент",
-    "chatFallback": "Чат {index}"
+    "chatFallback": "Чат {index}",
+    "exportCSV": "Экспортировать чаты в CSV"
   },
 
   "UseChatLogic": {
@@ -483,7 +484,12 @@
     "msgPatchErr": "Не удалось сгенерировать патч",
     "redactTopic": "Редактировать этот топик",
     "redactSubtopic": "Редактировать этот подтопик",
-    "redactQuestion": "Редактировать этот вопрос"
+    "redactQuestion": "Редактировать этот вопрос",
+    "tabFiles": "Файлы",
+    "tabSite": "Сайт",
+    "tabText": "Текст",
+     "download": "Скачать",
+    "delete": "Удалить"
   },
 
   "MainContent": {
