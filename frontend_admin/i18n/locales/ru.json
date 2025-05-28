@@ -488,8 +488,9 @@
     "tabFiles": "Файлы",
     "tabSite": "Сайт",
     "tabText": "Текст",
-     "download": "Скачать",
-    "delete": "Удалить"
+    "download": "Скачать",
+    "delete": "Удалить",
+    "uploadJson": "Загрузить JSON"
   },
 
   "MainContent": {

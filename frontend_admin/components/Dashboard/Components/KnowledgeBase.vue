@@ -630,8 +630,15 @@
                 </div>
                 <div class="flex justify-center items-center gap-4">
                   <!-- 🔍 search toggle -->
-                  <!-- 🔍 search toggle -->
                   <Button icon="pi pi-search text-xl" class="p-button-text p-button-rounded p-button-sm" @click="toggleReadonlySearch" />
+                  <div class="flex items-center gap-2">
+                    <!-- Кнопка -->
+                    <Button size="small" text icon="pi pi-ellipsis-v" @click="toggleActionMenu" />
+
+                    <!-- TieredMenu -->
+                    <TieredMenu ref="action_menu" id="action_menu" :model="action_items" popup />
+                    <input ref="fileInput" type="file" accept="application/json" class="hidden" @change="importData" />
+                  </div>
                   <i class="pi pi-info-circle text-base cursor-pointer text-xl" v-tooltip="t('KnowledgeBase.knowledgeBaseDesc')" />
                 </div>
               </header>
@@ -1007,15 +1014,15 @@ const rowMenus = ref([]); // массив TieredMenu
 const currentCtx = ref(null); // ctx currently in focus
 const source_items = [
   {
-    label: t('KnowledgeBase.download'),
-    icon: 'pi pi-download',
+    label: t("KnowledgeBase.download"),
+    icon: "pi pi-download",
     command() {
       downloadContext(currentCtx.value);
     },
   },
   {
-    label: t('KnowledgeBase.delete'),
-    icon: 'pi pi-trash',
+    label: t("KnowledgeBase.delete"),
+    icon: "pi pi-trash",
     command() {
       deleteContext(currentCtx.value.id);
     },
@@ -1025,9 +1032,23 @@ const source_items = [
 /* открываем меню над строкой */
 function openRowMenu(idx, ctx, event) {
   currentCtx.value = ctx;
-  source_items[0].visible = ctx.type === "file";              // показ первой команды
-  rowMenus.value[idx]?.toggle(event);                  // ← .value[idx]
+  source_items[0].visible = ctx.type === "file"; // показ первой команды
+  rowMenus.value[idx]?.toggle(event); // ← .value[idx]
 }
+
+const action_menu = ref();
+const action_items = [
+  {
+    label : t('KnowledgeBase.uploadJson'),
+    icon  : 'pi pi-upload',
+    command: triggerFileInput,        // ← opens the hidden <input>
+  },
+  // …whatever items you already had…
+]
+const toggleActionMenu = (event) => {
+    action_menu.value.toggle(event);
+};
+
 
 // Prevent opening dialog if limit is reached
 function openContextDialog() {

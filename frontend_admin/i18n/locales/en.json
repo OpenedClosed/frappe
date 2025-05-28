@@ -473,7 +473,8 @@
     "tabSite": "Site",
     "tabText": "Text",
     "download": "Download",
-    "delete": "Delete"
+    "delete": "Delete",
+    "uploadJson": "Upload JSON"
   },
   "MainContent": {
     "dialog": {

@@ -488,7 +488,8 @@
     "tabSite": "Strona",
     "tabText": "Tekst",
     "download": "Pobierz",
-    "delete": "Usuń"
+    "delete": "Usuń",
+    "uploadJson": "Załaduj JSON"
   },
 
   "MainContent": {

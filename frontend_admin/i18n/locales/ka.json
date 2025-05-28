@@ -488,8 +488,9 @@
     "tabFiles": "ფაილები",
     "tabSite": "ვებგვერდი",
     "tabText": "ტექსტი",
-     "download": "გადმოწერა",
-    "delete": "წაშლა"
+    "download": "გადმოწერა",
+    "delete": "წაშლა",
+    "uploadJson": "ატვირთეთ JSON"
   },
 
   "MainContent": {
