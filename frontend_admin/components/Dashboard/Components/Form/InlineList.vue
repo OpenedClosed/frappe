@@ -182,31 +182,34 @@ const { currentPageName } = usePageState()
  *  - Patch the parent with the updated array
  */
 async function deleteOneInline(index) {
-  // Optional: confirm before deleting
-  const confirmation = confirm(t('InlineList.confirmDelete'))
+  const confirmation = confirm(t('InlineList.confirmDelete'));
   if (!confirmation) return;
 
   try {
-    // Remove the item from the array
-    localItems.value.splice(index, 1);
+    // Clone the array and mark the specific item with _delete: true
+    const updatedItems = localItems.value.map((item, i) =>
+      i === index ? { ...item, _delete: true } : item
+    );
 
-    // Patch the parent with the updated array
+    // Patch the parent with the updated array (including the _delete flag)
     const patchData = {
-      [props.inlineDef.field]: [...localItems.value],
+      [props.inlineDef.field]: updatedItems,
     };
+    console.log("patchData", patchData);
 
     await nuxtApp.$api.patch(
       `api/${currentPageName.value}/${props.parentEntity}/${props.parentId}`,
       patchData
     );
 
-    alert(t('InlineList.deleted'))
+    alert(t('InlineList.deleted'));
     emit("reloadParent");
   } catch (error) {
-    console.error("Error deleting inline item:", error);
-    alert(t('InlineList.deleteError'))
+    console.error("Error marking inline item as deleted:", error);
+    alert(t('InlineList.deleteError'));
   }
 }
+
 
 /**
  * For creating a new inline item:
