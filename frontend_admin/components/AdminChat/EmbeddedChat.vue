@@ -411,7 +411,7 @@ function buildRooms(chats, consultantId) {
   };
 
   return chats.map((chat, idx) => {
-    // console.log("chatelement", chat); // For debugging: log chat data
+     console.log("chatelement", chat); // For debugging: log chat data
     const client = chat.client && chat.client[0] ? chat.client[0] : {};
     const sourceName = client.source && client.source.en ? client.source.en : t("EmbeddedChat.client");
 

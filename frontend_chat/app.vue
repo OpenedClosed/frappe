@@ -12,18 +12,18 @@ const colorMode = useColorMode();
 
 let isLocal = ref(window.location.hostname === "localhost");
 
-// function updateTheme() {
-//   colorMode.preference = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-//   const systemTheme = colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
-//   const themeLink = document.getElementById("theme-link");
-//   themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
-// }
 function updateTheme() {
-  // Force light mode
-  colorMode.preference = "light";
+  colorMode.preference = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  const systemTheme = colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
   const themeLink = document.getElementById("theme-link");
-  themeLink.setAttribute("href", "/aura-light-cyan/theme.css");
+  themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
 }
+// function updateTheme() {
+//   // Force light mode
+//   colorMode.preference = "light";
+//   const themeLink = document.getElementById("theme-link");
+//   themeLink.setAttribute("href", "/aura-light-cyan/theme.css");
+// }
 const isDarkMode = ref(window.matchMedia("(prefers-color-scheme)"));
 
 watch(isDarkMode, (newVal) => {
