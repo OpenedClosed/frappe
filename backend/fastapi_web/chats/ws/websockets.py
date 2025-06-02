@@ -16,7 +16,7 @@ from users.utils.help_functions import get_user_by_id
 
 from ..db.mongo.schemas import ChatSession
 from ..utils.help_functions import (determine_language,
-                                    get_active_chats_for_client, get_client_id)
+                                    get_active_chats_for_client, get_chat_position, get_client_id)
 from .ws_helpers import (chat_managers, get_typing_manager, get_ws_manager,
                          gpt_task_manager, websocket_jwt_required)
 
@@ -47,7 +47,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)
 
-    client_id = await get_client_id(websocket, chat_id, is_superuser)
+    client_id = await get_client_id(websocket, chat_id, is_superuser, user_id=user_id)
     user_data["client_id"] = client_id
 
     await manager.connect(websocket, client_id)

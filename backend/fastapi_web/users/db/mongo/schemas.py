@@ -5,7 +5,7 @@ from typing import Optional
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field, field_validator
 
-from db.mongo.base.schemas import BaseValidatedModel
+from db.mongo.base.schemas import BaseValidatedModel, Photo
 from db.mongo.db_init import mongo_db
 from infra import settings
 
@@ -22,10 +22,13 @@ class Settings(BaseModel):
 
 
 class User(BaseValidatedModel):
+    """Пользователь."""
     username: Optional[str] = Field(None)
     password: str = Field("", min_length=5)
     role: RoleEnum = RoleEnum.CLIENT
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    full_name: Optional[str] = Field(None)
+    avatar: Optional[Photo] = None
 
     @field_validator("username")
     def validate_username(cls, v):
@@ -64,6 +67,7 @@ class LoginSchema(BaseModel):
 
 
 class UserWithData(User):
+    """Данные пользователя."""
     data: Optional[dict] = {}
 
     async def get_email(self) -> Optional[str]:

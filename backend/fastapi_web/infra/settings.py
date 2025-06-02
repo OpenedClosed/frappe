@@ -102,6 +102,9 @@ FACEBOOK_VERIFY_TOKEN = os.getenv("FACEBOOK_VERIFY_TOKEN", "change_me")
 FACEBOOK_BUSINESS_ACCOUNT_ID = os.getenv(
     "FACEBOOK_BUSINESS_ACCOUNT_ID", "change_me")
 
+# Telegram настройки
+TELEGRAM_BOT_TOKEN = os.getenv("TOKEN", "change_me")
+TELEGRAM_BOT_ID = os.getenv("TELEGRAM_BOT_ID", "change_me")
 
 # Constructor.chat настройки
 CONSTRUCTOR_URL = "https://ai-chat-bbho.onrender.com/graphql"

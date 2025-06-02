@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from admin_core.base_admin import BaseAdmin, InlineAdmin
+from chats.db.mongo.enums import SenderRole
 from chats.utils.help_functions import get_master_client_by_id
 from crud_core.permissions import OperatorPermission
 from crud_core.registry import admin_registry
@@ -414,6 +415,20 @@ class ChatSessionAdmin(BaseAdmin):
         "client": ClientInline
     }
 
+    # async def get_queryset(
+    #     self,
+    #     filters: Optional[dict] = None,
+    #     sort_by: Optional[str] = None,
+    #     order: int = 1,
+    #     page: Optional[int] = None,
+    #     page_size: Optional[int] = None,
+    #     current_user: Optional[dict] = None
+    # ) -> List[dict]:
+    #     """Список чатов, у которых есть сообщения."""
+    #     filters = filters or {}
+    #     filters["messages"] = {"$exists": True, "$ne": []}
+    #     return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, page=page, page_size=page_size, current_user=current_user)
+
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
@@ -421,12 +436,72 @@ class ChatSessionAdmin(BaseAdmin):
         order: int = 1,
         page: Optional[int] = None,
         page_size: Optional[int] = None,
-        current_user: Optional[dict] = None
+        current_user: Optional[dict] = None,
+        format: bool = True,
     ) -> List[dict]:
-        """Список чатов, у которых есть сообщения."""
+        """Список чатов с поддержкой сортировки по updated_at и делегированием в super()."""
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
-        return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, page=page, page_size=page_size, current_user=current_user)
+
+        is_updated_at_sort = not sort_by or sort_by == "updated_at"
+
+        if not is_updated_at_sort:
+            # Используем стандартную сортировку, всё делает базовый метод
+            return await super().get_queryset(
+                filters=filters,
+                sort_by=sort_by,
+                order=order,
+                page=page,
+                page_size=page_size,
+                current_user=current_user,
+                format=format
+            )
+
+        raw_docs = await super().get_queryset(
+            filters=filters,
+            sort_by=None,
+            order=order,
+            page=None,
+            page_size=None,
+            current_user=current_user,
+            format=False
+        )
+
+
+        def get_updated_at(doc: dict) -> datetime:
+            messages = doc.get("messages") or []
+            for msg in reversed(messages):
+                sender_role = msg.get("sender_role")
+
+                if isinstance(sender_role, str):
+                    try:
+                        sender_role = json.loads(sender_role)
+                    except Exception:
+                        continue
+
+                if isinstance(sender_role, dict) and sender_role.get("en") == SenderRole.CLIENT.en_value:
+                    return msg.get("timestamp") or doc.get("last_activity") or doc.get("created_at")
+
+            return doc.get("last_activity") or doc.get("created_at")
+
+
+
+        raw_docs.sort(key=get_updated_at, reverse=(order == -1))
+
+        if page is not None and page_size:
+            start = (page - 1) * page_size
+            end = start + page_size
+            raw_docs = raw_docs[start:end]
+
+        if not format:
+            return raw_docs
+
+        return await asyncio.gather(*[
+            self.format_document(doc, current_user) for doc in raw_docs
+        ])
+
+
+
 
     async def get_status_display(self, obj: dict) -> str:
         """Статус чата (в виде JSON строки с переводами)."""

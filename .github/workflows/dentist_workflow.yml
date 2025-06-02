@@ -21,6 +21,7 @@ env:
   TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
   DEV_TOKEN: ${{ secrets.DEV_TOKEN }}
   TOKEN: ${{ secrets.TOKEN }}
+  ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
   CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
 
   WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
@@ -235,6 +236,7 @@ jobs:
             SERVICE_NAME=${{ env.SERVICE_NAME }}
             BOT_LINK=${{ env.BOT_LINK }}
             TOKEN=$([ "${{ env.ENV }}" = "prod" ] && echo '${{ secrets.TOKEN }}' || echo '${{ secrets.DEV_TOKEN }}')
+            ADMIN_CHAT_ID=${{ env.ADMIN_CHAT_ID }}
             CERTBOT_EMAIL=${{ env.CERTBOT_EMAIL }}
             WEATHER_API_KEY=${{ env.WEATHER_API_KEY }}
             INSTAGRAM_ACCESS_TOKEN=${{ env.INSTAGRAM_ACCESS_TOKEN }}

@@ -561,6 +561,7 @@ async def get_context_entry_content(entry: "ContextEntry") -> str:
 
 
 def normalize_snippets_structure(result: dict) -> List[dict]:
+    """Нормализация структуры сниппетов."""
     norm = []
     for t in result.get("topics", []):
         if not isinstance(t, dict) or not isinstance(t.get("topic"), str):

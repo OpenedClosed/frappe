@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 from chats.db.mongo.enums import ChatSource, SenderRole
 from chats.integrations.meta.meta import process_meta_message
+from integrations.basic.handlers import process_integration_message
 
 
 def parse_facebook_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -65,7 +66,7 @@ async def process_facebook_message(
     user_language: str,
 ):
     """Обрабатывает сообщение из Facebook и передаёт его в систему чатов."""
-    await process_meta_message(
+    await process_integration_message(
         platform="facebook",
         chat_source=ChatSource.FACEBOOK,
         sender_id=sender_id,

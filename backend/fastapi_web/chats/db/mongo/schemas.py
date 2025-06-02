@@ -70,6 +70,7 @@ class MasterClient(BaseValidatedIdModel):
     name: str | None = None
     avatar_url: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    user_id: Optional[str] = None
     created_at: datetime
 
 
@@ -104,6 +105,16 @@ class ChatSession(BaseValidatedModel):
     admin_marker: bool = False
     constructor_chat_id: Optional[str] = None
     read_state: Optional[List[ChatReadInfo]] = Field(default_factory=list)
+
+    @property
+    def updated_at(self) -> datetime:
+        """Дата последнего сообщения в чате (или last_activity/created_at)."""
+        if self.messages:
+            return self.messages[-1].timestamp
+        if self.last_activity:
+            return self.last_activity
+        return self.created_at
+
 
     def get_client_id(self) -> str:
         """Возвращает client_id клиента (external_id больше не хранится здесь)."""

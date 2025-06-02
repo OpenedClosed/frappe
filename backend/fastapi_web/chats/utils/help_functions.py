@@ -9,9 +9,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from bson import ObjectId
 import httpx
 from fastapi import Request, WebSocket
 from pymongo import DESCENDING
+from users.db.mongo.schemas import UserWithData
 from telegram_bot.infra import settings as bot_settings
 
 from chats.db.mongo.enums import ChatSource, ChatStatus, SenderRole
@@ -69,7 +71,7 @@ async def generate_client_id(
         pass
 
     if external_id and external_id != "anonymous":
-        return f"{chat_source_value}_{external_id}"
+        return f"{chat_source_value.upper()}_{external_id}"
 
     if not isinstance(source, (Request, WebSocket)):
         raise ValueError("Invalid source type. Must be Request or WebSocket.")
@@ -89,8 +91,12 @@ async def generate_client_id(
     return f"{chat_source_value.upper()}_{short_hash}"
 
 
-async def get_client_id(websocket: WebSocket, chat_id: str,
-                        is_superuser: bool) -> str:
+async def get_client_id(
+    websocket: WebSocket,
+    chat_id: str,
+    is_superuser: bool,
+    user_id: Optional[str] = None
+) -> str:
     """Возвращает client_id для пользователя чата."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
@@ -104,11 +110,13 @@ async def get_client_id(websocket: WebSocket, chat_id: str,
     if not chat_session.client:
         return ""
 
-    master = await get_master_client_by_id(chat_session.client.client_id)
-    if master:
-        return master.external_id or master.client_id
+    base_client_id = await generate_client_id(websocket)
 
-    return chat_session.client.client_id
+    if user_id:
+        return f"{user_id}:{base_client_id}"
+
+    return base_client_id
+
 
 # ==============================
 # БЛОК: Работа с MasterClient
@@ -134,6 +142,7 @@ async def get_or_create_master_client(
     name: Optional[str] = None,
     avatar_url: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
+    user_id: Optional[str] = None,
 ) -> MasterClient:
     """Возвращает существующего или создаёт нового MasterClient."""
     col = mongo_db.clients
@@ -156,6 +165,9 @@ async def get_or_create_master_client(
             lang = metadata.get("user_language")
             if lang and lang != doc.get("metadata", {}).get("user_language"):
                 update_fields["metadata.user_language"] = lang
+        if user_id and user_id != doc.get("user_id"):
+            update_fields["user_id"] = user_id
+
         if update_fields:
             await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
             doc = await col.find_one({"_id": doc["_id"]})
@@ -177,10 +189,12 @@ async def get_or_create_master_client(
         avatar_url=avatar_url,
         metadata=safe_meta,
         created_at=datetime.utcnow(),
+        user_id=user_id
     )
 
     await col.insert_one(client.dict(exclude={"id"}))
     return client
+
 
 # ==============================
 # БЛОК: Работа с сообщениями
@@ -203,47 +217,95 @@ def find_last_bot_message(chat_session: ChatSession) -> Optional[ChatMessage]:
 # ==============================
 
 
-async def send_message_to_bot(
-        chat_id: str, chat_session: Dict[str, Any]) -> None:
-    """Отправляет информацию о чате в админ‑бот."""
+async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> None:
+    """Отправляет информацию о чате в админ-бот."""
     if settings.HOST == "localhost":
         return
 
     bot_webhook_url = "http://bot:9999/webhook/send_message"
-    admin_chat_url = (
-        f"https://{settings.HOST}/admin/chats/chat_sessions/{chat_id}?isForm=false"
-    )
+    # bot_webhook_url = "http://0.0.0.0:9999/webhook/send_message"
+    admin_chat_url = f"https://{settings.HOST}/admin/chats/chat_sessions"
 
     def dt_iso(value: Any) -> str:
-        return value.isoformat() if isinstance(value, datetime) else str(value)
+        if isinstance(value, datetime):
+            value = value.astimezone(timezone.utc).replace(microsecond=0)
+            return value.isoformat() + " UTC+0"
+        return str(value)
 
-    message_text = (
-        "\n".join(
-            [
-                "🚨 <b>Chat Alert</b> 🚨",
-                "",
-                f"<b>Chat ID</b>: {chat_session['chat_id']}",
-                f"<b>Client ID</b>: {chat_session['client']['client_id']}",
-                f"<b>Created At</b>: {dt_iso(chat_session['created_at'])}",
-                f"<b>Last Activity</b>: {dt_iso(chat_session['last_activity'])}",
-                f"<b>Manual Mode</b>: {'Enabled' if chat_session['manual_mode'] else 'Disabled'}",
-                f"<b>Messages Count</b>: {len(chat_session['messages'])}",
-                f"<b>Brief Answers Count</b>: {len(chat_session['brief_answers'])}",
-                "",
-                f"📎 <a href='{admin_chat_url}'>View Chat in Admin Panel</a>",
-            ]
-        )
+    def is_client_sender(m: dict) -> bool:
+        try:
+            return json.loads(m.get("sender_role", "{}")).get("en") == SenderRole.CLIENT.en_value
+        except (json.JSONDecodeError, AttributeError):
+            return False
+
+    def get_ru_source_label(source_field: Any) -> str:
+        try:
+            parsed = json.loads(source_field) if isinstance(source_field, str) else source_field
+            return parsed.get("ru", "—")
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            return "—"
+
+    client = chat_session.get("client") or {}
+    client_id = client.get("client_id", "❌ Неизвестен")
+    external_id = chat_session.get("external_id") or "—"
+    messages = chat_session.get("messages", [])
+
+    last_client_message = next(
+        (m for m in reversed(messages) if is_client_sender(m) and m.get("message")),
+        None
     )
+    last_message_text = last_client_message["message"] if last_client_message else "—"
 
-    async with httpx.AsyncClient() as client:
-        await client.post(
-            bot_webhook_url,
-            json={
-                "chat_id": bot_settings.ADMIN_CHAT_ID,
-                "text": message_text,
-                "parse_mode": "HTML",
-            },
-        )
+    try:
+        position, total = await get_chat_position(chat_session["chat_id"])
+    except Exception:
+        position, total = -1, -1
+
+    position_display = f"{position} из {total}" if position > 0 else "не определена"
+
+    try:
+        master_client = await get_master_client_by_id(client_id) if client_id else None
+        master_external_id = master_client.external_id if master_client and master_client.external_id else "—"
+        master_source = get_ru_source_label(master_client.source) if master_client and master_client.source else "—"
+    except Exception:
+        master_external_id = master_source = "—"
+
+    message_text = f"""
+<b>🆘 Новый чат</b>
+
+🆔 <b>Чат ID:</b> {chat_session["chat_id"]}
+🔗 <b>External ID:</b> {external_id}
+👤 <b>Клиент ID:</b> {client_id}
+📡 <b>Источник:</b> {master_source}
+🤖 <b>Ручной режим:</b> {"✅ Включен" if chat_session.get("manual_mode") else "❌ Выключен"}
+💬 <b>Сообщений:</b> {len(messages)}
+📅 <b>Создан:</b> {dt_iso(chat_session.get("created_at"))}
+🕒 <b>Последняя активность:</b> {dt_iso(chat_session.get("last_activity"))}
+📊 <b>Позиция в очереди:</b> {position_display}
+
+🗣️ <b>Последнее сообщение клиента:</b>
+{last_message_text}
+
+🔍 <a href="{admin_chat_url}">Открыть чат в админке</a>
+""".strip()
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                bot_webhook_url,
+                json={
+                    "chat_id": bot_settings.ADMIN_CHAT_ID,
+                    "text": message_text,
+                    "parse_mode": "HTML",
+                },
+                timeout=10.0
+            )
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        logging.error(f"Ошибка от бота ({exc.response.status_code}): {exc.response.text}")
+    except Exception:
+        logging.exception("Ошибка при отправке сообщения в бот")
+
 
 # ==============================
 # БЛОК: Работа с чатами клиента
@@ -283,6 +345,37 @@ async def serialize_active_chat(chat_data: dict, ttl: int) -> Dict[str, Any]:
         "remaining_time": ttl,
         "status": ChatSession(**chat_data).compute_status(ttl).value,
     }
+
+
+async def get_chat_position(chat_id: str) -> tuple[int, int]:
+    """Определяет позицию чата в очереди по последнему сообщению клиента без использования админки."""
+    query = {"messages": {"$exists": True, "$ne": []}}
+    all_chats = [chat async for chat in mongo_db.chats.find(query)]
+
+    def get_updated_at(doc: dict) -> datetime:
+        messages = doc.get("messages") or []
+        for msg in reversed(messages):
+            try:
+                sender_role = msg.get("sender_role")
+                if isinstance(sender_role, str):
+                    sender_role = json.loads(sender_role)
+                if isinstance(sender_role, dict) and sender_role.get("en") == SenderRole.CLIENT.en_value:
+                    return msg.get("timestamp")
+            except Exception:
+                continue
+        return doc.get("last_activity") or doc.get("created_at")
+
+    all_chats.sort(key=get_updated_at, reverse=True)
+
+
+    chat_ids = [chat.get("chat_id") for chat in all_chats]
+    try:
+        position = chat_ids.index(chat_id) + 1
+    except ValueError:
+        position = -1
+
+    return position, len(chat_ids)
+
 
 
 # ==============================
@@ -376,6 +469,57 @@ async def handle_chat_creation(
         "client_id": client_id,
         "status": ChatStatus.IN_PROGRESS.value,
     }
+
+
+def is_valid_object_id(oid: str) -> bool:
+    """Получить информацию об отправителях (мастер-клиент + user_data)."""
+    if not isinstance(oid, str):
+        return False
+    try:
+        ObjectId(oid)
+        return True
+    except Exception:
+        return False
+
+async def build_sender_data_map(messages: list[dict]) -> dict[str, dict[str, Any]]:
+    """Получить информацию об отправителях (мастер-клиент + user_data)."""
+    sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
+    if not sender_ids:
+        return {}
+
+    # Получаем MasterClient
+    master_docs = await mongo_db.clients.find({"client_id": {"$in": list(sender_ids)}}).to_list(None)
+    masters = {d["client_id"]: MasterClient(**d) for d in master_docs}
+
+    # Загружаем всех пользователей одним запросом
+    valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
+    user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
+    users = {str(u["_id"]): u for u in user_docs}
+
+    sender_data_map = {}
+
+    for client_id, master in masters.items():
+        data = {
+            "name": master.name,
+            "avatar_url": master.avatar_url,
+            "source": master.source.en_value,
+            "external_id": master.external_id,
+            "metadata": master.metadata,
+            "client_id": master.client_id,
+        }
+
+        if master.user_id and is_valid_object_id(master.user_id):
+            user_doc = users.get(master.user_id)
+            if user_doc:
+                user_doc["_id"] = str(user_doc["_id"])
+                user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
+                user_data = await user_data_obj.get_full_user_data()
+                data["user"] = user_data
+
+        sender_data_map[client_id] = data
+
+    return sender_data_map
+
 
 # ==============================
 # БЛОК: Read-state
@@ -701,16 +845,33 @@ def format_value(field_name: str, value: Any) -> str:
 # БЛОК: Вспомогательный текст
 # ==============================
 
+
 def split_text_into_chunks(text: str, max_length: int = 998) -> List[str]:
-    """Делит текст на части по предложениям, не обрывая числовые списки."""
+    """Делит текст на части по предложениям, не обрывая числовые списки и не теряя хвост."""
+
     pattern = re.compile(
-        r"(?<!\d)(.*?[.!?…:;]+[)\]\"»”’…\s\w]*)(?=\n|\s|$)",
+        r"""
+        (            # начало группы
+            (?:      # не захватываем вложенную группу
+                (?!\d+\.\s)  # НЕ числовой список (например, 1. пункт)
+                .*?
+            )
+            [.!?…:;]+           # финальный знак окончания предложения
+            [)\]"»”’\s\w]*      # возможные закрывающие символы и пробелы
+        )
+        (?=\s+|$)    # за которым идёт пробел или конец строки
+        """,
         re.VERBOSE | re.DOTALL,
     )
-    sentences = pattern.findall(text) or [text]
+
+    matches = pattern.findall(text)
+    unmatched_tail = text[len("".join(matches)):]
+
+    if unmatched_tail.strip():
+        matches.append(unmatched_tail)
 
     chunks, chunk = [], ""
-    for sentence in sentences:
+    for sentence in matches:
         if len(chunk) + len(sentence) <= max_length:
             chunk += sentence
         else:
@@ -719,15 +880,32 @@ def split_text_into_chunks(text: str, max_length: int = 998) -> List[str]:
             chunk = sentence
     if chunk.strip():
         chunks.append(chunk.rstrip())
+
     return chunks
 
 
 def clean_markdown(text: str) -> str:
-    """Удаляет markdown-форматирование, оставляя чистый текст."""
+    """Удаляет Markdown и преобразует ссылки в текст (url), если текст ≠ url."""
     if not text:
         return ""
 
-    text = re.sub(r"\[([^\]]+)\]\((https?://[^\)]+)\)", r"\1", text)
+    def link_replacer(match):
+        label, url = match.group(1).strip(), match.group(2).strip()
+        if not url.startswith("http"):
+            return label
+        if not label:
+            return url
+        if label == url:
+            return url
+        return f"{label} ({url})"
+
+
+    text = re.sub(
+        r"\[\s*([^\]]*?)\s*\]\s*\(\s*(https?:\/\/[^\s)]+)\s*\)",
+        link_replacer,
+        text,
+    )
+
     text = re.sub(r"^\s*#{1,6}\s*", "", text, flags=re.MULTILINE)
     text = re.sub(r"```[\s\S]*?```", "", text)
     text = re.sub(r"`([^`]*)`", r"\1", text)
@@ -737,12 +915,25 @@ def clean_markdown(text: str) -> str:
     text = re.sub(r"__([^_]+)__", r"\1", text)
     text = re.sub(r"\*([^*]+)\*", r"\1", text)
     text = re.sub(r"_([^_]+)_", r"\1", text)
-    text = re.sub(r"~([^~]+)~", r"\1", text)
+    text = re.sub(r"~+([^~]+?)~+", r"\1", text)
+
     text = re.sub(r"^\s*[-*+•]\s+", "", text, flags=re.MULTILINE)
     text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE)
     text = re.sub(r"\n{2,}", "\n", text)
     text = re.sub(r"[ \t]+", " ", text)
+
+    text = re.sub(
+        r"(?<!\w)([a-zA-Z0-9\-._~:/?#@!$&'()*+,;=]{5,})\s*\(\s*(https?://[^\s)]+)\s*\)",
+        lambda m: m.group(2)
+        if m.group(1).rstrip('/').lower() in m.group(2).rstrip('/').lower()
+        else m.group(0),
+        text,
+    )
+
     return text.strip()
+
+
+
 
 # ==============================
 # БЛОК: Обработка сообщения пользователя

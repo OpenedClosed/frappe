@@ -5,14 +5,14 @@ from typing import Any, Dict, List
 
 import aiohttp
 
+from chats.integrations.basic.handlers import process_integration_message
 from chats.db.mongo.enums import ChatSource, SenderRole
-from chats.integrations.meta.meta import process_meta_message
 from infra import settings
 
 
 def parse_instagram_payload(payload: dict) -> List[dict]:
     """Преобразует веб-хук Instagram/Messenger в унифицированный список сообщений."""
-    msgs: List[dict] = []
+    msgs: List[dict] = [] 
 
     for entry in payload.get("entry", []):
         for ev in entry.get("messaging", []):
@@ -59,8 +59,7 @@ async def process_instagram_message(
     external_id: str,
     user_language: str,
 ):
-    """Обрабатывает сообщение из Instagram и передаёт его в систему чатов."""
-    await process_meta_message(
+    await process_integration_message(
         platform="instagram",
         chat_source=ChatSource.INSTAGRAM,
         sender_id=sender_id,
@@ -72,6 +71,7 @@ async def process_instagram_message(
         external_id=external_id,
         user_language=user_language,
     )
+
 
 
 async def get_instagram_user_profile(psid: str) -> dict:

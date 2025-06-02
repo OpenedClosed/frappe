@@ -16,17 +16,14 @@ from chats.utils.commands import COMMAND_HANDLERS, command_handler
 from chats.utils.help_functions import get_master_client_by_id
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
-from gemini_base.gemini_init import gemini_client
 from infra import settings
 from knowledge.db.mongo.schemas import Answer, Subtopic, Topic
 from knowledge.utils.help_functions import (build_messages_for_model,
                                             collect_kb_structures_from_context,
                                             get_knowledge_base,
-                                            merge_external_structures,
-                                            pick_model_and_client)
-from openai_base.openai_init import openai_client
+                                            merge_external_structures)
 from users.db.mongo.enums import RoleEnum
-from utils.help_functions import split_prompt_parts, try_parse_json
+from utils.help_functions import try_parse_json
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
@@ -38,7 +35,7 @@ from ..utils.help_functions import (chat_generate_any, clean_markdown,
                                     get_bot_context, get_weather_by_address,
                                     send_message_to_bot,
                                     split_text_into_chunks,
-                                    update_read_state_for_client)
+                                    update_read_state_for_client, get_or_create_master_client, build_sender_data_map)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
@@ -151,6 +148,7 @@ async def save_message_to_db(
 async def broadcast_message(
         manager: Any, chat_session: ChatSession, new_msg: ChatMessage) -> None:
     """Отправляет новое сообщение в чат."""
+
     payload = custom_json_dumps({
         "type": "new_message",
         "id": new_msg.id,
@@ -177,10 +175,12 @@ async def save_and_broadcast_new_message(
     """Сохраняет сообщение, отправляет в чат и Redis, и реплицирует во внешние сервисы."""
     await save_message_to_db(chat_session, new_msg)
     await broadcast_message(manager, chat_session, new_msg)
+
     await redis_db.set(
         redis_key_session, "1",
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
+
     if new_msg.sender_role != SenderRole.AI:
         await update_read_state_for_client(
             chat_id=chat_session.chat_id,
@@ -188,8 +188,10 @@ async def save_and_broadcast_new_message(
             user_id=None,
             last_read_msg=new_msg.id
         )
+
     if new_msg.sender_role != SenderRole.CLIENT:
-        await send_message_to_external_meta_channel(chat_session, new_msg)
+        await replicate_message_to_external_channel(chat_session, new_msg)
+
     try:
         await push_to_constructor(chat_session, [new_msg])
     except Exception:
@@ -197,15 +199,15 @@ async def save_and_broadcast_new_message(
 
 
 # ==============================
-# БЛОК: Интеграция с Meta
+# БЛОК: Интеграции чатов
 # ==============================
 
 
-async def send_message_to_external_meta_channel(
+async def replicate_message_to_external_channel(
     chat_session: ChatSession,
     new_msg: ChatMessage
 ) -> None:
-    """Отправляет сообщение в Instagram, WhatsApp или Facebook."""
+    """Отправляет сообщение во внешний чат (Telegram, Instagram, WhatsApp, Facebook)."""
 
     source = chat_session.client.source
     client_id = chat_session.client.client_id
@@ -215,20 +217,29 @@ async def send_message_to_external_meta_channel(
         return
 
     external_id = master_client.external_id
+    if not external_id:
+        return
+
     is_echo = new_msg.metadata.get("is_echo") if new_msg.metadata else False
-    has_external_id = new_msg.metadata.get("message_id") if new_msg.metadata else False or new_msg.external_id
+    has_external_id = (
+        new_msg.metadata.get("message_id") if new_msg.metadata else False
+    ) or new_msg.external_id
+
     en_source_name = json.loads(source).get("en")
 
     # Loop protection
-    if any(en_source_name == s.en_value for s in [
-        ChatSource.INSTAGRAM, ChatSource.FACEBOOK, ChatSource.WHATSAPP
-    ]) and has_external_id:
+    if en_source_name in {
+        ChatSource.INSTAGRAM.en_value,
+        ChatSource.FACEBOOK.en_value,
+        ChatSource.WHATSAPP.en_value,
+    } and has_external_id:
         return
 
     send_func_map = {
         ChatSource.INSTAGRAM.en_value: send_instagram_message,
         ChatSource.WHATSAPP.en_value: send_whatsapp_message,
         ChatSource.FACEBOOK.en_value: send_facebook_message,
+        ChatSource.TELEGRAM.en_value: send_telegram_message,
     }
 
     send_func = send_func_map.get(en_source_name)
@@ -236,6 +247,7 @@ async def send_message_to_external_meta_channel(
         return
 
     message_id = await send_func(external_id, new_msg)
+
     if message_id:
         await mongo_db.chats.update_one(
             {"chat_id": chat_session.chat_id, "messages.id": new_msg.id},
@@ -244,49 +256,64 @@ async def send_message_to_external_meta_channel(
 
 
 # ==============================
+# Meta
+# ==============================
+
+# ==============================
 # Instagram
 # ==============================
 
 
 async def send_instagram_message(
-        recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
-    """Отправляет сообщение в Instagram Direct."""
+    recipient_id: str, message_obj: ChatMessage
+) -> Optional[str]:
+    """Отправляет сообщение в Instagram Direct, разбивая текст и убирая Markdown."""
     url = "https://graph.instagram.com/v22.0/me/messages"
     headers = {
         "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
 
-    text = message_obj.message.strip()
+    raw_text = (message_obj.message or "").strip()
     files = message_obj.files or []
     first_file = None  # files[0] if files else None
 
-    if first_file:
-        payload = {
-            "recipient": {"id": recipient_id},
-            "message": {
-                "attachment": {
-                    "type": "image",
-                    "payload": {"url": first_file, "is_reusable": False}
-                },
-                "text": text,
-                "metadata": "broadcast"
-            }
-        }
-    else:
-        payload = {
-            "recipient": {"id": recipient_id},
-            "message": {"text": text, "metadata": "broadcast"}
-        }
+    cleaned_text = clean_markdown(raw_text)
+
+    text_chunks = split_text_into_chunks(cleaned_text)
 
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("message_id")
+            if first_file:
+                payload_image = {
+                    "recipient": {"id": recipient_id},
+                    "message": {
+                        "attachment": {
+                            "type": "image",
+                            "payload": {"url": first_file, "is_reusable": False}
+                        },
+                        "metadata": "broadcast"
+                    }
+                }
+                resp = await client.post(url, headers=headers, json=payload_image)
+                resp.raise_for_status()
+
+            message_id = None
+            for i, chunk in enumerate(text_chunks):
+                payload_text = {
+                    "recipient": {"id": recipient_id},
+                    "message": {
+                        "text": chunk,
+                        "metadata": "broadcast"
+                    }
+                }
+                response = await client.post(url, json=payload_text, headers=headers)
+                response.raise_for_status()
+                message_id = response.json().get("message_id")
+
+            return message_id
         except Exception as exc:
-            logging.error(f"Instagram send error: {exc}")
+            logging.exception(f"❌ Ошибка при отправке сообщения в Instagram: {exc}")
             return None
 
 
@@ -294,8 +321,8 @@ async def send_instagram_message(
 
 # async def send_instagram_message(recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
 #     """
-#     Отправляет фото (если есть) и текст (если есть) в Instagram Direct.
-#     Фото и подпись отправляются отдельными сообщениями.
+#     Отправляет фото (если есть) и текст (если есть) в Instagram Direct через Facebook Graph API.
+#     Фото и подпись отправляются отдельными сообщениями. Markdown очищается, текст разбивается.
 #     """
 #     url = f"https://graph.facebook.com/v22.0/{settings.APPLICATION_PAGE_ID}/messages"
 #     access_token = settings.APPLICATION_ACCESS_TOKEN
@@ -305,9 +332,12 @@ async def send_instagram_message(
 #         "Content-Type": "application/json"
 #     }
 #
-#     text = message_obj.message.strip()
+#     raw_text = message_obj.message.strip()
 #     files = message_obj.files or []
 #     image_url = files[0] if files else None
+#
+#     cleaned_text = clean_markdown(raw_text)
+#     text_chunks = split_text_into_chunks(cleaned_text)
 #
 #     async with httpx.AsyncClient() as client:
 #         try:
@@ -326,19 +356,23 @@ async def send_instagram_message(
 #                 }
 #                 await client.post(url, headers=headers, json=payload_image)
 #
-#             if text:
+#             message_id = None
+#             for chunk in text_chunks:
 #                 payload_text = {
 #                     "recipient": {"id": recipient_id},
 #                     "message": {
-#                         "text": text
+#                         "text": chunk
 #                     }
 #                 }
 #                 response = await client.post(url, headers=headers, json=payload_text)
 #                 response.raise_for_status()
-#                 return response.json().get("message_id")
+#                 message_id = response.json().get("message_id")
+#
+#             return message_id
 #         except Exception as exc:
 #             logging.error(f"IG send error: {exc}")
 #     return None
+
 
 
 # ==============================
@@ -418,6 +452,34 @@ async def send_facebook_message(
             logging.error(f"Facebook send error: {exc}")
             return None
 
+# ==============================
+# Telegram
+# ==============================
+
+async def send_telegram_message(
+    recipient_id: str,
+    message_obj: ChatMessage
+) -> Optional[str]:
+    """Отправляет сообщение в Telegram через вебхук в контейнере bot."""
+    url = "http://bot:9999/webhook/send_message"
+    # url = "http://0.0.0.0:9999/webhook/send_message"
+    payload = {
+        "chat_id": recipient_id,
+        "text": message_obj.message,
+        "parse_mode": "HTML",
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, timeout=10.0)
+            response.raise_for_status()
+            data = response.json()
+
+            return data.get("message_id")
+    except Exception as e:
+        logging.exception(f"❌ Ошибка при отправке в Telegram: {e}")
+        return None
+
 
 # ==============================
 # БЛОК: Основные хэндлеры (статус, идентификация)
@@ -479,6 +541,76 @@ async def handle_get_my_id(
 # Получение всех сообщений
 # ==============================
 
+# async def handle_get_messages(
+#     manager: ConnectionManager,
+#     chat_id: str,
+#     redis_key_session: str,
+#     data: dict,
+#     user_data: dict
+# ) -> bool:
+#     """Отдаёт историю чата и, при наличии with_enter=True, фиксирует прочтение текущим клиентом."""
+#     chat_data: dict | None = await mongo_db.chats.find_one({"chat_id": chat_id})
+#     if not chat_data:
+#         await manager.broadcast(custom_json_dumps({
+#             "type": "get_messages",
+#             "messages": [],
+#             "remaining_time": 0,
+#             "message": "No chat found."
+#         }))
+#         return False
+
+#     messages: list[dict] = chat_data.get("messages", [])
+#     messages.sort(key=lambda m: m.get("timestamp"))
+
+#     if not messages:
+#         remaining = max(await redis_db.ttl(redis_key_session), 0)
+#         await manager.broadcast(custom_json_dumps({
+#             "type": "get_messages",
+#             "messages": [],
+#             "remaining_time": remaining
+#         }))
+#         return False
+
+#     last_id = messages[-1]["id"]
+#     client_id = user_data["client_id"]
+#     user_id = user_data.get("user_id")
+
+#     if data.get("with_enter"):
+#         await update_read_state_for_client(
+#             chat_id=chat_id,
+#             client_id=client_id,
+#             user_id=user_id,
+#             last_read_msg=last_id
+#         )
+
+#     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
+#     read_state_raw = chat_data.get("read_state", [])
+#     read_state: list[ChatReadInfo] = [
+#         ChatReadInfo(**ri) if isinstance(ri, dict) else ri
+#         for ri in read_state_raw
+#     ]
+
+#     idx = {m["id"]: i for i, m in enumerate(messages)}
+#     enriched: list[dict] = []
+
+#     for m in messages:
+#         readers = [
+#             ri.client_id
+#             for ri in read_state
+#             if idx.get(ri.last_read_msg, -1) >= idx[m["id"]]
+#         ]
+#         m["read_by"] = readers
+#         enriched.append(m)
+
+#     remaining = max(await redis_db.ttl(redis_key_session), 0)
+#     await manager.broadcast(custom_json_dumps({
+#         "type": "get_messages",
+#         "messages": enriched,
+#         "remaining_time": remaining
+#     }))
+
+#     return True
+
 async def handle_get_messages(
     manager: ConnectionManager,
     chat_id: str,
@@ -487,7 +619,7 @@ async def handle_get_messages(
     user_data: dict
 ) -> bool:
     """Отдаёт историю чата и, при наличии with_enter=True, фиксирует прочтение текущим клиентом."""
-    chat_data: dict | None = await mongo_db.chats.find_one({"chat_id": chat_id})
+    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
         await manager.broadcast(custom_json_dumps({
             "type": "get_messages",
@@ -497,9 +629,7 @@ async def handle_get_messages(
         }))
         return False
 
-    messages: list[dict] = chat_data.get("messages", [])
-    messages.sort(key=lambda m: m.get("timestamp"))
-
+    messages = sorted(chat_data.get("messages", []), key=lambda m: m.get("timestamp"))
     if not messages:
         remaining = max(await redis_db.ttl(redis_key_session), 0)
         await manager.broadcast(custom_json_dumps({
@@ -510,7 +640,7 @@ async def handle_get_messages(
         return False
 
     last_id = messages[-1]["id"]
-    client_id = user_data["client_id"]
+    client_id = user_data.get("client_id")
     user_id = user_data.get("user_id")
 
     if data.get("with_enter"):
@@ -527,10 +657,11 @@ async def handle_get_messages(
         ChatReadInfo(**ri) if isinstance(ri, dict) else ri
         for ri in read_state_raw
     ]
-
     idx = {m["id"]: i for i, m in enumerate(messages)}
-    enriched: list[dict] = []
 
+    sender_data_map = await build_sender_data_map(messages)
+
+    enriched: list[dict] = []
     for m in messages:
         readers = [
             ri.client_id
@@ -538,6 +669,11 @@ async def handle_get_messages(
             if idx.get(ri.last_read_msg, -1) >= idx[m["id"]]
         ]
         m["read_by"] = readers
+
+        sender_id = m.get("sender_id")
+        if sender_id and sender_id in sender_data_map:
+            m["sender_data"] = sender_data_map[sender_id]
+
         enriched.append(m)
 
     remaining = max(await redis_db.ttl(redis_key_session), 0)
@@ -546,8 +682,8 @@ async def handle_get_messages(
         "messages": enriched,
         "remaining_time": remaining
     }))
-
     return True
+
 
 
 # ==============================
@@ -572,7 +708,7 @@ async def handle_new_message(
     msg_text = data.get("message", "")
     reply_to = data.get("reply_to")
     external_id = data.get("external_id")
-    metadata = data.get("metadata")
+    metadata = data.get("metadata", {})
 
     if is_superuser:
         await handle_superuser_message(manager, client_id, chat_id, msg_text, metadata, reply_to, redis_key_session, user_language)
@@ -1091,6 +1227,21 @@ async def handle_superuser_message(
         await broadcast_error(manager, client_id, chat_id, get_translation("errors", "invalid_chat_data", user_language))
         return
 
+    if ":" in client_id:
+        user_id, base_id = client_id.split(":", 1)
+    else:
+        user_id, base_id = client_id, client_id
+
+    await get_or_create_master_client(
+        source=ChatSource.INTERNAL,
+        external_id=client_id,
+        internal_client_id=client_id,
+        name=metadata.get("name"),
+        avatar_url=metadata.get("avatar_url"),
+        metadata=metadata,
+        user_id=user_id
+    )
+
     new_msg = ChatMessage(
         message=msg_text,
         sender_role=SenderRole.CONSULTANT,
@@ -1101,9 +1252,7 @@ async def handle_superuser_message(
 
     chat_session.manual_mode = True
     await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session)
-
     await mongo_db.chats.update_one({"chat_id": chat_id}, {"$set": {"manual_mode": True}})
-
 
 # ==============================
 # БЛОК: AI-логика (GPT)
@@ -1200,11 +1349,13 @@ async def determine_topics_via_ai(
     bot_context = await get_bot_context()
     model_name = model_name or bot_context["ai_model"]
 
+    kb_outline = build_kb_structure_outline(knowledge_base)
+
     topics_data = await detect_topics_ai(
         user_message=user_message,
         chat_history=chat_history,
         user_info=user_info,
-        knowledge_base=knowledge_base,
+        knowledge_base=kb_outline,
         model_name=model_name,
         bot_context=bot_context
     )
@@ -1240,7 +1391,6 @@ async def detect_topics_ai(
         kb_description=knowledge_base,
         app_description=bot_context["app_description"],
     )
-
     bundle = build_messages_for_model(
         system_prompt=system_prompt,
         messages_data=[],
@@ -1352,6 +1502,32 @@ def build_kb_description(knowledge_base: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def build_kb_structure_outline(knowledge_base: dict[str, Any]) -> dict[str, Any]:
+    """
+    Строит компактное описание базы знаний без текста ответов.
+    Только topic → subtopics → questions.
+    """
+    result: dict[str, Any] = {}
+
+    for topic_name, topic_data in knowledge_base.items():
+        topic_outline: dict[str, Any] = {}
+        subtopics = topic_data.get("subtopics", {})
+
+        if subtopics:
+            sub_outline: dict[str, Any] = {}
+            for sub_name, sub_data in subtopics.items():
+                questions = list(sub_data.get("questions", {}).keys())
+                sub_outline[sub_name] = {
+                    "questions": questions
+                }
+
+            topic_outline["subtopics"] = sub_outline
+
+        result[topic_name] = topic_outline
+
+    return result
+
+
 # ==============================
 # БЛОК: Обработка ответа ИИ
 # ==============================
@@ -1429,7 +1605,7 @@ async def build_ai_response(
         user_language=user_language,
         typing_manager=typing_manager,
         manager=manager,
-        chat_id=chat_id
+        chat_session=chat_session
     )
 
     ai_msg = ChatMessage(
@@ -1596,9 +1772,13 @@ async def extract_knowledge_with_sources(
                     q_clean = user_q.lower().strip()
                     for kb_q, ans in sub_dict[sub_name]["questions"].items():
                         if q_clean in kb_q.lower() or kb_q.lower() in q_clean:
+                            cleaned_files = [
+                                f for f in (ans.get("files") or [])
+                                if isinstance(f, str) and f.strip()
+                            ]
                             matched_q[user_q] = Answer(
                                 text=ans.get("text", ""),
-                                files=ans.get("files", []),
+                                files=cleaned_files,
                                 source_ref=context_map.get(topic_name, "kb")
                             )
                             break
@@ -1607,11 +1787,10 @@ async def extract_knowledge_with_sources(
 
         if extracted_subs:
             source = context_map.get(topic_name, "kb")
-            by_source.setdefault(
-                source, {})[topic_name] = Topic(
-                subtopics=extracted_subs)
+            by_source.setdefault(source, {})[topic_name] = Topic(subtopics=extracted_subs)
 
     return by_source
+
 
 
 # ==============================
@@ -1625,7 +1804,7 @@ async def generate_ai_answer(
     chat_history: List[ChatMessage],
     user_language: str,
     typing_manager: TypingManager,
-    chat_id: str,
+    chat_session: ChatSession,
     manager: ConnectionManager,
     style: str = "confident",
     return_json: bool = False,
@@ -1634,6 +1813,7 @@ async def generate_ai_answer(
     bot_ctx = await get_bot_context()
     model_name = bot_ctx["ai_model"]
     temperature = bot_ctx["temperature"]
+    chat_id = chat_session.chat_id
 
     weather_info = {
         loc["name"]: await get_weather_by_address(loc["address"])
@@ -1641,7 +1821,7 @@ async def generate_ai_answer(
     }
 
     system_prompt = assemble_system_prompt(
-        bot_ctx, snippets, user_info, user_language, weather_info
+        bot_ctx, snippets, user_info, user_language, weather_info, chat_session
     )
 
     msg_bundle = build_messages_for_model(
@@ -1676,6 +1856,7 @@ async def generate_ai_answer(
         snippets=snippets,
         bot_context=bot_ctx,
         user_interface_language=user_language,
+        chat_session=chat_session,
     )
 
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
@@ -1689,23 +1870,47 @@ async def postprocess_ai_response(
     chat_history: List[ChatMessage],
     snippets: List[str],
     bot_context: dict,
-    user_interface_language: str
+    user_interface_language: str,
+    chat_session: ChatSession,
 ) -> str:
-    """Проверяет и, при необходимости, исправляет ответ бота."""
+    """Пост-обработка: проверка ссылок/медиа в зависимости от канала."""
+
+    POSTPROCESS_INTERNAL = """
+**Unrequested file links**
+- If the AI inserted a Markdown or HTML link to a file (e.g., an image) from the `files` field, but the user **did not explicitly request a link**, remove the link.
+- Preserve any leading sentence (e.g., “See attached photo”) but remove the clickable part — files are delivered automatically.
+"""
+
+    POSTPROCESS_EXTERNAL = """
+**Photo link formatting**
+- The assistant must NOT mention attached images; instead, include a Markdown link `[caption](URL)` when a file is available.
+- If text contains phrases like “see attached photo/image”, replace them with the Markdown link; if no link is available, delete the phrase.
+- Validate every Markdown link: it must contain a full URL with protocol (`https://`).
+"""
+
+    try:
+        en_source = json.loads(chat_session.client.source).get("en")
+    except Exception:
+        en_source = "Unknown"
+
+    dynamic_postprocess_rules = (
+        POSTPROCESS_INTERNAL
+        if en_source in {ChatSource.INTERNAL.en_value,
+                         ChatSource.TELEGRAM_MINI_APP.en_value}
+        else POSTPROCESS_EXTERNAL
+    )
+
     system_prompt = AI_PROMPTS["postprocess_ai_answer"].format(
         ai_generated_response=raw_text.strip(),
         joined_snippets=snippets,
         user_interface_language=user_interface_language,
-        postprocessing_instruction=bot_context.get(
-            "postprocessing_instruction", "None"),
-        language_instruction=(
-            "Respond in the language used in the user's latest message.\n"
-            "This language must be followed exactly, regardless of the interface language.\n"
-        ),
+        postprocessing_instruction=bot_context.get("postprocessing_instruction", "None"),
+        language_instruction="",
         conversation_history="\n".join(
             f"{m.sender_role.name.upper()}: {m.message.strip()}"
             for m in chat_history[-10:]
-        )
+        ),
+        dynamic_postprocess_rules=dynamic_postprocess_rules,
     )
 
     model_name = bot_context["ai_model"]
@@ -1723,8 +1928,10 @@ async def postprocess_ai_response(
             temperature=0.2,
             system_instruction=bundle["system_instruction"]
         )
-        return extract_json_from_response(resp).get("text") or \
-            resp["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return (
+            extract_json_from_response(resp).get("text")
+            or resp["candidates"][0]["content"]["parts"][0]["text"].strip()
+        )
     except Exception as e:
         logging.warning(f"Postprocess failed: {e}")
         return raw_text
@@ -1735,10 +1942,38 @@ def assemble_system_prompt(
     snippets: List[str],
     user_info: str,
     user_language: str,
-    weather_info: Dict[str, Any]
+    weather_info: Dict[str, Any],
+    chat_session: ChatSession,
 ) -> str:
-    """Формирует system-prompt с датой, погодой и инструкциями."""
-    return AI_PROMPTS["system_ai_answer"].format(
+    """Собирает system-prompt с учётом канала и правил для медиа."""
+
+    INTERNAL_IMAGE_RULE = """
+**Image & file request**
+- Mention (only sentences, not links) attached images/files only if entries exist in `files`, but **do not include links**, even if a URL is present.
+- Never include Markdown or HTML links unless the user **explicitly asks for a link**.
+- Do not reject user requests for photos — if files exist, they will be sent automatically; your task is to reference them naturally (e.g., “See attached image”, “Photo is included above”) without inserting a link.
+"""
+
+    EXTERNAL_IMAGE_RULE = """
+**Photo request limitations**
+- This channel does not support sending media directly.
+- If the user asks for a photo, politely explain that images cannot be sent here, but you can share a direct link instead.
+- When a file is available in `files`, include a Markdown link like `[photo-caption](https://example.com/image.jpg)` **inside the answer**.
+- Never use phrases such as “See attached photo” or “Photo is included above”.
+"""
+
+    try:
+        en_source = json.loads(chat_session.client.source).get("en")
+    except Exception:
+        en_source = "Unknown"
+
+    if en_source in {ChatSource.INTERNAL.en_value,
+                     ChatSource.TELEGRAM_MINI_APP.en_value}:
+        dynamic_rules = INTERNAL_IMAGE_RULE
+    else:
+        dynamic_rules = EXTERNAL_IMAGE_RULE
+
+    system_prompt = AI_PROMPTS["system_ai_answer"].format(
         settings_context=bot_context["prompt_text"],
         current_datetime=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         weather_info=weather_info,
@@ -1748,7 +1983,10 @@ def assemble_system_prompt(
             "Language settings:\n"
             "- Always respond in the language of the user's last message.\n"
         ),
+        dynamic_rules=dynamic_rules,
     )
+
+    return system_prompt
 
 
 async def simulate_delay() -> None:
@@ -1765,8 +2003,8 @@ async def check_relevance_to_brief(question: str, user_message: str) -> bool:
 
     bundle = build_messages_for_model(
         system_prompt=system_prompt,
-        messages_data=[],   # нет внутренней хистори
-        user_message="",    # отдельного user_message нет
+        messages_data=[],
+        user_message="",
         model="gpt-3.5-turbo"
     )
 

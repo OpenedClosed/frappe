@@ -44,8 +44,8 @@ class UserAdmin(BaseAdmin):
         "ka": "მომხმარებლების მართვა სისტემაში"
     }
 
-    list_display = ["username", "role", "created_at"]
-    detail_fields = ["username", "password", "role", "created_at"]
+    list_display = ["username", "full_name", "role", "created_at"]
+    detail_fields = ["username", "password", "full_name", "avatar", "role", "created_at"]
     read_only_fields = ["created_at"]
 
     field_titles = {
@@ -69,6 +69,20 @@ class UserAdmin(BaseAdmin):
             "pl": "Rola",
             "uk": "Роль",
             "ka": "როლი"
+        },
+        "full_name": {
+            "en": "Full name",
+            "ru": "Полное имя",
+            "pl": "Pełne imię",
+            "uk": "Повне ім’я",
+            "ka": "სრული სახელი"
+        },
+        "avatar": {
+            "en": "Avatar",
+            "ru": "Аватар",
+            "pl": "Awatar",
+            "uk": "Аватар",
+            "ka": "ავატარი"
         },
         "created_at": {
             "en": "Created at",

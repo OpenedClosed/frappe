@@ -16,6 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from basic.routers import basic_router
 from chats.integrations.meta.instagram.instagram import instagram_router
 from chats.integrations.meta.whatsapp.whatsapp import whatsapp_router
+from chats.integrations.telegram.telegram_bot import telegram_router
 from chats.routers import chat_router
 from crud_core.registry import account_registry, admin_registry
 from crud_core.routes_generator import (auto_discover_modules,
@@ -88,6 +89,7 @@ async def on_shutdown():
 
 chat_router.include_router(instagram_router, prefix="/instagram")
 chat_router.include_router(whatsapp_router, prefix="/whatsapp")
+chat_router.include_router(telegram_router, prefix="/telegram")
 base_api_router.include_router(chat_router, prefix="/chats")
 base_api_router.include_router(user_router, prefix="/users")
 base_api_router.include_router(knowledge_base_router, prefix="/knowledge")

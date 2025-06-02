@@ -2,7 +2,7 @@
 from typing import Any, Dict, List
 
 from chats.db.mongo.enums import ChatSource, SenderRole
-from chats.integrations.meta.meta import process_meta_message
+from chats.integrations.basic.handlers import process_integration_message
 
 
 def parse_whatsapp_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -75,7 +75,7 @@ async def process_whatsapp_message(
     user_language: str,
 ):
     """Обрабатывает сообщение из WhatsApp и передаёт его в систему чатов."""
-    await process_meta_message(
+    await process_integration_message(
         platform="whatsapp",
         chat_source=ChatSource.WHATSAPP,
         sender_id=sender_id,
