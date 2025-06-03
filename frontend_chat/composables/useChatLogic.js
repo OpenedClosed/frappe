@@ -23,6 +23,7 @@ export function useChatLogic(options = {}) {
   let skipNextStatusCheck = false;
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
+  const currentChatId = ref("");
   const currentUserId = ref("1234");
   const activeRoomId = ref("1");
   rooms.value = [
@@ -55,8 +56,8 @@ export function useChatLogic(options = {}) {
 
   // WebSocket-соединение и chatId
   const websocket = ref(null);
-  const currenChatId = ref("");
-  watch(currenChatId, (newChatId) => {
+
+  watch(currentChatId, (newChatId) => {
     console.log("chatId изменился:", newChatId);
   })
 
@@ -338,7 +339,10 @@ export function useChatLogic(options = {}) {
 
     websocket.value.onmessage = async (event) => {
       const data = JSON.parse(event.data);
-
+      console.log('data: ', data);
+      console.log('data.chat_id: ', data.chat_id);
+      console.log(' currentChatId.value: ',  currentChatId.value);
+      if (data.chat_id && data.chat_id !== currentChatId.value) return;
       // Показываем toast при определённых типах
       if (data.type === "attention") {
         toast.add({
@@ -472,8 +476,8 @@ export function useChatLogic(options = {}) {
           life: 3000,
         });
         chatMessages.value = [];
-        currenChatId.value = null;
-        currenChatId.value = response.data.chat_id;
+        currentChatId.value = null;
+        currentChatId.value = response.data.chat_id;
         initializeWebSocket(response.data.chat_id);
       }
     } catch (error) {
@@ -519,7 +523,7 @@ export function useChatLogic(options = {}) {
 
     if (!websocket.value || [WebSocket.CLOSED, WebSocket.CLOSING].includes(websocket.value.readyState)) {
       console.log("[focus] сокет закрыт → переподключаемся");
-      initializeWebSocket(currenChatId.value);
+      initializeWebSocket(currentChatId.value);
     } else {
       console.log("[focus] сокет открыт → status_check");
       websocket.value?.send(JSON.stringify({ type: "status_check" }));
@@ -544,7 +548,7 @@ export function useChatLogic(options = {}) {
     const chatData = await useAsyncData("chatData", getChatData);
     if (chatData.data && chatData.data.value) {
       const { chat_id } = chatData.data.value;
-      currenChatId.value = chat_id;
+      currentChatId.value = chat_id;
       initializeWebSocket(chat_id);
     }
 
