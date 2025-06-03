@@ -404,10 +404,12 @@ function formatTimeDifferenceEU(dateStr) {
 function buildRooms(chats, consultantId) {
   console.log("buildRooms", chats); // For debugging: log chat data
   const sourceAvatars = {
-    Internal: "/avatars/telegram.png",
-    Instagram: "/avatars/insta.png",
-    Facebook: "/avatars/facebook.png",
-    WhatsApp: "/avatars/whatsapp.png",
+    'Internal': "/avatars/internal.png",
+    'Telegram': "/avatars/telegram.png",
+    'Telegram Mini-App': "/avatars/miniapp.png",
+    'Instagram': "/avatars/insta.png",
+    'Facebook': "/avatars/facebook.png",
+    'WhatsApp': "/avatars/whatsapp.png",
   };
 
   return chats.map((chat, idx) => {
