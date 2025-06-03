@@ -232,7 +232,6 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
         return
 
     bot_webhook_url = "http://bot:9999/webhook/send_message"
-    # bot_webhook_url = "http://0.0.0.0:9999/webhook/send_message"
     admin_chat_url = f"https://{settings.HOST}/admin/chats/chat_sessions"
 
     def dt_iso(value: Any) -> str:
@@ -298,15 +297,28 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
 🔍 <a href="{admin_chat_url}">Открыть чат в админке</a>
 """.strip()
 
+    # Разбор chat_id и message_thread_id из строки
+    chat_id_value = chat_id
+    message_thread_id = None
+    if "/" in chat_id:
+        parts = chat_id.split("/")
+        if len(parts) >= 2:
+            chat_id_value = parts[0]
+            message_thread_id = int(parts[1]) if parts[1].isdigit() else None
+
     try:
         async with httpx.AsyncClient() as client:
+            payload = {
+                "chat_id": chat_id_value,
+                "text": message_text,
+                "parse_mode": "HTML",
+            }
+            if message_thread_id:
+                payload["message_thread_id"] = message_thread_id
+
             response = await client.post(
                 bot_webhook_url,
-                json={
-                    "chat_id": bot_settings.ADMIN_CHAT_ID,
-                    "text": message_text,
-                    "parse_mode": "HTML",
-                },
+                json=payload,
                 timeout=10.0
             )
         response.raise_for_status()
