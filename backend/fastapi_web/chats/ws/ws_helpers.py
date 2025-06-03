@@ -11,6 +11,7 @@ from auth.utils.help_functions import is_token_blacklisted
 from fastapi import WebSocket, status
 from fastapi_jwt_auth import AuthJWT
 from starlette.websockets import WebSocketState
+from bson import ObjectId  
 
 # ==============================
 # Глобальные менеджеры
@@ -162,8 +163,10 @@ class DateTimeEncoder(json.JSONEncoder):
     """JSONEncoder для datetime."""
 
     def default(self, o: Any) -> Any:
-        return o.isoformat() if isinstance(o, datetime) else super().default(o)
-
+        if isinstance(o, datetime):
+            return o.isoformat() 
+        elif isinstance(o, ObjectId):
+            return str(o)
 
 def custom_json_dumps(obj: Any) -> str:
     """Сериализует объект в JSON с поддержкой datetime."""
