@@ -558,17 +558,20 @@ def is_valid_object_id(oid: str) -> bool:
     except Exception:
         return False
 
-async def build_sender_data_map(messages: list[dict]) -> dict[str, dict[str, Any]]:
-    """Получить информацию об отправителях (мастер-клиент + user_data)."""
+async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[str] = None) -> dict[str, dict[str, Any]]:
+    """Получить информацию об отправителях (мастер-клиент + user_data), включая клиента чата даже без сообщений."""
     sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
+
+    if extra_client_id:
+        sender_ids.add(extra_client_id)
+
+    sender_ids.discard(None)
     if not sender_ids:
         return {}
 
-    # Получаем MasterClient
     master_docs = await mongo_db.clients.find({"client_id": {"$in": list(sender_ids)}}).to_list(None)
     masters = {d["client_id"]: MasterClient(**d) for d in master_docs}
 
-    # Загружаем всех пользователей одним запросом
     valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
     user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
     users = {str(u["_id"]): u for u in user_docs}

@@ -488,7 +488,7 @@ class ChatSessionAdmin(BaseAdmin):
         if not messages:
             return json.dumps([], ensure_ascii=False, cls=DateTimeEncoder)
 
-        sender_data = await build_sender_data_map(messages)
+        sender_data = await build_sender_data_map(messages, extra_client_id=obj.get("client", {}).get("client_id"))
 
         participants = []
         for client_id, data in sender_data.items():
