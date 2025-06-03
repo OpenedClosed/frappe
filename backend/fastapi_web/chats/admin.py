@@ -11,6 +11,7 @@ from crud_core.permissions import OperatorPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 from infra import settings
+from .ws.ws_helpers import DateTimeEncoder
 
 from .db.mongo.schemas import ChatMessage, ChatSession, Client
 
@@ -181,13 +182,13 @@ class ChatMessageInline(InlineAdmin):
                     "ka": "დაბალი დარწმუნებულობა"
                 }
 
-        return json.dumps(status, ensure_ascii=False)
+        return json.dumps(status, ensure_ascii=False, cls=DateTimeEncoder)
 
     async def get_read_by_display(self, obj: dict) -> str:
         parent = getattr(self, "parent_document", None)
         if not parent:
 
-            return json.dumps([], ensure_ascii=False)
+            return json.dumps([], ensure_ascii=False, cls=DateTimeEncoder)
 
         message_id = obj.get("id")
         read_state = parent.get("read_state", [])
@@ -202,7 +203,7 @@ class ChatMessageInline(InlineAdmin):
             if reader_id and idx_map.get(last_read, -1) >= msg_idx:
                 readers.append(reader_id)
 
-        return json.dumps(readers, ensure_ascii=False)
+        return json.dumps(readers, ensure_ascii=False, cls=DateTimeEncoder)
 
 
 class ClientInline(InlineAdmin):
@@ -453,14 +454,14 @@ class ChatSessionAdmin(BaseAdmin):
     async def get_duration_display(self, obj: dict) -> str:
         created_at, last_activity = obj.get("created_at"), obj.get("last_activity")
         if not created_at or not last_activity:
-            return json.dumps({"en": "0h 0m", "ru": "0ч 0м"}, ensure_ascii=False)
+            return json.dumps({"en": "0h 0m", "ru": "0ч 0м"}, ensure_ascii=False, cls=DateTimeEncoder)
         duration = last_activity - created_at
         hours, remainder = divmod(duration.total_seconds(), 3600)
         minutes, _ = divmod(remainder, 60)
         return json.dumps(
             {"en": f"{int(hours)}h {int(minutes)}m",
              "ru": f"{int(hours)}ч {int(minutes)}м"},
-            ensure_ascii=False
+            ensure_ascii=False, cls=DateTimeEncoder
         )
 
     async def get_client_id_display(self, obj: dict) -> str:
@@ -480,12 +481,12 @@ class ChatSessionAdmin(BaseAdmin):
             client = Client(**client_data)
             if isinstance(client.source, str):
                 value = client.source.replace("_", " ").capitalize()
-        return json.dumps(value, ensure_ascii=False)
+        return json.dumps(value, ensure_ascii=False, cls=DateTimeEncoder)
 
     async def get_participants_display(self, obj: dict) -> str:
         messages = obj.get("messages", [])
         if not messages:
-            return json.dumps([], ensure_ascii=False)
+            return json.dumps([], ensure_ascii=False, cls=DateTimeEncoder)
 
         sender_data = await build_sender_data_map(messages)
 
@@ -496,7 +497,7 @@ class ChatSessionAdmin(BaseAdmin):
                 "sender_info": data
             })
 
-        return json.dumps(participants, ensure_ascii=False)
+        return json.dumps(participants, ensure_ascii=False, cls=DateTimeEncoder)
 
 
 admin_registry.register("chat_sessions", ChatSessionAdmin(mongo_db))
