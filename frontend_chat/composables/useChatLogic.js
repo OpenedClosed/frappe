@@ -5,11 +5,13 @@ import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
 
 export function useChatLogic(options = {}) {
-  const { isTelegram = false } = options; // Переключение под Telegram при необходимости
+  const { isTelegram = false, query } = options; // Переключение под Telegram при необходимости
   const { t, locale } = useI18n();
   const toast = useToast();
   const { isAutoMode, chatMessages } = useChatState();
-
+  const route = useRoute()  
+  let queryParams = route.query;
+  console.log("queryParams:", queryParams);
 
   watch(chatMessages, (newMessages) => {
     console.log("chatMessages изменились:", newMessages);
@@ -489,7 +491,11 @@ export function useChatLogic(options = {}) {
    */
   async function getChatData() {
     try {
-      const response = await useNuxtApp().$api.post("api/chats/get_chat");
+      const response = await useNuxtApp().$api.post(
+        'api/chats/get_chat',
+        null,                 // тело POST-запроса (не нужно → null/{} )
+        { params: queryParams } // ← передаём наш объект
+      );
       return response.data;
     } catch (error) {
       console.error("Ошибка при получении chat_data:", error);
