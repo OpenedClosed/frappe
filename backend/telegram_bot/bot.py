@@ -6,21 +6,27 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from aiogram.enums import ParseMode
-from aiogram.filters import Command, CommandObject
-from aiogram.types import MenuButtonWebApp, Message, WebAppInfo
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 from aiohttp import web
-from bot_conf.create_bot import bot, dp
-from chats.routers import send_message
-from fastapi_web.infra import settings
-from utils.decorators import check_private_chat
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler
+from aiogram.types import MenuButtonWebApp, WebAppInfo, Message
+from aiogram.filters import Command, CommandObject
+from aiogram.enums import ParseMode
+
 from utils.translations import BOT_TRANSLATIONS
+from utils.decorators import check_private_chat
+from chats.routers import send_message
+from chats.handlers import relay_router
+from bot_conf.create_bot import bot, dp
+from fastapi_web.infra import settings
+from utils.help_functions import generate_secure_webapp_url, set_menu_webapp_for_user
+import logging
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
+dp.include_router(relay_router)
 
 
 @dp.startup()
@@ -41,8 +47,11 @@ async def start(message: Message, command: CommandObject):
     """
     user_lang = message.from_user.language_code
     start_text = BOT_TRANSLATIONS["start_info_text"].get(
-        user_lang, BOT_TRANSLATIONS["start_info_text"]["en"])
+        user_lang, BOT_TRANSLATIONS["start_info_text"]["en"]
+    )
+    url = generate_secure_webapp_url(message.from_user.id)
     await message.answer(start_text, parse_mode=ParseMode.HTML)
+    await set_menu_webapp_for_user(message.from_user.id)
 
 
 @dp.message(Command("help"))
@@ -53,7 +62,8 @@ async def help(message: Message, command: CommandObject):
     """
     user_lang = message.from_user.language_code
     help_text = BOT_TRANSLATIONS["help_info_text"].get(
-        user_lang, BOT_TRANSLATIONS["help_info_text"]["en"])
+        user_lang, BOT_TRANSLATIONS["help_info_text"]["en"]
+    )
     await message.answer(help_text, parse_mode=ParseMode.HTML)
 
 
@@ -65,9 +75,9 @@ async def main():
 
     SimpleRequestHandler(
         dispatcher=dp,
-        bot=bot).register(
-        aiohttp_app,
-        path="/webhook")
+        bot=bot
+    ).register(aiohttp_app, path="/webhook")
+
     aiohttp_app.router.add_post("/webhook/send_message", send_message)
 
     runner = web.AppRunner(aiohttp_app)
@@ -75,11 +85,6 @@ async def main():
     site = web.TCPSite(runner, host="0.0.0.0", port=9999)
     await site.start()
 
-    web_app_url = f"{settings.FRONTEND_URL}/chats/telegram-chat"
-    # web_app_url = "https://panamed-aihubworks.com/chats/telegram-chat"
-
-    web_app_info = WebAppInfo(url=web_app_url)
-    await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="💬", web_app=web_app_info))
     await dp.start_polling(bot)
 
 

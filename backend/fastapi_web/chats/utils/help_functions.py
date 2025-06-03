@@ -163,27 +163,29 @@ async def get_or_create_master_client(
 
     if doc:
         update_fields: Dict[str, Any] = {}
+
         if name and name != doc.get("name"):
             update_fields["name"] = name
         if avatar_url and avatar_url != doc.get("avatar_url"):
             update_fields["avatar_url"] = avatar_url
+
         if metadata:
-            lang = metadata.get("user_language")
-            if lang and lang != doc.get("metadata", {}).get("user_language"):
-                update_fields["metadata.user_language"] = lang
+            current_metadata = doc.get("metadata", {})
+            merged_metadata = {**current_metadata, **metadata}
+            if merged_metadata != current_metadata:
+                update_fields["metadata"] = merged_metadata
+
         if user_id and user_id != doc.get("user_id"):
             update_fields["user_id"] = user_id
 
         if update_fields:
             await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
             doc = await col.find_one({"_id": doc["_id"]})
+
         doc.pop("id", None)
         return MasterClient(**doc)
 
-    safe_meta: Dict[str, Any] = {}
-    for key in ("locale", "ig_username", "user_language"):
-        if metadata and key in metadata:
-            safe_meta[key] = metadata[key]
+    safe_meta: Dict[str, Any] = metadata or {}
 
     save_external_id = external_id if external_id and external_id != "anonymous" else "anonymous"
 
@@ -200,6 +202,7 @@ async def get_or_create_master_client(
 
     await col.insert_one(client.dict(exclude={"id"}))
     return client
+
 
 
 # ==============================
