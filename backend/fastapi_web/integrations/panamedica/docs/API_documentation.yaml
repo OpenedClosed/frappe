@@ -1,0 +1,690 @@
+openapi: 3.0.3
+info:
+  title: PaNa CRM API
+  description: This document describes the API for the PaNa CRM system.
+  version: 1.0.0
+servers:
+  - url: 'https://u5505.pink.elasticweb.org/api/v1'
+paths:
+  /oauth/token:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/X-API-Client-Id'
+    post:
+      operationId: Issue token
+      summary: Obtain OAuth 2.0 Access Token using Client Credentials grant type
+      description: >
+        This endpoint issues an access token using the client credentials grant type. 
+        The client must provide its client ID and secret.
+      tags:
+        - OAuth 2.0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                grant_type:
+                  type: string
+                  enum: [ client_credentials ]
+                  example: client_credentials
+                client_id:
+                  type: string
+                  example: client-id
+                client_secret:
+                  type: string
+                  example: client-secret
+                scope:
+                  type: string
+                  example: scope-name1 scope-name2
+              required:
+                - grant_type
+                - client_id
+                - client_secret
+      responses:
+        200:
+          description: Access token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token_type:
+                    type: string
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                    example: 3600
+                  access_token:
+                    type: string
+                    example: eyJ0eXAiOiJKV1QiLCJhbGci...
+        400:
+          description: Invalid request (e.g., missing or incorrect parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthErrorResponse'
+        401:
+          description: Unauthorized (e.g., invalid client credentials)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthErrorResponse'
+        403:
+          description: Forbidden
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+  /patients:
+    parameters:
+      - $ref: '#/components/parameters/X-API-Client-Id'
+    post:
+      operationId: registerPatient
+      summary: Request Patient Registration
+      tags:
+        - Patients
+      requestBody:
+        description: A JSON object containing patient registration information.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterPatientRequest"
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource not found
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+  /patients/{id}:
+    parameters:
+      - $ref: '#/components/parameters/X-API-Client-Id'
+    get:
+      operationId: getPatientInformation
+      summary: Get Patient Information
+      tags:
+        - Patients
+      parameters:
+        - name: id
+          in: path
+          description: Patient External ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource not found
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+    patch:
+      operationId: updatePatientInformation
+      summary: Update Patient Information
+      tags:
+        - Patients
+      parameters:
+        - name: id
+          in: path
+          description: Patient ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: A JSON object containing the updated patient information.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientRequest"
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource not found
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+  /patients/{id}/appointments:
+    parameters:
+      - $ref: '#/components/parameters/X-API-Client-Id'
+    get:
+      operationId: getPatientAppointments
+      summary: Get Patient Appointments
+      tags:
+        - Appointments
+      parameters:
+        - name: id
+          in: path
+          description: Patient External ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientAppointments'
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource not found
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+  /patients/{id}/consents:
+    parameters:
+      - $ref: '#/components/parameters/X-API-Client-Id'
+    get:
+      operationId: getPatientConsents
+      summary: Get Patient Consents
+      tags:
+        - Consents
+      parameters:
+        - name: id
+          in: path
+          description: Patient External ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientConsents'
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource not found
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+  /patients/{id}/consents/{consentId}:
+    parameters:
+      - $ref: '#/components/parameters/X-API-Client-Id'
+    patch:
+      operationId: updatePatientConsent
+      summary: Update Patient Consent
+      tags:
+        - Consents
+      parameters:
+        - name: id
+          in: path
+          description: Patient External ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: consentId
+          in: path
+          description: Consent ID
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: A JSON object containing the acceptation or resignation for the specified consent.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientConsentRequest"
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource not found
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+
+components:
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      description: 'The Bearer token used for authentication. The token is obtained from the OAuth 2.0 token endpoint.'
+      required: true
+      schema:
+        type: string
+      example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+    X-API-Client-Id:
+      name: X-API-Client-Id
+      in: header
+      description: 'The source system of the request which is included in list: [PATIENT-PORTAL, FOUNDATION-PORTAL]. '
+      required: true
+      schema:
+        type: string
+        example: 'PATIENT-PORTAL'
+  schemas:
+    Success:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Patient information updated successfully'
+      required:
+        - message
+    OAuthErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: invalid_request
+          description: |
+            A short string indicating the error type (e.g., invalid_request, invalid_client, etc.)
+        error_description:
+          type: string
+          example: >
+            The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed.
+          description: Human-readable explanation of the error.
+        hint:
+          type: string
+          example: Check the `client_id` parameter
+          description: Optional hint to help diagnose the issue.
+        message:
+          type: string
+          example: >
+            The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed.
+          description: General error message, may duplicate `error_description`.
+    Errors:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 'Error message'
+          example: 'The Patient firstname must be a string. (and 4 more errors)'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      required:
+        - errors
+    Error:
+      type: object
+      properties:
+        fieldName:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+    RegisterPatientRequest:
+      type: object
+      description: 'Patient information for registration'
+      required:
+        - externalId
+        - firstname
+        - lastname
+        - email
+        - phone # TODO is really required (for foreigners)?
+      properties:
+        externalId:
+          type: string
+          description: "Patient's external identifier"
+          example: "yuj-123-sdzx-123-asd"
+        firstname:
+          type: string
+          description: "Patient's first name"
+          example: "John"
+        lastname:
+          type: string
+          description: "Patient's last name"
+          example: "Doe"
+        birthdate:
+          type: string
+          description: "Patient's date of birth, format: YYYY-MM-DD"
+          format: date
+          example: "1990-01-01"
+        phone:
+          type: string
+          description: "Patient's POLISH phone number, format: +48-XXX-XXX-XXX"
+          example: "+48-000-000-000"
+        email:
+          type: string
+          description: "Patient's email address"
+          format: email
+          example: "john.doe@example.com"
+        gender:
+          type: string
+          description: "Patient's gender"
+          enum:
+            - male
+            - female
+          example: "female"
+        pesel:
+          type: string
+          description: "Patient's PESEL number which consists of 11 digits."
+          example: "12345678901"
+    UpdatePatientRequest:
+      type: object
+      description: 'Patient information for update'
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+          description: "Patient's POLISH phone number, format: +48-XXX-XXX-XXX"
+          example: "+48-000-000-000"
+        email:
+          type: string
+          description: "Patient's email address"
+          format: email
+          example: "john.doe@example.com"
+        residenceAddress:
+          $ref: '#/components/schemas/Address'
+    UpdatePatientConsentRequest:
+      type: object
+      description: 'A JSON object containing the acceptation or resignation for the specified consent'
+      required:
+        - accept
+      properties:
+        accept:
+          type: boolean
+          description: "Flag which indicates whether the consent was accepted by the patient"
+          example: true
+    PatientRegistrationResponse:
+      type: object
+      description: 'Patient Registration Response'
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: integer
+          description: "Patient's request identifier"
+          format: int64
+          example: 1
+    Patient:
+      type: object
+      description: 'Patient information'
+      required:
+        - firstname
+        - lastname
+        - gender
+        - residenceAddress
+        - profile
+      properties:
+        firstname:
+          type: string
+          description: "Patient's first name"
+          example: "John"
+        lastname:
+          type: string
+          description: "Patient's last name"
+          example: "Doe"
+        birthdate:
+          type: string
+          description: "Patient's date of birth, format: YYYY-MM-DD"
+          format: date
+          example: "1990-01-01"
+        phone:
+          type: string
+          description: "Patient's POLISH phone number, format: +48-XXX-XXX-XXX"
+          example: "+48-000-000-000"
+        email:
+          type: string
+          description: "Patient's email address"
+          format: email
+          example: "john.doe@example.com"
+        gender:
+          type: string
+          description: "Patient's gender"
+          enum:
+            - male
+            - female
+          example: "female"
+        pesel:
+          type: string
+          description: "Patient's PESEL number which consists of 11 digits."
+          example: "12345678901"
+        passport:
+          type: string
+          description: "Patient's passport details"
+          example: "DFM123123"
+        profile:
+          type: string
+          description: "Type of patient's profile: demo or normal. Demo profile means user requested registration and it's pending."
+          enum:
+            - demo
+            - normal
+        residenceAddress:
+          $ref: '#/components/schemas/Address'
+        registrationRequest:
+          type: object
+          description: "Optional. Patient's registration request information if exists"
+          required:
+            - status
+            - message
+          properties:
+            status:
+              type: string
+              description: "Registration request status"
+              enum:
+                - pending
+                - rejected
+              example: "pending"
+            message:
+              type: string
+              description: "Registration request status description (applicable for negative scenarios)"
+              example: "Your request has been rejected because of profile duplication."
+    Address:
+      type: object
+      description: "Patient's residence address (not implemented yet)"
+      properties:
+        street:
+          type: string
+          description: "Patient's street address"
+          example: 'Warszawska'
+        building:
+          type: string
+          description: "Patient's building number"
+          example: '35A'
+        apartment:
+          type: string
+          description: "Patient's apartment number"
+          example: '20'
+        zip:
+          type: string
+          description: "Patient's zip code"
+          example: '05-200'
+        city:
+          type: string
+          description: "Patient's city"
+          example: 'Warszawa'
+        country:
+          type: string
+          description: "Patient's country"
+          example: 'Polska'
+    PatientAppointments:
+      type: object
+      description: "Patient's residence address (not implemented yet)"
+      required:
+        - total
+        - per_page
+        - current_page
+        - last_page
+        - data
+      properties:
+        total:
+          type: integer
+          description: "Total number of appointments"
+          example: 20
+        per_page:
+          type: integer
+          description: "Number of appointments per page"
+          example: 10
+        current_page:
+          type: integer
+          description: "Current page number"
+          example: 2
+        last_page:
+          type: integer
+          description: "Last page number"
+          example: 5
+        data:
+          type: array
+          description: "List of appointments"
+          items:
+            $ref: '#/components/schemas/Appointment'
+    Appointment:
+      type: object
+      description: "Patient appointment information"
+      required:
+        - id
+        - date
+        - start
+        - end
+        - doctor
+      properties:
+        id:
+          type: integer
+          description: "Appointment ID"
+          example: 1
+        date:
+          type: string
+          description: "Appointment date, format: YYYY-MM-DD"
+          format: date
+          example: "2025-10-15"
+        start:
+          type: string
+          description: "Appointment start time, format: HH:mm"
+          format: time
+          example: "14:00"
+        end:
+          type: string
+          description: "Appointment end time, format: HH:mm"
+          format: time
+          example: "15:00"
+        doctor:
+          $ref: '#/components/schemas/Doctor'
+    Doctor:
+      type: object
+      description: "Doctor information"
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: "Doctor's name"
+          example: "John Smith"
+    PatientConsents:
+      type: array
+      description: "Patient's consents information"
+      items:
+        $ref: '#/components/schemas/Consent'
+    Consent:
+      type: object
+      description: "Consent information"
+      required:
+        - id
+        - title
+        - shortText
+        - text
+        - accepted
+      properties:
+        id:
+          type: integer
+          description: "Consent ID"
+          format: int32
+          example: 1
+        title:
+          type: string
+          description: "Consent title"
+          example: "Zgoda na przetwarzanie danych w celach marketingowych przez PANA sp. z o.o."
+        shortText:
+          type: string
+          description: "Short text of the consent"
+          example: "Wyrażam wobec PANA sp. z o.o. zgodę na przetwarzanie w celach marketingowych"
+        text:
+          type: string
+          description: "Full text of the consent"
+          example: "Wyrażam wobec PANA sp. z o.o. zgodę na przetwarzanie w celach marketingowych, w tym poprzez profilowanie, moich danych osobowych pozyskanych w trakcie zamawiania, korzystania z usług tych podmiotów lub pozostawianych przeze mnie na ich formularzach kontaktowych. Niniejsza zgoda dotyczy wszelkich danych dotyczących mojej osoby, w tym informacji o sposobie korzystania przeze mnie z usług w/w podmiotów."
+        accepted:
+          type: boolean
+          description: "Flag which indicates whether the consent was accepted by the patient"
+          example: true
+  securitySchemes:
+    OAuth2ClientCredentials:
+      type: oauth2
+      description: OAuth 2.0 client credentials flow.
+      flows:
+        clientCredentials:
+          tokenUrl: https://u5505.pink.elasticweb.org/api/v1/oauth/token
+          scopes:
+            read: Read access to protected resources
+            write: Write access to protected resources
+security:
+  - OAuth2ClientCredentials:
+      - read
+      - write

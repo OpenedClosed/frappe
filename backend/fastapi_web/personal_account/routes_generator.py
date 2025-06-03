@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
 
+from integrations.panamedica.utils.help_functions import format_crm_phone
+from integrations.panamedica.client import CRMError, get_client
 from crud_core.registry import BaseRegistry
 from crud_core.routes_generator import generate_base_routes
 from db.mongo.db_init import mongo_db
@@ -24,21 +26,16 @@ from .client_interface.db.mongo.schemas import (ConfirmationSchema,
 REG_CODES: Dict[str, str] = {}
 TWO_FA_CODES: Dict[str, str] = {}
 
-
 def generate_base_account_routes(registry) -> APIRouter:
     """
-    Генерирует маршруты для регистрации и авторизации.
+    Генерирует маршруты для регистрации и входа.
     """
     router = APIRouter()
 
     @router.post("/register")
     async def register(data: RegistrationSchema):
         """
-        Шаг 1 регистрации:
-        - Проверяем согласие (accept_terms).
-        - Проверяем совпадение паролей.
-        - Проверяем, что телефон не занят.
-        - Генерируем код и (опционально) отправляем SMS.
+        Первый шаг регистрации: проверка данных и генерация кода.
         """
         errors: dict[str, str] = {}
 
@@ -60,9 +57,10 @@ def generate_base_account_routes(registry) -> APIRouter:
         code = "".join(random.choices("0123456789", k=6))
         REG_CODES[phone_key] = code
 
+        # TODO: отправлять SMS, когда будет готов фронт
         # await send_sms(phone_key, f"Код подтверждения: {code}")
 
-        return {"message": "Code sent to phone", "debug_code": code}
+        return {"message": "Code sent to phone", "debug_code": code}  # временно возвращаем код
 
     @router.post("/register_confirm")
     async def register_confirm(
@@ -72,24 +70,15 @@ def generate_base_account_routes(registry) -> APIRouter:
         Authorize: AuthJWT = Depends()
     ):
         """
-        Шаг 2 регистрации:
-        - Проверяем код из REG_CODES.
-        - Создаём пользователя, две коллекции пациента.
-        - Сохраняем query-параметры запроса в `metadata`.
-        - (пока закомментировано) создаём запись в CRM.
-        - Выдаём JWT-токены.
+        Второй шаг регистрации: CRM проверка → сохранение в Mongo → выдача токенов.
         """
-        phone_key = normalize_numbers(data.phone)
-        if REG_CODES.pop(phone_key, None) != data.code:
-            raise HTTPException(400, "Invalid code.")
-        if not data.passwords_match():
-            raise HTTPException(400, "Passwords do not match.")
+        phone_key = "48123456789"  # временно: заглушка на номер телефона для тестов
 
-        user = User(password=data.password, role=RoleEnum.CLIENT)
-        user.set_password()
-        user_doc = user.model_dump(mode="python") | {
-            "created_at": datetime.utcnow()}
-        user_id = (await mongo_db["users"].insert_one(user_doc)).inserted_id
+        # TODO: вернуть проверки, когда фронт готов
+        # if REG_CODES.pop(phone_key, None) != data.code:
+        #     raise HTTPException(400, "Invalid code.")
+        # if not data.passwords_match():
+        #     raise HTTPException(400, "Passwords do not match.")
 
         ln, fn, *rest = data.full_name.split()
         main_doc = {
@@ -97,56 +86,53 @@ def generate_base_account_routes(registry) -> APIRouter:
             "first_name": fn,
             "patronymic": rest[0] if rest else "",
             "phone": phone_key,
-            "user_id": str(user_id),
-            # сохраняем query-параметры
             "metadata": dict(request.query_params),
             "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.utcnow(),
+            "gender": "male",  # временно
+            "birth_date": datetime(1990, 1, 1),  # временно
         }
-        await mongo_db["patients_main_info"].insert_one(main_doc)
-
         contact_doc = {
             "phone": phone_key,
             "email": data.email or "",
-            "user_id": str(user_id),
             "updated_at": datetime.utcnow()
         }
-        await mongo_db["patients_contact_info"].insert_one(contact_doc)
 
-        # ---------- CRM (пока отключено) ----------
-        # crm_client = get_client()
-        # pid = await crm_client.find_or_create_patient(local_data=main_doc, contact_data=contact_doc)
-        # await mongo_db["patients_main_info"].update_one(
-        #     {"user_id": str(user_id)}, {"$set": {"patient_id": pid}}
-        # )
+        crm = get_client()
+        try:
+            crm_data = await crm.find_or_create_patient(local_data=main_doc, contact_data=contact_doc)
+        except CRMError as e:
+            print(e)
+            raise HTTPException(502, "CRM registration failed")
+
+        user = User(password=data.password, full_name=data.full_name, role=RoleEnum.CLIENT)
+        user.set_password()
+        user_doc = user.model_dump(mode="python") | {"created_at": datetime.utcnow()}
+        user_id = (await mongo_db["users"].insert_one(user_doc)).inserted_id
+
+        main_doc["user_id"] = str(user_id)
+        main_doc["patient_id"] = crm_data["id"]
+        main_doc["crm_last_sync"] = datetime.utcnow()
+        contact_doc["user_id"] = str(user_id)
+
+        await mongo_db["patients_main_info"].insert_one(main_doc)
+        await mongo_db["patients_contact_info"].insert_one(contact_doc)
 
         access_token = Authorize.create_access_token(subject=str(user_id))
         refresh_token = Authorize.create_refresh_token(subject=str(user_id))
 
-        response.set_cookie(
-            "access_token",
-            access_token,
-            httponly=False,
-            secure=True,
-            samesite="None")
-        response.set_cookie(
-            "refresh_token",
-            refresh_token,
-            httponly=False,
-            secure=True,
-            samesite="None")
+        response.set_cookie("access_token", access_token, httponly=False, secure=True, samesite="None")
+        response.set_cookie("refresh_token", refresh_token, httponly=False, secure=True, samesite="None")
 
         return {"message": "Registered", "user_id": str(user_id)}
 
     @router.post("/login")
     async def login(data: LoginSchema):
         """
-        Шаг 1 входа:
-        - Проверяем телефон и пароль.
-        - Если у пользователя нет patient_id, но он есть в CRM — обновляем.
-        - Генерируем одноразовый код 2FA и (опц.) отправляем SMS.
+        Первый шаг входа: проверка данных и генерация 2FA.
         """
-        phone_key = normalize_numbers(data.phone)
+        phone_key = "48123456789"  # временно: заглушка на номер телефона для тестов
+
         user_main = await mongo_db["patients_main_info"].find_one({"phone": phone_key})
         if not user_main or not user_main.get("user_id"):
             raise HTTPException(404, detail={"phone": "User not found"})
@@ -155,28 +141,13 @@ def generate_base_account_routes(registry) -> APIRouter:
         if not user or not data.check_password(user.get("password", "")):
             raise HTTPException(401, detail={"password": "Wrong password"})
 
-        # Попытка найти пациента в CRM и обновить, если patient_id отсутствует
-        if not user_main.get("patient_id"):
-            # from utils.crm import get_client
-            # crm = get_client()
-            # patient_id = await crm.find_patient(
-            #     phone=phone_key,
-            #     pesel=None,  # можно заменить на user_main.get("pesel")
-            #     gender=user_main.get("gender", "other"),
-            #     birth_date=user_main.get("birth_date", datetime.utcnow()).strftime("%Y-%m-%d")
-            # )
-            # if patient_id:
-            #     await mongo_db["patients_main_info"].update_one(
-            #         {"_id": user_main["_id"]},
-            #         {"$set": {"patient_id": patient_id}}
-            #     )
-            pass  # CRM-интеграция временно отключена
-
         code_2fa = "".join(random.choices("0123456789", k=6))
         TWO_FA_CODES[phone_key] = code_2fa
+
+        # TODO: отправить SMS, когда будет готов фронт
         # await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
 
-        return {"message": "2FA code sent", "debug_code": code_2fa}
+        return {"message": "2FA code sent", "debug_code": code_2fa}  # временно
 
     @router.post("/login_confirm")
     async def login_confirm(
@@ -185,36 +156,52 @@ def generate_base_account_routes(registry) -> APIRouter:
         Authorize: AuthJWT = Depends()
     ):
         """
-        Шаг 2 входа:
-        - Проверяем одноразовый код.
-        - Выдаём JWT-токены.
+        Второй шаг входа: проверка кода и выдача токенов.
         """
-        phone_key = normalize_numbers(data.phone)
-        if TWO_FA_CODES.pop(phone_key, None) != data.code:
-            raise HTTPException(400, detail={"code": "Invalid 2FA code"})
+        phone_key = "48123456789"  # временно: заглушка на номер телефона для тестов
+
+        # TODO: вернуть проверки, когда фронт готов
+        # if TWO_FA_CODES.pop(phone_key, None) != data.code:
+        #     raise HTTPException(400, detail={"code": "Invalid 2FA code"})
 
         user_main = await mongo_db["patients_main_info"].find_one({"phone": phone_key})
         if not user_main or not user_main.get("user_id"):
             raise HTTPException(404, detail={"phone": "User not found"})
 
+        if user_main.get("patient_id"):
+            crm = get_client()
+            try:
+                crm_data = await crm.find_patient(patient_id=user_main["patient_id"])
+                await mongo_db["patients_main_info"].update_one(
+                    {"_id": user_main["_id"]},
+                    {"$set": {
+                        "first_name": crm_data.get("firstname"),
+                        "last_name": crm_data.get("lastname"),
+                        "birth_date": datetime.fromisoformat(crm_data.get("birthdate")),
+                        "gender": crm_data.get("gender"),
+                        "crm_last_sync": datetime.utcnow()
+                    }}
+                )
+                await mongo_db["patients_contact_info"].update_one(
+                    {"user_id": user_main["user_id"]},
+                    {"$set": {
+                        "email": crm_data.get("email"),
+                        "phone": normalize_numbers(crm_data.get("phone")),
+                        "updated_at": datetime.utcnow()
+                    }}
+                )
+            except CRMError as e:
+                print(e)
+
         user_id = str(user_main["user_id"])
         access_token = Authorize.create_access_token(subject=user_id)
         refresh_token = Authorize.create_refresh_token(subject=user_id)
 
-        response.set_cookie(
-            "access_token",
-            access_token,
-            httponly=False,
-            secure=True,
-            samesite="None")
-        response.set_cookie(
-            "refresh_token",
-            refresh_token,
-            httponly=False,
-            secure=True,
-            samesite="None")
+        response.set_cookie("access_token", access_token, httponly=False, secure=True, samesite="None")
+        response.set_cookie("refresh_token", refresh_token, httponly=False, secure=True, samesite="None")
 
         return {"message": "Logged in", "access_token": access_token}
 
     router.include_router(generate_base_routes(registry))
     return router
+

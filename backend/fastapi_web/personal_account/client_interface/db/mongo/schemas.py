@@ -76,63 +76,6 @@ class TwoFASchema(BaseModel):
     code: str
 
 
-# ==========
-# Основная информация
-# ==========
-
-# class MainInfoSchema(BaseValidatedModel):
-#     """
-#     Основная информация о пациенте, хранится в MongoDB.
-#     """
-
-#     last_name: str
-#     first_name: str
-#     patronymic: Optional[str] = None
-
-#     birth_date: datetime = Field(
-#         ...,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "calendar",
-#                 "placeholder": {
-#                     "ru": "Выберите дату рождения",
-#                     "en": "Select birth date",
-#                     "pl": "Wybierz datę urodzenia"
-#                 }
-#             }
-#         }
-#     )
-
-#     gender: GenderEnum = Field(
-#         ...,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "select",
-#                 "placeholder": {
-#                     "ru": "Выберите пол",
-#                     "en": "Select gender",
-#                     "pl": "Wybierz płeć"
-#                 }
-#             }
-#         }
-#     )
-
-#     company_name: Optional[str] = None
-#     avatar: Optional[Photo] = None
-
-#     account_status: AccountVerificationEnum = Field(
-#         default=AccountVerificationEnum.UNVERIFIED,
-#         json_schema_extra={"settings": {"readonly": True}}
-#     )
-
-#     metadata: Optional[Dict[str, Any]] = Field(
-#         default_factory=dict,
-#         json_schema_extra={"settings": {"readonly": True}}
-#     )
-
-#     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-#     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-
 class MainInfoSchema(BaseValidatedModel):
     """
     Основная информация о пациенте, хранится в MongoDB.
