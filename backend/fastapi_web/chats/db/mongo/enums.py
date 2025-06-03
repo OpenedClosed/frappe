@@ -13,27 +13,62 @@ class SenderRole(BaseJsonEnumMixin, str, Enum):
 
 
 class ChatStatus(BaseJsonEnumMixin, str, Enum):
-    """Статусы чатов с возможностью визуального выделения."""
+    """Статусы чатов (взаимоисключающие)."""
 
-    IN_PROGRESS = json.dumps({
-        "en": "In Progress", "ru": "В процессе",
-        "settings": {"color": "#FFA500", "icon": "pi pi-spin pi-spinner"}
+    # --- Старт чата ---
+    NEW_SESSION = json.dumps({
+        "en": "New Session", "ru": "Новая сессия",
+        "settings": {"color": "#17a2b8", "icon": "pi pi-comment"}
     })
 
-    SUCCESSFULLY_CLOSED = json.dumps({
-        "en": "Successfully Closed", "ru": "Закрыт успешно",
-        "settings": {"color": "#28a745", "icon": "pi pi-check"}
+    # --- Брифинг ---
+    BRIEF_IN_PROGRESS = json.dumps({
+        "en": "Brief In Progress", "ru": "Заполняется бриф",
+        "settings": {"color": "#6c757d", "icon": "pi pi-list"}
+    })
+    BRIEF_COMPLETED = json.dumps({
+        "en": "Brief Completed", "ru": "Бриф заполнен",
+        "settings": {"color": "#20c997", "icon": "pi pi-check-circle"}
     })
 
-    CLOSED_WITHOUT_RESPONSE = json.dumps({
-        "en": "Closed Without Response", "ru": "Закрыт без ответа",
-        "settings": {"color": "#dc3545", "icon": "pi pi-times"}
+    # --- Автоматический режим ---
+    AUTO_WAITING_AI = json.dumps({
+        "en": "Waiting for AI", "ru": "Ожидает ИИ",
+        "settings": {"color": "#6f42c1", "icon": "pi pi-spin pi-cog"}
+    })
+    AUTO_WAITING_CLIENT = json.dumps({
+        "en": "Waiting for Client", "ru": "Ожидает клиента",
+        "settings": {"color": "#0d6efd", "icon": "pi pi-reply"}
     })
 
-    FORCED_CLOSED = json.dumps({
-        "en": "Forced Closed", "ru": "Принудительно закрыт",
-        "settings": {"color": "#6c757d", "icon": "pi pi-lock"}
+    # --- Ручной режим ---
+    MANUAL_WAITING_CONSULTANT = json.dumps({
+        "en": "Waiting for Consultant", "ru": "Ожидает консультанта",
+        "settings": {"color": "#dc3545", "icon": "pi pi-user-clock"}
     })
+    MANUAL_READ_BY_CONSULTANT = json.dumps({
+        "en": "Read by Consultant", "ru": "Прочитано консультантом",
+        "settings": {"color": "#ffc107", "icon": "pi pi-eye"}
+    })
+    MANUAL_WAITING_CLIENT = json.dumps({
+        "en": "Waiting for Client", "ru": "Ожидает клиента",
+        "settings": {"color": "#198754", "icon": "pi pi-user-check"}
+    })
+
+    # --- Завершённые ---
+    CLOSED_NO_MESSAGES = json.dumps({
+        "en": "Closed – No Messages", "ru": "Закрыт без сообщений",
+        "settings": {"color": "#adb5bd", "icon": "pi pi-times"}
+    })
+    CLOSED_BY_TIMEOUT = json.dumps({
+        "en": "Closed by Timeout", "ru": "Закрыт по таймауту",
+        "settings": {"color": "#6c757d", "icon": "pi pi-clock"}
+    })
+    CLOSED_BY_OPERATOR = json.dumps({
+        "en": "Closed by Operator", "ru": "Закрыт оператором",
+        "settings": {"color": "#28a745", "icon": "pi pi-lock"}
+    })
+
 
 
 class ChatSource(BaseJsonEnumMixin, str, Enum):

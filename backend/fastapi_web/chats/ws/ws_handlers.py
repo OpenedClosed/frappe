@@ -24,6 +24,7 @@ from knowledge.utils.help_functions import (build_messages_for_model,
                                             merge_external_structures)
 from users.db.mongo.enums import RoleEnum
 from utils.help_functions import try_parse_json
+from chats.utils.help_functions import calculate_chat_status
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
 from ..db.mongo.schemas import (BriefAnswer, BriefQuestion, ChatMessage,
@@ -490,34 +491,42 @@ async def handle_status_check(
     chat_id: str,
     redis_key_session: str
 ) -> None:
-    """Проверяет статус чата, режим работы и прочитан ли чат хотя бы одним сотрудником."""
-    remaining_time = max(await redis_db.ttl(redis_key_session), 0)
-
     chat_data = await mongo_db.chats.find_one(
         {"chat_id": chat_id},
-        {"chat_id": 1, "manual_mode": 1, "read_state": 1, "messages": 1}
+        {
+            "chat_id": 1,
+            "manual_mode": 1,
+            "read_state": 1,
+            "messages": 1,
+            "brief_answers": 1
+        }
     )
     if not chat_data:
         return
 
     chat_session = ChatSession(**chat_data)
+    remaining_time = max(await redis_db.ttl(redis_key_session), 0)
+    read_by_staff = chat_session.is_read_by_any_staff({
+        str(user["_id"]) async for user in mongo_db.users.find(
+            {"role": {"$in": [RoleEnum.ADMIN.value, RoleEnum.SUPERADMIN.value]}},
+            {"_id": 1}
+        )
+    })
 
-    staff_roles = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
-    staff_users_cursor = mongo_db.users.find(
-        {"role": {"$in": [role.value for role in staff_roles]}},
-        {"_id": 1}
-    )
-    staff_ids = {str(user["_id"]) async for user in staff_users_cursor}
-    read_by_staff = chat_session.is_read_by_any_staff(staff_ids)
+    status = await calculate_chat_status(chat_session, redis_key_session)
 
     response = custom_json_dumps({
         "type": "status_check",
         "message": "Session is active." if remaining_time > 0 else "Session is expired.",
         "remaining_time": remaining_time,
         "manual_mode": chat_session.manual_mode,
-        "read_by_staff": read_by_staff
+        "read_by_staff": read_by_staff,
+        "status": status.value
     })
+
     await manager.broadcast(response)
+
+
 
 
 async def handle_get_my_id(
@@ -827,20 +836,50 @@ async def load_chat_data(manager: ConnectionManager, client_id: str,
         return None
 
 
-async def validate_chat_status(manager: ConnectionManager, client_id: str, chat_session: ChatSession,
-                               redis_key_session: str, chat_id: str, user_language: str) -> bool:
-    """Проверяет статус чата перед обработкой сообщений."""
-    ttl_value = await redis_db.ttl(redis_key_session)
-    dynamic_status = chat_session.compute_status(ttl_value)
 
-    if dynamic_status != ChatStatus.IN_PROGRESS:
-        await broadcast_error(manager, client_id, chat_id, get_translation("errors", "chat_status_invalid", user_language, status=dynamic_status.value))
+
+async def validate_chat_status(
+    manager: ConnectionManager,
+    client_id: str,
+    chat_session: ChatSession,
+    redis_key_session: str,
+    chat_id: str,
+    user_language: str
+) -> bool:
+    """Проверяет статус чата перед обработкой сообщений."""
+
+    ttl_value = await redis_db.ttl(redis_key_session)
+    brief_questions = BRIEF_QUESTIONS
+    dynamic_status = chat_session.compute_status(ttl_value)
+    status_en = json.loads(dynamic_status.value)["en"]
+
+    NEGATIVE_STATUSES = {
+        ChatStatus.CLOSED_NO_MESSAGES.en_value,
+        ChatStatus.CLOSED_BY_TIMEOUT.en_value,
+        ChatStatus.CLOSED_BY_OPERATOR.en_value
+    }
+
+    if status_en in NEGATIVE_STATUSES:
+        await broadcast_error(
+            manager,
+            client_id,
+            chat_id,
+            get_translation(
+                "errors", "chat_status_invalid", user_language,
+                status=dynamic_status.value
+            )
+        )
         return False
 
     if ttl_value < 0 and chat_session.messages:
-        await redis_db.set(redis_key_session, "1", ex=int(settings.CHAT_TIMEOUT.total_seconds()))
+        await redis_db.set(
+            redis_key_session,
+            "1",
+            ex=int(settings.CHAT_TIMEOUT.total_seconds())
+        )
 
     return True
+
 
 
 # ==============================

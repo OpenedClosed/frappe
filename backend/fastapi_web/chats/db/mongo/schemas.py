@@ -1,5 +1,6 @@
 """Схемы приложения Чаты для работы с БД MongoDB."""
 from datetime import datetime
+import json
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
@@ -126,15 +127,54 @@ class ChatSession(BaseValidatedModel):
             "manual" if self.manual_mode else "automatic"
         )
 
-    def compute_status(self, ttl_value: int) -> ChatStatus:
-        """Определяет статус чата на основе его активности и закрытия."""
+    def compute_status(
+        self,
+        ttl_value: int,
+        staff_ids: set[str] | None = None,
+        brief_questions: list[BriefQuestion] | None = None
+    ) -> ChatStatus:
         if self.closed_by_request:
-            return ChatStatus.FORCED_CLOSED
-        if ttl_value > 0:
-            return ChatStatus.IN_PROGRESS
+            return ChatStatus.CLOSED_BY_OPERATOR
+
+        if ttl_value <= 0:
+            return (
+                ChatStatus.CLOSED_NO_MESSAGES
+                if not self.messages else ChatStatus.CLOSED_BY_TIMEOUT
+            )
+
+        # Новый чат, ещё никто не писал
         if not self.messages:
-            return ChatStatus.CLOSED_WITHOUT_RESPONSE
-        return self.determine_final_status()
+            return ChatStatus.NEW_SESSION
+
+        # Если бриф есть и не заполнен
+        if self.calculate_mode(brief_questions or []) == "brief":
+            return ChatStatus.BRIEF_IN_PROGRESS
+
+        # Если бриф завершён, но нет ни одного сообщения
+        if not self.messages:
+            return ChatStatus.BRIEF_COMPLETED
+
+        last = self.messages[-1]
+        role_en = (
+            json.loads(last.sender_role)["en"]
+            if isinstance(last.sender_role, str)
+            else last.sender_role.en_value
+        )
+
+        if self.manual_mode:
+            if role_en == SenderRole.CLIENT.en_value:
+                return (
+                    ChatStatus.MANUAL_READ_BY_CONSULTANT
+                    if self.is_read_by_any_staff(staff_ids or set())
+                    else ChatStatus.MANUAL_WAITING_CONSULTANT
+                )
+            return ChatStatus.MANUAL_WAITING_CLIENT
+
+        # Автоматический режим
+        if role_en == SenderRole.CLIENT.en_value:
+            return ChatStatus.AUTO_WAITING_AI
+        return ChatStatus.AUTO_WAITING_CLIENT
+
 
     def get_current_question(
             self, brief_questions: List[BriefQuestion]) -> Optional[BriefQuestion]:
@@ -149,13 +189,6 @@ class ChatSession(BaseValidatedModel):
         return {a.question for a in self.brief_answers}.issuperset(
             q.question for q in brief_questions)
 
-    def determine_final_status(self) -> ChatStatus:
-        """Возвращает финальный статус чата в зависимости от последнего сообщения."""
-        return (
-            ChatStatus.SUCCESSFULLY_CLOSED
-            if self.messages[-1].sender_role == SenderRole.CONSULTANT
-            else ChatStatus.CLOSED_WITHOUT_RESPONSE
-        )
 
     def is_read_by_any_staff(self, staff_ids: set[str]) -> bool:
         """Проверяет, прочитан ли чат хотя бы одним из указанных staff-пользователей."""

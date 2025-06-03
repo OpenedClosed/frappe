@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from admin_core.base_admin import BaseAdmin, InlineAdmin
 from chats.db.mongo.enums import SenderRole
-from chats.utils.help_functions import get_master_client_by_id
+from chats.utils.help_functions import build_sender_data_map, calculate_chat_status, get_master_client_by_id
 from crud_core.permissions import OperatorPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
@@ -303,266 +303,200 @@ class ClientInline(InlineAdmin):
 class ChatSessionAdmin(BaseAdmin):
     """Админ для сессий чата."""
 
+    # ──────────────────────────── базовые настройки ────────────────────────────
     model = ChatSession
     collection_name = "chats"
     permission_class = OperatorPermission()
-
-    verbose_name = {
-        "en": "Chat Session",
-        "pl": "Sesja czatu",
-        "uk": "Сесія чату",
-        "ru": "Сессия чата",
-        "ka": "ჩეთის სესია"
-    }
-    plural_name = {
-        "en": "Chat Sessions",
-        "pl": "Sesje czatu",
-        "uk": "Сесії чату",
-        "ru": "Сессии чата",
-        "ka": "ჩეთის სესიები"
-    }
-
     icon = "pi pi-comments"
 
-    list_display = [
-        "chat_id", "client_id_display", "client_source_display",
-        "company_name", "status_display", "duration_display",
-        "created_at", "admin_marker"
-    ]
+    verbose_name = {
+        "en": "Chat Session", "pl": "Sesja czatu", "uk": "Сесія чату",
+        "ru": "Сессия чата", "ka": "ჩეთის სესია"
+    }
+    plural_name = {
+        "en": "Chat Sessions", "pl": "Sesje czatu", "uk": "Сесії чату",
+        "ru": "Сессии чата", "ka": "ჩეთის სესიები"
+    }
 
-    detail_fields = list_display + ["read_state"]
-    computed_fields = [
-        "client_id_display", "client_source_display",
-        "status_display", "duration_display"
-    ]
-    read_only_fields = ["created_at", "last_activity"]
-
+    # ─────────────────────────── переименования полей ──────────────────────────
     field_titles = {
         "chat_id": {
-            "en": "Chat ID",
-            "pl": "ID czatu",
-            "uk": "ID чату",
-            "ru": "ID чата",
-            "ka": "ჩეთის ID"
+            "en": "Chat ID", "pl": "ID czatu", "uk": "ID чату",
+            "ru": "ID чата", "ka": "ჩეთის ID"
         },
         "client_id_display": {
-            "en": "Client ID",
-            "pl": "ID klienta",
-            "uk": "ID клієнта",
-            "ru": "ID клиента",
-            "ka": "კლიენტის ID"
+            "en": "Client ID", "pl": "ID klienta", "uk": "ID клієнта",
+            "ru": "ID клиента", "ka": "კლიენტის ID"
         },
         "client_source_display": {
-            "en": "Client Source",
-            "pl": "Źródło klienta",
-            "uk": "Джерело клієнта",
-            "ru": "Источник клиента",
-            "ka": "კლიენტის წყარო"
+            "en": "Client Source", "pl": "Źródło klienta", "uk": "Джерело клієнта",
+            "ru": "Источник клиента", "ka": "კლიენტის წყარო"
         },
         "company_name": {
-            "en": "Company Name",
-            "pl": "Nazwa firmy",
-            "uk": "Назва компанії",
-            "ru": "Название компании",
-            "ka": "კომპანიის სახელი"
+            "en": "Company Name", "pl": "Nazwa firmy", "uk": "Назва компанії",
+            "ru": "Название компании", "ka": "კომპანიის სახელი"
         },
         "status_display": {
-            "en": "Status",
-            "pl": "Status",
-            "uk": "Статус",
-            "ru": "Статус",
-            "ka": "სტატუსი"
+            "en": "Status", "pl": "Status", "uk": "Статус",
+            "ru": "Статус", "ka": "სტატუსი"
+        },
+        "status_emoji": {
+            "en": "Status Emoji", "ru": "Эмодзи статуса"
         },
         "duration_display": {
-            "en": "Duration",
-            "pl": "Czas trwania",
-            "uk": "Тривалість",
-            "ru": "Длительность",
-            "ka": "ხანგრძლივობა"
+            "en": "Duration", "pl": "Czas trwania", "uk": "Тривалість",
+            "ru": "Длительность", "ka": "ხანგრძილობა"
+        },
+        "participants_display": {
+            "en": "Participants", "ru": "Участники"
         },
         "created_at": {
-            "en": "Created At",
-            "pl": "Utworzono",
-            "uk": "Створено",
-            "ru": "Создано",
-            "ka": "შექმნის დრო"
+            "en": "Created At", "pl": "Utworzono", "uk": "Створено",
+            "ru": "Создано", "ka": "შექმნის დრო"
         },
         "last_activity": {
-            "en": "Last Activity",
-            "pl": "Ostatnia aktywność",
-            "uk": "Остання активність",
-            "ru": "Последняя активность",
-            "ka": "ბოლო აქტივობა"
+            "en": "Last Activity", "pl": "Ostatnia aktywność", "uk": "Остання активність",
+            "ru": "Последняя активность", "ka": "ბოლო აქტივობა"
         },
         "admin_marker": {
-            "en": "Admin Marker",
-            "pl": "Znacznik administratora",
-            "uk": "Позначка адміністратора",
-            "ru": "Админская метка",
-            "ka": "ადმინის მარკერი"
+            "en": "Admin Marker", "pl": "Znacznik administratora", "uk": "Позначка адміністратора",
+            "ru": "Админская метка", "ka": "ადმინის მარკერი"
         },
         "read_state": {
-            "en": "Read Status",
-            "pl": "Stan przeczytania",
-            "uk": "Статус прочитання",
-            "ru": "Прочитано кем",
-            "ka": "წაკითხვის სტატუსი"
+            "en": "Read Status", "pl": "Stan przeczytania", "uk": "Статус прочитання",
+            "ru": "Прочитано кем", "ka": "წაკითხვის სტატუსი"
         }
     }
 
-    inlines = {
-        "messages": ChatMessageInline,
-        "client": ClientInline
+    # ───────────────────────────── отображение ────────────────────────────────
+    list_display = [
+        "chat_id", "client_id_display", "client_source_display",
+        "company_name", "status_emoji", "status_display",
+        "duration_display", "participants_display",
+        "created_at", "admin_marker"
+    ]
+    detail_fields = list_display + ["read_state"]
+    computed_fields = [
+        "client_id_display", "client_source_display",
+        "status_display", "status_emoji",
+        "duration_display", "participants_display"
+    ]
+    read_only_fields = ["created_at", "last_activity"]
+    inlines = {"messages": ChatMessageInline, "client": ClientInline}
+
+    # ──────────────────────────── маппинг эмодзи ──────────────────────────────
+    STATUS_EMOJI_MAP = {
+        "New Session": "🆕", "Brief In Progress": "📝", "Brief Completed": "✅",
+        "Waiting for AI": "🤖", "Waiting for Client": "⏳",
+        "Waiting for Consultant": "📞", "Read by Consultant": "👓",
+        "Closed – No Messages": "🚫", "Closed by Timeout": "⌛️",
+        "Closed by Operator": "🔒"
     }
 
-    # async def get_queryset(
-    #     self,
-    #     filters: Optional[dict] = None,
-    #     sort_by: Optional[str] = None,
-    #     order: int = 1,
-    #     page: Optional[int] = None,
-    #     page_size: Optional[int] = None,
-    #     current_user: Optional[dict] = None
-    # ) -> List[dict]:
-    #     """Список чатов, у которых есть сообщения."""
-    #     filters = filters or {}
-    #     filters["messages"] = {"$exists": True, "$ne": []}
-    #     return await super().get_queryset(filters=filters, sort_by=sort_by, order=order, page=page, page_size=page_size, current_user=current_user)
-
+    # ─────────────────────────── queryset с сортировкой ────────────────────────
     async def get_queryset(
-        self,
-        filters: Optional[dict] = None,
-        sort_by: Optional[str] = None,
-        order: int = 1,
-        page: Optional[int] = None,
-        page_size: Optional[int] = None,
-        current_user: Optional[dict] = None,
-        format: bool = True,
+        self, filters: Optional[dict] = None, sort_by: Optional[str] = None,
+        order: int = 1, page: Optional[int] = None, page_size: Optional[int] = None,
+        current_user: Optional[dict] = None, format: bool = True
     ) -> List[dict]:
-        """Список чатов с поддержкой сортировки по updated_at и делегированием в super()."""
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
-
         is_updated_at_sort = not sort_by or sort_by == "updated_at"
 
         if not is_updated_at_sort:
-            # Используем стандартную сортировку, всё делает базовый метод
             return await super().get_queryset(
-                filters=filters,
-                sort_by=sort_by,
-                order=order,
-                page=page,
-                page_size=page_size,
-                current_user=current_user,
-                format=format
+                filters=filters, sort_by=sort_by, order=order,
+                page=page, page_size=page_size,
+                current_user=current_user, format=format
             )
 
         raw_docs = await super().get_queryset(
-            filters=filters,
-            sort_by=None,
-            order=order,
-            page=None,
-            page_size=None,
-            current_user=current_user,
-            format=False
+            filters=filters, sort_by=None, order=order, page=None, page_size=None,
+            current_user=current_user, format=False
         )
-
 
         def get_updated_at(doc: dict) -> datetime:
             messages = doc.get("messages") or []
             for msg in reversed(messages):
-                sender_role = msg.get("sender_role")
-
-                if isinstance(sender_role, str):
+                role = msg.get("sender_role")
+                if isinstance(role, str):
                     try:
-                        sender_role = json.loads(sender_role)
+                        role = json.loads(role)
                     except Exception:
                         continue
-
-                if isinstance(sender_role, dict) and sender_role.get("en") == SenderRole.CLIENT.en_value:
+                if isinstance(role, dict) and role.get("en") == SenderRole.CLIENT.en_value:
                     return msg.get("timestamp") or doc.get("last_activity") or doc.get("created_at")
-
             return doc.get("last_activity") or doc.get("created_at")
-
-
 
         raw_docs.sort(key=get_updated_at, reverse=(order == -1))
 
         if page is not None and page_size:
-            start = (page - 1) * page_size
-            end = start + page_size
+            start, end = (page - 1) * page_size, (page - 1) * page_size + page_size
             raw_docs = raw_docs[start:end]
 
         if not format:
             return raw_docs
 
-        return await asyncio.gather(*[
-            self.format_document(doc, current_user) for doc in raw_docs
-        ])
+        return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))
 
-
-
-
+    # ────────────────────────── вычисляемые поля ──────────────────────────────
     async def get_status_display(self, obj: dict) -> str:
-        """Статус чата (в виде JSON строки с переводами)."""
-        ttl_value = 0
-        if obj.get("last_activity"):
-            diff = (datetime.utcnow() - obj["last_activity"]).total_seconds()
-            ttl_value = settings.CHAT_TIMEOUT.total_seconds() - max(diff, 0)
-
         chat_session = ChatSession(**obj)
-        status = chat_session.compute_status(ttl_value).value
+        redis_key = f"chat:session:{chat_session.chat_id}"
+        status = await calculate_chat_status(chat_session, redis_key)
+        return status.value
 
-        translated = {
-            "en": status.replace("_", " ").capitalize(),
-            "ru": {
-                "active": "Активен",
-                "inactive": "Неактивен",
-                "expired": "Истёк"
-            }.get(status, "Неизвестно")
-        }
-        return json.dumps(translated, ensure_ascii=False)
+    async def get_status_emoji(self, obj: dict) -> str:
+        status_json = json.loads(await self.get_status_display(obj))
+        return self.STATUS_EMOJI_MAP.get(status_json.get("en"), "❓")
 
     async def get_duration_display(self, obj: dict) -> str:
-        """Длительность чата (в виде JSON строки с переводами)."""
-        created_at = obj.get("created_at")
-        last_activity = obj.get("last_activity")
+        created_at, last_activity = obj.get("created_at"), obj.get("last_activity")
         if not created_at or not last_activity:
-            return json.dumps({"en": "0h 0m", "ru": "0ч 0м"},
-                              ensure_ascii=False)
-
+            return json.dumps({"en": "0h 0m", "ru": "0ч 0м"}, ensure_ascii=False)
         duration = last_activity - created_at
         hours, remainder = divmod(duration.total_seconds(), 3600)
         minutes, _ = divmod(remainder, 60)
-
-        return json.dumps({
-            "en": f"{int(hours)}h {int(minutes)}m",
-            "ru": f"{int(hours)}ч {int(minutes)}м"
-        }, ensure_ascii=False)
+        return json.dumps(
+            {"en": f"{int(hours)}h {int(minutes)}m",
+             "ru": f"{int(hours)}ч {int(minutes)}м"},
+            ensure_ascii=False
+        )
 
     async def get_client_id_display(self, obj: dict) -> str:
-        """ID клиента или его внешний ID (в виде JSON строки)."""
         client_data = obj.get("client")
         value = "N/A"
-
         if isinstance(client_data, dict):
             client = Client(**client_data)
             master = await get_master_client_by_id(client.client_id)
             if master:
-                value = master.external_id or master.client_id
-
-        return json.dumps({"en": value, "ru": value}, ensure_ascii=False)
+                value = master.client_id
+        return value
 
     async def get_client_source_display(self, obj: dict) -> str:
-        """Источник клиента (в виде JSON строки)."""
         client_data = obj.get("client")
         value = "Unknown"
         if isinstance(client_data, dict):
             client = Client(**client_data)
             if isinstance(client.source, str):
                 value = client.source.replace("_", " ").capitalize()
+        return json.dumps(value, ensure_ascii=False)
 
-        return json.dumps({"en": value, "ru": value}, ensure_ascii=False)
+    async def get_participants_display(self, obj: dict) -> str:
+        messages = obj.get("messages", [])
+        if not messages:
+            return json.dumps([], ensure_ascii=False)
+
+        sender_data = await build_sender_data_map(messages)
+
+        participants = []
+        for client_id, data in sender_data.items():
+            participants.append({
+                "client_id": client_id,
+                "sender_info": data
+            })
+
+        return json.dumps(participants, ensure_ascii=False)
 
 
 admin_registry.register("chat_sessions", ChatSessionAdmin(mongo_db))

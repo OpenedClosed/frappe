@@ -11,8 +11,14 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from bson import ObjectId
 import httpx
-from fastapi import Request, WebSocket
+from fastapi import HTTPException, Request, WebSocket
 from pymongo import DESCENDING
+from fastapi import Request, HTTPException, Depends
+
+from fastapi_jwt_auth import AuthJWT, exceptions as jwt_exc
+
+from chats.utils.knowledge_base import BRIEF_QUESTIONS
+from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import UserWithData
 from telegram_bot.infra import settings as bot_settings
 
@@ -333,18 +339,40 @@ async def get_active_chats_for_client(
     active_chats.sort(key=lambda x: x[0]["created_at"], reverse=True)
     return active_chats
 
+async def calculate_chat_status(chat_session: ChatSession, redis_key_session: str):
+    remaining_time = max(await redis_db.ttl(redis_key_session), 0)
+
+    staff_roles = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    staff_users_cursor = mongo_db.users.find(
+        {"role": {"$in": [role.value for role in staff_roles]}},
+        {"_id": 1}
+    )
+    staff_ids = {str(user["_id"]) async for user in staff_users_cursor}
+    brief_questions = BRIEF_QUESTIONS
+
+    status = chat_session.compute_status(
+        ttl_value=remaining_time,
+        staff_ids=staff_ids,
+        brief_questions=brief_questions
+    )
+    return status
+
 
 async def serialize_active_chat(chat_data: dict, ttl: int) -> Dict[str, Any]:
-    """Унифицированная сериализация данных активного чата в API-ответ."""
+    chat_session = ChatSession(**chat_data)
+    redis_key = f"chat:session:{chat_session.chat_id}"
+    status = await calculate_chat_status(chat_session, redis_key)
+
     return {
         "message": "Chat session is active.",
-        "chat_id": chat_data["chat_id"],
-        "client_id": chat_data["client"]["client_id"],
-        "created_at": chat_data["created_at"],
-        "last_activity": chat_data["last_activity"],
+        "chat_id": chat_session.chat_id,
+        "client_id": chat_session.client.client_id,
+        "created_at": chat_session.created_at,
+        "last_activity": chat_session.last_activity,
         "remaining_time": ttl,
-        "status": ChatSession(**chat_data).compute_status(ttl).value,
+        "status": status.value,
     }
+
 
 
 async def get_chat_position(chat_id: str) -> tuple[int, int]:
@@ -381,6 +409,51 @@ async def get_chat_position(chat_id: str) -> tuple[int, int]:
 # ==============================
 # БЛОК: Создание / восстановление сессии
 # ==============================
+
+async def resolve_chat_identity(
+    request: Request,
+    source: ChatSource,
+    client_external_id: Optional[str],
+    user_id: Optional[str],
+    timestamp: Optional[str],
+    hash: Optional[str],
+    Authorize: AuthJWT = Depends(),          # ⬅️  JWT опционален
+) -> Tuple[str, str]:                       # (client_id, external_id)
+    """
+    1. Telegram Mini App → валидация подписи.
+    2. JWT → пытаемся найти MasterClient по `user_id`.
+    3. Иначе — старая схема (external_id || 'anonymous').
+    """
+    from chats.integrations.telegram.telegram_bot import verify_telegram_hash
+    # --- 1. Telegram Mini App ---
+    if source == ChatSource.TELEGRAM_MINI_APP:
+        if not (user_id and timestamp and hash):
+            raise HTTPException(400, "Telegram auth params missing")
+        if not verify_telegram_hash(user_id, timestamp, hash, settings.TELEGRAM_BOT_TOKEN):
+            raise HTTPException(403, "Invalid Telegram signature")
+        external_id = user_id
+
+    else:
+        user_id = None
+        try:
+            user_id = Authorize.get_jwt_subject()
+            if not user_id:
+                raise HTTPException(status_code=401, detail="Not authenticated")
+            user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+
+        except (jwt_exc.MissingTokenError, jwt_exc.RevokedTokenError):
+            user_doc = None
+
+        if user_doc and user_id:
+            master = await mongo_db.master_clients.find_one({"user_id": user_id})
+            if master:
+                return master["client_id"], master.get("external_id") or ""
+            external_id = "anonymous" if source == ChatSource.INTERNAL else user_id
+        else:
+            external_id = "anonymous" if source == ChatSource.INTERNAL else user_id
+
+    client_id = await generate_client_id(request, chat_source=source, external_id=external_id)
+    return client_id, external_id
 
 async def handle_chat_creation(
     mode: Optional[str] = None,
@@ -463,11 +536,15 @@ async def handle_chat_creation(
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
 
+    status = await calculate_chat_status(chat, f"chat:session:{chat.chat_id}")
+
+
+
     return {
         "message": "New chat session created.",
         "chat_id": chat.chat_id,
         "client_id": client_id,
-        "status": ChatStatus.IN_PROGRESS.value,
+        "status": status.value,
     }
 
 
