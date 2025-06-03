@@ -48,27 +48,6 @@
           <EmbeddedChat class="w-full" v-if="filteredTableData.length>0"  :id="filteredTableData[0]?.chat_id" :chatsData="filteredTableData" :totalRecords="totalRecords" @page="changeCurrentPage" :isRoomsLoading="isLoading"  @exportToExcel="onExportToExcel"/>
 
       </div>
-      <!-- <div
-        v-else-if="currentEntity === 'patients_bonus_program' && !currentId"
-        class="flex w-full flex-col flex-1 min-w-0 justify-center items-center"
-      >
-        <PointsTable
-          :title="currentEntityName"
-          :isInline="isEntityInline"
-          :displayedColumns="displayedColumns"
-          :tableData="tableDataOriginal"
-          :isLoading="isLoading"
-          :fieldOptions="fieldOptions"
-          :rows="pageSize"
-          :first="(currentPage - 1) * pageSize"
-          :totalRecords="totalRecords"
-          :paginator="true"
-          @page="onPageChange"
-          @exportToExcel="onExportToExcel"
-          @showFilter="showFilterDialog"
-          @filterChange="handleFilterChange"
-        />
-      </div> -->
 
       <!-- Default behavior: Show Data Table -->
       <div v-else-if="currentEntity && !currentId" class="flex flex-col flex-1 min-w-0 justify-between m-4">

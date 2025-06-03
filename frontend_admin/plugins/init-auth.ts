@@ -1,7 +1,6 @@
-
 export default defineNuxtPlugin(async (nuxtApp) => {
   const { isAuthorized } = useAuthState();
-  const { currentUrl, currentFrontendUrl } = useURLState();;
+  const { currentUrl, currentFrontendUrl } = useURLState();
   const { currentPageName } = usePageState();
   const route = useRoute();
 
@@ -9,6 +8,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   const pagename = route.params.pagename || "admin";
   currentPageName.value = pagename;
 
+  currentUrl.value =
+    window.location.hostname === "localhost" ? "http://localhost:8000" : `${window.location.protocol}//${window.location.hostname}`;
 
   // Auth check logic
   const token = useCookie("access_token");
