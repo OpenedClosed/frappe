@@ -429,6 +429,7 @@ async def resolve_chat_identity(
     """
     from chats.integrations.telegram.telegram_bot import verify_telegram_hash
     # --- 1. Telegram Mini App ---
+    # --- 1. Telegram Mini App ---
     if source == ChatSource.TELEGRAM_MINI_APP:
         if not (user_id and timestamp and hash):
             raise HTTPException(400, "Telegram auth params missing")
@@ -437,15 +438,17 @@ async def resolve_chat_identity(
         external_id = user_id
 
     else:
-        user_id = None
-        try:
-            user_id = Authorize.get_jwt_subject()
-            if not user_id:
-                raise HTTPException(status_code=401, detail="Not authenticated")
-            user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
-
-        except (jwt_exc.MissingTokenError, jwt_exc.RevokedTokenError):
-            user_doc = None
+        user_doc = None
+        if Authorize is not None:
+            try:
+                user_id = Authorize.get_jwt_subject()
+                if not user_id:
+                    raise HTTPException(status_code=401, detail="Not authenticated")
+                user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+            except (jwt_exc.MissingTokenError, jwt_exc.RevokedTokenError):
+                user_doc = None
+        else:
+            user_id = None
 
         if user_doc and user_id:
             master = await mongo_db.master_clients.find_one({"user_id": user_id})

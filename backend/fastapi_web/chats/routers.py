@@ -28,10 +28,10 @@ async def create_or_get_chat(
     user_id: Optional[str] = Query(default=None),
     timestamp: Optional[str] = Query(default=None),
     hash: Optional[str] = Query(default=None),
-    Authorize: AuthJWT = Depends(),
+    Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> dict:
     """API-обработчик получения или создания чата."""
-
+    print('зашли')
     client_id, external_id = await resolve_chat_identity(
         request, source, client_external_id, user_id, timestamp, hash, Authorize
     )
@@ -66,7 +66,7 @@ async def get_chat_by_id(
     user_id: Optional[str] = Query(default=None),
     timestamp: Optional[str] = Query(default=None),
     hash: Optional[str] = Query(default=None),
-    Authorize: AuthJWT = Depends(),
+    Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> dict:
     """Получает чат по ID, если он активен и принадлежит вызывающему клиенту."""
 
@@ -96,7 +96,7 @@ async def get_active_chats(
     user_id: Optional[str] = Query(default=None),
     timestamp: Optional[str] = Query(default=None),
     hash: Optional[str] = Query(default=None),
-    Authorize: AuthJWT = Depends(),
+    Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> list[dict]:
     """Получает список всех активных чатов клиента."""
 
