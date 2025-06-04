@@ -30,7 +30,7 @@ def generate_secure_webapp_url(user_id: int) -> str:
     """
     Генерирует WebApp URL с подписью.
     """
-    base_url = f"{settings.HOST}/chats/telegram-chat"
+    base_url = f"{settings.HOST_URL}/chats/telegram-chat"
     timestamp = int(datetime.utcnow().timestamp())
     data = f"user_id={user_id}&timestamp={timestamp}"
     logging.error(f"data {data}")
