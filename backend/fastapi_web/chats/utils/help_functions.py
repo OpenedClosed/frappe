@@ -1,10 +1,12 @@
 """Вспомогательные функции приложения Чаты."""
 import base64
 import hashlib
+import hmac
 import json
 import locale
 import logging
 import re
+from urllib.parse import parse_qs, urlparse
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -16,6 +18,7 @@ from pymongo import DESCENDING
 from fastapi import Request, HTTPException, Depends
 
 from fastapi_jwt_auth import AuthJWT, exceptions as jwt_exc
+
 
 from chats.utils.knowledge_base import BRIEF_QUESTIONS
 from users.db.mongo.enums import RoleEnum
@@ -97,31 +100,72 @@ async def generate_client_id(
     return f"{chat_source_value.upper()}_{short_hash}"
 
 
+# async def get_client_id(
+#     websocket: WebSocket,
+#     chat_id: str,
+#     is_superuser: bool,
+#     user_id: Optional[str] = None
+# ) -> str:
+#     """Возвращает client_id для пользователя чата."""
+#     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
+#     if not chat_data:
+#         raise ValueError("Chat session not found")
+
+#     chat_session = ChatSession(**chat_data)
+
+#     if not is_superuser:
+#         return await generate_client_id(websocket)
+
+#     if not chat_session.client:
+#         return ""
+
+#     base_client_id = await generate_client_id(websocket)
+
+#     if user_id:
+#         return f"{user_id}:{base_client_id}"
+
+#     return base_client_id
+
+
 async def get_client_id(
     websocket: WebSocket,
     chat_id: str,
     is_superuser: bool,
     user_id: Optional[str] = None
 ) -> str:
-    """Возвращает client_id для пользователя чата."""
-    chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
-    if not chat_data:
-        raise ValueError("Chat session not found")
+    """
+    Возвращает client_id для пользователя чата.
+    • Telegram Mini-App → проверяем подпись и делаем такой же client_id, как при REST.
+    • JWT-админ → user_id:base_client_id.
+    • Обычный клиент → INTERNAL_<…>
+    """
 
-    chat_session = ChatSession(**chat_data)
+    # ---------- 1. Telegram Mini-App ----------
+    qs = parse_qs(urlparse(str(websocket.url)).query)
+    tg_user_id = qs.get("user_id", [None])[0]
+    ts          = qs.get("timestamp", [None])[0]
+    tg_hash     = qs.get("hash", [None])[0]
 
-    if not is_superuser:
-        return await generate_client_id(websocket)
+    if tg_user_id and ts and tg_hash:
+        base_string = f"user_id={tg_user_id}&timestamp={ts}"
+        secret_key = hashlib.sha256(settings.TELEGRAM_BOT_TOKEN.encode()).digest()
+        expected_hash = hmac.new(secret_key, base_string.encode(), hashlib.sha256).hexdigest()
+        result = hmac.compare_digest(expected_hash, tg_hash)
+        if result:
+            # генерируем ID в том же формате, что и /get_chat
+            return await generate_client_id(
+                websocket,
+                chat_source=ChatSource.TELEGRAM_MINI_APP,
+                external_id=tg_user_id
+            )
 
-    if not chat_session.client:
-        return ""
+    # ---------- 2. Суперюзер с JWT ----------
+    if is_superuser:
+        base_id = await generate_client_id(websocket)
+        return f"{user_id}:{base_id}" if user_id else base_id
 
-    base_client_id = await generate_client_id(websocket)
-
-    if user_id:
-        return f"{user_id}:{base_client_id}"
-
-    return base_client_id
+    # ---------- 3. Обычный клиент ----------
+    return await generate_client_id(websocket)
 
 
 # ==============================

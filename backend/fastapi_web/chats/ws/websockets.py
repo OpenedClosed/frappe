@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from typing import Optional
+from urllib.parse import parse_qs, urlparse
 
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
@@ -39,10 +40,12 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
         except Exception as e:
             logging.warning(f"Cannot load user from JWT: {e}")
 
+    qs = parse_qs(urlparse(str(websocket.url)).query)
+    as_admin = qs.get("as_admin", False)[0]
     is_superuser = bool(
         user and user.role in [
             RoleEnum.ADMIN,
-            RoleEnum.SUPERADMIN])
+            RoleEnum.SUPERADMIN] and as_admin)
 
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)

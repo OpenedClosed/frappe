@@ -55,16 +55,16 @@
       :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
       :text-messages="textMessagesJson"
-      
     >
       <div slot="room-header-avatar">
-        <Avatar icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
+        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
+        <Avatar v-else icon="pi pi-user" size="large" class="mr-2" style="background: #ece9fc; color: #2a1261" />
       </div>
       <div slot="room-header-info" class="flex-1">
         <!-- 🔥 Added flex-1 here -->
         <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
           <div class="flex flex-col">
-            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">{{ t("EmbeddedChat.userIdLabel") }}: {{ activeUserId }}</h2>
+            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">{{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}</h2>
             <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
           </div>
           <div class="flex flex-row justify-center items-center gap-1">
@@ -287,6 +287,7 @@ const messagesMap = ref({}); // { [roomId]: ChatMessage[] }
 const activeRoomId = ref(null);
 const activeUsername = ref(null);
 const activeUserId = ref(null);
+const activePdEntry = ref(null);
 const activeStartDate = ref(null);
 
 const textMessagesObject = computed(() => ({
@@ -327,6 +328,7 @@ function getChatId(data) {
       const room = rooms.value[idx];
       rooms.value[idx] = { ...room, seen: true, roomName: clearRoomName(room) };
       activeUserId.value = room?.roomName || null;
+      activePdEntry.value = room?.pdEntry || null;
       activeStartDate.value = room?.lastMessage?.timestamp || null;
     }
   }
@@ -401,19 +403,71 @@ function formatTimeDifferenceEU(dateStr) {
   });
 }
 
+
+function stripPrefix(id = "") {
+  /* TELEGRAM_599597042 → 599597042 */
+  return id.replace(/^[A-Z_]+_/, "");
+}
+
+/**
+ *  Turn sender_info (plus client_id) → a tidy, guaranteed-filled object
+ */
+function normaliseParticipant(senderInfo = {}, clientId = "") {
+  const md  = senderInfo.metadata || {};
+
+  /* -------- NAME -------- */
+  const username =
+    senderInfo.name              ??
+    md.profile_name              ?? // WhatsApp
+    md.name                      ?? // Telegram duplicate
+    md.username                  ?? // Telegram @username
+    stripPrefix(clientId);          // last fallback
+
+  /* -------- AVATAR -------- */
+  const avatar =
+    senderInfo.avatar_url        ??
+    md.avatar_url                ??
+    "";
+
+  /* -------- SOURCE -------- */
+  let source = senderInfo.source || "";
+  if (!source) {
+    // Instagram sometimes comes in as “Internal”
+    if (clientId.startsWith("TELEGRAM_"))  source = "Telegram";
+    else if (clientId.startsWith("WHATSAPP_")) source = "WhatsApp";
+    else if (clientId.startsWith("INSTAGRAM_")) source = "Instagram";
+    else source = "Internal";
+  }
+
+  /* -------- EXTERNAL ID / PHONE -------- */
+  const externalId =
+    senderInfo.external_id       ?? stripPrefix(clientId);
+
+  const phone =
+    md.display_phone_number      ?? // WhatsApp business
+    (externalId.match(/^\d+$/) ? externalId : null);
+
+  return { username, avatar, source, externalId, phone };
+}
+
+
 function buildRooms(chats, consultantId) {
   console.log("buildRooms", chats); // For debugging: log chat data
   const sourceAvatars = {
-    'Internal': "/avatars/internal.png",
-    'Telegram': "/avatars/telegram.png",
-    'Telegram Mini-App': "/avatars/miniapp.png",
-    'Instagram': "/avatars/insta.png",
-    'Facebook': "/avatars/facebook.png",
-    'WhatsApp': "/avatars/whatsapp.png",
+    Internal: "/avatars/internal.png",
+    Telegram: "/avatars/telegram.png",
+    "Telegram Mini-App": "/avatars/miniapp.png",
+    Instagram: "/avatars/insta.png",
+    Facebook: "/avatars/facebook.png",
+    WhatsApp: "/avatars/whatsapp.png",
   };
 
   return chats.map((chat, idx) => {
-     console.log("chatelement", chat); // For debugging: log chat data
+    const pdEntry = chat.participants_display?.find((p) => p.client_id === chat.client_id_display) ?? chat.participants_display?.[0];
+
+    const normalizedPd=
+      normaliseParticipant(pdEntry?.sender_info, pdEntry?.client_id);
+    console.log("chatelement", chat); // For debugging: log chat data
     const client = chat.client && chat.client[0] ? chat.client[0] : {};
     const sourceName = client.source && client.source.en ? client.source.en : t("EmbeddedChat.client");
 
@@ -438,16 +492,18 @@ function buildRooms(chats, consultantId) {
         }
       : { content: "", senderId: consultantUser._id };
     console.log("lastMessage", chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0); // For debugging: log last message data
+    const status_emoji = chat.status_emoji;
     const seen = chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0 || false;
     return {
       avatar: sourceAvatars[sourceName] || "/avatars/default.png",
       roomId: chat.chat_id,
-      roomName: `${seen ? "" : "🔴"} ${client.id}` || t("EmbeddedChat.chatFallback", { index: idx + 1 }),
+      roomName: `${seen ? "" : "🔴"} ${status_emoji || ''} ${normalizedPd.username || client.id}` || t("EmbeddedChat.chatFallback", { index: idx + 1 }),
       users: [clientUser, consultantUser],
       lastMessage,
       typingUsers: [],
       seen: seen,
       sourceName: sourceName,
+      pdEntry: normalizedPd,
     };
   });
 }
@@ -475,15 +531,14 @@ watch([chatRows], async ([rows]) => {
 onBeforeUnmount(() => chatLogic.value?.destroy?.());
 </script>
 
-<style >
+<style>
 .vue-advanced-chat {
   box-shadow: none !important;
 }
 /* global stylesheet (or <style> block without "scoped") */
 .vac-image-buttons .vac-button-download {
-  display: none !important;   /* hides the ⬇️ button everywhere */
+  display: none !important; /* hides the ⬇️ button everywhere */
 }
-
 </style>
 <style scoped>
 :deep(.vac-button-download) {
