@@ -9,7 +9,8 @@ def check_private_chat(func):
     @wraps(func)
     async def wrapper(message: Message, *args, **kwargs):
         chat_info = await message.bot.get_chat(message.chat.id)
-        if chat_info.type != 'supergroup':
+        # if chat_info.type != 'supergroup':
+        if chat_info.type == 'private':
             return await func(message, *args, **kwargs)
         else:
             await message.reply("Эта команда доступна только в личных чатах.")

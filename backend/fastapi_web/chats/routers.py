@@ -31,7 +31,10 @@ async def create_or_get_chat(
     Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> dict:
     """API-обработчик получения или создания чата."""
-    print('зашли')
+
+    if user_id and timestamp and hash:
+        source = ChatSource.TELEGRAM_MINI_APP
+
     client_id, external_id = await resolve_chat_identity(
         request, source, client_external_id, user_id, timestamp, hash, Authorize
     )
@@ -69,7 +72,8 @@ async def get_chat_by_id(
     Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> dict:
     """Получает чат по ID, если он активен и принадлежит вызывающему клиенту."""
-
+    if user_id and timestamp and hash:
+        source = ChatSource.TELEGRAM_MINI_APP
     client_id, _ = await resolve_chat_identity(
         request, source, client_external_id, user_id, timestamp, hash, Authorize
     )
@@ -99,7 +103,8 @@ async def get_active_chats(
     Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> list[dict]:
     """Получает список всех активных чатов клиента."""
-
+    if user_id and timestamp and hash:
+        source = ChatSource.TELEGRAM_MINI_APP
     client_id, _ = await resolve_chat_identity(
         request, source, client_external_id, user_id, timestamp, hash, Authorize
     )
