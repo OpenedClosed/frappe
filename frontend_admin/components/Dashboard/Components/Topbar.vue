@@ -35,7 +35,7 @@
           />
           <Button text type="button" class="text-white" @click="toggle" aria-haspopup="true" aria-controls="overlay_tmenu">
             <i :class="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"></i>
-            <Avatar v-if="avatarUrl" :image="avatarUrl" shape="circle" size="small" class="border border-white/20" />
+            <Avatar v-if="avatarUrl" :image="avatarUrl" shape="circle" size="small" class="border border-white/20 min-h-[30px] min-w-[30px]" />
             <p>{{ userName }}</p>
           </Button>
           <TieredMenu ref="menu" id="overlay_tmenu" :model="items" popup />

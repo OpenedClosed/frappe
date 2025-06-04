@@ -23,7 +23,7 @@
     "messageDialogText": "Текст",
     "noSources": "У сообщения нет источников из базы знаний",
     "sourceLabel": "Источник",
-    "userIdLabel": "ID пользователя",
+    "userIdLabel": "Пользователь",
     "closeButton": "Закрыть",
 
     "seeSources": "Показать источники",
