@@ -13,6 +13,7 @@ from .db.mongo.enums import ChatSource
 from .utils.help_functions import (get_active_chats_for_client,
                                    handle_chat_creation, resolve_chat_identity, serialize_active_chat)
 from infra import settings
+import logging
 
 chat_router = APIRouter()
 
@@ -32,6 +33,10 @@ async def create_or_get_chat(
 ) -> dict:
     """API-обработчик получения или создания чата."""
 
+    logging.error(f"===== ДО: {user_id} =====")
+    logging.error(f"user_id {user_id}")
+    logging.error(f"timestamp {timestamp}")
+    logging.error(f"hash {hash}")
     if user_id and timestamp and hash:
         source = ChatSource.TELEGRAM_MINI_APP
 

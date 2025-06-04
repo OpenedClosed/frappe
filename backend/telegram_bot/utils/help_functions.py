@@ -33,15 +33,20 @@ def generate_secure_webapp_url(user_id: int) -> str:
     base_url = f"{settings.FRONTEND_URL}/chats/telegram-chat"
     timestamp = int(datetime.utcnow().timestamp())
     data = f"user_id={user_id}&timestamp={timestamp}"
+    logging.error(f"data {data}")
 
     secret_key = hashlib.sha256(bot_settings.TELEGRAM_BOT_TOKEN.encode()).digest()
+    logging.error(f"secret_key {secret_key}")
     signature = hmac.new(secret_key, data.encode(), hashlib.sha256).hexdigest()
+    logging.error(f"signature {signature}")
 
     query = urlencode({
         "user_id": user_id,
         "timestamp": timestamp,
         "hash": signature,
     })
+
+    logging.error(f"query {query}")
 
     return f"{base_url}?{query}"
 
@@ -50,6 +55,7 @@ async def set_menu_webapp_for_user(user_id: int):
     Назначает WebApp-кнопку с безопасной ссылкой.
     """
     url = generate_secure_webapp_url(user_id)
+    logging.error(url)
     await bot.set_chat_menu_button(
         chat_id=user_id,
         menu_button=MenuButtonWebApp(

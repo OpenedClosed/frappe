@@ -454,12 +454,15 @@ async def resolve_chat_identity(
     3. Иначе — старая схема (external_id || 'anonymous').
     """
     from chats.integrations.telegram.telegram_bot import verify_telegram_hash
+    logging.error(f"===== ПОСЛЕ: {user_id} =====")
     logging.error(source)
     logging.error(f"user_id {user_id}")
     logging.error(f"timestamp {timestamp}")
     logging.error(f"hash {hash}")
-    res = verify_telegram_hash(user_id, timestamp, hash, settings.TELEGRAM_BOT_TOKEN)
-    logging.error(f"res {res}")
+    if hash:
+
+        res = verify_telegram_hash(user_id, timestamp, hash, settings.TELEGRAM_BOT_TOKEN)
+        logging.error(f"res {res}")
     if source == ChatSource.TELEGRAM_MINI_APP:
         if not (user_id and timestamp and hash):
             raise HTTPException(400, "Telegram auth params missing")
