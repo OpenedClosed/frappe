@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
 HOST = os.getenv("HOST", "localhost")
 PROTOCOL = "https" if HOST != "localhost" else "http"
 HOST_URL = f"{PROTOCOL}://{HOST}"
-if HOST = "localhost":
+if HOST == "localhost":
     FRONTEND_URL = f"{HOST_URL}:3000"
     BACKEND_URL = f"{HOST_URL}:8000"
 else:
