@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "primevue/usetoast";
 // УБРАЛ import { throttle } from "lodash";
 
+
 export function useChatLogic(options = {}) {
   const { isTelegram = false, query } = options; // Переключение под Telegram при необходимости
   const { t, locale } = useI18n();
@@ -113,6 +114,25 @@ export function useChatLogic(options = {}) {
     if (ext === "svg") return "svg+xml";
     return ext;
   }
+  const token = useCookie('access_token');
+  function buildWsQueryParams() {
+    const params = new URLSearchParams();
+
+    // copy every current query parameter from the page URL
+    Object.entries(route.query).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(v => params.append(key, v));
+      } else if (value != null) {
+        params.append(key, value);
+      }
+    });
+
+    // add the access-token cookie if it exists
+    if (token.value) params.append('token', token.value);
+
+    return params.toString();      // ""  → nothing to add
+  }
+
 
 
   /**
@@ -323,7 +343,8 @@ export function useChatLogic(options = {}) {
     // Определяем схему (ws для localhost, wss для prod)
     const scheme = window.location.hostname === "localhost" ? "ws" : "wss";
     const host = window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname;
-    const wsUrl = `${scheme}://${host}/ws/${chatId}/`;
+    const query   = buildWsQueryParams();
+    const wsUrl = `${scheme}://${host}/ws/${chatId}/${query ? '?' + query : ''}`;
 
     console.log("Инициализация WebSocket по адресу:", wsUrl);
     websocket.value = new WebSocket(wsUrl);

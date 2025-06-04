@@ -1,0 +1,632 @@
+{
+  "textMessages": {
+    "ROOMS_EMPTY": "Keine Unterhaltungen",
+    "ROOM_EMPTY": "Keine Unterhaltung ausgewählt",
+    "NEW_MESSAGES": "Neue Nachrichten",
+    "MESSAGE_DELETED": "Diese Nachricht wurde gelöscht",
+    "MESSAGES_EMPTY": "Keine Nachrichten",
+    "CONVERSATION_STARTED": "Die Unterhaltung begann am:",
+    "TYPE_MESSAGE": "Nachricht eingeben",
+    "SEARCH": "Suche",
+    "IS_ONLINE": "ist online",
+    "LAST_SEEN": "zuletzt gesehen ",
+    "IS_TYPING": "schreibt...",
+    "CANCEL_SELECT_MESSAGE": "Auswahl aufheben"
+  },
+
+  "EmbeddedChat": {
+    "allLabel": "Alle",
+    "unreadLabel": "Ungelesen",
+    "exportButton": "Chats nach Excel exportieren",
+    "exportCSV": "Chats als CSV exportieren",
+    "csvSuccess": "CSV erstellt",
+    "csvFailed": "CSV-Export fehlgeschlagen",
+    "messageDialogHeader": "Nachricht",
+    "messageDialogId": "ID",
+    "messageDialogText": "Text",
+    "noSources": "Nachricht hat keine Quellen aus der Wissensdatenbank",
+    "sourceLabel": "Quelle",
+    "userIdLabel": "Benutzer",
+    "closeButton": "Schließen",
+
+    "seeSources": "Quellen anzeigen",
+    "excelSuccess": "Excel erstellt",
+    "excelFailed": "Excel-Export fehlgeschlagen",
+    "noDate": "Kein Datum angegeben",
+    "inFuture": "In der Zukunft",
+    "startedAgo": "Gestartet vor {diffDays} Tagen, {diffHours} Stunden, {diffMinutes} Minuten",
+    "consultant": "Berater",
+    "client": "Kunde",
+    "chatFallback": "Chat {index}"
+  },
+
+  "UseChatLogic": {
+    "client": "👤 Kunde",
+    "aiAssistant": "🤖 KI-Assistent",
+    "consultant": "👀 Berater",
+    "unknown": "❓ Unbekannt"
+  },
+
+  "MainLogin": {
+    "title": "Melden Sie sich bei Ihrem Konto an",
+    "loginLabel": "Login",
+    "loginPlaceholder": "Login eingeben",
+    "passwordLabel": "Passwort",
+    "passwordPlaceholder": "Passwort eingeben",
+    "loginButton": "Einloggen",
+    "noAccount": "Sie haben noch kein Konto?",
+    "registerLink": "Registrieren"
+  },
+
+  "MainRegistration": {
+    "titleRegister": "Registrierung",
+    "email": "E-Mail:",
+    "emailPlaceholder": "E-Mail eingeben",
+    "phone": "Telefon:",
+    "phonePlaceholder": "Telefonnummer eingeben",
+    "firstName": "Vorname:",
+    "firstNamePlaceholder": "Vornamen eingeben",
+    "lastName": "Nachname:",
+    "lastNamePlaceholder": "Nachnamen eingeben",
+    "birthDate": "Geburtsdatum:",
+    "birthDatePlaceholder": "Geburtsdatum eingeben",
+    "city": "Stadt:",
+    "cityPlaceholder": "Stadt eingeben",
+    "gender": "Geschlecht:",
+    "genderPlaceholder": "Geschlecht eingeben",
+    "termsLabel": "Ich stimme den",
+    "termsAnd": "und",
+    "termsLink": "Nutzungsbedingungen",
+    "privacyLink": "Datenschutzbestimmungen",
+    "registerButton": "Registrieren",
+    "alreadyHaveAccount": "Haben Sie bereits ein Konto?",
+    "goToLogin": "Zum Login gehen",
+
+    "codeTitle": "Testcode (wird später per E-Mail gesendet)",
+    "codeConfirmTitle": "Code-Bestätigung",
+    "enterCodePrompt": "Sechsstelligen Code aus Ihrer E-Mail eingeben",
+    "codeConfirmButton": "Bestätigen",
+    "codeResendHelp1": "Wenn Sie den Code nicht erhalten haben —",
+    "codeResendHelp2": "prüfen Sie den Spam-Ordner oder",
+    "resendLink": "erneut senden",
+
+    "error": {
+      "terms": "Sie müssen den Nutzungsbedingungen zustimmen."
+    }
+  },
+
+  "PersonalMainLogin": {
+    "titleLogin": "Anmeldung",
+    "phone": "Telefon",
+    "phonePlaceholder": "Telefonnummer eingeben",
+    "password": "Passwort",
+    "passwordPlaceholder": "Passwort eingeben",
+    "loginButton": "Anmelden",
+    "noAccount": "Noch kein Konto?",
+    "registerLink": "Registrieren",
+    "title2FA": "Anmeldebestätigung",
+    "testCode": "Testcode:",
+    "twofaLabel": "Code aus SMS / E-Mail",
+    "twofaPlaceholder": "Code eingeben",
+    "confirmButton": "Bestätigen",
+    "cancelButton": "Abbrechen"
+  },
+
+  "PersonalMainRegistration": {
+    "title": "Registrierung",
+    "subtitle": "Neues Konto erstellen",
+    "phone": "Telefonnummer",
+    "phonePlaceholder": "Telefonnummer eingeben",
+    "email": "E-Mail",
+    "emailPlaceholder": "{'mail@example.com'}",
+    "fullName": "Vollständiger Name",
+    "fullNamePlaceholder": "Max Mustermann",
+    "password": "Passwort",
+    "passwordPlaceholder": "Mindestens 10 Zeichen",
+    "show": "Anzeigen",
+    "hide": "Verbergen",
+    "passwordHint": "Mindestens 10 Zeichen, einschließlich Groß-/Kleinbuchstaben, Zahlen und Symbole",
+    "passwordConfirm": "Passwort bestätigen",
+    "passwordConfirmPlaceholder": "Passwort wiederholen",
+    "termsPrefix": "Ich stimme den",
+    "termsLink": "Nutzungsbedingungen",
+    "privacyAnd": "und",
+    "privacyLink": "Datenschutzbestimmungen",
+    "registerButton": "Registrieren",
+    "alreadyHave": "Haben Sie bereits ein Konto?",
+    "loginLink": "Anmelden",
+    "confirmTitle": "Registrierung bestätigen",
+    "debugCode": "Testcode (kommt später per E-Mail)",
+    "smsCodeLabel": "SMS-Code",
+    "smsCodePlaceholder": "SMS-Code eingeben",
+    "confirmButton": "Bestätigen",
+    "cancelButton": "Abbrechen"
+  },
+
+  "DynamicForm": {
+    "upload": "Hochladen",
+    "addFiles": "Dateien hinzufügen",
+    "addImages": "Bilder hinzufügen",
+    "downloadFile": "Datei herunterladen",
+    "delete": "Löschen",
+    "enterTags": "Tags eingeben...",
+    "enterCountry": "Land eingeben..."
+  },
+
+  "InlineList": {
+    "addNewHeader": "Neu hinzufügen",
+    "saveBtn": "Speichern",
+    "deleteBtn": "Löschen",
+    "createBtn": "Erstellen",
+
+    "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?",
+    "noChanges": "Keine Änderungen festgestellt.",
+    "updated": "Inline-Element aktualisiert!",
+    "updateError": "Fehler beim Aktualisieren des Inline-Elements.",
+    "deleted": "Inline-Element gelöscht!",
+    "deleteError": "Fehler beim Löschen des Inline-Elements.",
+    "onlyOne": "Nur ein Element ist erlaubt.",
+    "created": "Inline-Element erstellt!",
+    "createError": "Fehler beim Erstellen des Inline-Elements."
+  },
+
+  "MainForm": {
+    "createPrefix": "Neuen Eintrag erstellen",
+    "detailPrefix": "Eintragsdetails",
+    "loading": "Daten laden…",
+
+    "edit": "Bearbeiten",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "create": "Eintrag erstellen",
+    "openChat": "Chat öffnen",
+    "backToList": "Zurück zur Liste",
+    "backToRecord": "Zurück zum Eintrag",
+
+    "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?",
+
+    "noChanges": "Keine Änderungen zu speichern.",
+    "created": "Eintrag erstellt",
+    "deleted": "Eintrag gelöscht",
+    "updateError": "Fehler beim Speichern der Änderungen.",
+    "createError": "Fehler beim Erstellen des Eintrags.",
+    "deleteError": "Fehler beim Löschen des Eintrags.",
+    "unknownError": "Unbekannter Fehler"
+  },
+
+  "AgreesPanel": {
+    "title": "Benutzereinwilligungen",
+    "subtitle": "Informationen über Benutzereinwilligungen"
+  },
+
+  "ContactInfoView": {
+    "title": "Kontaktinformationen",
+
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "address": "Adresse",
+    "pesel": "PESEL / Kennung",
+
+    "emergency": "Notfallkontakt",
+    "docId": "Dokument-ID",
+    "lastUpdate": "Letzte Aktualisierung",
+
+    "invalidDate": "Ungültiges Datum",
+    "dash": "—"
+  },
+
+  "FamilyTable": {
+    "addMember": "Familienmitglied hinzufügen",
+    "idPrefix": "ID:",
+    "nameUnknown": "Name nicht festgelegt",
+    "relationshipUnknown": "Beziehung nicht festgelegt",
+    "statusUnknown": "Status nicht festgelegt",
+    "bonusSuffix": "Bonuspunkte",
+    "noBonus": "Keine Boni",
+    "editAria": "Bearbeiten"
+  },
+
+  "InfoHeader": {
+    "patientIdPrefix": "Patienten-ID:",
+    "bonusPrefix": "Bonuspunkte:",
+    "actions": "Aktionen",
+    "logout": "Abmelden",
+    "adminPanel": "Admin-Panel",
+    "changeTheme": "Theme ändern"
+  },
+
+  "NavigationSidebarTabs": {
+    "support": "Support"
+  },
+
+  "PatientsHealthSurveyView": {
+    "title": "Gesundheitsfragebogen",
+    "subtitle": "Medizinische Informationen des Benutzers",
+
+    "allergies": "Allergien:",
+    "chronic": "Chronische Erkrankungen:",
+    "smoking": "Raucherstatus:",
+    "medications": "Aktuelle Medikamente:",
+    "lastUpdate": "Letzte Aktualisierung:",
+    "noData": "Keine Daten",
+    "dash": "—"
+  },
+
+  "PatientsMainInfoView": {
+    "sectionTitle": "Grundinformationen",
+
+    "blockPersonal": "Persönliche Daten",
+    "lastName": "Nachname:",
+    "firstName": "Vorname:",
+    "patronymic": "Zweiter Vorname:",
+    "birthDate": "Geburtsdatum:",
+    "gender": "Geschlecht:",
+
+    "blockCompany": "Unternehmensinformationen",
+    "companyName": "Firmenname:",
+
+    "blockSystem": "Systeminformationen",
+    "patientId": "Patienten-ID:",
+    "createdAt": "Erstellt am:",
+    "updatedAt": "Letzte Aktualisierung:",
+
+    "invalidDate": "Ungültiges Datum",
+    "dash": "—"
+  },
+
+  "PointsTable": {
+    "balanceCard": "Bonuskonto",
+    "balanceSubtitle": "Informationen zum Benutzerbonus",
+    "currentBalance": "Aktuelles Guthaben:",
+    "referralCode": "Empfehlungscode:",
+    "lastUpdate": "Letzte Aktualisierung",
+
+    "transactionsCard": "Transaktionshistorie",
+    "transactionsSubtitle": "Neueste Bonusvorgänge",
+
+    "toastTitle": "Code kopiert",
+    "toastBody": "Empfehlungscode in die Zwischenablage kopiert!",
+    "tooltipCopy": "Empfehlungscode kopieren"
+  },
+
+  "SupportPage": {
+    "title": "Support-Chat"
+  },
+
+  "DateRangeFilter": {
+    "heading": "Datumsbereichsfilter:",
+    "placeholder": "Daten auswählen",
+    "clear": "Datumsbereich löschen"
+  },
+
+  "DynamicDataTable": {
+    "exportExcel": "Nach Excel exportieren",
+    "create": "Erstellen",
+    "add": "Hinzufügen",
+    "editAria": "Bearbeiten"
+  },
+
+  "KnowledgeBase": {
+    "contextSources": "Kontextquellen",
+    "contextInfoTip": "Kontextquellen sind die Dateien, Links oder Texte, die der Bot zum Beantworten von Fragen verwendet. Sie können sie nach Bedarf hinzufügen, entfernen oder bearbeiten. Der Bot nutzt die relevantesten Quellen, um genaue Antworten zu geben.",
+
+    "searchPlaceholder": "Quellen suchen…",
+    "searchTip": "Nach Quellenamen suchen. Geben Sie einen Teil des Dateinamens, der Webseite oder des Titels ein, um die Liste zu filtern.",
+    "addContext": "Kontext hinzufügen",
+    "addContextTip": "Neue Datenquelle importieren: Datei, Webseite oder Text.",
+
+    "addContextHeader": "Kontext hinzufügen",
+
+    "titlePlaceholder": "Titel",
+    "pasteTextPlaceholder": "Text hier einfügen…",
+
+    "uploadHeader": "Quellen hochladen",
+    "uploadSub": "Datei auswählen oder hierher ziehen.",
+    "uploadTypes": "Unterstützte Typen: PDF, TXT, Bilder, DOCX, XLSX, Bilder",
+
+    "dialogCancel": "Abbrechen",
+    "dialogAdd": "Hinzufügen",
+
+    "totalSources": "Gesamtquellen",
+    "selectedSources": "Ausgewählt",
+
+    "queryField": "Abfragefeld",
+    "queryFieldTip": "Geben Sie Ihre Frage oder Anfrage ein. Die KI verwendet die Kontextquellen, um relevante Antworten zu liefern.",
+
+    "aiModelPlaceholder": "KI-Modell auswählen",
+
+    "requestHistory": "Verlauf der Anfragen",
+    "clearHistory": "Verlauf löschen",
+    "noHistory": "Keine vorherigen Anfragen gefunden.",
+    "reuseTip": "Diese Anfrage wiederverwenden",
+
+    "typeHere": "Hier tippen…",
+    "typeHereTip": "Beschreiben Sie, was der KI-Assistent mit Ihren Daten tun soll…",
+
+    "uploadSourcesTitle": "Quellen hochladen",
+    "uploadSourcesSubtitle": "Datei auswählen oder hierher ziehen.",
+    "uploadSourcesTypes": "Unterstützte Typen: PDF, TXT, Bilder, DOCX, XLSX",
+
+    "files": "Dateien",
+    "site": "Webseite",
+    "text": "Text",
+
+    "dontUse": "Nicht verwenden",
+    "botKnowledge": "Bot-Wissen",
+    "contextOnly": "Nur Kontext",
+    "knowledgeAndContext": "Wissen & Kontext",
+
+    "querySmartChange": "Smart Change generieren",
+
+    "playgroundHeader": "Spielplatz",
+
+    "addTopic": "Thema hinzufügen",
+    "addTopicDesc": "Thema – das Hauptthema, das verwandte Unterthemen kombiniert. Unterthema – ein Abschnitt des Hauptthemas mit einem spezifischen Fokus. Frage – eine typische Benutzerfrage innerhalb eines Unterthemas. Antwort – eine detaillierte Antwort auf eine spezifische Frage.",
+    "addSubtopic": "Unterthema hinzufügen",
+    "addQuestion": "Frage hinzufügen",
+    "addLink": "Link hinzufügen",
+
+    "questionLabel": "Frage:",
+    "answerTextLabel": "Antworttext:",
+    "linksFilesLabel": "Fotos (Links):",
+    "selectedFilesLabel": "Ausgewählte Dateien:",
+
+    "topicTooltip": "Das Hauptthema mit zugehörigen Unterabschnitten und Fragen.",
+    "subtopicTooltip": "Ein Abschnitt eines Themas, der verwandte Fragen und Antworten gruppiert.",
+    "questionTooltip": "Eine Frage in der Wissensdatenbank, auf die der Bot Antworten sucht.",
+    "answerTooltip": "Eine Antwort auf eine Frage, die der Bot bei der Formulierung von Antworten verwendet.",
+
+    "playgroundEmpty": "Spielplatz ist leer",
+    "playgroundEmptyBody": "Importieren Sie Inhalte aus der linken Leiste oder erstellen Sie einen neuen Block.",
+    "createBlock": "Block erstellen",
+
+    "reject": "Verwerfen",
+    "save": "Speichern",
+    "saveDesc": "Speichert die aktuelle Wissensstruktur als Entwurf. Sie können später darauf zurückkommen. Der Entwurf wird vom Bot nicht verwendet, bis Sie ihn veröffentlichen.",
+    "publish": "Veröffentlichen",
+    "publishDesc": "Veröffentlicht die Wissensstruktur in der Hauptwissensdatenbank, die der Bot zur Beantwortung von Fragen verwendet. Änderungen treten sofort in Kraft. Stellen Sie sicher, dass die Struktur vollständig bereit ist.",
+
+    "knowledgeBase": "Wissensdatenbank",
+    "knowledgeBaseDesc": "Die Wissensdatenbank ist die Hauptinformationsquelle für den Bot. Sie enthält alle Themen, Unterthemen und Fragen, die der Bot beantworten kann. Sie können sie durchsuchen, aber hier nicht direkt bearbeiten.",
+    "searchKbPlaceholder": "Wissensdatenbank durchsuchen…",
+
+    "export": "Exportieren",
+    "exportDialogTitle": "Wissensdatenbank exportieren",
+    "exportJson": "JSON",
+    "exportJsonDesc": "Vollständig strukturierte Daten (empfohlen)",
+    "exportCsv": "CSV",
+    "exportCsvDesc": "Tabellenkompatibles Format",
+    "exportTxt": "Reiner Text",
+    "exportTxtDesc": "Reiner Text",
+    "exportCancel": "Abbrechen",
+
+    "removeTopic": "Thema «{topicName}» löschen?",
+    "removeSubtopic": "Unterthema «{subtopicName}» in «{topicName}» löschen?",
+    "removeQuestion": "Frage «{questionKey}» löschen?",
+
+    "newTopic": "Neues Thema",
+    "newSubtopic": "Neues Unterthema",
+    "newQuestion": "Neue Frage",
+
+    "toastAdded": "{what} erfolgreich hinzugefügt",
+    "toastRemoved": "{what} erfolgreich entfernt",
+    "toastUpdated": "{what} erfolgreich aktualisiert",
+    "toastNotAdded": "{what} nicht hinzugefügt",
+    "toastNotRemoved": "{what} nicht entfernt",
+    "toastNotUpdated": "{what} nicht aktualisiert",
+
+    "ctxRenamePrompt": "Kontext umbenennen",
+    "ctxRenamed": "Kontextname aktualisiert",
+    "ctxNotRenamed": "Kontextname nicht geändert",
+
+    "ctxPurposeUpdated": "Zweck aktualisiert",
+    "ctxPurposeNotUpdated": "Zweck nicht aktualisiert",
+
+    "ctxLoadErr": "Kontext kann nicht geladen werden",
+    "ctxAddMax": "Maximum von {max} Quellen erreicht",
+    "ctxAdded": "Kontext hinzugefügt",
+    "ctxNotAdded": "Kontext nicht hinzugefügt",
+    "ctxDeleted": "Kontext gelöscht",
+    "ctxNotDeleted": "Kontext nicht gelöscht",
+
+    "menuRename": "Umbenennen",
+    "menuDownload": "Herunterladen",
+    "menuDelete": "Löschen",
+
+    "typeText": "Text",
+    "typeFile": "Datei / Foto",
+    "typeLink": "Link",
+
+    "purposeNone": "Nicht verwenden",
+    "purposeBot": "Bot-Wissen",
+    "purposeKb": "Nur Kontext",
+    "purposeBoth": "Wissen & Kontext",
+
+    "purposeNoneDesc": "Die Quelle wird bei der Generierung von Antworten ignoriert.",
+    "purposeBotDesc": "Informationen werden in die Wissensdatenbank aufgenommen und beeinflussen allgemeine Antworten.",
+    "purposeKbDesc": "Die Quelle wird nur zur Beantwortung der spezifischen Frage verwendet.",
+    "purposeBothDesc": "Die Quelle wird sowohl für allgemeines Wissen als auch für spezifische Antworten verwendet.",
+
+    "topicAdded": "Thema erfolgreich hinzugefügt",
+    "topicRemoved": "Thema erfolgreich entfernt",
+    "topicNotRemoved": "Thema nicht entfernt",
+
+    "subtopicAdded": "Unterthema erfolgreich hinzugefügt",
+    "subtopicRemoved": "Unterthema erfolgreich entfernt",
+    "subtopicNotRemoved": "Unterthema nicht entfernt",
+
+    "questionAdded": "Frage erfolgreich hinzugefügt",
+    "questionRemoved": "Frage erfolgreich entfernt",
+    "questionNotRemoved": "Frage nicht entfernt",
+    "questionExists": "Diese Frage existiert bereits!",
+
+    "fileAdded": "Link / Datei hinzugefügt",
+    "fileRemoved": "Link / Datei entfernt",
+
+    "playgroundCleared": "Spielplatz erfolgreich geleert",
+    "playgroundUpdated": "Spielplatz erfolgreich aktualisiert",
+    "playgroundNotUpdated": "Spielplatz nicht aktualisiert",
+    "playgroundRejected": "Spielplatz erfolgreich verworfen",
+
+    "kbSaved": "Wissensdatenbank erfolgreich gespeichert",
+    "kbNotSaved": "Wissensdatenbank nicht gespeichert",
+
+    "patchGenerated": "Patch erfolgreich generiert",
+    "patchNotGenerated": "Patch nicht generiert",
+
+    "noChanges": "Keine Änderungen zu speichern.",
+    "msgPlaygroundUpdated": "Spielplatz erfolgreich aktualisiert",
+    "msgPlaygroundUpdateErr": "Spielplatzaktualisierung fehlgeschlagen",
+    "msgDbSaved": "Wissensdatenbank gespeichert",
+    "msgDbSaveErr": "Wissensdatenbankspeicherung fehlgeschlagen",
+    "confirmClear": "Spielplatz leeren?\n\nAlle Entwurfsänderungen gehen verloren. Die echte Wissensdatenbank bleibt unverändert.",
+    "msgPlaygroundCleared": "Spielplatz geleert",
+    "confirmReject": "Spielplatz verwerfen?\n\nEntwurfsänderungen gehen verloren. Die echte Wissensdatenbank bleibt unverändert.",
+    "msgPlaygroundRejected": "Spielplatz verworfen",
+    "unsavedChanges": "Sie haben ungespeicherte Änderungen im Spielplatz!",
+    "msgPatchGenerated": "Patch erfolgreich generiert",
+    "msgPatchErr": "Patch-Generierung fehlgeschlagen",
+    "redactTopic": "Dieses Thema bearbeiten",
+    "redactSubtopic": "Dieses Unterthema bearbeiten",
+    "redactQuestion": "Diese Frage bearbeiten",
+    "tabFiles": "Dateien",
+    "tabSite": "Webseite",
+    "tabText": "Text",
+    "download": "Herunterladen",
+    "delete": "Löschen",
+    "uploadJson": "JSON hochladen"
+  },
+
+  "MainContent": {
+    "dialog": {
+      "filterOptions": "Filteroptionen"
+    },
+    "buttons": {
+      "fillHealthSurvey": "Gesundheitsfragebogen ausfüllen",
+      "fillMainInfo": "Hauptinformationen ausfüllen",
+      "fillContactInfo": "Kontaktinformationen ausfüllen",
+      "fillConsents": "Einwilligungen ausfüllen"
+    },
+    "toast": {
+      "exportSuccessSummary": "Export erfolgreich",
+      "exportSuccessDetail": "Daten erfolgreich nach Excel exportiert",
+      "exportFailSummary": "Export fehlgeschlagen",
+      "exportFailDetail": "Datenexport fehlgeschlagen.",
+      "invalidGroupSummary": "Ungültige Gruppe",
+      "invalidEntitySummary": "Ungültige Entität",
+      "errorSummary": "Fehler",
+      "noDataDetail": "Keine Daten verfügbar.",
+      "loadFailDetail": "Tabellendaten konnten nicht geladen werden. ({status})",
+      "redirectDetail": "Weiterleitung zu: {route}"
+    },
+
+    "playground": {
+      "saveDraft": "Speichert die aktuelle Wissensstruktur als Entwurf. Sie können später weiterarbeiten. Der Entwurf wird vom Bot nicht verwendet, bis Sie ihn veröffentlichen.",
+      "publish": "Veröffentlicht die Wissensstruktur in der Hauptwissensdatenbank, die der Bot zur Beantwortung von Fragen verwendet. Nach der Veröffentlichung treten die Änderungen sofort in Kraft, und der Bot beantwortet mit den neuen Daten. Stellen Sie sicher, dass die Struktur vollständig bereit ist.",
+      "statusReady": "Bereit zur Veröffentlichung",
+      "blockType": "Thema – das Hauptthema, das verwandte Unterthemen kombiniert.\nUnterthema – ein Abschnitt des Hauptthemas mit einem spezifischen Fokus.\nFrage – eine typische Benutzerfrage innerhalb eines Unterthemas.\nAntwort – eine detaillierte Antwort auf eine spezifische Frage.",
+      "parentBlock": "Wählen Sie den Block aus, dem das erstellte Element zugeordnet wird.\nBefolgen Sie die richtige Hierarchie:\n• Unterthemen werden innerhalb von Themen erstellt\n• Fragen werden innerhalb von Unterthemen erstellt\n• Antworten werden für spezifische Fragen erstellt"
+    },
+
+    "import": {
+      "sourceSearch": "Nach Quellenamen suchen. Geben Sie einen Teil des Dateinamens, der Webseite oder des Textdokuments ein, um die Liste zu filtern.",
+      "importNew": "Eine neue Datenquelle importieren: Datei, Webseite oder Text.",
+      "aiInput": "Schreiben Sie hier, was der KI-Assistent mit Ihren Daten tun soll. Beispiel: \"Heben Sie die wichtigsten Dienstleistungen meiner Website hervor und erstellen Sie Fragen und Antworten dazu\". Drücken Sie Enter oder die Senden-Taste, um ausgewählte Quellen in eine strukturierte Wissensdatenbank zu konvertieren.",
+      "generator": "Schreiben Sie dem KI-Assistenten spezifische Aufgaben zur Strukturierung Ihrer Daten. Beispiele:\n• \"Erstelle Frage-Antwort-Paare aus einem Produktdokument\"\n• \"Teile Text in Unterthemen auf\"\n• \"Erstelle ein Dienstemenü aus meiner Preisliste\"\n• \"Extrahiere Hauptvorteile\""
+    },
+
+    "kbBlock": {
+      "topic": "Das Hauptthema mit zugehörigen Unterabschnitten und Fragen.",
+      "subtopic": "Ein Abschnitt eines Themas, der verwandte Fragen und Antworten gruppiert.",
+      "question": "Eine Frage in der Wissensdatenbank, auf die der Bot Antworten sucht.",
+      "answer": "Eine Antwort auf eine Frage, die der Bot bei der Formulierung von Antworten verwendet."
+    }
+  },
+
+  "NavigationSidebar": {
+    "tooltip": {
+      "expand": "Erweitern",
+      "collapse": "Einklappen"
+    },
+    "headers": {
+      "settings": "Einstellungen",
+      "sidebar": "Seitenleiste"
+    },
+    "links": {
+      "knowledgeBase": "Wissensdatenbank",
+      "botSettings": "Bot-Einstellungen"
+    }
+  },
+
+  "ReadonlyKB": {
+    "summary": {
+      "knowledgeBase": "Wissensdatenbank"
+    },
+    "buttons": {
+      "goToSource": "Zur Quelle"
+    }
+  },
+
+  "SaveChangesDialog": {
+    "header": {
+      "preview": "Vorschau der erkannten Änderungen.",
+      "savePlayground": "Möchten Sie Änderungen im Spielplatz speichern?",
+      "saveKnowledgeBase": "Möchten Sie Änderungen in der Wissensdatenbank speichern?"
+    },
+    "info": {
+      "noChanges": "Keine Änderungen zum Anwenden in der Wissensdatenbank.",
+      "editModeNote": "Ändert den Spielplatz, aber NICHT die Wissensdatenbank.",
+      "applyKb": "Ändert die Wissensdatenbank."
+    },
+    "labels": {
+      "added": "Hinzugefügt:",
+      "changed": "Geändert:",
+      "deleted": "Gelöscht:",
+      "addedItems": "Hinzugefügte Elemente",
+      "changedItems": "Geänderte Elemente",
+      "deletedItems": "Gelöschte Elemente"
+    },
+    "buttons": {
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "confirm": "Bestätigen"
+    }
+  },
+
+  "Topbar": {
+    "aria": {
+      "menu": "Menü"
+    },
+    "titles": {
+      "personalAccount": "Persönliches Konto"
+    },
+    "menu": {
+      "toPersonal": "Zum persönlichen Konto",
+      "toAdmin": "Zum Admin-Panel",
+      "changeTheme": "Theme ändern",
+      "logout": "Abmelden"
+    },
+    "alt": {
+      "logo": "Logo"
+    },
+    "user": {
+      "defaultName": "Administrator"
+    }
+  },
+
+  "AdminChat": {
+    "buttons": {
+      "trainBot": "KI-Bot trainieren",
+      "closeChat": "Chat schließen",
+      "openTestChat": "Testchat öffnen"
+    }
+  },
+
+  "LoaderOverlay": {
+    "loadingCompleted": "Ladevorgang abgeschlossen!"
+  },
+
+  "test": {
+    "test": "Test"
+  }
+}
