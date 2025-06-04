@@ -1,6 +1,7 @@
 """Вспомогательные функции приложения Чаты."""
 import base64
 import hashlib
+import hmac
 import json
 import locale
 import logging
@@ -18,7 +19,7 @@ from fastapi import Request, HTTPException, Depends
 
 from fastapi_jwt_auth import AuthJWT, exceptions as jwt_exc
 
-from backend.fastapi_web.chats.integrations.telegram.telegram_bot import verify_telegram_hash
+
 from chats.utils.knowledge_base import BRIEF_QUESTIONS
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import UserWithData
@@ -146,7 +147,11 @@ async def get_client_id(
     tg_hash     = qs.get("hash", [None])[0]
 
     if tg_user_id and ts and tg_hash:
-        if verify_telegram_hash(tg_user_id, ts, tg_hash, settings.TELEGRAM_BOT_TOKEN):
+        base_string = f"user_id={tg_user_id}&timestamp={ts}"
+        secret_key = hashlib.sha256(settings.TELEGRAM_BOT_TOKEN.encode()).digest()
+        expected_hash = hmac.new(secret_key, base_string.encode(), hashlib.sha256).hexdigest()
+        result = hmac.compare_digest(expected_hash, tg_hash)
+        if result:
             # генерируем ID в том же формате, что и /get_chat
             return await generate_client_id(
                 websocket,
