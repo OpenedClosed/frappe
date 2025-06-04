@@ -48,7 +48,7 @@ const isMobile = computed(() => windowWidth.value < 768);
 // Existing reactive states and computed properties
 const isLocalhost = window.location.hostname === "localhost";
 const { currentFrontendUrl } = useURLState();
-const chatUrl = isLocalhost ? `${currentFrontendUrl.value}/chats/telegram-chat` : `${currentFrontendUrl.value}/chats/telegram-chat`;
+const chatUrl = isLocalhost ? `${currentFrontendUrl.value}/chats/telegram-chat?as_client=True` : `${currentFrontendUrl.value}/chats/telegram-chat?as_client=True`;
 const isChatOpen = ref(false);
 const toggleChat = () => {
     isChatOpen.value = !isChatOpen.value;
