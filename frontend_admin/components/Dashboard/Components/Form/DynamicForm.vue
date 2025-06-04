@@ -4,14 +4,14 @@
     <div v-for="group in groupedFields" :key="group.title.en">
       <div
         v-if="!group.fields.every((field) => isDisabled(field)) || !isNewItem"
-        class="mb-6 bg-neutralLight  border border-neutralDark  rounded-lg p-6 shadow"
+        class="mb-6 bg-neutralLight border border-neutralDark rounded-lg p-6 shadow"
       >
         <!-- Group header -->
         <h2 class="text-2xl font-bold text-primaryDark mb-2">
           {{ group.title?.[currentLanguage] || group.title?.en || "" }}
         </h2>
 
-        <p v-if="group.help_text" class="text-base  mb-4">
+        <p v-if="group.help_text" class="text-base mb-4">
           {{ group.help_text[currentLanguage] || group.help_text.en || "" }}
         </p>
         <!-- {{ internalValue }} -->
@@ -97,7 +97,7 @@
                 class="w-full"
                 @input="emitUpdate"
                 :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
-                placeholder="Enter tags..."
+                :placeholder="t('DynamicForm.enterTags')"
               />
               <!-- Autocomplete Field -->
               <AutoComplete
@@ -111,7 +111,7 @@
                 @complete="onAutoComplete"
                 @change="emitUpdate"
                 :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
-                placeholder="Enter a country..."
+                :placeholder="t('DynamicForm.enterCountry')"
               />
 
               <!-- Multi Files Upload Field -->
@@ -127,7 +127,7 @@
                     :maxFileSize="5242880"
                     @upload="(e) => onMultiFileUploadComplete(e, field.name)"
                     class="w-full"
-                    choose-label="Загрузить"
+                    :choose-label="t('DynamicForm.upload')"
                     :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
                   />
                 </div>
@@ -140,7 +140,7 @@
                       class="flex items-center justify-between border p-2 rounded"
                     >
                       <a :href="currentUrl + file.url" target="_blank" class="underline">
-                        {{ file.name || "Скачать файл" }}
+                        {{ file.name || t("DynamicForm.downloadFile") }}
                       </a>
                       <Button
                         :disabled="isDisabled(field)"
@@ -161,7 +161,7 @@
                       :maxFileSize="5242880"
                       @upload="(e) => onMultiFileUploadComplete(e, field.name)"
                       class="w-full"
-                      choose-label="Добавить файлы"
+                      :choose-label="t('DynamicForm.addFiles')"
                       :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
                     />
                   </div>
@@ -251,19 +251,19 @@
                     :maxFileSize="5242880"
                     @upload="(e) => onFileUploadComplete(e, field.name)"
                     class="w-full"
-                    choose-label="Загрузить"
+                    :choose-label="t('DynamicForm.upload')"
                     :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
                   />
                 </div>
                 <!-- If file is uploaded, display file link and remove button -->
                 <div v-else class="flex flex-col gap-2 w-full">
                   <a :href="currentUrl + internalValue[field.name].url" target="_blank" class="underline">
-                    {{ internalValue[field.name].name || "Скачать файл" }}
+                    {{ internalValue[field.name].name || t("DynamicForm.downloadFile") }}
                   </a>
                   <div class="flex gap-2 w-full">
                     <Button
                       :disabled="isDisabled(field)"
-                      label="Удалить"
+                      :label="t('DynamicForm.delete')"
                       icon="pi pi-times"
                       severity="danger"
                       @click="removeFile(field.name)"
@@ -307,10 +307,10 @@
                     :disabled="isDisabled(field)"
                     :auto="true"
                     :multiple="false"
-                     :customUpload="true"   
+                    :customUpload="true"
                     @uploader="(e) => onUploadComplete(e, field.name)"
                     class="w-full"
-                    choose-label="Загрузить"
+                   :choose-label="t('DynamicForm.upload')"
                     :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
                   />
                 </div>
@@ -323,7 +323,7 @@
                   <div class="flex gap-2">
                     <Button
                       :disabled="isDisabled(field)"
-                      label="Удалить"
+                      :label="t('DynamicForm.delete')"
                       icon="pi pi-times"
                       severity="danger"
                       @click="removeImage(field.name)"
@@ -360,7 +360,7 @@
                     :maxFileSize="5242880"
                     @upload="(e) => onMultiUploadComplete(e, field.name)"
                     class="w-full"
-                    choose-label="Загрузить"
+                    :choose-label="t('DynamicForm.upload')"
                     :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
                   />
                 </div>
@@ -389,7 +389,7 @@
                       :maxFileSize="5242880"
                       @upload="(e) => onMultiUploadComplete(e, field.name)"
                       class="w-full"
-                      choose-label="Добавить изображения"
+                      :choose-label="t('DynamicForm.addImages')"
                       :class="{ 'p-invalid': parsedFieldErrors[field.name] }"
                     />
                   </div>
@@ -540,6 +540,11 @@ import Textarea from "primevue/textarea";
 import draggable from "vuedraggable";
 // If using nuxt-jsoneditor:
 // import JSONEditor from 'nuxt-jsoneditor'
+
+
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const { currentUrl } = useURLState(); // Your composable for base URL or something similar
 const { currentLanguage } = useLanguageState(); // Your composable for current language

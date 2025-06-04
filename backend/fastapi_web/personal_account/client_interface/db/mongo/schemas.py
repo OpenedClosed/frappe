@@ -1,16 +1,17 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
-from datetime import datetime, time, date
+from datetime import date, datetime, time
 from typing import Any, Dict, List, Optional
 
 from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr, Field
 
-from utils.help_functions import normalize_numbers
-from integrations.panamedica.client import get_client
 from db.mongo.base.schemas import BaseValidatedModel, Photo
+from integrations.panamedica.client import get_client
+from utils.help_functions import normalize_numbers
 
-from .enums import (AccountVerificationEnum, ConditionEnum, ConsentEnum, FamilyStatusEnum, GenderEnum,
-                    RelationshipEnum, TransactionTypeEnum)
+from .enums import (AccountVerificationEnum, ConditionEnum, ConsentEnum,
+                    FamilyStatusEnum, GenderEnum, RelationshipEnum,
+                    TransactionTypeEnum)
 
 # ==========
 # Регистрация
@@ -75,63 +76,6 @@ class TwoFASchema(BaseModel):
     code: str
 
 
-# ==========
-# Основная информация
-# ==========
-
-# class MainInfoSchema(BaseValidatedModel):
-#     """
-#     Основная информация о пациенте, хранится в MongoDB.
-#     """
-
-#     last_name: str
-#     first_name: str
-#     patronymic: Optional[str] = None
-
-#     birth_date: datetime = Field(
-#         ...,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "calendar",
-#                 "placeholder": {
-#                     "ru": "Выберите дату рождения",
-#                     "en": "Select birth date",
-#                     "pl": "Wybierz datę urodzenia"
-#                 }
-#             }
-#         }
-#     )
-
-#     gender: GenderEnum = Field(
-#         ...,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "select",
-#                 "placeholder": {
-#                     "ru": "Выберите пол",
-#                     "en": "Select gender",
-#                     "pl": "Wybierz płeć"
-#                 }
-#             }
-#         }
-#     )
-
-#     company_name: Optional[str] = None
-#     avatar: Optional[Photo] = None
-
-#     account_status: AccountVerificationEnum = Field(
-#         default=AccountVerificationEnum.UNVERIFIED,
-#         json_schema_extra={"settings": {"readonly": True}}
-#     )
-
-#     metadata: Optional[Dict[str, Any]] = Field(
-#         default_factory=dict,
-#         json_schema_extra={"settings": {"readonly": True}}
-#     )
-
-#     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-#     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-
 class MainInfoSchema(BaseValidatedModel):
     """
     Основная информация о пациенте, хранится в MongoDB.
@@ -185,7 +129,8 @@ class MainInfoSchema(BaseValidatedModel):
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    async def get_patient_id_from_crm(self, contact_data: dict) -> Optional[int]:
+    async def get_patient_id_from_crm(
+            self, contact_data: dict) -> Optional[int]:
         """
         Получает ID пациента из CRM, если он существует. Возвращает None, если не найден.
         Используется при логине или синхронизации.
@@ -657,6 +602,7 @@ class ConsentSchema(BaseValidatedModel):
 # ==========
 # Встречи
 # ==========
+
 
 class AppointmentSchema(BaseModel):
     """

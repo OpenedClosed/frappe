@@ -61,7 +61,8 @@ class BaseCrudCore:
     def check_crud_enabled(self, action: str) -> None:
         """Проверяет, включено ли действие."""
         if not self.allow_crud_actions.get(action, False):
-            raise HTTPException(403, f"{action.capitalize()} is disabled for this model.")
+            raise HTTPException(
+                403, f"{action.capitalize()} is disabled for this model.")
 
     def check_object_permission(
         self, action: str, user: Optional[BaseModel], obj: Optional[dict] = None
@@ -168,7 +169,8 @@ class BaseCrudCore:
             },
         }
 
-    async def get(self, object_id: str, current_user: Optional[BaseModel] = None) -> Optional[dict]:
+    async def get(self, object_id: str,
+                  current_user: Optional[BaseModel] = None) -> Optional[dict]:
         """Возвращает один документ по _id с учётом прав."""
         self.check_crud_enabled("read")
         docs = await self.get_queryset(filters={"_id": ObjectId(object_id)}, current_user=current_user)
@@ -177,19 +179,26 @@ class BaseCrudCore:
             self.check_object_permission("read", current_user, obj)
         return obj
 
-    async def create(self, data: dict, current_user: Optional[BaseModel] = None) -> dict:
+    async def create(self, data: dict,
+                     current_user: Optional[BaseModel] = None) -> dict:
         """Создаёт документ с проверкой прав и ограничений."""
         self.check_permission("create", current_user)
 
         user_field = self.get_user_field_name()
 
         if self.max_instances_per_user is not None and current_user:
-            filter_by_user = {user_field: str(getattr(current_user, "id", None))}
+            filter_by_user = {
+                user_field: str(
+                    getattr(
+                        current_user,
+                        "id",
+                        None))}
             count = await self.db.count_documents(filter_by_user)
             if count >= self.max_instances_per_user:
-                raise HTTPException(403, "You have reached the maximum number of allowed instances.")
+                raise HTTPException(
+                    403, "You have reached the maximum number of allowed instances.")
 
-        valid_data = await self._process_data(data=data)
+        valid_data = await self.process_data(data=data)
         if current_user and user_field == "user_id" and "user_id" not in valid_data:
             user_id = current_user.data["user_id"]
             if user_id:
@@ -217,7 +226,7 @@ class BaseCrudCore:
 
         self.check_object_permission("update", current_user, obj)
 
-        valid_data = await self._process_data(data=data, existing_obj=obj, partial=True)
+        valid_data = await self.process_data(data=data, existing_obj=obj, partial=True)
 
         for field in self.computed_fields:
             valid_data.pop(field, None)
@@ -232,7 +241,8 @@ class BaseCrudCore:
 
         return await self.format_document(updated_raw, current_user)
 
-    async def delete(self, object_id: str, current_user: Optional[BaseModel] = None) -> dict:
+    async def delete(self, object_id: str,
+                     current_user: Optional[BaseModel] = None) -> dict:
         """Удаляет документ после проверки прав."""
         self.check_crud_enabled("delete")
 
@@ -265,7 +275,8 @@ class BaseCrudCore:
 
         try:
             for field, inline_cls in self.inlines.items():
-                existing_inlines = existing_doc.get(field, []) if existing_doc else []
+                existing_inlines = existing_doc.get(
+                    field, []) if existing_doc else []
 
                 if field not in update_data:
                     inline_data[field] = existing_inlines
@@ -273,10 +284,12 @@ class BaseCrudCore:
 
                 inline_inst = inline_cls(self.db)
                 update_inlines = update_data.pop(field)
-                update_inlines = update_inlines if isinstance(update_inlines, list) else [update_inlines]
+                update_inlines = update_inlines if isinstance(
+                    update_inlines, list) else [update_inlines]
 
                 if existing_doc:
-                    existing_by_id = {item["id"]: item for item in existing_inlines if "id" in item}
+                    existing_by_id = {
+                        item["id"]: item for item in existing_inlines if "id" in item}
                     merged_inlines: List[dict] = []
 
                     for item in update_inlines:
@@ -301,7 +314,8 @@ class BaseCrudCore:
                             existing_by_id.pop(item["id"], None)
                         else:
                             validated = await inline_inst.validate_data(item, partial=False)
-                            full_validated = inline_inst.model.parse_obj(validated).dict()
+                            full_validated = inline_inst.model.parse_obj(
+                                validated).dict()
                             final_inline = full_validated
 
                             if inline_inst.inlines:
@@ -319,7 +333,8 @@ class BaseCrudCore:
                             continue
 
                         validated = await inline_inst.validate_data(item, partial=False)
-                        full_validated = inline_inst.model.parse_obj(validated).dict()
+                        full_validated = inline_inst.model.parse_obj(
+                            validated).dict()
                         final_inline = full_validated
 
                         if inline_inst.inlines:
@@ -335,7 +350,8 @@ class BaseCrudCore:
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
-    async def get_inlines(self, doc: dict, current_user: Optional[dict] = None) -> dict:
+    async def get_inlines(self, doc: dict,
+                          current_user: Optional[dict] = None) -> dict:
         """Возвращает отформатированные инлайны."""
         inl_data: Dict[str, Any] = {}
         for field, inline_cls in self.inlines.items():
@@ -353,7 +369,8 @@ class BaseCrudCore:
             ]
         return inl_data
 
-    async def format_document(self, doc: dict, current_user: Optional[dict] = None) -> dict:
+    async def format_document(self, doc: dict,
+                              current_user: Optional[dict] = None) -> dict:
         """Форматирует документ и добавляет вычисляемые поля с инлайнами."""
         def parse_json_recursive(value: Any) -> Any:
             if isinstance(value, str):
@@ -409,12 +426,17 @@ class BaseCrudCore:
                     if field in self.model.__annotations__:
                         field_type = self.model.__annotations__[field]
                         parsed_val = try_parse_json(val)
-                        validated_val = self.model._validate_field_type(field, field_type, parsed_val)
+                        validated_val = self.model._validate_field_type(
+                            field, field_type, parsed_val)
                         validated[field] = self.serialize_value(validated_val)
             else:
-                filtered = {k: try_parse_json(v) for k, v in data.items() if k not in self.inlines}
+                filtered = {
+                    k: try_parse_json(v) for k,
+                    v in data.items() if k not in self.inlines}
                 obj = self.model(**filtered)
-                validated = {k: self.serialize_value(v) for k, v in obj.dict().items()}
+                validated = {
+                    k: self.serialize_value(v) for k,
+                    v in obj.dict().items()}
 
         except ValidationError as e:
             for err in e.errors():
@@ -429,7 +451,7 @@ class BaseCrudCore:
 
         return validated
 
-    async def _process_data(
+    async def process_data(
         self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False
     ) -> dict:
         """Валидирует данные и мерджит инлайны."""
@@ -440,28 +462,28 @@ class BaseCrudCore:
         return valid
 
     # --- Поиск во вложенных структурах ---
-    def _nested_find(self, doc: Any, target_id: str) -> bool:
+    def nested_find(self, doc: Any, target_id: str) -> bool:
         """Ищет target_id во вложенных структурах."""
         if isinstance(doc, dict):
             if str(doc.get("id")) == target_id:
                 return True
-            return any(self._nested_find(v, target_id) for v in doc.values())
+            return any(self.nested_find(v, target_id) for v in doc.values())
         if isinstance(doc, list):
-            return any(self._nested_find(i, target_id) for i in doc)
+            return any(self.nested_find(i, target_id) for i in doc)
         return False
 
-    def _find_container(self, doc: Any, target_id: str) -> Optional[dict]:
+    def find_container(self, doc: Any, target_id: str) -> Optional[dict]:
         """Возвращает родительский контейнер для элемента с target_id."""
         if isinstance(doc, dict):
             for k, v in doc.items():
                 if k == "id" and str(v) == target_id:
                     return doc
-                sub = self._find_container(v, target_id)
+                sub = self.find_container(v, target_id)
                 if sub:
                     return sub
         elif isinstance(doc, list):
             for i in doc:
-                sub = self._find_container(i, target_id)
+                sub = self.find_container(i, target_id)
                 if sub:
                     return sub
         return None
@@ -472,19 +494,18 @@ class BaseCrudCore:
         if direct:
             return direct
         async for parent in self.db.find({}):
-            if self._nested_find(parent, any_id):
+            if self.nested_find(parent, any_id):
                 return parent
         return None
 
     async def get_parent_container(self, any_id: str) -> Optional[dict]:
         """Возвращает контейнер, содержащий элемент с any_id."""
         root = await self.get_root_document(any_id)
-        return self._find_container(root, any_id) if root else None
+        return self.find_container(root, any_id) if root else None
 
     def __str__(self) -> str:
         """Имя модели."""
         return self.verbose_name
-
 
 
 class InlineCrud(BaseCrudCore):
@@ -496,9 +517,10 @@ class InlineCrud(BaseCrudCore):
 
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         super().__init__(db)
-        self.db = db[self.collection_name] if isinstance(db, AsyncIOMotorDatabase) else db
+        self.db = db[self.collection_name] if isinstance(
+            db, AsyncIOMotorDatabase) else db
 
-    async def _get_nested_field(self, doc: dict, dot_path: str) -> Any:
+    async def get_nested_field(self, doc: dict, dot_path: str) -> Any:
         """Возвращает данные по точечной нотации."""
         for part in dot_path.split("."):
             if not isinstance(doc, dict) or part not in doc:
@@ -525,7 +547,7 @@ class InlineCrud(BaseCrudCore):
         results: List[dict] = []
 
         async for parent in cursor:
-            nested = await self._get_nested_field(parent, self.dot_field_path)
+            nested = await self.get_nested_field(parent, self.dot_field_path)
             if isinstance(nested, list):
                 results.extend(nested)
             elif isinstance(nested, dict):
@@ -536,7 +558,8 @@ class InlineCrud(BaseCrudCore):
 
         return await asyncio.gather(*(self.format_document(i, current_user) for i in results))
 
-    async def get(self, object_id: str, current_user: Optional[dict] = None) -> Optional[dict]:
+    async def get(self, object_id: str,
+                  current_user: Optional[dict] = None) -> Optional[dict]:
         """Возвращает вложенный объект по ID."""
         self.check_crud_enabled("read")
 
@@ -545,21 +568,22 @@ class InlineCrud(BaseCrudCore):
         if not parent:
             return None
 
-        nested = await self._get_nested_field(parent, self.dot_field_path)
+        nested = await self.get_nested_field(parent, self.dot_field_path)
         item = next((el for el in nested if el.get("id") == object_id), None) if isinstance(nested, list) else (
-            nested if isinstance(nested, dict) and nested.get("id") == object_id else None
+            nested if isinstance(nested, dict) and nested.get(
+                "id") == object_id else None
         )
 
         if item:
             self.permission_class.check("read", current_user, item)
         return item
 
-
-    async def create(self, data: dict, current_user: Optional[dict] = None) -> dict:
+    async def create(self, data: dict,
+                     current_user: Optional[dict] = None) -> dict:
         """Добавляет новый вложенный объект."""
         self.check_permission("create", current_user)
 
-        valid = await self._process_data(data)
+        valid = await self.process_data(data)
         if not valid:
             raise HTTPException(400, "No valid fields provided.")
 
@@ -570,8 +594,8 @@ class InlineCrud(BaseCrudCore):
             raise HTTPException(500, "Failed to create object.")
         return valid
 
-
-    async def update(self, object_id: str, data: dict, current_user: Optional[dict] = None) -> dict:
+    async def update(self, object_id: str, data: dict,
+                     current_user: Optional[dict] = None) -> dict:
         """Обновляет вложенный объект."""
         self.check_crud_enabled("update")
 
@@ -580,20 +604,24 @@ class InlineCrud(BaseCrudCore):
             raise HTTPException(404, "Item not found for update.")
         self.permission_class.check("update", current_user, existing)
 
-        valid = await self._process_data(data, partial=True)
+        valid = await self.process_data(data, partial=True)
         if not valid:
             raise HTTPException(400, "No valid fields to update.")
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         filters = {**base_filter, f"{self.dot_field_path}.id": object_id}
-        update_query = {"$set": {f"{self.dot_field_path}.$.{k}": v for k, v in valid.items()}}
+        update_query = {
+            "$set": {
+                f"{self.dot_field_path}.$.{k}": v for k,
+                v in valid.items()}}
 
         res = await self.db.update_one(filters, update_query)
         if res.matched_count == 0:
             raise HTTPException(500, "Failed to update object.")
         return await self.get(object_id, current_user)
 
-    async def delete(self, object_id: str, current_user: Optional[dict] = None) -> dict:
+    async def delete(self, object_id: str,
+                     current_user: Optional[dict] = None) -> dict:
         """Удаляет вложенный объект."""
         self.check_crud_enabled("delete")
 
@@ -608,7 +636,7 @@ class InlineCrud(BaseCrudCore):
         if not parent:
             raise HTTPException(404, "Parent document not found.")
 
-        nested = await self._get_nested_field(parent, self.dot_field_path)
+        nested = await self.get_nested_field(parent, self.dot_field_path)
         update_query = (
             {"$pull": {self.dot_field_path: {"id": object_id}}}
             if isinstance(nested, list)

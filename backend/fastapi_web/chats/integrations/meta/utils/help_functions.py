@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
+from typing import Optional
 
 import aiohttp
 from fastapi import HTTPException, Request
@@ -30,34 +31,26 @@ async def verify_meta_signature(
     return True
 
 
-
-async def get_meta_locale(psid: str, access_token: str) -> str | None:
+async def get_meta_locale(psid: str, access_token: str) -> Optional[str]:
     """Возвращает locale пользователя по его PSID."""
     url = f"https://graph.facebook.com/v22.0/{psid}"
     params = {"fields": "locale", "access_token": access_token}
-
-    logging.debug(f"[IG] Запрос locale для psid={psid} (token starts with: {access_token[:10]}...)")
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params, timeout=5) as resp:
                 text = await resp.text()
-                logging.debug(f"[IG] Ответ locale для psid={psid}: status={resp.status}, body={text[:300]}")
 
                 if resp.status == 200:
                     data = json.loads(text)
-                    locale = data.get("locale")
-                    logging.info(f"[IG] locale={locale} получен для psid={psid}")
-                    if not locale:
-                        logging.warning(f"[IG] locale отсутствует в ответе: {data}")
-                    return locale
+                    return data.get("locale")
 
-                logging.warning(f"[IG] Ошибка при запросе locale {psid}: {resp.status} {text}")
                 if "Invalid OAuth access token" in text:
-                    logging.error(f"[IG] ❌ Неверный access token — проверь настройки")
+                    logging.error(
+                        "[IG] Invalid access token — check your settings"
+                    )
 
-    except Exception as e:
-        logging.exception(f"[IG] Исключение при запросе locale для psid={psid}: {e}")
+    except Exception:
+        pass
 
     return None
-

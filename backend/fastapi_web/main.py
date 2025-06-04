@@ -2,50 +2,48 @@
 import logging
 import sys
 from pathlib import Path
+import time
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from utils.errors import (general_exception_handler,
-                          validation_exception_handler)
-from users.routers import user_router
-from personal_account.routes_generator import generate_base_account_routes
-from knowledge.routers import knowledge_base_router
-from infra.middlewares import BasicAuthMiddleware
-from infra import settings
-from db.mongo.db_init import mongo_db_on_startapp
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRouter
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+
+from basic.routers import basic_router
+from chats.integrations.meta.instagram.instagram import instagram_router
+from chats.integrations.meta.whatsapp.whatsapp import whatsapp_router
+from chats.integrations.telegram.telegram_bot import telegram_router
+from chats.routers import chat_router
+from crud_core.registry import account_registry, admin_registry
 from crud_core.routes_generator import (auto_discover_modules,
                                         generate_base_routes,
                                         get_routes_by_apps)
-from crud_core.registry import account_registry, admin_registry
-from chats.routers import chat_router
-from chats.integrations.meta.whatsapp.whatsapp import whatsapp_router
-from chats.integrations.meta.instagram.instagram import instagram_router
-from basic.routers import basic_router
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.routing import APIRouter
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.exceptions import RequestValidationError
-from fastapi import FastAPI
-
-
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-# )
-
-import logging
-
-
-logging.getLogger("pymongo").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.INFO)  # можно оставить INFO для API-запросов
+from db.mongo.db_init import mongo_db_on_startapp
+from infra import settings
+from infra.middlewares import BasicAuthMiddleware
+from knowledge.routers import knowledge_base_router
+from personal_account.routes_generator import generate_base_account_routes
+from users.routers import user_router
+from utils.errors import (general_exception_handler,
+                          validation_exception_handler)
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d — %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+logging.Formatter.converter = lambda *args: time.gmtime(time.time() + 3 * 3600)
+
+logging.getLogger("pymongo").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.INFO)
+
 
 app = FastAPI()
 app.router.redirect_slashes = False
@@ -91,6 +89,7 @@ async def on_shutdown():
 
 chat_router.include_router(instagram_router, prefix="/instagram")
 chat_router.include_router(whatsapp_router, prefix="/whatsapp")
+chat_router.include_router(telegram_router, prefix="/telegram")
 base_api_router.include_router(chat_router, prefix="/chats")
 base_api_router.include_router(user_router, prefix="/users")
 base_api_router.include_router(knowledge_base_router, prefix="/knowledge")

@@ -1,0 +1,604 @@
+{
+  "textMessages": {
+    "ROOMS_EMPTY": "No conversations",
+    "ROOM_EMPTY": "No conversation selected",
+    "NEW_MESSAGES": "New messages",
+    "MESSAGE_DELETED": "This message was deleted",
+    "MESSAGES_EMPTY": "No messages",
+    "CONVERSATION_STARTED": "The conversation started on:",
+    "TYPE_MESSAGE": "Type your message",
+    "SEARCH": "Search",
+    "IS_ONLINE": "is online",
+    "LAST_SEEN": "last seen ",
+    "IS_TYPING": "is typing...",
+    "CANCEL_SELECT_MESSAGE": "Cancel Selection"
+  },
+
+  "EmbeddedChat": {
+    "allLabel": "All",
+    "unreadLabel": "Unread",
+    "exportButton": "Export chats to Excel",
+    "exportCSV": "Export chats to CSV",
+    "csvSuccess": "CSV created",
+    "csvFailed": "CSV export failed",
+    "messageDialogHeader": "Message",
+    "messageDialogId": "ID",
+    "messageDialogText": "Text",
+    "noSources": "Message has no sources from knowledge base",
+    "sourceLabel": "Source",
+    "userIdLabel": "User id",
+    "closeButton": "Close",
+
+    "seeSources": "See sources",
+    "excelSuccess": "Excel created",
+    "excelFailed": "Excel export failed",
+    "noDate": "No date provided",
+    "inFuture": "In the future",
+    "startedAgo": "Started {diffDays} days, {diffHours} hours, {diffMinutes} minutes ago",
+    "consultant": "Consultant",
+    "client": "Client",
+    "chatFallback": "Chat {index}"
+  },
+  "UseChatLogic": {
+    "client": "👤 Client",
+    "aiAssistant": "🤖 AI Assistant",
+    "consultant": "👀 Consultant",
+    "unknown": "❓ Unknown"
+  },
+  "MainLogin": {
+    "title": "Login to your account",
+    "loginLabel": "Login",
+    "loginPlaceholder": "Enter your login",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "loginButton": "Log in",
+    "noAccount": "Don't have an account?",
+    "registerLink": "Register"
+  },
+  "MainRegistration": {
+    "titleRegister": "Registration",
+    "email": "E-mail:",
+    "emailPlaceholder": "Enter your e-mail",
+    "phone": "Phone:",
+    "phonePlaceholder": "Enter your phone number",
+    "firstName": "First Name:",
+    "firstNamePlaceholder": "Enter your first name",
+    "lastName": "Last Name:",
+    "lastNamePlaceholder": "Enter your last name",
+    "birthDate": "Birth Date:",
+    "birthDatePlaceholder": "Enter your birth date",
+    "city": "City:",
+    "cityPlaceholder": "Enter your city",
+    "gender": "Gender:",
+    "genderPlaceholder": "Enter your gender",
+    "termsLabel": "I agree to the",
+    "termsAnd": "and",
+    "termsLink": "Terms of Use",
+    "privacyLink": "Privacy Policy",
+    "registerButton": "Register",
+    "alreadyHaveAccount": "Already have an account?",
+    "goToLogin": "Go to login",
+
+    "codeTitle": "Test Code (Will be sent by email later)",
+    "codeConfirmTitle": "Code Confirmation",
+    "enterCodePrompt": "Enter the six-digit code from your email",
+    "codeConfirmButton": "Confirm",
+    "codeResendHelp1": "If you did not receive the code —",
+    "codeResendHelp2": "check spam or",
+    "resendLink": "resend it",
+
+    "error": {
+      "terms": "You must agree to the Terms of Service."
+    }
+  },
+  "PersonalMainLogin": {
+    "titleLogin": "Login to Account",
+    "phone": "Phone",
+    "phonePlaceholder": "Enter your phone number",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "loginButton": "Login",
+    "noAccount": "Don’t have an account?",
+    "registerLink": "Register",
+    "title2FA": "Login Confirmation",
+    "testCode": "Test code:",
+    "twofaLabel": "Code from SMS / email",
+    "twofaPlaceholder": "Enter the code",
+    "confirmButton": "Confirm",
+    "cancelButton": "Cancel"
+  },
+  "PersonalMainRegistration": {
+    "title": "Registration",
+    "subtitle": "Create a new account",
+    "phone": "Phone number",
+    "phonePlaceholder": "Enter your phone number",
+    "email": "Email",
+    "emailPlaceholder": "{'mail@example.com'}",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "John Doe",
+    "password": "Password",
+    "passwordPlaceholder": "Minimum 10 characters",
+    "show": "Show",
+    "hide": "Hide",
+    "passwordHint": "Minimum of 10 characters, including uppercase, lowercase, numbers and symbols",
+    "passwordConfirm": "Confirm password",
+    "passwordConfirmPlaceholder": "Repeat the password",
+    "termsPrefix": "I agree to the",
+    "termsLink": "Terms of Use",
+    "privacyAnd": "and",
+    "privacyLink": "Privacy Policy",
+    "registerButton": "Register",
+    "alreadyHave": "Already have an account?",
+    "loginLink": "Login",
+    "confirmTitle": "Confirm registration",
+    "debugCode": "Test code (will come from email later)",
+    "smsCodeLabel": "Code from SMS",
+    "smsCodePlaceholder": "Enter the SMS code",
+    "confirmButton": "Confirm",
+    "cancelButton": "Cancel"
+  },
+  "DynamicForm": {
+    "upload": "Upload",
+    "addFiles": "Add files",
+    "addImages": "Add images",
+    "downloadFile": "Download file",
+    "delete": "Delete",
+    "enterTags": "Enter tags...",
+    "enterCountry": "Enter a country..."
+  },
+  "InlineList": {
+    "addNewHeader": "Add New",
+    "saveBtn": "Save",
+    "deleteBtn": "Delete",
+    "createBtn": "Create",
+
+    "confirmDelete": "Are you sure you want to delete this item?",
+    "noChanges": "No changes detected.",
+    "updated": "Inline item updated!",
+    "updateError": "Error updating inline item.",
+    "deleted": "Inline item deleted!",
+    "deleteError": "Error deleting inline item.",
+    "onlyOne": "Only one item is allowed.",
+    "created": "Inline item created!",
+    "createError": "Error creating inline item."
+  },
+  "MainForm": {
+    "createPrefix": "Creating new record",
+    "detailPrefix": "Record details",
+    "loading": "Loading data…",
+
+    "edit": "Edit",
+    "save": "Save",
+    "delete": "Delete",
+    "create": "Create record",
+    "openChat": "Open chat",
+    "backToList": "Back to list",
+    "backToRecord": "Back to record",
+
+    "confirmDelete": "Are you sure you want to delete this record?",
+
+    "noChanges": "There are no changes to save.",
+    "created": "Record created",
+    "deleted": "Record deleted",
+    "updateError": "Error saving changes.",
+    "createError": "Error creating record.",
+    "deleteError": "Error deleting record.",
+    "unknownError": "Unknown error"
+  },
+  "AgreesPanel": {
+    "title": "User consents",
+    "subtitle": "Information about user consents"
+  },
+  "ContactInfoView": {
+    "title": "Contact information",
+
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "pesel": "PESEL / Identifier",
+
+    "emergency": "Emergency contact",
+    "docId": "Document ID",
+    "lastUpdate": "Last update",
+
+    "invalidDate": "Invalid date",
+    "dash": "—"
+  },
+  "FamilyTable": {
+    "addMember": "Add family member",
+    "idPrefix": "ID:",
+    "nameUnknown": "Name not set",
+    "relationshipUnknown": "Relationship not set",
+    "statusUnknown": "Status not set",
+    "bonusSuffix": "bonus points",
+    "noBonus": "No bonuses",
+    "editAria": "Edit"
+  },
+  "InfoHeader": {
+    "patientIdPrefix": "Patient ID:",
+    "bonusPrefix": "Bonuses:",
+    "actions": "Actions",
+    "logout": "Logout",
+    "adminPanel": "Admin panel",
+    "changeTheme": "Change theme"
+  },
+  "NavigationSidebarTabs": {
+    "support": "Support"
+  },
+  "PatientsHealthSurveyView": {
+    "title": "Health survey",
+    "subtitle": "User medical information",
+
+    "allergies": "Allergies:",
+    "chronic": "Chronic conditions:",
+    "smoking": "Smoking status:",
+    "medications": "Current medications:",
+    "lastUpdate": "Last update:",
+    "noData": "No data",
+    "dash": "—"
+  },
+  "PatientsMainInfoView": {
+    "sectionTitle": "Basic information",
+
+    "blockPersonal": "Personal data",
+    "lastName": "Last name:",
+    "firstName": "First name:",
+    "patronymic": "Middle name:",
+    "birthDate": "Birth date:",
+    "gender": "Gender:",
+
+    "blockCompany": "Company information",
+    "companyName": "Company name:",
+
+    "blockSystem": "System information",
+    "patientId": "Patient ID:",
+    "createdAt": "Created at:",
+    "updatedAt": "Last update:",
+
+    "invalidDate": "Invalid date",
+    "dash": "—"
+  },
+  "PointsTable": {
+    "balanceCard": "Bonus account",
+    "balanceSubtitle": "User bonus information",
+    "currentBalance": "Current balance:",
+    "referralCode": "Referral code:",
+    "lastUpdate": "Last update",
+
+    "transactionsCard": "Transaction history",
+    "transactionsSubtitle": "Latest bonus operations",
+
+    "toastTitle": "Code copied",
+    "toastBody": "Referral code copied to clipboard!",
+    "tooltipCopy": "Copy referral code"
+  },
+  "SupportPage": {
+    "title": "Support chat"
+  },
+  "DateRangeFilter": {
+    "heading": "Date range filter:",
+    "placeholder": "Select dates",
+    "clear": "Clear date range"
+  },
+
+  "DynamicDataTable": {
+    "exportExcel": "Export to Excel",
+    "create": "Create",
+    "add": "Add",
+    "editAria": "Edit"
+  },
+  "KnowledgeBase": {
+    "contextSources": "Context sources",
+    "contextInfoTip": "Context sources are the files, links, or text that the bot uses to answer questions. You can add, remove, or edit them as needed. The bot will use the most relevant sources to provide accurate answers.",
+
+    "searchPlaceholder": "Search sources…",
+    "searchTip": "Search by source name.  Enter part of a file, web page or text title to filter the list.",
+    "addContext": "Add context",
+    "addContextTip": "Import a new data source: file, web page or text.",
+
+    "addContextHeader": "Add context",
+
+    "titlePlaceholder": "Title",
+    "pasteTextPlaceholder": "Paste the text here…",
+
+    "uploadHeader": "Upload sources",
+    "uploadSub": "Select a file or drag it here.",
+    "uploadTypes": "Supported types: PDF, TXT, Images, DOCX, XLSX, images",
+
+    "dialogCancel": "Cancel",
+    "dialogAdd": "Add",
+
+    "totalSources": "Total sources",
+    "selectedSources": "Selected",
+
+    "queryField": "Query field",
+    "queryFieldTip": "Enter your question or request. The AI will use the context sources to provide a relevant answer.",
+
+    "aiModelPlaceholder": "Select AI Model",
+
+    "requestHistory": "Request history",
+    "clearHistory": "Clear history",
+    "noHistory": "No previous requests found.",
+    "reuseTip": "Reuse this request",
+
+    "typeHere": "Type here…",
+    "typeHereTip": "Describe what the AI assistant should do with your data…",
+
+    "uploadSourcesTitle": "Upload sources",
+    "uploadSourcesSubtitle": "Select a file or drag it here.",
+    "uploadSourcesTypes": "Supported types: PDF, TXT, images, DOCX, XLSX",
+
+    "files": "Files",
+    "site": "Site",
+    "text": "Text",
+
+    "dontUse": "Don't use",
+    "botKnowledge": "Bot knowledge",
+    "contextOnly": "Context only",
+    "knowledgeAndContext": "Knowledge & context",
+
+    "querySmartChange": "Generate smart change",
+
+    "playgroundHeader": "Playground",
+
+    "addTopic": "Add topic",
+    "addTopicDesc": "Topic – the main theme that combines related subtopics. Subtopic – a subsection of the main topic with a specific focus. Question – a typical user question within a subtopic. Answer – a detailed response to a specific question.",
+    "addSubtopic": "Add subtopic",
+    "addQuestion": "Add question",
+    "addLink": "Add link",
+
+    "questionLabel": "Question:",
+    "answerTextLabel": "Answer text:",
+    "linksFilesLabel": "Photos (Links):",
+    "selectedFilesLabel": "Selected files:",
+
+    "topicTooltip": "The main topic containing related subsections and questions.",
+    "subtopicTooltip": "A section of a topic that groups related questions and answers.",
+    "questionTooltip": "A question in the knowledge base that the bot will look for answers to.",
+    "answerTooltip": "An answer to a question that the bot will use when formulating responses.",
+
+    "playgroundEmpty": "Playground is empty",
+    "playgroundEmptyBody": "Import content from the left panel or create a new block.",
+    "createBlock": "Create block",
+
+    "reject": "Reject",
+    "save": "Save",
+    "saveDesc": "Saves the current knowledge structure as a draft. You can return to it later. The draft is not used by the bot to answer questions until you publish it.",
+    "publish": "Publish",
+    "publishDesc": " 'Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions.  Changes take effect immediately.  Make sure the structure is completely ready.'",
+
+    "knowledgeBase": "Knowledge base",
+    "knowledgeBaseDesc": " Knowledge base is the main source of information for the bot. It contains all the topics, subtopics, and questions that the bot can answer. You can view and search through it, but you cannot edit it directly here.",
+    "searchKbPlaceholder": "Search knowledge base…",
+    "export": "Export",
+    "exportDialogTitle": "Export knowledge base",
+    "exportJson": "JSON",
+    "exportJsonDesc": "Full structured data (recommended)",
+    "exportCsv": "CSV",
+    "exportCsvDesc": "Spreadsheet-compatible format",
+    "exportTxt": "Plain text",
+    "exportTxtDesc": "Plain text",
+    "exportCancel": "Cancel",
+
+    "removeTopic": "Delete topic «{topicName}»?",
+    "removeSubtopic": "Delete subtopic «{subtopicName}» in «{topicName}»?",
+    "removeQuestion": "Delete question «{questionKey}»?",
+
+    "newTopic": "New Topic",
+    "newSubtopic": "New Subtopic",
+    "newQuestion": "New Question",
+
+    "toastAdded": "{what} added successfully",
+    "toastRemoved": "{what} removed successfully",
+    "toastUpdated": "{what} updated successfully",
+    "toastNotAdded": "{what} not added",
+    "toastNotRemoved": "{what} not removed",
+    "toastNotUpdated": "{what} not updated",
+
+    "ctxRenamePrompt": "Rename context",
+    "ctxRenamed": "Context name updated",
+    "ctxNotRenamed": "Context name not changed",
+
+    "ctxPurposeUpdated": "Purpose updated",
+    "ctxPurposeNotUpdated": "Purpose not updated",
+
+    "ctxLoadErr": "Cannot load context",
+    "ctxAddMax": "Maximum of {max} sources reached",
+    "ctxAdded": "Context added",
+    "ctxNotAdded": "Context not added",
+    "ctxDeleted": "Context deleted",
+    "ctxNotDeleted": "Context not deleted",
+
+    "menuRename": "Rename",
+    "menuDownload": "Download",
+    "menuDelete": "Delete",
+
+    "typeText": "Text",
+    "typeFile": "File / Photo",
+    "typeLink": "Link",
+
+    "purposeNone": "Don't use",
+    "purposeBot": "Bot knowledge",
+    "purposeKb": "Context only",
+    "purposeBoth": "Knowledge & context",
+
+    "purposeNoneDesc": "The source is ignored when generating answers.",
+    "purposeBotDesc": "Information is added to the knowledge base and influences general answers.",
+    "purposeKbDesc": "The source is used only to answer the specific question.",
+    "purposeBothDesc": "The source is used for both general knowledge and specific query answers.",
+
+    "topicAdded": "Topic added successfully",
+    "topicRemoved": "Topic removed successfully",
+    "topicNotRemoved": "Topic not removed",
+
+    "subtopicAdded": "Subtopic added successfully",
+    "subtopicRemoved": "Subtopic removed successfully",
+    "subtopicNotRemoved": "Subtopic not removed",
+
+    "questionAdded": "Question added successfully",
+    "questionRemoved": "Question removed successfully",
+    "questionNotRemoved": "Question not removed",
+    "questionExists": "This question already exists!",
+
+    "fileAdded": "Link / file added",
+    "fileRemoved": "Link / file removed",
+
+    "playgroundCleared": "Playground cleared successfully",
+    "playgroundUpdated": "Playground updated successfully",
+    "playgroundNotUpdated": "Playground not updated",
+    "playgroundRejected": "Playground rejected successfully",
+
+    "kbSaved": "Knowledge base saved successfully",
+    "kbNotSaved": "Knowledge base not saved",
+
+    "patchGenerated": "Patch generated successfully",
+    "patchNotGenerated": "Patch not generated",
+
+    "noChanges": "No changes to save.",
+    "msgPlaygroundUpdated": "Playground updated successfully",
+    "msgPlaygroundUpdateErr": "Playground update failed",
+    "msgDbSaved": "Knowledge base saved",
+    "msgDbSaveErr": "Failed to save knowledge base",
+    "confirmClear": "Clear playground?\n\nAll draft changes will be lost. This will NOT touch the real knowledge base.",
+    "msgPlaygroundCleared": "Playground cleared",
+    "confirmReject": "Reject playground?\n\nDraft changes will be lost. The real knowledge base stays intact.",
+    "msgPlaygroundRejected": "Playground rejected",
+    "unsavedChanges": "You have unsaved changes in the playground!",
+    "msgPatchGenerated": "Patch generated successfully",
+    "msgPatchErr": "Patch generation failed",
+    "redactTopic": "Redact this topic",
+    "redactSubtopic": "Redact this subtopic",
+    "redactQuestion": "Redact this question",
+    "tabFiles": "Files",
+    "tabSite": "Site",
+    "tabText": "Text",
+    "download": "Download",
+    "delete": "Delete",
+    "uploadJson": "Upload JSON"
+  },
+  "MainContent": {
+    "dialog": {
+      "filterOptions": "Filter Options"
+    },
+    "buttons": {
+      "fillHealthSurvey": "Fill in Health Survey",
+      "fillMainInfo": "Fill in Main Information",
+      "fillContactInfo": "Fill in Contact Information",
+      "fillConsents": "Fill in Consents"
+    },
+    "toast": {
+      "exportSuccessSummary": "Export Successful",
+      "exportSuccessDetail": "Data exported to Excel successfully",
+      "exportFailSummary": "Export Failed",
+      "exportFailDetail": "Failed to export data.",
+      "invalidGroupSummary": "Invalid Group",
+      "invalidEntitySummary": "Invalid Entity",
+      "errorSummary": "Error",
+      "noDataDetail": "No available data.",
+      "loadFailDetail": "Failed to load table data. ({status})",
+      "redirectDetail": "Redirecting to: {route}"
+    },
+
+    "playground": {
+      "saveDraft": "Saves the current knowledge structure as a draft. You will be able to continue working with it later. The draft is not used by the bot to answer questions until you publish it.",
+      "publish": "Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions. After publication, changes take effect immediately, and the bot will start responding using the new data. Make sure the structure is completely ready.",
+      "statusReady": "Ready for publication",
+      "blockType": "Topic – the main theme that combines related subtopics.\\nSubtopic – a subsection of the main topic with a specific focus.\\nQuestion – a typical user question within a subtopic.\\nAnswer – a detailed response to a specific question.",
+      "parentBlock": "Select the block to which the created element will relate.\\nFollow the correct hierarchy:\\n• Subtopics are created within Topics\\n• Questions are created within Subtopics\\n• Answers are created for specific Questions"
+    },
+
+    "import": {
+      "sourceSearch": "Search by source name. Enter part of the file name, web page, or text document to filter the list.",
+      "importNew": "Import a new data source: file, web page, or text.",
+      "aiInput": "Write here what the AI assistant should do with your data. Example: \"Highlight the main services from my website and create questions and answers for them\". Press Enter or the send button to convert selected sources into a structured knowledge base.",
+      "generator": "Write to the AI assistant specific tasks for structuring your data. Examples:\\n• \"Create Q&A pairs from a product document\"\\n• \"Divide text into subtopics\"\\n• \"Form a menu of services from my price list\"\\n• \"Extract key benefits\""
+    },
+
+    "kbBlock": {
+      "topic": "The main topic containing related subsections and questions.",
+      "subtopic": "A section of a topic that groups related questions and answers.",
+      "question": "A question in the knowledge base that the bot will look for answers to.",
+      "answer": "An answer to a question that the bot will use when formulating responses."
+    }
+  },
+  "NavigationSidebar": {
+    "tooltip": {
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "headers": {
+      "settings": "Settings",
+      "sidebar": "Sidebar"
+    },
+    "links": {
+      "knowledgeBase": "Knowledge Base",
+      "botSettings": "Bot Settings"
+    }
+  },
+  "ReadonlyKB": {
+    "summary": {
+      "knowledgeBase": "Knowledge base"
+    },
+    "buttons": {
+      "goToSource": "Go to source"
+    }
+  },
+  "SaveChangesDialog": {
+    "header": {
+      "preview": "Preview of detected changes.",
+      "savePlayground": "Do you want to save changes to playground?",
+      "saveKnowledgeBase": "Do you want to save changes to knowledge base?"
+    },
+    "info": {
+      "noChanges": "There are no changes to apply to knowledge base.",
+      "editModeNote": "It will change the playground, but WILL NOT update the knowledge base.",
+      "applyKb": "It will CHANGE the knowledge base."
+    },
+    "labels": {
+      "added": "Added:",
+      "changed": "Changed:",
+      "deleted": "Deleted:",
+      "addedItems": "Added Items",
+      "changedItems": "Changed Items",
+      "deletedItems": "Deleted Items"
+    },
+    "buttons": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
+  },
+  "Topbar": {
+    "aria": {
+      "menu": "Menu"
+    },
+    "titles": {
+      "personalAccount": "Personal Account"
+    },
+    "menu": {
+      "toPersonal": "To Personal Account",
+      "toAdmin": "To Admin Panel",
+      "changeTheme": "Change Theme",
+      "logout": "Logout"
+    },
+    "alt": {
+      "logo": "Logo"
+    },
+    "user": {
+      "defaultName": "Administrator"
+    }
+  },
+  "AdminChat": {
+    "buttons": {
+      "trainBot": "Train AI bot",
+      "closeChat": "Close chat",
+      "openTestChat": "Open test chat"
+    }
+  },
+  "LoaderOverlay": {
+    "loadingCompleted": "Loading completed!"
+  },
+  "test": {
+    "test": "Test"
+  }
+}

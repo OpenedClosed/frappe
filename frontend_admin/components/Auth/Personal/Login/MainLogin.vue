@@ -8,14 +8,14 @@
         <!-- Заголовок / логотип -->
         <div class="w-full flex flex-col justify-center items-center mb-4">
           <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">
-            Вход в аккаунт
+            	{{ t('PersonalMainLogin.titleLogin') }}
           </p>
         </div>
         
         <!-- Логин (например, телефон) -->
         <div class="w-full flex flex-col justify-start">
           <label for="phone" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            Телефон <span class="text-red-500">*</span>
+            {{ t('PersonalMainLogin.phone') }} <span class="text-red-500">*</span>
           </label>
           <div class="input-container flex items-center border rounded-lg"
                :class="{ 'p-invalid': Boolean(loginError.phone) }"
@@ -26,7 +26,7 @@
               type="tel"
               required
               mask="+9 (999) 999-99-99"
-              placeholder="Введите ваш телефон"
+             :placeholder="t('PersonalMainLogin.phonePlaceholder')"
               class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
             />
           </div>
@@ -36,7 +36,7 @@
         <!-- Пароль -->
         <div class="w-full flex flex-col justify-start">
           <label for="password" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            Пароль <span class="text-red-500">*</span>
+            {{ t('PersonalMainLogin.password') }} <span class="text-red-500">*</span>
           </label>
           <div class="input-container flex items-center border rounded-lg"
                :class="{ 'p-invalid': Boolean(loginError.password) }"
@@ -47,7 +47,7 @@
               required
               id="password"
               class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
-              placeholder="Введите ваш пароль"
+              :placeholder="t('PersonalMainLogin.passwordPlaceholder')"
             />
             <span @click="showPassword = !showPassword" class="cursor-pointer pr-4">
               <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
@@ -58,14 +58,14 @@
 
         <!-- Кнопка «Войти» -->
         <div class="w-full mt-6">
-          <Button type="submit" label="Войти"
+          <Button type="submit" :label="t('PersonalMainLogin.loginButton')"
                   class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full border-none" />
         </div>
 
         <!-- Ссылка на регистрацию (если не в админке) -->
         <small v-if="currentPageName != 'admin'" class="text-[14px] text-black dark:text-white">
-          У вас нет аккаунта?
-          <span @click="goRegistration" class="underline cursor-pointer"> Зарегистрироваться </span>
+         {{ t('PersonalMainLogin.noAccount') }}
+          <span @click="goRegistration" class="underline cursor-pointer"> {{ t('PersonalMainLogin.registerLink') }} </span>
         </small>
       </form>
 
@@ -74,13 +74,13 @@
         <!-- Заголовок -->
         <div class="w-full flex flex-col justify-center items-center mb-4">
           <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">
-            Подтверждение входа
+            	{{ t('PersonalMainLogin.title2FA') }}
           </p>
         </div>
  <!-- Для отладки: вывести код, если бэкенд вернул debug_code -->
  <div class="w-full flex flex-col" v-if="debugCode">
           <label class="text-[14px] text-black dark:text-white">
-            Тестовый код:
+            {{ t('PersonalMainLogin.testCode') }}
           </label>
           <div class="flex items-center gap-2">
             <InputText :value="debugCode" readonly class="w-full" />
@@ -91,7 +91,7 @@
         <!-- Код 2FA -->
         <div class="w-full flex flex-col justify-start">
           <label for="twofa_code" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            Код из SMS / почты <span class="text-red-500">*</span>
+            {{ t('PersonalMainLogin.twofaLabel') }} <span class="text-red-500">*</span>
           </label>
           <div class="input-container flex items-center border rounded-lg"
                :class="{ 'p-invalid': Boolean(twoFAError.message) }"
@@ -101,7 +101,7 @@
               required
               id="twofa_code"
               class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
-              placeholder="Введите код"
+              :placeholder="t('PersonalMainLogin.twofaPlaceholder')"
             />
           </div>
           <small class="text-red-500 mt-1">{{ twoFAError.message }}</small>
@@ -110,12 +110,13 @@
        
         <!-- Кнопка «Подтвердить» -->
         <div class="w-full mt-6">
-          <Button type="submit" label="Подтвердить"
+          <Button type="submit" :label="t('PersonalMainLogin.confirmButton')"
                   class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full border-none" />
         </div>
 
         <!-- Кнопка «Отмена» (вернуться к вводу пароля) -->
-        <Button type="button" label="Отмена"
+        <Button type="button" :label="t('PersonalMainLogin.cancelButton')"
+
                 class="p-button-text mt-2 w-full"
                 @click="cancel2FA"
         />
@@ -129,6 +130,10 @@ import { ref } from 'vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import { useNuxtApp, useAuthState, usePageState, navigateTo, reloadNuxtApp } from '#imports'
+
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 /**
  * Управление видимостью пароля

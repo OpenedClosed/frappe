@@ -21,27 +21,26 @@ from chats.db.mongo.schemas import ChatMessage
 from db.mongo.db_init import mongo_db
 from db.redis.db_init import redis_db
 from gemini_base.gemini_init import gemini_client
-
 from infra import settings
 from knowledge.db.mongo.enums import ContextPurpose, ContextType
 from knowledge.db.mongo.schemas import ContextEntry, KnowledgeBase
 from knowledge.utils.prompts import AI_PROMPTS
 from openai_base.openai_init import openai_client
+from utils.help_functions import split_prompt_parts
 
 from .knowledge_base import KNOWLEDGE_BASE
 
-# -----------------------------------------------------------
+# ==============================
 # КОНСТАНТЫ
-# -----------------------------------------------------------
+# ==============================
 
 IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-# DOC_EXT = {".pdf", ".docx", ".xlsx", ".xls"}
 DOC_EXT = {".pdf", ".docx", ".doc", ".xlsx", ".xls"}
 
 
-# -----------------------------------------------------------
+# ==============================
 # БЛОК: СРАВНЕНИЕ И СЛИЯНИЕ
-# -----------------------------------------------------------
+# ==============================
 
 
 def mark_created_diff(val: Any) -> Any:
@@ -52,7 +51,7 @@ def mark_created_diff(val: Any) -> Any:
     return val
 
 
-def _compare_values(old_value, new_value) -> Optional[dict]:
+def compare_values(old_value, new_value) -> Optional[dict]:
     if isinstance(old_value, dict) and isinstance(new_value, dict):
         nested = diff_with_tags(old_value, new_value)
         return {"tag": "updated", **nested} if nested else None
@@ -72,7 +71,7 @@ def diff_with_tags(old: dict, new: dict) -> Optional[dict]:
         elif k not in new:
             diff[k] = {"tag": "deleted", "old": old[k]}
         else:
-            nested = _compare_values(old[k], new[k])
+            nested = compare_values(old[k], new[k])
             if nested:
                 diff[k] = nested
     return diff or None
@@ -101,9 +100,9 @@ def merge_external_structures(main_kb: dict, externals: list[dict]) -> dict:
     return merged
 
 
-# -----------------------------------------------------------
+# ==============================
 # БЛОК: БАЗА ЗНАНИЙ
-# -----------------------------------------------------------
+# ==============================
 
 
 async def get_knowledge_full_document() -> dict:
@@ -132,17 +131,17 @@ async def save_kb_doc(data: dict) -> bool:
     return bool(res.modified_count or res.upserted_id)
 
 
-# -----------------------------------------------------------
+# ==============================
 # БЛОК: ПАРСИНГ
-# -----------------------------------------------------------
+# ==============================
 
 
 async def parse_pdf(file: UploadFile) -> str:
     """Возвращает текст из PDF-файла."""
     data = await file.read()
     with pdfplumber.open(io.BytesIO(data)) as pdf:
-        return "\n".join(page.extract_text() or "" for page in pdf.pages).strip()
-
+        return "\n".join(page.extract_text()
+                         or "" for page in pdf.pages).strip()
 
 
 async def parse_docx(file: UploadFile) -> str:
@@ -165,7 +164,6 @@ async def parse_docx(file: UploadFile) -> str:
                 parts.append(row_text)
 
     return "\n".join(parts).strip()
-
 
 
 async def parse_excel(file: UploadFile) -> str:
@@ -202,35 +200,6 @@ async def parse_file_from_path(path: str) -> str:
     return await parse_file(fake) or ""
 
 
-# ---------- Парсинг URL ----------
-
-# async def parse_url(url: str, timeout: int = 10) -> str:
-#     """Скачивает страницу и возвращает очищенный текст без скриптов/стилей."""
-#     async with httpx.AsyncClient(
-#         timeout=timeout,
-#         follow_redirects=True,
-#         headers={"User-Agent": "Mozilla/5.0 (knowledge-context-bot)"},
-#     ) as client:
-#         r = await client.get(url)
-#         r.raise_for_status()
-
-#     soup = BeautifulSoup(r.text, "lxml")
-#     for t in soup(["script", "style", "noscript", "header", "footer", "form"]):
-#         t.decompose()
-#     return "\n".join(line.strip() for line in soup.get_text("\n").splitlines() if line.strip())
-
-
-# async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
-#     """Возвращает кешированный текст страницы или кэширует новый."""
-#     key = f"url_cache:{hashlib.sha1(url.encode()).hexdigest()}"
-#     cached = await redis_db.get(key)
-#     if cached:
-#         return cached.decode(errors="ignore") if isinstance(cached, bytes) else cached
-
-#     parsed = await parse_url(url)
-#     await redis_db.set(key, parsed, ex=ttl)
-#     return parsed
-
 async def parse_url(url: str, timeout: int = 10) -> str:
     """Скачивает страницу и возвращает очищенный текст без скриптов/стилей."""
     url = url.strip()
@@ -248,18 +217,22 @@ async def parse_url(url: str, timeout: int = 10) -> str:
     soup = BeautifulSoup(r.text, "lxml")
     for t in soup(["script", "style", "noscript", "header", "footer", "form"]):
         t.decompose()
-    return "\n".join(line.strip() for line in soup.get_text("\n").splitlines() if line.strip())
+    return "\n".join(line.strip()
+                     for line in soup.get_text("\n").splitlines() if line.strip())
+
 
 async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
     """Возвращает кешированный текст страницы или кэширует новый."""
     url = url.strip()
     if not url:
-        raise ValueError("Empty or whitespace-only URL passed to cache_url_snapshot")
+        raise ValueError(
+            "Empty or whitespace-only URL passed to cache_url_snapshot")
 
     key = f"url_cache:{hashlib.sha1(url.encode()).hexdigest()}"
     cached = await redis_db.get(key)
     if cached:
-        return cached.decode(errors="ignore") if isinstance(cached, bytes) else cached
+        return cached.decode(errors="ignore") if isinstance(
+            cached, bytes) else cached
 
     parsed = await parse_url(url)
     await redis_db.set(key, parsed, ex=ttl)
@@ -277,9 +250,9 @@ async def save_uploaded_file(file: UploadFile, uid: str) -> Path:
         await f.write(await file.read())
     return dst_path
 
-# -----------------------------------------------------------
+# ==============================
 # БЛОК: LLM-ПОМOЩНИКИ
-# -----------------------------------------------------------
+# ==============================
 
 
 def pick_model_and_client(model: str):
@@ -288,10 +261,10 @@ def pick_model_and_client(model: str):
         return openai_client, model
     if model.startswith("gemini"):
         return gemini_client, model
-    return openai_client, settings.MODEL_DEFAULT
+    return gemini_client, settings.MODEL_DEFAULT
 
 
-async def llm_chat(
+async def admin_chat_generate_any(
     client,
     model: str,
     messages: list[dict],
@@ -322,9 +295,9 @@ def extract_json_from_gpt(raw: str) -> dict:
         return {}
 
 
-# -----------------------------------------------------------
+# ==============================
 # БЛОК: СООБЩЕНИЯ, ФАЙЛЫ
-# -----------------------------------------------------------
+# ==============================
 
 
 def extract_english_value(value: Any) -> Any:
@@ -347,14 +320,22 @@ def build_messages_for_model(
     user_message: str,
     model: str,
 ) -> Dict[str, Any]:
-    """Формирует payload сообщений для конкретного LLM."""
+    """Формирует payload сообщений для конкретного LLM с поддержкой разделения статики и динамики."""
     messages, system_instruction = [], None
 
-    if system_prompt:
-        if model.startswith("gpt"):
-            messages.append({"role": "system", "content": system_prompt})
-        else:
-            system_instruction = system_prompt
+    static_part, dynamic_part = split_prompt_parts(system_prompt or "")
+
+    if model.startswith("gpt"):
+        if static_part:
+            messages.append({"role": "system", "content": static_part})
+        if dynamic_part:
+            messages.append({"role": "system", "content": dynamic_part})
+    elif model.startswith("gemini"):
+        full_prompt = f"{static_part}\n\n{dynamic_part}".strip()
+        messages.append({"role": "user", "parts": [{"text": full_prompt}]})
+    else:
+        full_prompt = f"{static_part}\n\n{dynamic_part}".strip()
+        system_instruction = full_prompt
 
     for raw in messages_data:
         role_raw, content = ("user", raw)
@@ -365,7 +346,8 @@ def build_messages_for_model(
             role_raw = extract_english_value(raw.get("sender_role", "user"))
             content = raw
 
-        role = "assistant" if role_raw.lower() in {"assistant", "consultant", "ai assistant"} else "user"
+        role = "assistant" if role_raw.lower() in {
+            "assistant", "consultant", "ai assistant"} else "user"
         blocks: List[Dict[str, Any]] = []
 
         if isinstance(content, str):
@@ -374,7 +356,8 @@ def build_messages_for_model(
             if "text" in content:
                 blocks.append({"type": "text", "text": content["text"]})
             elif "image_url" in content:
-                blocks.append({"type": "image_url", "image_url": content["image_url"]})
+                blocks.append(
+                    {"type": "image_url", "image_url": content["image_url"]})
 
         if not blocks:
             continue
@@ -399,12 +382,14 @@ def build_messages_for_model(
         if model.startswith("gpt"):
             messages.append({"role": "user", "content": user_message})
         else:
-            messages.append({"role": "user", "parts": [{"text": user_message}]})
+            messages.append(
+                {"role": "user", "parts": [{"text": user_message}]})
 
     return {"messages": messages, "system_instruction": system_instruction}
 
 
-async def build_gpt_message_blocks(user_message: str, files: List[UploadFile]) -> List[dict]:
+async def build_gpt_message_blocks(
+        user_message: str, files: List[UploadFile]) -> List[dict]:
     """Создаёт text/image-блоки для GPT-моделей на основе сообщения и файлов."""
     blocks: List[dict] = []
 
@@ -417,21 +402,24 @@ async def build_gpt_message_blocks(user_message: str, files: List[UploadFile]) -
         if ext in DOC_EXT:
             parsed = await parse_file(f)
             if parsed:
-                blocks.append({"type": "text", "text": f"[File: {name}]\n{parsed}"})
+                blocks.append(
+                    {"type": "text", "text": f"[File: {name}]\n{parsed}"})
 
         elif ext in IMG_EXT:
             b64 = base64.b64encode(await f.read()).decode()
-            blocks.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+            blocks.append({"type": "image_url", "image_url": {
+                          "url": f"data:image/jpeg;base64,{b64}"}})
 
         else:
-            blocks.append({"type": "text", "text": f"[File: {name}] Unknown format, skipped."})
+            blocks.append({"type": "text",
+                           "text": f"[File: {name}] Unknown format, skipped."})
 
     return blocks
 
 
-# -----------------------------------------------------------
+# ==============================
 # БЛОК: CONTEXTENTRY – snapshot + KB-структура
-# -----------------------------------------------------------
+# ==============================
 
 
 IMAGE_HINT = (
@@ -441,7 +429,8 @@ IMAGE_HINT = (
 )
 
 
-async def ensure_entry_processed(entry: "ContextEntry", ai_model: str = settings.MODEL_DEFAULT) -> None:
+async def ensure_entry_processed(
+        entry: "ContextEntry", ai_model: str = settings.MODEL_DEFAULT) -> None:
     """
     Гарантирует, что у ContextEntry заполнены snapshot_text и kb_structure.
     При необходимости вызывает LLM.
@@ -474,7 +463,8 @@ async def ensure_entry_processed(entry: "ContextEntry", ai_model: str = settings
         blocks = await collect_context_blocks([entry])
 
         # для картинок добавляем подсказку
-        if entry.type is ContextType.FILE and entry.file_path and Path(entry.file_path).suffix.lower() in IMG_EXT:
+        if entry.type is ContextType.FILE and entry.file_path and Path(
+                entry.file_path).suffix.lower() in IMG_EXT:
             blocks.insert(0, {"sender_role": "user", "text": IMAGE_HINT})
 
         if blocks:
@@ -482,13 +472,15 @@ async def ensure_entry_processed(entry: "ContextEntry", ai_model: str = settings
             client, real_model = pick_model_and_client(ai_model)
 
             msg = build_messages_for_model(sys_prompt, blocks, "", real_model)
-            raw = await llm_chat(client, real_model, msg["messages"], msg.get("system_instruction"))
+            raw = await admin_chat_generate_any(client, real_model, msg["messages"], msg.get("system_instruction"))
 
             entry.kb_structure = extract_json_from_gpt(raw) or {}
             updated["context.$.kb_structure"] = entry.kb_structure
 
-            # если KB-структура по изображению получена — делаем snapshot кратким QA
-            if entry.snapshot_text and entry.snapshot_text.startswith("[Image:") and entry.kb_structure:
+            # если KB-структура по изображению получена — делаем snapshot
+            # кратким QA
+            if entry.snapshot_text and entry.snapshot_text.startswith(
+                    "[Image:") and entry.kb_structure:
                 flat: List[str] = []
                 for t in entry.kb_structure.values():
                     for s in t.get("subtopics", {}).values():
@@ -536,15 +528,16 @@ async def collect_context_blocks(
         elif e.type == ContextType.FILE and e.file_path:
             ext = Path(e.file_path).suffix.lower()
 
-            if ext in IMG_EXT:  # image → image_url
+            if ext in IMG_EXT:  # image -> image_url
                 mime = mimetypes.guess_type(e.file_path)[0] or "image/jpeg"
                 async with aiofiles.open(e.file_path, "rb") as f:
                     b64 = base64.b64encode(await f.read()).decode()
                 blocks.append(
-                    {"sender_role": "Context", "image_url": {"url": f"data:{mime};base64,{b64}"}}
+                    {"sender_role": "Context", "image_url": {
+                        "url": f"data:{mime};base64,{b64}"}}
                 )
 
-            elif ext in DOC_EXT:  # doc/pdf/xls → text
+            elif ext in DOC_EXT:  # doc/pdf/xls -> text
                 txt = await parse_file_from_path(e.file_path)
                 if txt:
                     blocks.append({"sender_role": "Context", "text": txt})
@@ -562,12 +555,13 @@ async def get_context_entry_content(entry: "ContextEntry") -> str:
         return entry.snapshot_text or await cache_url_snapshot(str(entry.url))
     return ""
 
-# -----------------------------------------------------------
+# ==============================
 # БЛОК: HIGH-LEVEL –  анализ, патчи, KB-структуры
-# -----------------------------------------------------------
+# ==============================
 
 
 def normalize_snippets_structure(result: dict) -> List[dict]:
+    """Нормализация структуры сниппетов."""
     norm = []
     for t in result.get("topics", []):
         if not isinstance(t, dict) or not isinstance(t.get("topic"), str):
@@ -628,7 +622,7 @@ async def analyze_update_snippets_via_gpt(
     msg_bundle = build_messages_for_model(
         sys_prompt, ctx_blocks + user_blocks, "", ai_model)
     client, real_model = pick_model_and_client(ai_model)
-    raw = await llm_chat(client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction"))
+    raw = await admin_chat_generate_any(client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction"))
     return {"topics": normalize_snippets_structure(extract_json_from_gpt(raw))}
 
 
@@ -704,7 +698,7 @@ async def generate_patch_body_via_gpt(
     msg_bundle = build_messages_for_model(
         sys_prompt, ctx_blocks + user_blocks, "", ai_model)
     client, real_model = pick_model_and_client(ai_model)
-    raw = await llm_chat(client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction"))
+    raw = await admin_chat_generate_any(client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction"))
 
     return extract_json_from_gpt(raw)
 
@@ -731,13 +725,13 @@ async def collect_bot_context_snippets(
     frags = [f for f in frags if f]
 
     prompt = (
-        "The following text fragments are contextual references for the assistant.\n"
-        "They serve as **background knowledge** and may be used\n"
-        "(If they are suitable or required by the user according to the meaning of the request.) to enhance responses,\n"
-        "but should NOT be copied directly into structured outputs.\n\n"
-        + ("\n\n".join(frags) if frags else "No additional context.")
-        + "\n" + "=" * 30
+        "The following are text fragments that serve as background context for the assistant.\n"
+        "They provide additional information that may be used to improve answers\n"
+        "when relevant to the user's request, but should not be quoted directly or included\n"
+        "verbatim in structured outputs.\n\n"
+        + ("\n\n".join(frags) if frags else "No additional context available.")
     )
+
     return frags, prompt
 
 

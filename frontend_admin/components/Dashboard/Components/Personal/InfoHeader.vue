@@ -9,10 +9,22 @@
           <div class="text-xl font-bold text-black dark:text-white">
             {{ patientName }}
           </div>
-          <div class="text-sm">ID пациента: {{ patientId }} • Бонусов: {{ bonusCount }}</div>
+          <div class="text-sm">{{ t('InfoHeader.patientIdPrefix') }} {{ patientId }} • {{ t('InfoHeader.bonusPrefix') }} {{ bonusCount }}</div>
         </div>
       </div>
       <div class="flex items-center gap-2">
+         <Dropdown
+            v-model="selectedLocale"
+            :options="languageOptions"
+            optionLabel="name"
+            optionValue="code"
+            class="min-w-42 text-sm"
+            @change="onLocaleChange($event.value)"
+            :pt="{
+              input: { class: 'bg-transparent text-white border-none' },
+              panel: { class: 'min-w-[10rem]' },
+            }"
+          />
         <Button
           text
           :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
@@ -31,6 +43,8 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 // Определяем реактивные переменные с начальными значениями
 const patientName = ref("Имя");
@@ -116,7 +130,7 @@ const { currentPageName } = usePageState();
 // Initialize the color mode
 const colorMode = useColorMode();
 
-const userName = ref("Действия");
+const userName = ref(t('InfoHeader.actions'));
 
 function toggleTheme() {
   colorMode.preference = colorMode.preference === "dark" ? "light" : "dark";
@@ -150,8 +164,13 @@ const menuOpen = ref(false);
 
 // Use a computed property for the menu items so that the icon updates reactively.
 const items = computed(() => [
+   {
+      label: t('InfoHeader.changeTheme'),
+      icon: colorMode.preference === "dark" ? "pi pi-sun" : "pi pi-moon",
+      command: toggleTheme,
+    },
   {
-    label: "Выйти",
+    label: t('InfoHeader.logout'),
     icon: "pi pi-power-off",
     command: onLogout,
   },
@@ -159,7 +178,7 @@ const items = computed(() => [
 
 if (isAdmin.value) {
   items.value.unshift({
-    label: "В админ панель",
+    label:	t('InfoHeader.adminPanel'),
     icon: "pi pi-user",
     command: () => {
       window.location.href = "/admin";
@@ -167,11 +186,29 @@ if (isAdmin.value) {
   });
 }
 
+
 // Toggle the TieredMenu popup
 const toggle = (event) => {
   menuOpen.value = !menuOpen.value;
   menu.value.toggle(event);
 };
+
+
+
+const { locale, locales, setLocale, setLocaleCookie } = useI18n()
+
+const selectedLocale = ref(locale.value)
+
+const languageOptions = locales.value.map((l) => ({
+  code: l.code,
+  name: l.name || l.code.toUpperCase(),
+}))
+
+function onLocaleChange(code) {
+  setLocale(code)
+  setLocaleCookie(code)
+  selectedLocale.value = code
+}
 </script>
 
 <style scoped>

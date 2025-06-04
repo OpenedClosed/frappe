@@ -9,24 +9,24 @@
               <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
             </div>
           </div>
-          <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">Вход в аккаунт</p>
+          <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">{{ $t('MainLogin.title') }}</p>
         </div>
         <div class="w-full flex flex-col justify-start">
-          <label for="audience" class="w-full text-[14px] mb-2"> Логин </label>
+          <label for="audience" class="w-full text-[14px] mb-2"> {{ $t('MainLogin.loginLabel') }} </label>
           <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(loginError.message) }">
             <InputText
               v-model="loginForm.username"
               required
               id="username"
               class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
-              placeholder="Введите ваш логин"
+              :placeholder="$t('MainLogin.loginPlaceholder')"
             />
           </div>
           <small class="text-red-500 mt-1">{{ loginError.message }}</small>
         </div>
 
         <div class="w-full flex flex-col justify-start">
-          <label for="password" class="w-full text-[14px] mb-2"> Пароль </label>
+          <label for="password" class="w-full text-[14px] mb-2"> {{ $t('MainLogin.passwordLabel') }} </label>
 
           <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(loginError.message) }">
             <InputText
@@ -35,7 +35,7 @@
               required
               id="password"
               class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
-              placeholder="Введите ваш пароль"
+               :placeholder="$t('MainLogin.passwordPlaceholder')"
             />
             <span @click="showPassword = !showPassword" class="cursor-pointer pr-4">
               <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'" />
@@ -53,13 +53,13 @@
 
         <div class="w-full mt-6">
           <Button type="submit" class="w-full flex justify-center items-center">
-            <p class="text-white">Войти</p>
+            <p class="text-white">{{ $t('MainLogin.loginButton') }}</p>
           </Button>
         </div>
 
         <small v-if="currentPageName != 'admin'" class="text-[14px]">
-          У вас нет аккаунта?
-          <span @click="goRegistration" class="underline cursor-pointer"> Зарегистрироваться </span>
+         {{ $t('MainLogin.noAccount') }}
+          <span @click="goRegistration" class="underline cursor-pointer">    {{ $t('MainLogin.registerLink') }} </span>
         </small>
       </form>
     </div>

@@ -4,35 +4,35 @@
         <h2 class="text-3xl font-semibold" v-if="title">
           {{ typeof title === 'object' ? (title[currentLanguage] || title.en) : title }}
         </h2>
-        <Button @click="onClickCreate" label="Добавить члена семьи" size="small" icon="pi pi-plus" class=""></Button>
+        <Button @click="onClickCreate" :label="t('FamilyTable.addMember')" size="small" icon="pi pi-plus" class=""></Button>
       </div>
       <div v-if="tableData && tableData.length > 0" v-for="(member, index) in tableData" :key="index" class="flex items-center justify-between p-4 rounded-lg border border-gray-200 gap-4">
         <div class="flex-1 flex flex-row justify-start items-center gap-4">
           <Avatar icon="pi pi-user" class="mr-2" size="medium" shape="circle" />
           <div class="flex flex-col">
             <div class="text-xl font-bold text-black dark:text-white">
-              {{ member.name || "Имя не задано" }}
+              {{ member.name || t('FamilyTable.nameUnknown')  }}
             </div>
             <div class="text-sm">
-              ID: {{ member.id }} • 
-              {{ member.relationship?.[currentLanguage] || member.relationship?.en || "Отношение не задано" }}
+              {{ t('FamilyTable.idPrefix') }} {{ member.id }} • 
+              {{ member.relationship?.[currentLanguage] || member.relationship?.en ||  t('FamilyTable.relationshipUnknown') }}
             </div>
           </div>
         </div>
         <div v-if="member.status" class="inline-block px-3 py-1 rounded-full text-sm font-medium text-blue-600 bg-blue-100">
-          {{ member.status?.[currentLanguage] || member.status?.en || "Статус не задан" }}
+          {{ member.status?.[currentLanguage] || member.status?.en ||  t('FamilyTable.statusUnknown') }}
         </div>
         <div v-if="member.bonus" class="inline-block px-3 py-1 rounded-full text-sm font-medium text-blue-600 bg-blue-100">
-          {{ member.bonus }} бонусов
+          {{ member.bonus }} {{ t('FamilyTable.bonusSuffix') }}
         </div>
         <div v-else class="inline-block px-3 py-1 rounded-full text-sm font-medium text-blue-600 bg-blue-100">
-          Бонусов нет
+         	{{ t('FamilyTable.noBonus') }}
         </div>
         <Button
                 icon="pi pi-user-edit"
                 class=" p-button-text p-button-md"
                 @click="onClickEdit(member.id)"
-                aria-label="Edit"
+               :aria-label="t('FamilyTable.editAria')"
               />
       </div>
     </div>
@@ -47,6 +47,9 @@ import { navigateTo } from "#app";
 const router = useRouter();
 const { currentPageName } = usePageState();
 const { currentLanguage } = useLanguageState();
+
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 // Accept the same props you had before
 const props = defineProps({

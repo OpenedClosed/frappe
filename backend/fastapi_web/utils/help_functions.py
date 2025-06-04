@@ -7,14 +7,16 @@ import string
 from datetime import datetime
 from typing import Any, Dict, Union
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
 import httpx
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+
 from infra import settings
 
 
 def to_snake_case(name: str) -> str:
     """Привести строку в snake_case."""
     return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+
 
 def get_language_from_locale(locale: str | None) -> str:
     """Извлекает язык из locale, по умолчанию 'en'."""
@@ -41,7 +43,7 @@ def try_parse_json(text: str) -> Union[Dict[str, Any], str]:
         return json.loads(text)
     except json.JSONDecodeError:
         return {"error": "Invalid JSON", "original": text}
-    
+
 
 def normalize_numbers(phone: str) -> str:
     "Убрать лишние символы, оставив лишь числовые"
@@ -73,8 +75,12 @@ async def send_sms(phone: str, text: str) -> dict:
             r = await client.post(settings.SMS_API_URL, json=payload)
             response_data = r.json()
             if not response_data.get("success"):
-                error_code = response_data.get("error", {}).get("code", "Unknown")
-                error_desc = response_data.get("error", {}).get("description", "")
+                error_code = response_data.get(
+                    "error", {}).get(
+                    "code", "Unknown")
+                error_desc = response_data.get(
+                    "error", {}).get(
+                    "description", "")
                 logging.error(f"SMS-Fly error {error_code}: {error_desc}")
                 raise HTTPException(
                     status_code=502,
@@ -94,3 +100,17 @@ async def send_sms(phone: str, text: str) -> dict:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal SMS error"
             ) from exc
+
+
+def split_prompt_parts(full_prompt: str) -> tuple[str, str]:
+    """Делит prompt на static- и dynamic-части."""
+    if "<<<STATIC>>>" in full_prompt and "<<<DYNAMIC>>>" in full_prompt:
+        static_part = (
+            full_prompt.split("<<<DYNAMIC>>>")[0]
+            .replace("<<<STATIC>>>", "")
+            .strip()
+        )
+        dynamic_part = full_prompt.split("<<<DYNAMIC>>>")[1].strip()
+    else:
+        static_part, dynamic_part = full_prompt.strip(), ""
+    return static_part, dynamic_part

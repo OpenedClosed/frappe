@@ -11,19 +11,19 @@
                 <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
               </div>
             </div>
-            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">Регистрация</p>
+            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">{{ t('MainRegistration.titleRegister') }}</p>
           </div>
 
           <!-- E-mail -->
           <div class="w-full flex flex-col justify-start">
-            <label for="email" class="w-full text-[14px] mb-2">E-mail:</label>
+            <label for="email" class="w-full text-[14px] mb-2">{{ t('MainRegistration.email') }}</label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.email) }">
               <InputText
                 v-model="regForm.email"
                 type="email"
                 required
                 id="email"
-                placeholder="Введите ваш e-mail"
+                :placeholder="t('MainRegistration.emailPlaceholder')"
                 class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
               />
             </div>
@@ -32,14 +32,14 @@
 
           <!-- Phone -->
           <div class="w-full flex flex-col justify-start">
-            <label for="phone" class="w-full text-[14px] mb-2">Phone:</label>
+            <label for="phone" class="w-full text-[14px] mb-2">{{ t('MainRegistration.phone') }}</label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.phone) }">
               <InputText
                 v-model="regForm.phone"
                 type="phone"
                 required
                 id="phone"
-                placeholder="Введите ваш телефон"
+                :placeholder="t('MainRegistration.phonePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
               />
             </div>
@@ -48,14 +48,14 @@
 
           <!-- First Name -->
           <div class="w-full flex flex-col justify-start">
-            <label for="first_name" class="w-full text-[14px] mb-2">First Name:</label>
+            <label for="first_name" class="w-full text-[14px] mb-2">{{ t('MainRegistration.firstName') }}</label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.first_name) }">
               <InputText
                 v-model="regForm.first_name"
                 type="text"
                 required
                 id="first_name"
-                placeholder="Введите ваше имя"
+                :placeholder="t('MainRegistration.firstNamePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
               />
             </div>
@@ -64,14 +64,14 @@
 
           <!-- Last Name -->
           <div class="w-full flex flex-col justify-start">
-            <label for="last_name" class="w-full text-[14px] mb-2">Last Name:</label>
+            <label for="last_name" class="w-full text-[14px] mb-2">{{ t('MainRegistration.lastName') }}</label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.last_name) }">
               <InputText
                 v-model="regForm.last_name"
                 type="text"
                 required
                 id="last_name"
-                placeholder="Введите вашу фамилию"
+                :placeholder="t('MainRegistration.lastNamePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
               />
             </div>
@@ -80,14 +80,14 @@
 
           <!-- Birth Date -->
           <div class="w-full flex flex-col justify-start">
-            <label for="birth_date" class="w-full text-[14px] mb-2">Birth Date:</label>
+            <label for="birth_date" class="w-full text-[14px] mb-2">{{ t('MainRegistration.birthDate') }}</label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.birth_date) }">
               <InputText
                 v-model="regForm.birth_date"
                 type="date"
                 required
                 id="birth_date"
-                placeholder="Введите дату рождения"
+                :placeholder="t('MainRegistration.birthDatePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
               />
             </div>
@@ -96,14 +96,14 @@
 
           <!-- City -->
           <div class="w-full flex flex-col justify-start">
-            <label for="city" class="w-full text-[14px] mb-2">City:</label>
+            <label for="city" class="w-full text-[14px] mb-2">{{ t('MainRegistration.city') }}</label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.city) }">
               <InputText
                 v-model="regForm.city"
                 type="text"
                 required
                 id="city"
-                placeholder="Введите ваш город"
+                :placeholder="t('MainRegistration.cityPlaceholder')" 
                 class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
               />
             </div>
@@ -112,14 +112,14 @@
 
           <!-- Gender -->
           <div class="w-full flex flex-col justify-start">
-            <label for="gender" class="w-full text-[14px] mb-2">Gender:</label>
+            <label for="gender" class="w-full text-[14px] mb-2">{{ t('MainRegistration.gender') }}</label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(regError.gender) }">
               <InputText
                 v-model="regForm.gender"
                 type="text"
                 required
                 id="gender"
-                placeholder="Введите ваш пол"
+                :placeholder="t('MainRegistration.genderPlaceholder')"
                 class="w-full bg-transparent border-none shadow-none h-[48px] focus:ring-0 focus:outline-none"
               />
             </div>
@@ -137,10 +137,10 @@
               :class="{ 'p-invalid': Boolean(regError.terms) }"
             />
             <label for="terms" class="text-[14px] text-black dark:text-white">
-              Согласен с
-              <a href="https://quam.cc/termsofuse" target="_blank" class="underline"> Условиями использования </a>
-              и
-              <a href="https://quam.cc/privacy" target="_blank" class="underline"> Политикой конфиденциальности </a>
+             {{ t('MainRegistration.termsLabel') }}
+              <a href="https://quam.cc/termsofuse" target="_blank" class="underline"> {{ t('MainRegistration.termsLink') }}</a>
+               {{ t('MainRegistration.termsAnd') }}
+              <a href="https://quam.cc/privacy" target="_blank" class="underline"> {{ t('MainRegistration.privacyLink') }}</a>
             </label>
           </div>
           <small class="text-red-500 mt-1">{{ regError.terms }}</small>
@@ -148,21 +148,21 @@
           <!-- Кнопка регистрации -->
           <div class="w-full mt-6">
             <Button type="submit" class="w-full flex justify-center items-center">
-              <p class="text-white">Зарегистрироваться</p>
+              <p class="text-white">{{ t('MainRegistration.registerButton') }}</p>
             </Button>
           </div>
 
           <!-- Ссылка на логин -->
           <small class="text-[14px]">
-            Уже есть аккаунт?
-            <span @click="goLogin" class="underline cursor-pointer"> Перейти к логину </span>
+            {{ t('MainRegistration.alreadyHaveAccount') }}
+            <span @click="goLogin" class="underline cursor-pointer"> {{ t('MainRegistration.goToLogin') }} </span>
           </small>
         </form>
       </template>
 
       <template v-else>
         <div>
-          <h3 class="text-[18px] text-center">Тестовый код (Потом будет с почты)</h3>
+          <h3 class="text-[18px] text-center">{{ t('MainRegistration.codeTitle') }}</h3>
           <div class="flex flex-row items-center gap-1">
             <InputText v-model="testCode" readonly id="code" class="w-full" />
             <Button icon="pi pi-copy" @click="onCopy"></Button>
@@ -178,12 +178,12 @@
                 <img src="/main/Logo.png" alt="Logo" class="w-32 h-auto hidden dark:block" />
               </div>
             </div>
-            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">Подтверждение кода</p>
+            <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">{{ t('MainRegistration.codeConfirmTitle') }}</p>
           </div>
 
           <!-- Поле ввода кода -->
           <div class="w-full flex flex-col justify-center items-center space-y-3">
-            <p for="code" class="font-bold text-lg w-full text-center">Введите шестизначный код с Почты</p>
+            <p for="code" class="font-bold text-lg w-full text-center">{{ t('MainRegistration.enterCodePrompt') }}</p>
 
             <InputOtp required :length="6" v-model="regForm.code" id="code" :class="{ 'p-invalid': Boolean(regError.code) }" />
             <small class="text-red-500 mt-1">{{ regError.code }}</small>
@@ -192,16 +192,16 @@
           <!-- Кнопка подтверждения -->
           <div class="w-full mt-6">
             <Button type="submit" class="w-full flex justify-center items-center">
-              <p class="text-white">Подтвердить</p>
+              <p class="text-white">{{ t('MainRegistration.codeConfirmButton') }}</p>
             </Button>
           </div>
 
           <!-- Ссылка для повторной отправки кода -->
           <div class="text-center text-[14px]">
-            <p>Если код не был получен —</p>
+            <p>{{ t('MainRegistration.codeResendHelp1') }}</p>
             <p>
-              проверьте спам или
-              <a @click="goNoCode" class="underline cursor-pointer"> повторить отправку </a>
+              {{ t('MainRegistration.codeResendHelp2') }}
+              <a @click="goNoCode" class="underline cursor-pointer"> {{ t('MainRegistration.codeResendHelp2') }} </a>
             </p>
           </div>
         </form>
@@ -213,6 +213,11 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRoute, navigateTo, reloadNuxtApp } from "#imports";
+
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 
 const is_loading = ref(false);
 const loading_text_displayed = ref(false);
@@ -286,7 +291,7 @@ function goLogin() {
 
 function sendReg() {
   if (!CheckboxValue.value) {
-    regError.value.terms = "You must agree to the Terms of Service.";
+    regError.value.terms = t('MainRegistration.error.terms');
     return;
   }
 

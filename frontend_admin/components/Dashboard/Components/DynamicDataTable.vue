@@ -3,9 +3,9 @@
   <div>
     <!-- Фильтры и управление таблицей -->
     <div class="max-w-full mb-4">
-      <div class="outline outline-primary  rounded-md p-2">
+      <div class="outline outline-primary rounded-md p-2">
         <div class="flex flex-col xl:flex-row items-center md:justify-between gap-4">
-          <h2 class="font-bold text-lg ml-2">{{ title[currentLanguage] || title['en'] || '' }}</h2>
+          <h2 class="font-bold text-lg ml-2">{{ title[currentLanguage] || title["en"] || "" }}</h2>
           <!-- <Dropdown
             class="min-w-[14rem]"
             v-model="internalSelectedField"
@@ -17,13 +17,19 @@
           <Button class="min-w-[14rem] xl:min-w-[8rem]" label="Filter" icon="pi pi-filter" @click="emitShowFilter" /> -->
           <div class="flex flex-col xl:flex-row items-center gap-4">
             <Button
-            v-if="currentPageName === 'admin'"
-              label="Экспорт в Excel"
+              v-if="currentPageName === 'admin'"
+              :label="t('DynamicDataTable.exportExcel')"
               icon="pi pi-file-excel"
               class="p-button-success bg-green-600 hover:bg-green-500 text-white min-w-[14rem] xl:min-w-[8rem]"
               @click="onExportToExcel"
             />
-            <Button :disabled="isInline" :label="createLabel" icon="pi pi-plus" class="p-button-success text-white  min-w-[14rem] xl:min-w-[8rem]" @click="onClickCreate" />
+            <Button
+              :disabled="isInline"
+              :label="createLabel"
+              icon="pi pi-plus"
+              class="p-button-success text-white min-w-[14rem] xl:min-w-[8rem]"
+              @click="onClickCreate"
+            />
           </div>
         </div>
       </div>
@@ -49,16 +55,15 @@
           <Column class="h-[4rem]" :field="column.field" :header="column.header" :filter="true">
             <template #body="slotProps">
               <p
-  :class="[getAlignmentClass(slotProps.data[column.field]), { 'font-bold': isTotalRow(slotProps.data) }]"
-  class="truncate max-w-[10rem] overflow-hidden"
->
-  {{
-    column.field.toLowerCase().includes("date") || column.field.toLowerCase().includes("created")
-      ? formatDate(slotProps.data[column.field])
-      : getLocalizedValue(slotProps.data[column.field], currentLanguage.value) || " "
-  }}
-</p>
-
+                :class="[getAlignmentClass(slotProps.data[column.field]), { 'font-bold': isTotalRow(slotProps.data) }]"
+                class="truncate max-w-[10rem] overflow-hidden"
+              >
+                {{
+                  column.field.toLowerCase().includes("date") || column.field.toLowerCase().includes("created")
+                    ? formatDate(slotProps.data[column.field])
+                    : getLocalizedValue(slotProps.data[column.field], currentLanguage.value) || " "
+                }}
+              </p>
             </template>
           </Column>
         </template>
@@ -70,7 +75,7 @@
                 icon="pi pi-cog"
                 class="p-button-rounded p-button-text p-button-sm"
                 @click="onClickEdit(slotProps.data)"
-                aria-label="Edit"
+                :aria-label="t('DynamicDataTable.editAria')"
               />
             </div>
           </template>
@@ -81,16 +86,19 @@
 </template>
 
 <script setup>
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+
 import { ref, computed, watch } from "vue";
 import { debounce } from "lodash";
 import { navigateTo } from "#app";
 const router = useRouter();
 
-const { currentPageName } = usePageState()
+const { currentPageName } = usePageState();
 const { currentLanguage } = useLanguageState();
 
 const createLabel = computed(() => {
-  return currentPageName.value === "admin" ? "Создать" : "Добавить";
+  return currentPageName.value === "admin" ? t("DynamicDataTable.create") : t("DynamicDataTable.add");
 });
 const props = defineProps({
   title: {
@@ -147,9 +155,8 @@ const props = defineProps({
 });
 console.log("props", props.fieldOptions);
 
-
 // Add the "createNew" event to the emitted events
-const emit = defineEmits(["showFilter", "filterChange", "page",'exportToExcel']);
+const emit = defineEmits(["showFilter", "filterChange", "page", "exportToExcel"]);
 
 function onExportToExcel() {
   emit("exportToExcel");
@@ -161,10 +168,10 @@ function onExportToExcel() {
  * @param {String} lang            Current language code (e.g. "ru" or "en").
  * @return {String}                Localized string to display.
  */
- function getLocalizedValue(fieldObj, lang) {
+function getLocalizedValue(fieldObj, lang) {
   // Default lang to "en" if not provided
   lang = lang || "en";
-  
+
   if (!fieldObj) return "";
 
   // If fieldObj is a string, try to parse it as JSON
@@ -173,11 +180,7 @@ function onExportToExcel() {
       const parsedObj = JSON.parse(fieldObj);
       if (parsedObj && typeof parsedObj === "object") {
         // Check if the key exists before returning
-        return parsedObj[lang] !== undefined
-          ? parsedObj[lang]
-          : parsedObj["en"] !== undefined
-          ? parsedObj["en"]
-          : fieldObj;
+        return parsedObj[lang] !== undefined ? parsedObj[lang] : parsedObj["en"] !== undefined ? parsedObj["en"] : fieldObj;
       }
       return fieldObj;
     } catch (e) {
@@ -190,7 +193,7 @@ function onExportToExcel() {
     if (fieldObj[lang] !== undefined) return fieldObj[lang];
     if (fieldObj["en"] !== undefined) return fieldObj["en"];
   }
-  
+
   return "";
 }
 

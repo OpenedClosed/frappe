@@ -3,28 +3,41 @@
     <Menubar class="rounded-none bg-primaryHeader outline-none border-none">
       <template #start>
         <div class="flex flex-row items-center justify-between">
-          <Button text icon="pi pi-bars color-black dark:color-white" class="xl:!hidden !block" @click="isSidebarOpen = true" aria-label="Menu" />
+          <Button
+            text
+            icon="pi pi-bars color-black dark:color-white"
+            class="xl:!hidden !block"
+            @click="isSidebarOpen = true"
+            :aria-label="t('Topbar.aria.menu')"
+          />
           <div v-if="currentPageName === 'admin'" class="flex items-center justify-center md:justify-start ml-2">
-            <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto block dark:hidden" />
-            <img src="/main/Logo.png" alt="Logo" class="w-24 h-auto hidden dark:block" />
+            <img src="/main/Logo.png" :alt="t('Topbar.alt.logo')" class="w-24 h-auto block dark:hidden" />
+            <img src="/main/Logo.png" :alt="t('Topbar.alt.logo')" class="w-24 h-auto hidden dark:block" />
           </div>
           <div v-else class="flex items-center justify-center md:justify-start ml-2">
-            <h3 class="text-white text-lg font-bold">Личный кабинет</h3>
+            <h3 class="text-white text-lg font-bold">{{ t("Topbar.titles.personalAccount") }}</h3>
           </div>
         </div>
       </template>
       <template #end>
         <div class="flex items-center gap-2">
-          <Button
-            text
-            :icon="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"
-            type="button"
-            :label="userName"
-            class="text-white"
-            @click="toggle"
-            aria-haspopup="true"
-            aria-controls="overlay_tmenu"
+          <Dropdown
+            v-model="selectedLocale"
+            :options="languageOptions"
+            optionLabel="name"
+            optionValue="code"
+            class="min-w-42 text-sm"
+            @change="onLocaleChange($event.value)"
+            :pt="{
+              input: { class: 'bg-transparent text-white border-none' },
+              panel: { class: 'min-w-[10rem]' },
+            }"
           />
+          <Button text type="button" class="text-white" @click="toggle" aria-haspopup="true" aria-controls="overlay_tmenu">
+            <i :class="menuOpen ? 'pi pi-angle-up' : 'pi pi-angle-down'"></i>
+            <Avatar v-if="avatarUrl" :image="avatarUrl" shape="circle" size="small" class="border border-white/20" />
+            <p>{{ userName }}</p>
+          </Button>
           <TieredMenu ref="menu" id="overlay_tmenu" :model="items" popup />
         </div>
       </template>
@@ -34,15 +47,15 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import Theme from "~/components/Dashboard/Components/Theme.vue";
-
-
+import { useI18n } from "#imports";
+const { t } = useI18n();
 const { isSidebarOpen } = useSidebarState();
-const { currentPageName } = usePageState()
+const { currentPageName } = usePageState();
 // Initialize the color mode
 const colorMode = useColorMode();
-
-const userName = ref("Администратор");
+const { currentUrl } = useURLState();
+const userName = ref(t("Topbar.user.defaultName"));
+const avatarUrl = ref(null);
 
 function toggleTheme() {
   colorMode.preference = colorMode.preference === "dark" ? "light" : "dark";
@@ -58,7 +71,6 @@ function updateTheme() {
   // themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
   // //console.log(themeLink)
 }
-
 
 // Logout function with API request
 async function onLogout() {
@@ -79,12 +91,12 @@ const menuOpen = ref(false);
 const items = computed(() => {
   const menuItems = [
     {
-      label: "Change Theme",
+      label: t("Topbar.menu.changeTheme"),
       icon: colorMode.preference === "dark" ? "pi pi-sun" : "pi pi-moon",
       command: toggleTheme,
     },
     {
-      label: "Logout",
+      label: t("Topbar.menu.logout"),
       icon: "pi pi-power-off",
       command: onLogout,
     },
@@ -92,7 +104,7 @@ const items = computed(() => {
 
   if (currentPageName.value === "admin") {
     menuItems.unshift({
-      label: "To Personal Account",
+      label: t("Topbar.menu.toPersonal"),
       icon: "pi pi-user",
       command: () => {
         window.location.href = "/personal_account";
@@ -100,7 +112,7 @@ const items = computed(() => {
     });
   } else {
     menuItems.unshift({
-      label: "To Admin Panel",
+      label: t("Topbar.menu.toAdmin"),
       icon: "pi pi-user",
       command: () => {
         window.location.href = "/admin";
@@ -117,7 +129,6 @@ const toggle = (event) => {
   menu.value.toggle(event);
 };
 
-
 const userData = await useAsyncData("userData", getUserData);
 
 if (userData.data) {
@@ -129,8 +140,16 @@ if (userData.data) {
 function setData(data) {
   if (data) {
     console.log("userData data= ", data);
-    if (data){
-      userName.value = `${data.username}`;
+    if (data) {
+      if (data.full_name) {
+        userName.value = data.full_name;
+      } else {
+        userName.value = data.username;
+      }
+
+      if (data.avatar?.url) {
+        avatarUrl.value = currentUrl.value + data.avatar.url;
+      }
     }
   }
 }
@@ -151,4 +170,18 @@ async function getUserData() {
   return responseData;
 }
 
+const { locale, locales, setLocale, setLocaleCookie } = useI18n();
+
+const selectedLocale = ref(locale.value);
+
+const languageOptions = locales.value.map((l) => ({
+  code: l.code,
+  name: l.name || l.code.toUpperCase(),
+}));
+
+function onLocaleChange(code) {
+  setLocale(code);
+  setLocaleCookie(code);
+  selectedLocale.value = code;
+}
 </script>

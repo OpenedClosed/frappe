@@ -1,29 +1,31 @@
 """Обработчики интеграции с Constructor.chat"""
-from datetime import timezone
-
-import httpx
-from chats.db.mongo.enums import SenderRole
-from chats.db.mongo.schemas import ChatMessage, ChatSession
-from infra import settings
-from . import constants
-
-
 import logging
 from datetime import timezone
+from typing import List
+
+import httpx
+
+from chats.db.mongo.enums import SenderRole
+from chats.db.mongo.schemas import ChatMessage, ChatSession
 from db.mongo.db_init import mongo_db
+from infra import settings
+
+from . import constants
 
 logger = logging.getLogger(__name__)
 
+
 def to_constructor_message(msg: ChatMessage) -> dict:
     """Преобразует ChatMessage в формат сообщения для Constructor.chat."""
-    return {
+    base = {
         "sentAt": int(msg.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000),
         "content": msg.message,
         "isInbound": msg.sender_role == SenderRole.CLIENT,
-        **({"sender": msg.sender_role.name.replace("_", " ").title()}
-           if msg.sender_role not in {SenderRole.CLIENT, SenderRole.AI}
-           else {})
     }
+    if msg.sender_role not in {SenderRole.CLIENT, SenderRole.AI}:
+        base["sender"] = msg.sender_role.name.replace("_", " ").title()
+    return base
+
 
 async def constructor_query(query: str, variables: dict):
     """Выполняет GraphQL-запрос к Constructor.chat; ошибки отлавливаются по полю `errors`."""
@@ -43,17 +45,13 @@ async def constructor_query(query: str, variables: dict):
 
     payload = resp.json()
     if payload.get("errors"):
-        logger.error("[Constructor] GraphQL errors: %s", payload["errors"])
         raise RuntimeError(payload["errors"])
 
-    logger.debug("[Constructor] GraphQL ok: %s", payload.get("data"))
     return payload["data"]
 
 
 async def create_constructor_chat(session: ChatSession):
     """Создаёт чат в Constructor.chat, отправляет всю историю и сохраняет ID в MongoDB с проверкой уникальности."""
-    logger.info("[Constructor] Creating chat for %s", session.chat_id)
-
     unsynced_all = [m for m in session.messages if not m.synced_to_constructor]
 
     data = await constructor_query(
@@ -66,7 +64,6 @@ async def create_constructor_chat(session: ChatSession):
     )
     chat_id = data["createApiChat"]["id"]
 
-    # 🛡 Проверка на уникальность constructor_chat_id
     existing = await mongo_db.chats.find_one({
         "constructor_chat_id": chat_id,
         "chat_id": {"$ne": session.chat_id}
@@ -79,9 +76,7 @@ async def create_constructor_chat(session: ChatSession):
         raise RuntimeError("Constructor chat ID collision detected")
 
     session.constructor_chat_id = chat_id
-    logger.info("[Constructor] Chat created with id %s for %s", chat_id, session.chat_id)
 
-    # Помечаем все отправленные сообщения
     if unsynced_all:
         for m in unsynced_all:
             m.synced_to_constructor = True
@@ -96,11 +91,6 @@ async def create_constructor_chat(session: ChatSession):
             },
             array_filters=[{"msg.id": {"$in": [m.id for m in unsynced_all]}}],
         )
-        logger.info(
-            "[Constructor] Initial sync of %d historical message(s) for chat %s",
-            len(unsynced_all),
-            session.chat_id,
-        )
     else:
         await mongo_db.chats.update_one(
             {"chat_id": session.chat_id},
@@ -108,26 +98,19 @@ async def create_constructor_chat(session: ChatSession):
         )
 
 
-
-async def push_to_constructor(session: ChatSession, messages: list[ChatMessage]):
+async def push_to_constructor(
+        session: ChatSession, messages: List[ChatMessage]):
     """
     Отправляет НОВЫЕ (не синхронизированные) сообщения в Constructor.chat.
     Если чат ещё не создан — создаёт его и синхронизирует всю историю.
     """
     unsynced = [m for m in messages if not m.synced_to_constructor]
     if not unsynced:
-        logger.debug("[Constructor] Nothing to sync for chat %s", session.chat_id)
         return
 
     if not session.constructor_chat_id:
         await create_constructor_chat(session)
-        return  # ⚠️ ключевой момент — не продолжаем, чтобы не отправить new_msg второй раз
-
-    logger.info(
-        "[Constructor] Sending %d new message(s) to Constructor.chat for chat %s",
-        len(unsynced),
-        session.chat_id,
-    )
+        return
 
     await constructor_query(
         constants.CREATE_MESSAGES,
@@ -149,10 +132,3 @@ async def push_to_constructor(session: ChatSession, messages: list[ChatMessage])
         },
         array_filters=[{"msg.id": {"$in": [m.id for m in unsynced]}}],
     )
-
-    logger.info(
-        "[Constructor] Synced %d message(s) for chat %s",
-        len(unsynced),
-        session.chat_id,
-    )
-

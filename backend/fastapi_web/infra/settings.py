@@ -57,17 +57,13 @@ ALLOWED_ORIGINS = [
 
 # Остальные
 CHAT_TIMEOUT = timedelta(days=1)
-# FLOOD_TIMEOUTS = {
-#     "manual": timedelta(seconds=3),
-#     "automatic": timedelta(seconds=10),
-# }
 FLOOD_TIMEOUTS = {
     "manual": timedelta(seconds=3),
-    "automatic": timedelta(seconds=3), 
+    "automatic": timedelta(seconds=3),
 }
 CONTEXT_TTL = timedelta(days=1)
 
-SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru"}
+SUPPORTED_LANGUAGES = {"en", "pl", "uk", "ru", "ka"}
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "change_me")
 WEATHER_API_URL = "http://api.openweathermap.org/data/2.5/weather"
 WEATHER_CACHE_LIFETIME = timedelta(hours=1)
@@ -97,6 +93,18 @@ WHATSAPP_BOT_NUMBER_ID = os.getenv("WHATSAPP_BOT_NUMBER_ID", "change_me")
 WHATSAPP_BOT_NUMBER = os.getenv("WHATSAPP_BOT_NUMBER", "change_me")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "change_me")
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "change_me")
+
+# Facebook Messenger API настройки
+FACEBOOK_ACCESS_TOKEN = os.getenv("FACEBOOK_ACCESS_TOKEN", "change_me")
+FACEBOOK_PAGE_ID = os.getenv("FACEBOOK_PAGE_ID", "change_me")
+FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "change_me")
+FACEBOOK_VERIFY_TOKEN = os.getenv("FACEBOOK_VERIFY_TOKEN", "change_me")
+FACEBOOK_BUSINESS_ACCOUNT_ID = os.getenv(
+    "FACEBOOK_BUSINESS_ACCOUNT_ID", "change_me")
+
+# Telegram настройки
+TELEGRAM_BOT_TOKEN = os.getenv("TOKEN", "change_me")
+TELEGRAM_BOT_ID = os.getenv("TELEGRAM_BOT_ID", "change_me")
 
 # Constructor.chat настройки
 CONSTRUCTOR_URL = "https://ai-chat-bbho.onrender.com/graphql"

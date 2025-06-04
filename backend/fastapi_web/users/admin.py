@@ -1,13 +1,12 @@
 """Админ-панель приложения Пользователи."""
 from typing import Optional
 
-from bson import ObjectId
-from fastapi import HTTPException
-
 from admin_core.base_admin import BaseAdmin
+from bson import ObjectId
 from crud_core.permissions import SuperAdminOnlyPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
+from fastapi import HTTPException
 
 from .db.mongo.schemas import User
 
@@ -23,12 +22,16 @@ class UserAdmin(BaseAdmin):
     verbose_name = {
         "en": "User",
         "ru": "Пользователь",
-        "pl": "Użytkownik"
+        "pl": "Użytkownik",
+        "uk": "Користувач",
+        "ka": "მომხმარებელი"
     }
     plural_name = {
         "en": "Users",
         "ru": "Пользователи",
-        "pl": "Użytkownicy"
+        "pl": "Użytkownicy",
+        "uk": "Користувачі",
+        "ka": "მომხმარებლები"
     }
 
     icon = "pi pi-user"
@@ -36,37 +39,61 @@ class UserAdmin(BaseAdmin):
     description = {
         "en": "Manage users in the system",
         "ru": "Управление пользователями в системе",
-        "pl": "Zarządzanie użytkownikami w systemie"
+        "pl": "Zarządzanie użytkownikami w systemie",
+        "uk": "Керування користувачами в системі",
+        "ka": "მომხმარებლების მართვა სისტემაში"
     }
 
-    list_display = ["username", "role", "created_at"]
-    detail_fields = ["username", "password", "role", "created_at"]
+    list_display = ["username", "full_name", "role", "created_at"]
+    detail_fields = ["username", "password", "full_name", "avatar", "role", "created_at"]
     read_only_fields = ["created_at"]
 
     field_titles = {
         "username": {
             "en": "Username",
             "ru": "Имя пользователя",
-            "pl": "Nazwa użytkownika"
+            "pl": "Nazwa użytkownika",
+            "uk": "Ім’я користувача",
+            "ka": "მომხმარებლის სახელი"
         },
         "password": {
             "en": "Password (hashed)",
             "ru": "Хешированный пароль",
-            "pl": "Hasło (zhashowane)"
+            "pl": "Hasło (zhashowane)",
+            "uk": "Пароль (хешований)",
+            "ka": "პაროლი (დაშიფრული)"
         },
         "role": {
             "en": "Role",
             "ru": "Роль",
-            "pl": "Rola"
+            "pl": "Rola",
+            "uk": "Роль",
+            "ka": "როლი"
+        },
+        "full_name": {
+            "en": "Full name",
+            "ru": "Полное имя",
+            "pl": "Pełne imię",
+            "uk": "Повне ім’я",
+            "ka": "სრული სახელი"
+        },
+        "avatar": {
+            "en": "Avatar",
+            "ru": "Аватар",
+            "pl": "Awatar",
+            "uk": "Аватар",
+            "ka": "ავატარი"
         },
         "created_at": {
             "en": "Created at",
             "ru": "Дата создания",
-            "pl": "Data utworzenia"
+            "pl": "Data utworzenia",
+            "uk": "Дата створення",
+            "ka": "შექმნის თარიღი"
         }
     }
 
-    async def _hash_password_if_needed(self, data: dict) -> None:
+    async def hash_password_if_needed(self, data: dict) -> None:
         """
         Хэширует пароль через метод схемы, если он передан и ещё не хэширован.
         """
@@ -85,7 +112,7 @@ class UserAdmin(BaseAdmin):
         self.check_permission("create", user=current_user)
 
         validated_data = await self.validate_data(data)
-        await self._hash_password_if_needed(validated_data)
+        await self.hash_password_if_needed(validated_data)
 
         if await self.db.find_one({"username": validated_data["username"]}):
             raise HTTPException(
@@ -94,7 +121,7 @@ class UserAdmin(BaseAdmin):
             )
 
         result = await self.db.insert_one(validated_data)
-        return await self._get_or_raise(result.inserted_id, "Failed to retrieve created object.", current_user=current_user)
+        return await self.get_or_raise(result.inserted_id, "Failed to retrieve created object.", current_user=current_user)
 
     async def update(self, object_id: str, data: dict,
                      current_user: Optional[dict] = None) -> dict:
@@ -109,7 +136,7 @@ class UserAdmin(BaseAdmin):
             raise HTTPException(404, "User not found.")
 
         full_data = {**existing_user, **validated_data}
-        await self._hash_password_if_needed(full_data)
+        await self.hash_password_if_needed(full_data)
 
         if "password" in full_data:
             validated_data["password"] = full_data["password"]
@@ -128,10 +155,10 @@ class UserAdmin(BaseAdmin):
         if result.matched_count == 0:
             raise HTTPException(404, "Object not found for update.")
 
-        return await self._get_or_raise(object_id, "Failed to retrieve updated object.", current_user=current_user)
+        return await self.get_or_raise(object_id, "Failed to retrieve updated object.", current_user=current_user)
 
-    async def _get_or_raise(self, object_id: str, error_message: str,
-                            current_user: Optional[dict] = None) -> dict:
+    async def get_or_raise(self, object_id: str, error_message: str,
+                           current_user: Optional[dict] = None) -> dict:
         """
         Получает объект по ID или выбрасывает ошибку.
         """

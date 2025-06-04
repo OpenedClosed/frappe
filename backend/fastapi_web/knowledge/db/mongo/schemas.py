@@ -14,6 +14,7 @@ from .enums import (AIModelEnum, BotColorEnum, CommunicationStyleEnum,
 # БЛОК: Контекст
 # ==============================
 
+
 class ContextEntry(IdModel):
     """Универсальная единица контекста."""
 
@@ -131,25 +132,37 @@ class BotSettings(BaseValidatedModel):
     greeting: Dict[str, str] = Field(
         default_factory=lambda: {
             "en": "Hello! How can I assist you today?",
-            "ru": "Здравствуйте! Чем могу помочь?"
+            "pl": "Cześć! W czym mogę pomóc?",
+            "uk": "Вітаю! Чим я можу допомогти?",
+            "ru": "Здравствуйте! Чем могу помочь?",
+            "ka": "გამარჯობა! რით შემიძლია დაგეხმარო?"
         }
     )
     error_message: Dict[str, str] = Field(
         default_factory=lambda: {
             "en": "Your question requires further review. A specialist will join the conversation shortly.",
-            "ru": "Ваш вопрос требует дополнительного рассмотрения. Специалист скоро подключится к беседе."
+            "pl": "Twoje pytanie wymaga dalszej analizy. Konsultant wkrótce dołączy do rozmowy.",
+            "uk": "Ваше питання потребує додаткового розгляду. Спеціаліст незабаром приєднається до розмови.",
+            "ru": "Ваш вопрос требует дополнительного рассмотрения. Специалист скоро подключится к беседе.",
+            "ka": "თქვენი კითხვა საჭიროებს დამატებით განხილვას. სპეციალისტი მალე შემოუერთდება საუბარს."
         }
     )
     farewell_message: Dict[str, str] = Field(
         default_factory=lambda: {
             "en": "Goodbye! If you need anything else, feel free to ask.",
-            "ru": "До свидания! Если вам что-то понадобится, обращайтесь."
+            "pl": "Do widzenia! Jeśli będziesz czegoś potrzebować, śmiało pytaj.",
+            "uk": "До побачення! Якщо потрібно буде щось ще — звертайтесь.",
+            "ru": "До свидания! Если вам что-то понадобится, обращайтесь.",
+            "ka": "ნახვამდის! თუ კიდევ დაგჭირდებათ რაიმე — დაწერეთ."
         }
     )
     fallback_ai_error_message: Dict[str, str] = Field(
         default_factory=lambda: {
             "en": "Unfortunately, I'm having trouble generating a response right now. Please try again later.",
-            "ru": "К сожалению, я не могу сейчас сгенерировать ответ. Пожалуйста, попробуйте позже."
+            "pl": "Niestety, mam problem z wygenerowaniem odpowiedzi. Spróbuj ponownie później.",
+            "uk": "На жаль, не можу згенерувати відповідь. Спробуйте пізніше.",
+            "ru": "К сожалению, я не могу сейчас сгенерировать ответ. Пожалуйста, попробуйте позже.",
+            "ka": "სამწუხაროდ, ამჟამად ვერ ვქმნი პასუხს. გთხოვთ, სცადეთ მოგვიანებით."
         }
     )
 

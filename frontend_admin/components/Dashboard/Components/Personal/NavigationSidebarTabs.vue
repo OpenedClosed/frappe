@@ -25,7 +25,7 @@
     'border-2 border-primary text-primary dark:text-primaryLight font-semibold bg-white dark:bg-neutral rounded-lg': isActiveRoute('/personal_account/support/support')
   }">
               <i class="pi pi-info-circle mr-1"></i>
-              Поддержка
+              {{ t('NavigationSidebarTabs.support') }}
             </RouterLink>
           </li>
         </ul>
@@ -38,6 +38,9 @@
 <script setup>
 import { defineProps, computed } from 'vue'
 import { useRoute } from 'vue-router'
+
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const route = useRoute()
 const { currentLanguage } = useLanguageState()

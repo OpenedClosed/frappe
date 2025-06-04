@@ -6,12 +6,11 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 
 import { debounce } from "lodash";
+import { useI18n } from "#imports";
 
 export function useChatLogic(options = {}) {
-  const { isTelegram = false } = options; // Переключение под Telegram при необходимости
+  const { isTelegram = false, locale = "en", chatRoles } = options; // Переключение под Telegram при необходимости
   console.log("currentChatId.value", currentChatId.value);
-  // const { t, locale } = useI18n();
-  // const toast = useToast();
 
   // Состояние экрана, устройства и т.п.
   const isMobile = ref(false);
@@ -27,11 +26,6 @@ export function useChatLogic(options = {}) {
       users: [
         { _id: "1234", username: "User" },
         { _id: "4321", username: "Consultant" },
-      ],
-      roomActions: [
-        { name: "inviteUser", title: "Invite User" },
-        { name: "removeUser", title: "Remove User" },
-        { name: "deleteRoom", title: "Delete Room" },
       ],
       typingUsers: [],
     },
@@ -50,23 +44,6 @@ export function useChatLogic(options = {}) {
 
   // WebSocket-соединение и chatId
   const websocket = ref(null);
-
-  // Текстовые сообщения для vue-advanced-chat (i18n)
-  const textMessagesObject = computed(() => ({
-    SEARCH: "Search",
-    TYPE_MESSAGE: "Type a message",
-    ROOM_EMPTY: "This room is empty",
-    ROOMS_EMPTY: "No rooms available",
-    MESSAGES_EMPTY: "No messages yet",
-    MESSAGE_DELETED: "Message deleted",
-    NEW_MESSAGES: "New messages",
-    IS_ONLINE: "is online",
-    IS_TYPING: "is typing...",
-    LAST_SEEN: "Last seen",
-    CONVERSATION_STARTED: "Conversation started",
-    CANCEL_SELECT_MESSAGE: "Cancel message selection",
-  }));
-  const textMessagesJson = computed(() => JSON.stringify(textMessagesObject.value));
 
   /**
    * Проверка, содержит ли текст ссылку (URL).
@@ -112,7 +89,7 @@ export function useChatLogic(options = {}) {
       chatMessages.value = [];
     }
     // const currentLocale = locale.value; // e.g., "ru-RU" or "en-US"
-    const currentLocale = "en";
+    const currentLocale = locale;
     const results = [];
     if (!apiMessages) return results;
     for (let [index, msg] of apiMessages?.entries()) {
@@ -124,12 +101,14 @@ export function useChatLogic(options = {}) {
       if (detectUrl(contentString)) {
         const previewData = await fetchLinkPreview(contentString);
         if (previewData?.data?.image) {
-          files.push({
-            type: "png",
-            name: "Preview",
-            url: previewData.data.image,
-            preview: previewData.data.image,
-          });
+          files
+            .filter((u) => typeof u === "string" && u.trim().length)
+            .push({
+              type: "png",
+              name: "Preview",
+              url: previewData.data.image,
+              preview: previewData.data.image,
+            });
         }
       }
       // 2. Обрабатываем attachments, пришедшие сразу в msg.files
@@ -183,19 +162,20 @@ export function useChatLogic(options = {}) {
       // Determine senderId and username
       let senderId;
       let username;
+      console.log("chatRoles", chatRoles);
       console.log("roleEn", roleEn);
       if (roleEn === "Client") {
         senderId = "1234";
-        username = "Client";
+        username = chatRoles.client;
       } else if (roleEn === "AI Assistant") {
         senderId = "4321";
-        username = "AI Assistant";
+        username = chatRoles.aiAssistant;
       } else if (roleEn === "Consultant") {
         senderId = "4321";
-        username = "Consultant";
+        username = chatRoles.consultant;
       } else {
         senderId = "4321";
-        username = "Unknown";
+        username = chatRoles.unknown;
       }
 
       // Determine if the message should appear on the right (sent) or left
@@ -208,10 +188,12 @@ export function useChatLogic(options = {}) {
         console.log("sources", sources);
       }
 
+      const displayContent = `**${username}:** \n ${contentString}`;
+
       results.push({
         _id: msg._id ?? index,
         backend_id: msg.id,
-        content: contentString,
+        content: displayContent,
         senderId,
         username,
         date: formattedDate,
@@ -338,6 +320,8 @@ export function useChatLogic(options = {}) {
 
     websocket.value.onmessage = async (event) => {
       const data = JSON.parse(event.data);
+
+      if (data.chat_id && data.chat_id !== currentChatId.value) return;
       console.log("Получено сообщение:", data);
       // Показываем toast при определённых типах
       if (data.type === "attention") {
@@ -528,7 +512,6 @@ export function useChatLogic(options = {}) {
     choiceOptions,
     isChoiceStrict,
     timerExpired,
-    textMessagesJson,
 
     // Методы
     fetchMessages: messagesFetcher,

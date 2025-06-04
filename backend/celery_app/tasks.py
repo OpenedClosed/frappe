@@ -56,7 +56,7 @@ def clean_unused_media_files():
     removed_files = []
     for file_name in os.listdir(media_dir):
         full_path = os.path.join(media_dir, file_name)
-        normalized = _normalize_path(full_path)
+        normalized =  normalize_path(full_path)
 
         if normalized not in used_files:
             os.remove(full_path)
@@ -67,7 +67,7 @@ def clean_unused_media_files():
     return {"removed_files": removed_files}
 
 
-def _normalize_path(path: str) -> str:
+def  normalize_path(path: str) -> str:
     """
     Приводит путь к унифицированной форме: только имя файла, без путей и префиксов.
     Например: "/media/images/test.png" -> "test.png"

@@ -64,3 +64,13 @@ class BaseJsonEnumMixin:
             "title": cls.__name__,
             "description": f"Enum with relaxed matching for {cls.__name__}"
         }
+    
+    @property
+    def en_value(self) -> str:
+        """Возвращает значение поля 'en' из JSON-строки."""
+        try:
+            parsed = json.loads(self.value)
+            return parsed.get("en", self.name)
+        except Exception:
+            return self.name
+

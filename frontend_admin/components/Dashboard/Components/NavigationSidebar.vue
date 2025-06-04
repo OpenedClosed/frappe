@@ -1,12 +1,12 @@
 <template>
   <!-- ░░ Desktop sidebar ░░ -->
-  <div class="hidden xl:flex m-4 transition-all duration-300" :class="isCollapsed ? 'w-16' : 'min-w-[200px] flex-1'">
+  <div class="hidden xl:block m-4 transition-all duration-300" :class="isCollapsed ? 'w-[60px]' : 'min-w-[200px]'">
     <div class="rounded-xl shadow-thicc p-2 flex flex-col bg-white dark:bg-secondary h-full w-full">
       <!-- collapse / expand button -->
       <button
         class="p-2 self-end text-xl hover:text-primary "
         @click="isCollapsed = !isCollapsed"
-        v-tooltip.bottom="isCollapsed ? 'Expand' : 'Collapse'"
+        v-tooltip.bottom="isCollapsed ? t('NavigationSidebar.tooltip.expand') : t('NavigationSidebar.tooltip.collapse')"
       >
         <i :class="isCollapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"></i>
       </button>
@@ -47,10 +47,10 @@
         </li>
 
         <!-- hard-coded Admin settings -->
-        <li v-if="currentPageName === 'admin'">
+        <li v-if="currentPageName === 'admin' && isAdmin">
           <h3 v-if="!isCollapsed" class="text-md uppercase mb-2 flex items-center px-2 font-semibold">
             <i class="mr-2 pi pi-calendar-plus"></i>
-            Settings
+            {{t('NavigationSidebar.headers.settings')}}
           </h3>
           <ul :class="isCollapsed ? 'items-center' : 'ml-4'">
             <RouterLink
@@ -62,10 +62,10 @@
                   ? 'border-2 border-primary'
                   : 'hover:text-primary ',
               ]"
-              v-tooltip.right="'Knowledge Base'"
+              v-tooltip.right="t('NavigationSidebar.links.knowledgeBase')"
             >
               <i class="pi pi-book"></i>
-              <span v-if="!isCollapsed" class="ml-3 text-sm">Knowledge Base</span>
+              <span v-if="!isCollapsed" class="ml-3 text-sm">{{t('NavigationSidebar.links.knowledgeBase')}}</span>
             </RouterLink>
 
             <RouterLink
@@ -77,10 +77,10 @@
                   ? 'border-2 border-primary'
                   : 'hover:text-primary ',
               ]"
-              v-tooltip.right="'Bot Settings'"
+              v-tooltip.right="t('NavigationSidebar.links.botSettings')"
             >
               <i class="pi pi-cog"></i>
-              <span v-if="!isCollapsed" class="ml-3 text-sm">Bot Settings</span>
+              <span v-if="!isCollapsed" class="ml-3 text-sm">{{t('NavigationSidebar.links.botSettings')}}</span>
             </RouterLink>
           </ul>
         </li>
@@ -90,7 +90,7 @@
 
   <!-- ░░ Mobile drawer (unchanged) ░░ -->
   <!-- Mobile Sidebar (Drawer) -->
-  <Sidebar v-model:visible="isSidebarOpen" header="Sidebar" class="!w-full md:!w-80 lg:!w-[30rem]">
+  <Sidebar v-model:visible="isSidebarOpen" :header="t('NavigationSidebar.headers.sidebar')" class="!w-full md:!w-80 lg:!w-[30rem]">
     <nav class="p-4">
       <ul class="space-y-4">
         <!-- Hardcoded Knowledge Base -->
@@ -115,7 +115,7 @@
             </li>
           </ul>
         </li>
-        <li v-if="currentPageName === 'admin'">
+        <li v-if="currentPageName === 'admin' && isAdmin">
           <h3 class="text-md uppercase flex justify-start text-ellipsis items-center mb-2 px-2">
             <i class="mr-2 flex pi pi-calendar-plus"></i>
             Settings
@@ -128,7 +128,7 @@
               :class="{ 'border-2 border-primary': isActiveRoute(`/${currentPageName}/knowledge-base`) }"
             >
               <i class="pi pi-book mr-3"></i>
-              <span class="text-sm">Knowledge Base</span>
+              <span class="text-sm">{{t('NavigationSidebar.links.knowledgeBase')}}</span>
             </RouterLink>
           </ul>
           <ul class="ml-4">
@@ -139,7 +139,7 @@
               :class="{ 'border-2 border-primary': isActiveRoute(`/${currentPageName}/knowledge/bot_settings`) }"
             >
               <i class="pi pi-cog mr-3"></i>
-              <span class="text-sm">Bot Settings</span>
+              <span class="text-sm">{{t('NavigationSidebar.links.botSettings')}}</span>
             </RouterLink>
           </ul>
         </li>
@@ -152,6 +152,8 @@
 import { ref, computed, watch } from "vue";
 import Sidebar from "primevue/sidebar";
 import Tooltip from "primevue/tooltip";
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const { currentPageName } = usePageState();
 const { currentLanguage } = useLanguageState();
@@ -195,6 +197,45 @@ watch(
   () => props.navItems,
   (val) => console.log("navItems updated", val)
 );
+
+
+
+
+// 
+
+let isAdmin = ref(false);
+// Получаем данные из API через useAsyncData (Nuxt 3)
+const { data: headerData, error } = await useAsyncData("headerData", getHeaderData);
+
+if (headerData.value) {
+  // Destructure the two objects from headerData.value
+  const { responseDataMe } = headerData.value;
+  console.log("responseDataMe", responseDataMe);
+  if (responseDataMe?.role && (responseDataMe?.role === "admin" || responseDataMe?.role === "superadmin")) {
+    isAdmin.value = true;
+  }
+
+
+  // For example, if you want to log responseDataMe:
+  console.log("User data =", responseDataMe);
+} else if (error.value) {
+  console.error("Ошибка загрузки данных:", error.value);
+}
+
+
+// Функция для получения данных из API
+async function getHeaderData() {
+  let responseDataMe;
+  try {
+    const response_me = await useNuxtApp().$api.get(`/api/users/me`);
+    responseDataMe = response_me.data;
+  } catch (err) {
+    if (err.response) {
+      console.error("Ошибка API:", err.response.data);
+    }
+  }
+  return {  responseDataMe };
+}
 </script>
 
 <style scoped>

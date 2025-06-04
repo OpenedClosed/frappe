@@ -16,13 +16,14 @@ from users.utils.help_functions import get_user_by_id
 
 from ..db.mongo.schemas import ChatSession
 from ..utils.help_functions import (determine_language,
-                                    get_active_chats_for_client, get_client_id)
+                                    get_active_chats_for_client, get_chat_position, get_client_id)
 from .ws_helpers import (chat_managers, get_typing_manager, get_ws_manager,
                          gpt_task_manager, websocket_jwt_required)
 
 # ==============================
 # Основной WebSocket эндпоинт
 # ==============================
+
 
 @app.websocket("/ws/{chat_id}/")
 async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
@@ -38,12 +39,15 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
         except Exception as e:
             logging.warning(f"Cannot load user from JWT: {e}")
 
-    is_superuser = bool(user and user.role in [RoleEnum.ADMIN, RoleEnum.SUPERADMIN])
+    is_superuser = bool(
+        user and user.role in [
+            RoleEnum.ADMIN,
+            RoleEnum.SUPERADMIN])
 
     manager = await get_ws_manager(chat_id)
     typing_manager = await get_typing_manager(chat_id)
 
-    client_id = await get_client_id(websocket, chat_id, is_superuser)
+    client_id = await get_client_id(websocket, chat_id, is_superuser, user_id=user_id)
     user_data["client_id"] = client_id
 
     await manager.connect(websocket, client_id)
@@ -93,7 +97,8 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
             )
 
     except WebSocketDisconnect:
-        logging.warning(f"Client disconnected: chat_id={chat_id}, client_id={client_id}")
+        logging.warning(
+            f"Client disconnected: chat_id={chat_id}, client_id={client_id}")
         await manager.disconnect(client_id)
         await typing_manager.remove_typing(chat_id, client_id, manager)
 
@@ -120,14 +125,16 @@ async def validate_session(
     active_chat_ids = {chat["chat_id"] for chat, _ in active_chats}
 
     if chat_id not in active_chat_ids:
-        logging.info(f"Session validation failed: client_id={client_id}, chat_id={chat_id}")
+        logging.info(
+            f"Session validation failed: client_id={client_id}, chat_id={chat_id}")
         await manager.disconnect(client_id)
         return False
 
     return True
 
 
-async def load_chat_session(manager, client_id: str, chat_id: str) -> Optional[ChatSession]:
+async def load_chat_session(manager, client_id: str,
+                            chat_id: str) -> Optional[ChatSession]:
     """Загружает сессию чата из базы данных."""
     chat_data = await mongo_db.chats.find_one({"chat_id": chat_id})
     if not chat_data:
