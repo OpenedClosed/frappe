@@ -226,6 +226,7 @@ def find_last_bot_message(chat_session: ChatSession) -> Optional[ChatMessage]:
 # ==============================
 
 
+
 async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> None:
     """Отправляет информацию о чате в админ-бот."""
     if settings.HOST == "localhost":
@@ -298,30 +299,33 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
 """.strip()
 
     # Разбор chat_id и message_thread_id из строки
-    chat_id_value = chat_id
+    admin_chat_id = bot_settings.ADMIN_CHAT_ID
     message_thread_id = None
 
-    if "/" in chat_id:
-        parts = chat_id.split("/")
-        try:
-            chat_id_value = parts[0].strip()
-            message_thread_id = int(parts[1].strip())
-        except (IndexError, ValueError):
-            pass
+    
+    logging.error(f"📤 URL: {bot_webhook_url}")
+    if "/" in admin_chat_id:
+        parts = admin_chat_id.split("/")
+        if len(parts) >= 2:
+            admin_chat_id = parts[0]
+            message_thread_id = int(parts[1]) if parts[1] else None
 
     try:
         async with httpx.AsyncClient() as client:
             payload = {
-                "chat_id": chat_id_value,
+                "chat_id": admin_chat_id,
                 "text": message_text,
                 "parse_mode": "HTML",
             }
             if message_thread_id:
                 payload["message_thread_id"] = message_thread_id
+            logging.error(f"📨 Отправка в бота → chat_id: {admin_chat_id}, thread_id: {message_thread_id}")
+            logging.error("📦 Payload:")
+            logging.error(json.dumps(payload, ensure_ascii=False, indent=2))
 
-            print("📦 Payload:")
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
-
+            logging.error(f"🛠 Используемый chat_id: {payload['chat_id']}")
+            if "message_thread_id" in payload:
+                logging.error(f"🧵 Используемый thread_id: {payload.get('message_thread_id', None)}")
 
 
             response = await client.post(
@@ -334,6 +338,8 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
         logging.error(f"Ошибка от бота ({exc.response.status_code}): {exc.response.text}")
     except Exception:
         logging.exception("Ошибка при отправке сообщения в бот")
+
+
 
 
 # ==============================
