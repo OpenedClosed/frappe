@@ -39,13 +39,13 @@ def clean_unused_media_files():
             for subtopic in topic.get("subtopics", {}).values():
                 for answer in subtopic.get("questions", {}).values():
                     for file_path in answer.get("files", []):
-                        used_files.add(_normalize_path(file_path))
+                        used_files.add(normalize_path(file_path))
 
     # 2. Проверка в bot_settings
     for bot in sync_db.bot_settings.find({}, {"avatar.url": 1}):
         avatar_path = bot.get("avatar", {}).get("url")
         if avatar_path and not avatar_path.startswith("http"):
-            used_files.add(_normalize_path(avatar_path))
+            used_files.add(normalize_path(avatar_path))
 
     # 3. Очистка неиспользуемых файлов из MEDIA_DIR
     media_dir = settings.MEDIA_DIR
