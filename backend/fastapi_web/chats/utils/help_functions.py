@@ -300,11 +300,14 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
     # Разбор chat_id и message_thread_id из строки
     chat_id_value = chat_id
     message_thread_id = None
+
     if "/" in chat_id:
         parts = chat_id.split("/")
-        if len(parts) >= 2:
-            chat_id_value = parts[0]
-            message_thread_id = int(parts[1]) if parts[1].isdigit() else None
+        try:
+            chat_id_value = parts[0].strip()
+            message_thread_id = int(parts[1].strip())
+        except (IndexError, ValueError):
+            pass
 
     try:
         async with httpx.AsyncClient() as client:
@@ -315,6 +318,11 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
             }
             if message_thread_id:
                 payload["message_thread_id"] = message_thread_id
+
+            print("📦 Payload:")
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
 
             response = await client.post(
                 bot_webhook_url,
