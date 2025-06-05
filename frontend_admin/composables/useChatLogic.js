@@ -299,7 +299,7 @@ export function useChatLogic(options = {}) {
     // Определяем схему (ws для localhost, wss для prod)
     const wsUrl = `${window.location.hostname === "localhost" ? "ws" : "wss"}://${
       window.location.hostname === "localhost" ? "localhost:8000" : window.location.hostname
-    }/ws/${currentChatId.value}/?token=${token.value}`;
+    }/ws/${currentChatId.value}/?token=${token.value}&as_admin=true`;
 
     console.log("Инициализация WebSocket по адресу:", wsUrl);
     websocket.value = new WebSocket(wsUrl);

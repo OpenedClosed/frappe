@@ -133,6 +133,7 @@ class ChatSession(BaseValidatedModel):
         staff_ids: set[str] | None = None,
         brief_questions: list[BriefQuestion] | None = None
     ) -> ChatStatus:
+        print(self.closed_by_request)
         if self.closed_by_request:
             return ChatStatus.CLOSED_BY_OPERATOR
 

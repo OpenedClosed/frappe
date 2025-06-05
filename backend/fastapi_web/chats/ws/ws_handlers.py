@@ -852,12 +852,15 @@ async def validate_chat_status(
     brief_questions = BRIEF_QUESTIONS
     dynamic_status = chat_session.compute_status(ttl_value)
     status_en = json.loads(dynamic_status.value)["en"]
+    print(status_en)
+
 
     NEGATIVE_STATUSES = {
         ChatStatus.CLOSED_NO_MESSAGES.en_value,
         ChatStatus.CLOSED_BY_TIMEOUT.en_value,
         ChatStatus.CLOSED_BY_OPERATOR.en_value
     }
+    print(NEGATIVE_STATUSES)
 
     if status_en in NEGATIVE_STATUSES:
         await broadcast_error(

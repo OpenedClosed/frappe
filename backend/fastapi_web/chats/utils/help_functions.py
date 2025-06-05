@@ -576,17 +576,18 @@ async def handle_chat_creation(
         chat_data, ttl = active_chats[0]
         return await serialize_active_chat(chat_data, ttl)
 
-    if mode == "new":
-        for chat_data, _ in active_chats:
-            await mongo_db.chats.update_one(
-                {"chat_id": chat_data["chat_id"]},
-                {
-                    "$set": {
-                        "closed_by_request": True,
-                        "last_activity": datetime.utcnow()
-                    }
-                }
-            )
+    # Временно убрал
+    # if mode == "new":
+    #     for chat_data, _ in active_chats:
+    #         await mongo_db.chats.update_one(
+    #             {"chat_id": chat_data["chat_id"]},
+    #             {
+    #                 "$set": {
+    #                     "closed_by_request": True,
+    #                     "last_activity": datetime.utcnow()
+    #                 }
+    #             }
+    #         )
 
     if chat_source != ChatSource.INTERNAL:
         if chat_data := await mongo_db.chats.find_one({"client.client_id": client_id}):

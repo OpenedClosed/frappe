@@ -37,9 +37,10 @@ class ChatStatus(BaseJsonEnumMixin, str, Enum):
         "settings": {"color": "#6f42c1", "icon": "pi pi-spin pi-cog"}
     })
     AUTO_WAITING_CLIENT = json.dumps({
-        "en": "Waiting for Client", "ru": "Ожидает клиента",
+        "en": "Waiting for Client (AI)", "ru": "Ожидает клиента (ИИ)",
         "settings": {"color": "#0d6efd", "icon": "pi pi-reply"}
     })
+
 
     # --- Ручной режим ---
     MANUAL_WAITING_CONSULTANT = json.dumps({
