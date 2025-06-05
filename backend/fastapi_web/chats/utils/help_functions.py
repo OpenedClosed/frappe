@@ -589,7 +589,7 @@ async def handle_chat_creation(
     #             }
     #         )
 
-    if chat_source != ChatSource.INTERNAL:
+    if chat_source not in [ChatSource.INTERNAL, ChatSource.TELEGRAM_MINI_APP]:
         if chat_data := await mongo_db.chats.find_one({"client.client_id": client_id}):
             chat_session = ChatSession(**chat_data)
             await redis_db.set(

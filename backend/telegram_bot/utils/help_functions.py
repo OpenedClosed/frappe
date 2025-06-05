@@ -1,4 +1,4 @@
-from aiogram import Bot
+from aiogram import Bot, User
 import asyncio
 import logging
 import sys
@@ -26,43 +26,50 @@ def generate_telegram_hash(user_id: str, timestamp: str, bot_token: str) -> str:
     return hmac.new(secret_key, base_string.encode(), hashlib.sha256).hexdigest()
 
 
-def generate_secure_webapp_url(user_id: int) -> str:
+async def generate_secure_webapp_url(user: User, bot: Bot) -> str:
     """
-    Генерирует WebApp URL с подписью.
+    Генерирует WebApp URL с подписью и дополнительной информацией о пользователе.
     """
     base_url = f"{settings.HOST_URL}/chats/telegram-chat"
     timestamp = int(datetime.utcnow().timestamp())
-    data = f"user_id={user_id}&timestamp={timestamp}"
-    logging.error(f"data {data}")
+    user_id = user.id
 
+    # Хэш только по user_id и timestamp
+    data = f"user_id={user_id}&timestamp={timestamp}"
     secret_key = hashlib.sha256(bot_settings.TELEGRAM_BOT_TOKEN.encode()).digest()
-    logging.error(f"secret_key {secret_key}")
     signature = hmac.new(secret_key, data.encode(), hashlib.sha256).hexdigest()
-    logging.error(f"signature {signature}")
+
+    # Дополнительные данные
+    avatar_url = await get_avatar_url(bot, user.id)
 
     query = urlencode({
         "user_id": user_id,
         "timestamp": timestamp,
         "hash": signature,
+        "username": user.username or "",
+        "first_name": user.first_name or "",
+        "last_name": user.last_name or "",
+        "language_code": user.language_code or "",
+        "avatar_url": avatar_url or "",
     })
-
-    logging.error(f"query {query}")
 
     return f"{base_url}?{query}"
 
-async def set_menu_webapp_for_user(user_id: int):
+
+async def set_menu_webapp_for_user(user: User, bot: Bot):
     """
     Назначает WebApp-кнопку с безопасной ссылкой.
     """
-    url = generate_secure_webapp_url(user_id)
+    url = await generate_secure_webapp_url(user, bot)
     logging.error(url)
     await bot.set_chat_menu_button(
-        chat_id=user_id,
+        chat_id=user.id,
         menu_button=MenuButtonWebApp(
             text="💬",
             web_app=WebAppInfo(url=url)
         )
     )
+
 
 async def get_avatar_url(bot: Bot, user_id: int) -> str | None:
     photos = await bot.get_user_profile_photos(user_id, limit=1)
