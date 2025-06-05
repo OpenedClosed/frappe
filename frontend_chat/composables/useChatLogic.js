@@ -505,6 +505,7 @@ export function useChatLogic(options = {}) {
         chatMessages.value = [];
         currentChatId.value = null;
         currentChatId.value = response.data.chat_id;
+        console.log("get_chat id:", response.data.chat_id);
         initializeWebSocket(response.data.chat_id);
       }
     } catch (error) {
