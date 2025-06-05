@@ -9,7 +9,7 @@ export function useChatLogic(options = {}) {
   const { isTelegram = false, query } = options; // Переключение под Telegram при необходимости
   const { t, locale } = useI18n();
   const toast = useToast();
-  const { isAutoMode, chatMessages } = useChatState();
+  const { isAutoMode, chatMessages,currentChatId } = useChatState();
   const route = useRoute()  
   let queryParams = route.query;
   console.log("queryParams:", queryParams);
@@ -24,7 +24,6 @@ export function useChatLogic(options = {}) {
   let skipNextStatusCheck = false;
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
-  const currentChatId = ref("");
   const currentUserId = ref("1234");
   const activeRoomId = ref("1");
   rooms.value = [
@@ -488,7 +487,14 @@ export function useChatLogic(options = {}) {
    */
   async function refreshChat() {
     try {
-      const response = await useNuxtApp().$api.post("api/chats/get_chat?mode=new");
+      const params = { ...route.query, mode: "new" };
+
+      // ② Шлём POST без тела, но с объектом params
+      const response = await useNuxtApp().$api.post(
+        "api/chats/get_chat",
+        null,          // тело запроса не нужно
+        { params }     // ← сюда кладём объединённые query-параметры
+      );
       if (response.data) {
         toast.add({
           severity: "success",
@@ -499,6 +505,7 @@ export function useChatLogic(options = {}) {
         chatMessages.value = [];
         currentChatId.value = null;
         currentChatId.value = response.data.chat_id;
+        console.log("get_chat id:", response.data.chat_id);
         initializeWebSocket(response.data.chat_id);
       }
     } catch (error) {
@@ -569,6 +576,7 @@ export function useChatLogic(options = {}) {
     const chatData = await useAsyncData("chatData", getChatData);
     if (chatData.data && chatData.data.value) {
       const { chat_id } = chatData.data.value;
+      console.log("Получен chat_id:", chat_id);
       currentChatId.value = chat_id;
       initializeWebSocket(chat_id);
     }
