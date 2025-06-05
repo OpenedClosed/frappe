@@ -576,6 +576,7 @@ export function useChatLogic(options = {}) {
     const chatData = await useAsyncData("chatData", getChatData);
     if (chatData.data && chatData.data.value) {
       const { chat_id } = chatData.data.value;
+      console.log("Получен chat_id:", chat_id);
       currentChatId.value = chat_id;
       initializeWebSocket(chat_id);
     }
