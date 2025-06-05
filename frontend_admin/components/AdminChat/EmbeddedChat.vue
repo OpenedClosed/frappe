@@ -56,9 +56,10 @@
       @message-action-handler="onMessageAction"
       :text-messages="textMessagesJson"
     >
-      <div slot="room-header-avatar flex items-center justify-center">
-        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle"/>
-        <Avatar v-else icon="pi pi-user" size="large" shape="circle" />
+      <div slot="room-header-avatar" class="flex items-center justify-center">
+        
+        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2"/>
+        <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2"/>
       </div>
       <div slot="room-header-info" class="flex-1">
         <!-- 🔥 Added flex-1 here -->
