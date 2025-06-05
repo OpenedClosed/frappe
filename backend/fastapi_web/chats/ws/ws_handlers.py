@@ -40,7 +40,7 @@ from ..utils.help_functions import (chat_generate_any, clean_markdown,
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
-from .ws_helpers import (ConnectionManager, TypingManager, custom_json_dumps,
+from .ws_helpers import (ConnectionManager, DateTimeEncoder, TypingManager, custom_json_dumps,
                          gpt_task_manager)
 
 logger = logging.getLogger(__name__)
@@ -1315,16 +1315,18 @@ async def process_user_query_after_brief(
             user_data["brief_info"] = extract_brief_info(chat_session)
 
             chat_history = chat_session.messages[-25:]
-
+            print('5-???')
             kb_doc, kb_model = await get_knowledge_base()
+            print('4-???')
             external_structs, _ = await collect_kb_structures_from_context(kb_model.context)
             merged_kb = merge_external_structures(
                 kb_doc["knowledge_base"],
                 external_structs
             )
+            print('3-???')
 
             client_id = chat_session.client.client_id if chat_session.client else None
-
+            print('3.1-???')
             gpt_data = await determine_topics_via_ai(
                 user_message=user_msg.message,
                 user_info=user_data,
@@ -1332,17 +1334,18 @@ async def process_user_query_after_brief(
                 chat_history=chat_history,
                 client_id=client_id
             )
-
+            
             user_msg.gpt_evaluation = GptEvaluation(
                 topics=gpt_data["topics"],
                 confidence=gpt_data["confidence"],
                 out_of_scope=gpt_data["out_of_scope"],
                 consultant_call=gpt_data["consultant_call"]
             )
+            print('3.2-???')
             await update_gpt_evaluation_in_db(chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation)
 
             lang = gpt_data.get("user_language") or user_language
-
+            print('2-???')
             ai_msg = await build_ai_response(
                 manager=manager,
                 chat_session=chat_session,
@@ -1354,6 +1357,7 @@ async def process_user_query_after_brief(
                 typing_manager=typing_manager,
                 chat_id=chat_id,
             )
+            print('1-???')
 
             if ai_msg:
                 await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
@@ -1387,9 +1391,9 @@ async def determine_topics_via_ai(
     """Возвращает темы, оффтоп, вызов консультанта и язык пользователя."""
     bot_context = await get_bot_context()
     model_name = model_name or bot_context["ai_model"]
-
+    print('0.1-???')
     kb_outline = build_kb_structure_outline(knowledge_base)
-
+    print('0.2-???')
     topics_data = await detect_topics_ai(
         user_message=user_message,
         chat_history=chat_history,
@@ -1398,7 +1402,7 @@ async def determine_topics_via_ai(
         model_name=model_name,
         bot_context=bot_context
     )
-
+    print('0.3-???')
     outcome_data = await detect_outcome_ai(
         user_message=user_message,
         topics=topics_data["topics"],
@@ -1425,7 +1429,7 @@ async def detect_topics_ai(
     formatted_history = format_chat_history_from_models(chat_history)
 
     system_prompt = AI_PROMPTS["system_topics_prompt"].format(
-        user_info=json.dumps(user_info, ensure_ascii=False, indent=2),
+        user_info=json.dumps(user_info, ensure_ascii=False, indent=2, cls=DateTimeEncoder),
         chat_history=formatted_history,
         kb_description=knowledge_base,
         app_description=bot_context["app_description"],
@@ -1450,6 +1454,7 @@ async def detect_topics_ai(
     }
 
 
+
 async def detect_outcome_ai(
     user_message: str,
     topics: list[dict[str, Any]],
@@ -1464,10 +1469,7 @@ async def detect_outcome_ai(
     snippets = await extract_knowledge(topics, user_message, knowledge_base)
     last_messages = chat_history[-history_tail:] if chat_history else []
 
-    history_text = "\n".join(
-        f"- {m.timestamp.isoformat()} {m.sender_role.value}: {m.message}"
-        for m in last_messages
-    )
+    formatted_history = format_chat_history_from_models(last_messages)
 
     system_prompt = AI_PROMPTS["system_outcome_analysis_prompt"].format(
         forbidden_topics=json.dumps(
@@ -1477,8 +1479,11 @@ async def detect_outcome_ai(
             ensure_ascii=False),
         snippets=json.dumps(snippets, ensure_ascii=False),
         additional_instructions=bot_context.get("app_description"),
-        chat_history=history_text
+        chat_history=formatted_history
     )
+    print("===== СИСТЕМНЫЙ ПРОМПТ ОПРЕДЕЛНИЯ =====")
+    print(system_prompt)
+    print("==========")
 
     bundle = build_messages_for_model(
         system_prompt=system_prompt,
@@ -1501,12 +1506,15 @@ async def detect_outcome_ai(
             {"$set": {"metadata.user_language": user_lang}}
         )
 
+    print("===== РЕЗУЛЬТАТ =====")
+    print(res)
+    print("==========")
+
     return {
         "out_of_scope": res.get("out_of_scope", False),
         "consultant_call": res.get("consultant_call", False),
         "user_language": user_lang,
     }
-
 
 # ==============================
 # БЛОК: Вспомогательные функции
@@ -1897,6 +1905,10 @@ async def generate_ai_answer(
         user_interface_language=user_language,
         chat_session=chat_session,
     )
+    print("===== ДО =====")
+    print(message_before_postprocessing)
+    print("===== ПОСЛЕ =====")
+    print(ai_text)
 
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
     final_ai_text = try_parse_json(ai_text) if return_json else ai_text
@@ -1951,6 +1963,7 @@ async def postprocess_ai_response(
         ),
         dynamic_postprocess_rules=dynamic_postprocess_rules,
     )
+    print(system_prompt)
 
     model_name = bot_context["ai_model"]
     bundle = build_messages_for_model(
