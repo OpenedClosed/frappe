@@ -503,6 +503,7 @@ export function useChatLogic(options = {}) {
           life: 3000,
         });
         chatMessages.value = [];
+        rooms.value[0].typingUsers = [];
         currentChatId.value = null;
         currentChatId.value = response.data.chat_id;
         console.log("get_chat id:", response.data.chat_id);

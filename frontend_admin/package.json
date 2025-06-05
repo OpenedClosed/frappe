@@ -22,6 +22,7 @@
     "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "lodash.throttle": "^4.1.1",
+    "mark.js": "^8.11.1",
     "metadata-scraper": "^0.2.61",
     "mitt": "^3.0.1",
     "nanoid": "^5.0.7",

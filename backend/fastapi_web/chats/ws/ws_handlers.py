@@ -171,7 +171,8 @@ async def save_and_broadcast_new_message(
     manager: Any,
     chat_session: ChatSession,
     new_msg: ChatMessage,
-    redis_key_session: str
+    redis_key_session: str,
+    user_data: Optional[dict] = {}
 ) -> None:
     """Сохраняет сообщение, отправляет в чат и Redis, и реплицирует во внешние сервисы."""
     await save_message_to_db(chat_session, new_msg)
@@ -182,13 +183,16 @@ async def save_and_broadcast_new_message(
         ex=int(settings.CHAT_TIMEOUT.total_seconds())
     )
 
-    if new_msg.sender_role != SenderRole.AI:
-        await update_read_state_for_client(
-            chat_id=chat_session.chat_id,
-            client_id=new_msg.sender_id,
-            user_id=None,
-            last_read_msg=new_msg.id
-        )
+    if user_data:
+        user_id = user_data.get("data", {}).get("user_id")
+
+        if new_msg.sender_role != SenderRole.AI:
+            await update_read_state_for_client(
+                chat_id=chat_session.chat_id,
+                client_id=new_msg.sender_id,
+                user_id=user_id,
+                last_read_msg=new_msg.id
+            )
 
     if new_msg.sender_role != SenderRole.CLIENT:
         await replicate_message_to_external_channel(chat_session, new_msg)
@@ -650,7 +654,10 @@ async def handle_get_messages(
 
     last_id = messages[-1]["id"]
     client_id = user_data.get("client_id")
-    user_id = user_data.get("user_id")
+    user_id = user_data.get("data", {}).get("user_id")
+
+    print("===== USER DATA ====")
+    print(user_data)
 
     if data.get("with_enter"):
         await update_read_state_for_client(
@@ -761,7 +768,7 @@ async def handle_new_message(
     if not await validate_choice(manager, client_id, chat_session, chat_id, msg_text, user_language):
         return
 
-    await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session)
+    await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session, user_data)
 
     if await handle_brief_mode(manager, client_id, chat_session, msg_text, chat_id, redis_key_session, user_language):
         return

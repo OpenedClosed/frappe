@@ -49,9 +49,10 @@ async def start(message: Message, command: CommandObject):
     start_text = BOT_TRANSLATIONS["start_info_text"].get(
         user_lang, BOT_TRANSLATIONS["start_info_text"]["en"]
     )
-    url = generate_secure_webapp_url(message.from_user.id)
+    url = await generate_secure_webapp_url(message.from_user, message.bot)
     await message.answer(start_text, parse_mode=ParseMode.HTML)
-    await set_menu_webapp_for_user(message.from_user.id)
+    await set_menu_webapp_for_user(message.from_user, message.bot)
+
 
 
 @dp.message(Command("help"))

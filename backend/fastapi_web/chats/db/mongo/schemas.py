@@ -133,7 +133,6 @@ class ChatSession(BaseValidatedModel):
         staff_ids: set[str] | None = None,
         brief_questions: list[BriefQuestion] | None = None
     ) -> ChatStatus:
-        print(self.closed_by_request)
         if self.closed_by_request:
             return ChatStatus.CLOSED_BY_OPERATOR
 
@@ -193,10 +192,16 @@ class ChatSession(BaseValidatedModel):
 
     def is_read_by_any_staff(self, staff_ids: set[str]) -> bool:
         """Проверяет, прочитан ли чат хотя бы одним из указанных staff-пользователей."""
+        print("-"*100)
+        print(self.read_state)
         if not self.messages or not self.read_state:
             return False
 
         last_msg_id = self.messages[-1].id
+        print("ID Пользоваталей:")
+        print([ri.user_id for ri in self.read_state if ri.user_id])
+        print("ID Сотрудников:")
+        print(staff_ids)
 
         return any(
             ri.user_id in staff_ids and ri.last_read_msg == last_msg_id
