@@ -9,7 +9,7 @@ export function useChatLogic(options = {}) {
   const { isTelegram = false, query } = options; // Переключение под Telegram при необходимости
   const { t, locale } = useI18n();
   const toast = useToast();
-  const { isAutoMode, chatMessages } = useChatState();
+  const { isAutoMode, chatMessages,currentChatId } = useChatState();
   const route = useRoute()  
   let queryParams = route.query;
   console.log("queryParams:", queryParams);
@@ -24,7 +24,6 @@ export function useChatLogic(options = {}) {
   let skipNextStatusCheck = false;
   const { rooms } = useHeaderState();
   // Текущий пользователь и комнаты
-  const currentChatId = ref("");
   const currentUserId = ref("1234");
   const activeRoomId = ref("1");
   rooms.value = [
