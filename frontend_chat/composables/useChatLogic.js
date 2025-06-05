@@ -488,7 +488,14 @@ export function useChatLogic(options = {}) {
    */
   async function refreshChat() {
     try {
-      const response = await useNuxtApp().$api.post("api/chats/get_chat?mode=new");
+      const params = { ...route.query, mode: "new" };
+
+      // ② Шлём POST без тела, но с объектом params
+      const response = await useNuxtApp().$api.post(
+        "api/chats/get_chat",
+        null,          // тело запроса не нужно
+        { params }     // ← сюда кладём объединённые query-параметры
+      );
       if (response.data) {
         toast.add({
           severity: "success",
