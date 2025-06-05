@@ -185,6 +185,69 @@ def determine_language(accept_language: str) -> str:
     return user_language if user_language in settings.SUPPORTED_LANGUAGES else "en"
 
 
+# async def get_or_create_master_client(
+#     source: ChatSource,
+#     external_id: str,
+#     internal_client_id: str,
+#     name: Optional[str] = None,
+#     avatar_url: Optional[str] = None,
+#     metadata: Optional[Dict[str, Any]] = None,
+#     user_id: Optional[str] = None,
+# ) -> MasterClient:
+#     """Возвращает существующего или создаёт нового MasterClient."""
+#     col = mongo_db.clients
+
+#     is_internal = source == ChatSource.INTERNAL
+#     is_anonymous = not external_id or external_id == "anonymous"
+
+#     if is_internal and is_anonymous:
+#         doc = await col.find_one({"client_id": internal_client_id})
+#     else:
+#         doc = await col.find_one({"source": source.value, "external_id": external_id})
+
+#     if doc:
+#         update_fields: Dict[str, Any] = {}
+
+#         if name and name != doc.get("name"):
+#             update_fields["name"] = name
+#         if avatar_url and avatar_url != doc.get("avatar_url"):
+#             update_fields["avatar_url"] = avatar_url
+
+#         if metadata:
+#             current_metadata = doc.get("metadata", {})
+#             merged_metadata = {**current_metadata, **metadata}
+#             if merged_metadata != current_metadata:
+#                 update_fields["metadata"] = merged_metadata
+
+#         if user_id and user_id != doc.get("user_id"):
+#             update_fields["user_id"] = user_id
+
+#         if update_fields:
+#             await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
+#             doc = await col.find_one({"_id": doc["_id"]})
+
+#         doc.pop("id", None)
+#         return MasterClient(**doc)
+
+#     safe_meta: Dict[str, Any] = metadata or {}
+
+#     save_external_id = external_id if external_id and external_id != "anonymous" else "anonymous"
+
+#     client = MasterClient(
+#         client_id=internal_client_id,
+#         source=source,
+#         external_id=save_external_id,
+#         name=name,
+#         avatar_url=avatar_url,
+#         metadata=safe_meta,
+#         created_at=datetime.utcnow(),
+#         user_id=user_id
+#     )
+
+#     await col.insert_one(client.dict(exclude={"id"}))
+#     return client
+
+
 async def get_or_create_master_client(
     source: ChatSource,
     external_id: str,
@@ -194,59 +257,71 @@ async def get_or_create_master_client(
     metadata: Optional[Dict[str, Any]] = None,
     user_id: Optional[str] = None,
 ) -> MasterClient:
-    """Возвращает существующего или создаёт нового MasterClient."""
+    """Возвращает существующего или создаёт нового MasterClient с защитой от гонки."""
     col = mongo_db.clients
-
+    metadata = metadata or {}
+    save_external_id = external_id if external_id and external_id != "anonymous" else "anonymous"
     is_internal = source == ChatSource.INTERNAL
     is_anonymous = not external_id or external_id == "anonymous"
 
-    if is_internal and is_anonymous:
-        doc = await col.find_one({"client_id": internal_client_id})
-    else:
-        doc = await col.find_one({"source": source.value, "external_id": external_id})
+    # 🔐 Redis-блокировка от гонки
+    lock_key = f"lock:client:create:{source.value}:{save_external_id}"
+    got_lock = await redis_db.set(lock_key, "1", ex=5, nx=True)
 
-    if doc:
-        update_fields: Dict[str, Any] = {}
+    try:
+        if is_internal and is_anonymous:
+            doc = await col.find_one({"client_id": internal_client_id})
+        else:
+            doc = await col.find_one({"source": source.value, "external_id": save_external_id})
 
-        if name and name != doc.get("name"):
-            update_fields["name"] = name
-        if avatar_url and avatar_url != doc.get("avatar_url"):
-            update_fields["avatar_url"] = avatar_url
+        if doc:
+            update_fields: Dict[str, Any] = {}
 
-        if metadata:
+            if name and name != doc.get("name"):
+                update_fields["name"] = name
+            if avatar_url and avatar_url != doc.get("avatar_url"):
+                update_fields["avatar_url"] = avatar_url
+            if user_id and user_id != doc.get("user_id"):
+                update_fields["user_id"] = user_id
+
             current_metadata = doc.get("metadata", {})
             merged_metadata = {**current_metadata, **metadata}
             if merged_metadata != current_metadata:
                 update_fields["metadata"] = merged_metadata
 
-        if user_id and user_id != doc.get("user_id"):
-            update_fields["user_id"] = user_id
+            if update_fields:
+                await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
+                doc = await col.find_one({"_id": doc["_id"]})
 
-        if update_fields:
-            await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
-            doc = await col.find_one({"_id": doc["_id"]})
+            doc.pop("id", None)
+            return MasterClient(**doc)
 
-        doc.pop("id", None)
-        return MasterClient(**doc)
+        # ⏱ fallback: если гонка, ждём и пытаемся найти
+        if not got_lock:
+            await asyncio.sleep(0.2)
+            doc = await col.find_one({"client_id": internal_client_id})
+            if doc:
+                doc.pop("id", None)
+                return MasterClient(**doc)
+            raise RuntimeError("Race condition: client creation lost")
 
-    safe_meta: Dict[str, Any] = metadata or {}
+        # ✅ создаём нового клиента
+        client = MasterClient(
+            client_id=internal_client_id,
+            source=source,
+            external_id=save_external_id,
+            name=name,
+            avatar_url=avatar_url,
+            metadata=metadata,
+            created_at=datetime.utcnow(),
+            user_id=user_id,
+        )
+        await col.insert_one(client.dict(exclude={"id"}))
+        return client
 
-    save_external_id = external_id if external_id and external_id != "anonymous" else "anonymous"
-
-    client = MasterClient(
-        client_id=internal_client_id,
-        source=source,
-        external_id=save_external_id,
-        name=name,
-        avatar_url=avatar_url,
-        metadata=safe_meta,
-        created_at=datetime.utcnow(),
-        user_id=user_id
-    )
-
-    await col.insert_one(client.dict(exclude={"id"}))
-    return client
-
+    finally:
+        if got_lock:
+            await redis_db.delete(lock_key)
 
 
 # ==============================
