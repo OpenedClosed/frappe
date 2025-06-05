@@ -348,7 +348,7 @@
               <div class="flex flex-col gap-4 p-4 h-full overflow-y-auto">
                 <div class="flex flex-1 min-h-0 overflow-y-auto" v-if="Object.keys(knowledgeBaseData.knowledge_base).length || isEditMode">
                   <!-- Read-only display if not editing -->
-                  <div v-if="!isEditMode" class="flex-1 overflow-y-auto">
+                  <div v-if="!isEditMode" ref="playgroundReadonly" v-mark="debouncedSearchTerm" class="flex-1 overflow-y-auto">
                     <div v-for="(topicValue, topicName) in filteredPlaygroundData" :key="topicName" class="mb-6 group">
                       <div class="flex justify-between items-center">
                         <div>
@@ -652,7 +652,7 @@
                 </InputText>
                 <Button icon="pi pi-times" class="p-button-text p-button-rounded p-button-sm" @click="resetReadonlySearch" />
               </div>
-              <div class="flex-1 overflow-y-auto p-4">
+              <div ref="kbReadonly" v-mark="debouncedSearchTerm" class="flex-1 overflow-y-auto p-4">
                 <div v-for="(topicValue, topicName) in filteredReadonlyData" :key="topicName" class="mb-6">
                   <h3 class="font-semibold text-gray-900 dark:text-gray-200">{{ topicName }}</h3>
                   <div v-if="topicValue.subtopics">
@@ -1039,16 +1039,15 @@ function openRowMenu(idx, ctx, event) {
 const action_menu = ref();
 const action_items = [
   {
-    label : t('KnowledgeBase.uploadJson'),
-    icon  : 'pi pi-upload',
-    command: triggerFileInput,        // ← opens the hidden <input>
+    label: t("KnowledgeBase.uploadJson"),
+    icon: "pi pi-upload",
+    command: triggerFileInput, // ← opens the hidden <input>
   },
   // …whatever items you already had…
-]
+];
 const toggleActionMenu = (event) => {
-    action_menu.value.toggle(event);
+  action_menu.value.toggle(event);
 };
-
 
 // Prevent opening dialog if limit is reached
 function openContextDialog() {
@@ -2321,6 +2320,11 @@ function csvEscape(val) {
 </script>
 
 <style>
+/* app.css or a <style> block */
+.kb-hit {
+  @apply bg-yellow-300 dark:bg-yellow-600/60 rounded px-0.5;
+}
+
 .p-fileupload .p-badge {
   display: none !important;
 }
