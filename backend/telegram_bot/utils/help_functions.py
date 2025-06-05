@@ -1,4 +1,5 @@
-from aiogram import Bot, User
+from aiogram import Bot
+from aiogram.types import User
 import asyncio
 import logging
 import sys
