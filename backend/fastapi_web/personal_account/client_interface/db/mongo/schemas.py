@@ -167,20 +167,20 @@ class ContactInfoSchema(BaseValidatedModel):
         }
     )
 
-    # address: Optional[str] = Field(
-    #     default=None,
-    #     json_schema_extra={
-    #         "settings": {
-    #             "type": "textarea",
-    #             "rows": 2,
-    #             "placeholder": {
-    #                 "ru": "Введите адрес",
-    #                 "en": "Enter address",
-    #                 "pl": "Wprowadź adres"
-    #             }
-    #         }
-    #     }
-    # )
+    address: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "textarea",
+                "rows": 2,
+                "placeholder": {
+                    "ru": "Введите адрес",
+                    "en": "Enter address",
+                    "pl": "Wprowadź adres"
+                }
+            }
+        }
+    )
 
     pesel: Optional[str] = Field(
         default=None,
@@ -573,7 +573,7 @@ class ConsentSchema(BaseValidatedModel):
         },
     )
     last_updated: datetime = Field(default_factory=datetime.utcnow)
-    
+
 # ==========
 # Встречи
 # ==========

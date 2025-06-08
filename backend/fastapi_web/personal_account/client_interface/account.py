@@ -1,4 +1,5 @@
 """Персональный аккаунт приложения Клиентский интерфейс."""
+import asyncio
 from datetime import date, datetime
 from typing import Any, List, Optional
 
@@ -1479,6 +1480,35 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
     async def get_patient_id_for_user(self, user) -> str | None:
         client = await self.get_master_client_by_user(user)
         return client.get("patient_id") if client else None
+    
+    async def get_field_overrides(
+        self, obj: Optional[dict] = None, current_user: Optional[Any] = None
+    ) -> dict:
+        patient_id = None
+        print('зашли куда надо')
+        if obj:
+            patient_id = obj.get("patient_id")
+        elif current_user:
+            client = await self.get_master_client_by_user(current_user)
+            patient_id = client.get("patient_id") if client else None
+
+        if not patient_id:
+            return {}
+
+        try:
+            consents = await self.get_consents_cached(patient_id)
+        except Exception as e:
+            print("Ошибка", e)
+            return {}
+
+        return {
+            "consents": {
+                "choices": [
+                    {"value": c["title"], "label": c["title"]}
+                    for c in consents if "title" in c
+                ]
+            }
+        }
 
 
 # ==========

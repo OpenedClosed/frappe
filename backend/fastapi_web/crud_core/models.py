@@ -258,6 +258,17 @@ class BaseCrudCore:
 
         return {"status": "success"}
 
+
+    async def get_field_overrides(
+        self, obj: Optional[dict] = None, current_user: Optional[Any] = None
+    ) -> dict:
+        """
+        Переопределяет свойства отдельных полей схемы.
+        Может использовать данные текущего объекта и пользователя.
+        Переопределения могут быть частичными — например, только choices или placeholder.
+        """
+        return {}
+
     # --- Обработка данных ---
     def serialize_value(self, value: Any) -> Any:
         """Сериализует значение перед сохранением."""

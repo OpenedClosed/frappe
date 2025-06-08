@@ -54,7 +54,7 @@ base_api_router = APIRouter(prefix="/api")
 async def print_routes():
     """Вывод зарегистрированных маршрутов."""
     print("Зарегистрированные админские маршруты:")
-    for route in get_routes_by_apps(admin_registry):
+    for route in await get_routes_by_apps(admin_registry):
         print(route)
 
 
