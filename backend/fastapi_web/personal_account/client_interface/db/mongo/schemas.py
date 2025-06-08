@@ -594,32 +594,22 @@ class AppointmentSchema(BaseModel):
                     "ru": "Дата визита",
                     "en": "Visit date",
                     "pl": "Data wizyty"
-                }
+                },
             }
-        }
+        },
     )
 
     start: time = Field(
         ...,
-        json_schema_extra={
-            "settings": {
-                "type": "time",
-                "readonly": True
-            }
-        }
+        json_schema_extra={"settings": {"type": "time", "readonly": True}},
     )
 
     end: time = Field(
         ...,
-        json_schema_extra={
-            "settings": {
-                "type": "time",
-                "readonly": True
-            }
-        }
+        json_schema_extra={"settings": {"type": "time", "readonly": True}},
     )
 
-    doctor_name: str = Field(
+    doctor: str = Field(
         ...,
         json_schema_extra={
             "settings": {
@@ -628,13 +618,13 @@ class AppointmentSchema(BaseModel):
                 "placeholder": {
                     "ru": "Имя врача",
                     "en": "Doctor name",
-                    "pl": "Imię lekarza"
-                }
+                    "pl": "Imię lekarza",
+                },
             }
-        }
+        },
     )
 
-    status: Optional[str] = Field(
+    status: str | None = Field(
         None,
         json_schema_extra={
             "settings": {
@@ -643,8 +633,8 @@ class AppointmentSchema(BaseModel):
                 "placeholder": {
                     "ru": "Статус визита",
                     "en": "Appointment status",
-                    "pl": "Status wizyty"
-                }
+                    "pl": "Status wizyty",
+                },
             }
-        }
+        },
     )

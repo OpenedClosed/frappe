@@ -23,6 +23,9 @@ class CRMIntegrationMixin:
             main = await mongo_db["patients_main_info"].find_one({"user_id": str(user_id)})
         return main
 
+    async def get_patient_id_for_user(self, user) -> str | None:
+        client = await self.get_master_client_by_user(user)
+        return client.get("patient_id") if client else None
 
     async def get_patient_cached(self, patient_id: str) -> dict | None:
         """
@@ -187,5 +190,28 @@ class CRMIntegrationMixin:
             consents = await get_client().get_consents(patient_id)
             await redis_db.set(cache_key, json.dumps(consents), ex=ttl)
             return consents
+        except CRMError:
+            return []
+
+    async def get_bonuses_history_cached(self, patient_id: str, ttl: int = 60) -> list[dict]:
+        """
+        Возвращает историю бонусов пациента из CRM  
+        (энд-поинт `GET /patients/{id}/history-charges`), кеш ‹ttl› сек.
+        """
+        if not patient_id:
+            return []
+
+        cache_key = f"crm:bonuses:{patient_id}"
+        cached = await redis_db.get(cache_key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except Exception:
+                pass
+
+        try:
+            data = await get_client().get_bonus_history(patient_id)
+            await redis_db.set(cache_key, json.dumps(data), ex=ttl)
+            return data
         except CRMError:
             return []

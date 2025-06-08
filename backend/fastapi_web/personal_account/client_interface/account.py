@@ -2,7 +2,7 @@
 import asyncio
 from datetime import date, datetime
 import json
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 
@@ -1011,7 +1011,7 @@ class FamilyAccount(BaseAccount):
 # ==========
 
 
-class BonusTransactionInlineAccount(InlineAccount):
+class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
     """
     Инлайн-модель для транзакций бонусной программы.
     Отображается внутри поля `transaction_history`.
@@ -1094,6 +1094,57 @@ class BonusTransactionInlineAccount(InlineAccount):
         }
     }
 
+    async def get_queryset(
+        self,
+        filters: dict | None = None,
+        sort_by: str | None = None,
+        order: int = 1,
+        page: int | None = None,
+        page_size: int | None = None,
+        current_user=None,
+        format: bool = True,
+    ) -> list[dict]:
+        """
+        • Берём patient_id из self.parent_document,  
+        • тянем историю из CRM,  
+        • конвертируем в BonusTransactionSchema → dict,  
+        • отдаём как инлайн-список.
+        """
+        parent = getattr(self, "parent_document", {}) or {}
+        patient_id = parent.get("patient_id")
+
+        if not patient_id:
+            client = await self.get_master_client_by_user(current_user)
+            patient_id = client.get("patient_id") if client else None
+
+        if not patient_id:
+            return []
+
+        crm_rows = await self.get_bonuses_history_cached(patient_id)
+        print(crm_rows)
+
+        def map_row(r: dict) -> dict:
+            tx_type = (TransactionTypeEnum.ACCRUED
+                       if r.get("type") == "award"
+                       else TransactionTypeEnum.REDEEMED)
+            return BonusTransactionSchema(
+                title=r.get("title") or ("Bonus accrued" if tx_type is TransactionTypeEnum.ACCRUED else "Bonus spent"),
+                description="",
+                amount=r.get("amount", 0),
+                transaction_type=tx_type,
+                date_time=datetime.strptime(r["date"], "%Y-%m-%d"),
+                referral_code=r.get("referralCode", "")
+            ).model_dump()
+
+        items = [map_row(r) for r in crm_rows]
+
+        # сортируем по дате (новые сверху)
+        items.sort(key=lambda x: x["date_time"], reverse=True)
+
+        return [await self.format_document(i, current_user) for i in items] if format else items
+
+
+
     allow_crud_actions = {
         "create": False,
         "read": True,
@@ -1102,7 +1153,7 @@ class BonusTransactionInlineAccount(InlineAccount):
     }
 
 
-class BonusProgramAccount(BaseAccount):
+class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
     """
     Админка для вкладки 'Бонусная программа'.
     """
@@ -1228,81 +1279,113 @@ class BonusProgramAccount(BaseAccount):
         "delete": False
     }
 
-    async def get_queryset(
-        self,
-        filters: Optional[dict] = None,
-        sort_by: Optional[str] = None,
-        order: int = 1,
-        page: Optional[int] = None,
-        page_size: Optional[int] = None,
-        current_user=None
-    ) -> List[dict]:
-        """
-        Переопределяем, чтобы если в коллекции нет записи для текущего юзера,
-        то мы её создаём и сразу возвращаем вместе с любыми другими возможными
-        данными (если логика дополняется).
-        """
-
-        self.check_crud_enabled("read")
-        final_filters = filters.copy() if filters else {}
+    async def ensure_local_document(self, current_user) -> dict | None:
+        """Возвращает готовый локальный doc (создаёт и/или синхронизирует при необходимости)."""
+        client = await self.get_master_client_by_user(current_user)
+        patient_id = client.get("patient_id") if client else None
+        if not patient_id:
+            return None
 
         user_id = str(current_user.data["user_id"])
-        final_filters["user_id"] = user_id
+        doc = await self.db.find_one({"user_id": user_id})
 
-        cursor = self.db.find(final_filters).sort(
-            sort_by or self.detect_id_field(), order)
-        docs = await cursor.to_list(None)
+        if not doc:
+            now = datetime.utcnow()
+            res = await self.db.insert_one({
+                "user_id"           : user_id,
+                "patient_id"        : patient_id,
+                "referral_code"     : f"CODE_{patient_id}",
+                "last_updated"      : now,
+                "transaction_history": [],
+            })
+            doc = await self.db.find_one({"_id": res.inserted_id})
 
-        if not docs:
-            new_doc = {
-                "user_id": user_id,
-                "balance": 0,
-                "referral_code": "",
-                "last_updated": datetime.utcnow(),
-                "transaction_history": [
-                    {
-                        "title": "Welcome bonus",
-                        "description": "Test transaction",
-                        "date_time": datetime.utcnow(),
-                        "transaction_type": TransactionTypeEnum.ACCRUED.value,
-                        "amount": 100,
-                        "referral_code": "TESTCODE"
-                    }
-                ]
-            }
-            insert_res = await self.db.insert_one(new_doc)
-            if not insert_res.inserted_id:
-                raise HTTPException(500, "Failed to create bonus program.")
-            cursor = self.db.find(final_filters).sort(
-                sort_by or self.detect_id_field(), order)
-            docs = await cursor.to_list(None)
+        # всегда обновляем транзакции из CRM
+        doc = await self.refresh_transactions_from_crm(doc, patient_id)
+        return doc
 
-        formatted = []
-        for raw_doc in docs:
-            self.check_object_permission("read", current_user, raw_doc)
-            formatted.append(await self.format_document(raw_doc, current_user))
+    # -----------------------------------------------------------------
+    # 2.  Полная замена transaction_history + отметка времени
+    # -----------------------------------------------------------------
+    async def refresh_transactions_from_crm(self, doc: dict, patient_id: str) -> dict:
+        crm_rows = await self.get_bonuses_history_cached(patient_id)
 
-        return formatted
+        def map_row(r: dict) -> dict:
+            tx_type = (TransactionTypeEnum.ACCRUED
+                       if r.get("type") == "award"
+                       else TransactionTypeEnum.REDEEMED)
+            return BonusTransactionSchema(
+                title=r.get("title") or ("Bonus accrued" if tx_type is TransactionTypeEnum.ACCRUED else "Bonus spent"),
+                description="",
+                amount=r.get("amount", 0),
+                transaction_type=tx_type,
+                date_time=datetime.strptime(r["date"], "%Y-%m-%d"),
+                referral_code=r.get("referralCode", "")
+            ).model_dump()
 
+        new_history = [map_row(r) for r in crm_rows]
+
+        if new_history != doc.get("transaction_history", []):
+            await self.db.update_one(
+                {"_id": doc["_id"]},
+                {"$set": {
+                    "transaction_history": new_history,
+                    "last_updated"      : datetime.utcnow()
+                }}
+            )
+            doc["transaction_history"] = new_history
+        return doc
+
+    # -----------------------------------------------------------------
+    # 3.  Публичный get_queryset
+    # -----------------------------------------------------------------
+    async def get_queryset(
+        self,
+        filters: dict | None = None,
+        sort_by: str | None = None,
+        order: int = 1,
+        page: int | None = None,
+        page_size: int | None = None,
+        current_user=None,
+        format: bool = True,
+    ) -> list[dict]:
+
+        doc = await self.ensure_local_document(current_user)
+        if not doc:
+            return []
+
+        formatted = await self.format_document(doc, current_user) if format else doc
+        return [formatted]
+
+    # -----------------------------------------------------------------
+    # 4.  Вычисляемые поля
+    # -----------------------------------------------------------------
     async def get_balance(self, obj: dict) -> int:
         """
-        Пример: считаем сумму транзакций типа ACCRUED (прибавляем)
-        и типа SPENT (вычитаем).
+        Возвращает текущий баланс из CRM (поле bonuses).
+        Если не найден — fallback: считаем по транзакциям.
         """
-        transactions = obj.get("transaction_history", [])
-        balance = 0
-        for tx in transactions:
-            if tx.get("transaction_type") == TransactionTypeEnum.ACCRUED.value:
-                balance += tx.get("amount", 0)
-            elif tx.get("transaction_type") == TransactionTypeEnum.REDEEMED.value:
-                balance -= tx.get("amount", 0)
-        return balance
+        patient_id = obj.get("patient_id")
+
+        if patient_id:
+            crm_data = await self.get_patient_cached(patient_id)
+            if crm_data and isinstance(crm_data.get("bonuses"), int):
+                return crm_data["bonuses"]
+
+        # Ручной пересчёт (временно отключён)
+        # total = 0
+        # for tx in obj.get("transaction_history", []):
+        #     if tx["transaction_type"] == TransactionTypeEnum.ACCRUED.value:
+        #         total += tx["amount"]
+        #     elif tx["transaction_type"] == TransactionTypeEnum.REDEEMED.value:
+        #         total -= tx["amount"]
+        # return total
+
+        return 0
+
 
     async def get_referral_code(self, obj: dict) -> str:
-        code = obj.get("referral_code")
-        if not code:
-            return "IVAN2023"
-        return code
+        return obj.get("referral_code") or "IVAN2023"
 
 
 # ==========
@@ -1524,9 +1607,6 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         return await super().update(object_id, data, current_user)
 
 
-    async def get_patient_id_for_user(self, user) -> str | None:
-        client = await self.get_master_client_by_user(user)
-        return client.get("patient_id") if client else None
     
     async def get_field_overrides(
         self, obj: Optional[dict] = None, current_user: Optional[Any] = None
@@ -1583,7 +1663,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
 # ==========
 
 
-class AppointmentAccount(BaseAccount):
+class AppointmentAccount(BaseAccount, CRMIntegrationMixin):
     """
     Только для чтения: встречи пользователя, полученные из CRM.
     """
@@ -1626,56 +1706,50 @@ class AppointmentAccount(BaseAccount):
 
     read_only_fields = ["visit_date", "start", "end", "doctor"]
 
-    # async def get_queryset(
-    #     self, filters=None, sort_by=None, order=1, page=None, page_size=None, current_user=None, format=True
-    # ) -> list[dict]:
-    #     """
-    #     Получает встречи из CRM для текущего пользователя начиная с даты регистрации.
-    #     Если patient_id отсутствует, создаёт пациента в CRM.
-    #     """
-    #     if not current_user or not current_user.data["user_id"]:
-    #         raise HTTPException(403, "Unauthorized")
+    async def get_queryset(                             # noqa: D401
+        self,
+        filters: Optional[dict] = None,
+        sort_by: Optional[str] = None,
+        order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        current_user: Optional[Any] = None,
+        format: bool = True,
+    ) -> List[Dict[str, Any]]:
+        """
+        Возвращает список визитов из CRM.
+        Параметры пагинации игнорируем – возвращаем всё, как пришло.
+        """
+        self.check_crud_enabled("read")
 
-    #     user_id = str(current_user.data["user_id"])
-    #     info = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
-    #     contact = await mongo_db["patients_contact_info"].find_one({"user_id": user_id})
-    #     if not info or not contact:
-    #         return []
+        patient_id = await self.get_patient_id_for_user(current_user)
+        if not patient_id:
+            return []
 
-    #     # Если patient_id нет, пытаемся создать
-    #     if "patient_id" not in info:
-    #         try:
-    #             pid = await get_client().find_or_create_patient(local_data=info, contact_data=contact)
-    #             await mongo_db["patients_main_info"].update_one(
-    #                 {"_id": info["_id"]},
-    #                 {"$set": {"patient_id": pid}}
-    #             )
-    #             info["patient_id"] = pid
-    #         except CRMError as e:
-    #             raise HTTPException(502, f"CRM error: {e.detail}")
+        # берём визиты «с сегодняшнего дня и далее»
+        crm_raw = await self.get_future_appointments_cached(patient_id, date.today())
+        print(crm_raw)
 
-    #     patient_id = info["patient_id"]
-    #     created = info.get("created_at", date.today())
+        # энд-поинт может вернуть как список, так и объект-страницу
+        rows = crm_raw.get("data") if isinstance(crm_raw, dict) and "data" in crm_raw else crm_raw
 
-    # appointments = await get_client().future_appointments(patient_id,
-    # from_date=created.date())
+        formatted: List[Dict[str, Any]] = []
+        for item in rows or []:
+            formatted.append(
+                {
+                    "id": str(item.get("id", "")),
+                    "visit_date": item.get("date"),
+                    "start": item.get("start"),
+                    "end": item.get("end"),
+                    "doctor": (item.get("doctor") or {}).get("name"),
+                    # если в будущем будем выводить статус
+                    "status": item.get("status"),
+                }
+            )
 
-    #     def to_result(raw: dict) -> dict:
-    #         return {
-    #             "visit_date": raw.get("date"),
-    #             "start": raw.get("start"),
-    #             "end": raw.get("end"),
-    #             "doctor": raw.get("doctor", {}).get("name"),
-    #             "id": str(raw.get("id")),
-    #         }
-
-    #     results = [to_result(a) for a in appointments]
-
-    #     if sort_by:
-    #         results.sort(key=lambda x: x.get(sort_by), reverse=(order == -1))
-
-    #     return results
-
+        # сортировка по дате/времени, если нужно
+        formatted.sort(key=lambda x: (x["visit_date"], x["start"]))
+        return formatted
 
 account_registry.register("patients_main_info", MainInfoAccount(mongo_db))
 account_registry.register(
