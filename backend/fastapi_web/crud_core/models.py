@@ -231,6 +231,9 @@ class BaseCrudCore:
         for field in self.computed_fields:
             valid_data.pop(field, None)
 
+        # 🔄 Рекурсивная сериализация перед обновлением в Mongo
+        valid_data = self.recursive_model_dump(valid_data)
+
         res = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": valid_data})
         if res.matched_count == 0:
             raise HTTPException(500, "Failed to update object.")
@@ -240,6 +243,7 @@ class BaseCrudCore:
             raise HTTPException(500, "Failed to retrieve updated object.")
 
         return await self.format_document(updated_raw, current_user)
+
 
     async def delete(self, object_id: str,
                      current_user: Optional[BaseModel] = None) -> dict:
@@ -258,6 +262,15 @@ class BaseCrudCore:
 
         return {"status": "success"}
 
+    def recursive_model_dump(self, obj):
+        if isinstance(obj, BaseModel):
+            return {k: self.recursive_model_dump(v) for k, v in obj.model_dump().items()}
+        elif isinstance(obj, dict):
+            return {k: self.recursive_model_dump(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self.recursive_model_dump(i) for i in obj]
+        else:
+            return obj
 
     async def get_field_overrides(
         self, obj: Optional[dict] = None, current_user: Optional[Any] = None

@@ -666,9 +666,6 @@ async def build_model_info(instance, current_user) -> dict:
     if hasattr(instance, "get_field_overrides"):
         try:
             overrides = await instance.get_field_overrides(obj=None, current_user=current_user)
-            print("=!="*100)
-            print(overrides)
-            print("=!="*100)
         except Exception:
             overrides = {}
 

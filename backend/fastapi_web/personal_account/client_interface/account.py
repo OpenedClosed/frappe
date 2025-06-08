@@ -1,6 +1,7 @@
 """Персональный аккаунт приложения Клиентский интерфейс."""
 import asyncio
 from datetime import date, datetime
+import json
 from typing import Any, List, Optional
 
 from fastapi import HTTPException
@@ -597,7 +598,7 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
                     "phone": format_crm_phone(normalize_numbers(updated["phone"])) if updated.get("phone") else None,
                     "email": updated.get("email")
                 }
-                await self.patch_contacts_in_crm(patient_id, patch)
+                asyncio.create_task(self.patch_contacts_in_crm(patient_id, patch))
 
         return updated
 
@@ -1419,7 +1420,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
             )
         return doc
 
-    async def get_or_create_if_missing(self, patient_id: str) -> dict:
+    async def get_or_create_if_missing(self, patient_id: str, current_user) -> dict:
         """
         Получает запись из Mongo, если есть. Иначе — создаёт по CRM-согласиям.
         """
@@ -1435,6 +1436,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
             "patient_id": patient_id,
             "consents": [c.model_dump() for c in consents],
             "last_updated": now,
+            "current_user": current_user,
         }
         result = await self.db.insert_one(data)
         data["_id"] = result.inserted_id
@@ -1454,28 +1456,73 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         if not patient_id:
             return []
 
-        raw = await self.get_or_create_if_missing(patient_id)
+        raw = await self.get_or_create_if_missing(patient_id, current_user)
         return [await self.format_document(raw, current_user) if format else raw]
 
-    async def update(self, obj_id: str, data: dict, current_user=None):
+    async def update(self, object_id: str, data: dict, current_user=None):
         """
         Обновляет согласия в CRM и в локальной базе.
         """
-        doc = await self.get(obj_id, current_user)
-        patient_id = doc.get("patient_id")
+        doc = await self.get(object_id, current_user)
+        patient_id = await self.get_patient_id_for_user(current_user)
         if not patient_id:
             raise HTTPException(400, "Patient ID missing")
 
-        new_items = {item["id"]: item["accepted"] for item in data.get("consents", [])}
-        old_items = {item.id: item.accepted for item in doc.get("consents", [])}
+        raw_consents = data.get("consents", [])
+
+        # Унификация: всегда список строк
+        if isinstance(raw_consents, str):
+            try:
+                raw_consents = json.loads(raw_consents)
+            except Exception:
+                raw_consents = [raw_consents]
+        if not isinstance(raw_consents, list):
+            raise HTTPException(400, "Invalid consents format: must be list")
+
+        # Получаем все согласия из CRM
+        consents = await self.get_consents_cached(patient_id)
+        consents_by_title = {
+            c["title"]: c["id"]
+            for c in consents
+            if isinstance(c, dict) and "title" in c and "id" in c
+        }
+
+        # Перевод входных в set строк (заголовки)
+        input_titles = set()
+        for item in raw_consents:
+            if isinstance(item, str):
+                input_titles.add(item)
+            elif isinstance(item, dict) and "title" in item:
+                input_titles.add(item["title"])
+            else:
+                raise HTTPException(400, f"Invalid consent format: {item}")
+
+        # Сопоставление title → id с accepted = True/False
+        new_items = {}
+        for title, cid in consents_by_title.items():
+            new_items[cid] = title in input_titles  # True если выбран, иначе False
+
+        # Сравниваем со старыми из базы
+        old_items = {
+            item["id"]: item["accepted"]
+            for item in doc.get("consents", [])
+            if isinstance(item, dict) and "id" in item and "accepted" in item
+        }
 
         crm = get_client()
         for cid, acc in new_items.items():
-            if cid not in old_items or old_items[cid] != acc:
-                await crm.update_consent(patient_id, cid, acc)
+            if old_items.get(cid) != acc:
+                asyncio.create_task(crm.update_consent(patient_id, cid, acc))
 
+        # Обновление в локальной БД
+        data["consents"] = [
+            {"id": cid, "accepted": acc}
+            for cid, acc in new_items.items()
+        ]
         data["last_updated"] = datetime.utcnow()
-        return await super().update(obj_id, data, current_user)
+
+        return await super().update(object_id, data, current_user)
+
 
     async def get_patient_id_for_user(self, user) -> str | None:
         client = await self.get_master_client_by_user(user)
@@ -1485,7 +1532,6 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         self, obj: Optional[dict] = None, current_user: Optional[Any] = None
     ) -> dict:
         patient_id = None
-        print('зашли куда надо')
         if obj:
             patient_id = obj.get("patient_id")
         elif current_user:
@@ -1498,7 +1544,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         try:
             consents = await self.get_consents_cached(patient_id)
         except Exception as e:
-            print("Ошибка", e)
+
             return {}
 
         return {
@@ -1509,6 +1555,27 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
                 ]
             }
         }
+
+    async def format_document(self, doc: dict, current_user: Optional[dict] = None) -> dict:
+        """
+        Форматирует согласия как список строк (title), чтобы multiselect их отобразил.
+        Остальная логика базовая.
+        """
+        formatted = await super().format_document(doc, current_user)
+
+        patient_id = doc.get("patient_id")
+        if not patient_id:
+            return formatted
+
+        try:
+            crm_consents = await self.get_consents_cached(patient_id)
+            accepted_titles = [c["title"] for c in crm_consents if c.get("accepted") and "title" in c]
+            formatted["consents"] = accepted_titles
+        except Exception:
+            # если что-то сломается, оставим как есть
+            pass
+
+        return formatted
 
 
 # ==========
