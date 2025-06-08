@@ -11,22 +11,33 @@ from db.mongo.base.enums import BaseJsonEnumMixin
 
 class GenderEnum(BaseJsonEnumMixin, str, Enum):
     MALE = json.dumps({
-        "ru": "Мужской",
-        "en": "Male",
-        "pl": "Mężczyzna",
+        "ru": "мужской",
+        "en": "male",
+        "pl": "mężczyzna",
         "settings": {}
     })
     FEMALE = json.dumps({
-        "ru": "Женский",
-        "en": "Female",
-        "pl": "Kobieta",
+        "ru": "женский",
+        "en": "female",
+        "pl": "kobieta",
         "settings": {}
     })
 
 
-class AccountVerificationEnum(str, Enum):
-    UNVERIFIED = "unverified"
-    VERIFIED = "verified"
+class AccountVerificationEnum(BaseJsonEnumMixin, str, Enum):
+    UNVERIFIED = json.dumps({
+        "ru": "не верифицирован",
+        "en": "unverified",
+        "pl": "niezweryfikowany",
+        "settings": {}
+    })
+    VERIFIED = json.dumps({
+        "ru": "верифицирован",
+        "en": "verified",
+        "pl": "zweryfikowany",
+        "settings": {}
+    })
+
 
 # ==========
 # Анкета здоровья

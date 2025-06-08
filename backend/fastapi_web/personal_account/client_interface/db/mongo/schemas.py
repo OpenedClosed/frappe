@@ -80,6 +80,9 @@ class MainInfoSchema(BaseValidatedModel):
     """
     Основная информация о пациенте, хранится в MongoDB.
     """
+    patient_id: Optional[str] = Field(
+        default=None,
+    )
 
     last_name: str
     first_name: str
@@ -129,30 +132,6 @@ class MainInfoSchema(BaseValidatedModel):
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    async def get_patient_id_from_crm(
-            self, contact_data: dict) -> Optional[int]:
-        """
-        Получает ID пациента из CRM, если он существует. Возвращает None, если не найден.
-        Используется при логине или синхронизации.
-        """
-        # crm = get_client()
-        # phone = normalize_numbers(contact_data.get("phone", ""))
-        # pesel = contact_data.get("pesel")
-        # gender = self.gender.value if self.gender else None
-        # bdate = self.birth_date.strftime("%Y-%m-%d") if self.birth_date else None
-
-        # try:
-        #     patient_id = await crm.find_patient(
-        #         phone=phone,
-        #         pesel=pesel,
-        #         gender=gender,
-        #         birth_date=bdate
-        #     )
-        #     return patient_id
-        # except Exception as e:
-        #     print(e)
-        #     return None
-        return None
 
 # ==========
 # Контактная информация
@@ -188,23 +167,23 @@ class ContactInfoSchema(BaseValidatedModel):
         }
     )
 
-    address: str = Field(
-        ...,
-        json_schema_extra={
-            "settings": {
-                "type": "textarea",
-                "rows": 2,
-                "placeholder": {
-                    "ru": "Введите адрес",
-                    "en": "Enter address",
-                    "pl": "Wprowadź adres"
-                }
-            }
-        }
-    )
+    # address: Optional[str] = Field(
+    #     default=None,
+    #     json_schema_extra={
+    #         "settings": {
+    #             "type": "textarea",
+    #             "rows": 2,
+    #             "placeholder": {
+    #                 "ru": "Введите адрес",
+    #                 "en": "Enter address",
+    #                 "pl": "Wprowadź adres"
+    #             }
+    #         }
+    #     }
+    # )
 
-    pesel: str = Field(
-        ...,
+    pesel: Optional[str] = Field(
+        default=None,
         json_schema_extra={
             "settings": {
                 "type": "pesel",
@@ -576,29 +555,25 @@ class BonusProgramSchema(BaseValidatedModel):
 # ==========
 
 
-class ConsentSchema(BaseValidatedModel):
-    """
-    Схема для вкладки 'Согласия пользователя'.
-    """
+class ConsentItem(BaseModel):
+    """Согласие в CRM."""
+    id: int
+    accepted: bool
 
-    consents: List[ConsentEnum] = Field(
+class ConsentSchema(BaseValidatedModel):
+    """Согласия пользователя, кеш 60 с."""
+    consents: List[ConsentItem] = Field(
+        default_factory=list,
         json_schema_extra={
             "settings": {
-                "color_map": {
-                    "yes": "#4CAF50",
-                    "no": "#F44336"
-                },
-                "placeholder": {
-                    "en": "Select consents",
-                    "ru": "Выберите согласия",
-                    "pl": "Wybierz zgody"
-                }
+                "type": "color_multiselect",
+                "color_map": {"true": "#4CAF50", "false": "#F44336"},
+                "searchable": True,
             }
-        }
+        },
     )
-
-    last_updated: Optional[datetime] = Field(default_factory=datetime.utcnow)
-
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    
 # ==========
 # Встречи
 # ==========

@@ -138,8 +138,6 @@ paths:
                 $ref: '#/components/schemas/Patient'
         401:
           description: Unauthorized
-        403:
-          description: Forbidden
         404:
           description: Resource not found
         500:
@@ -193,6 +191,7 @@ paths:
     get:
       operationId: getPatientAppointments
       summary: Get Patient Appointments
+      description: Available for patients with confirmed profile only.
       tags:
         - Appointments
       parameters:
@@ -213,7 +212,43 @@ paths:
         401:
           description: Unauthorized
         403:
-          description: Forbidden
+          description: Forbidden (e.g., patient profile not confirmed)
+        404:
+          description: Resource not found
+        500:
+          description: Internal Server Error
+        503:
+          description: Service Unavailable
+        504:
+          description: Gateway Timeout
+  /patients/{id}/history-charges:
+    parameters:
+      - $ref: '#/components/parameters/X-API-Client-Id'
+    get:
+      operationId: getPatientBonusesHistory
+      summary: Get Patient Bonuses History
+      description: Available for patients with confirmed profile only.
+      tags:
+        - Bonuses
+      parameters:
+        - name: id
+          in: path
+          description: Patient External ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientBonusesHistoryCharges'
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden (e.g., patient profile not confirmed)
         404:
           description: Resource not found
         500:
@@ -228,6 +263,7 @@ paths:
     get:
       operationId: getPatientConsents
       summary: Get Patient Consents
+      description: Available for patients with confirmed profile only.
       tags:
         - Consents
       parameters:
@@ -248,7 +284,7 @@ paths:
         401:
           description: Unauthorized
         403:
-          description: Forbidden
+          description: Forbidden (e.g., patient profile not confirmed)
         404:
           description: Resource not found
         500:
@@ -263,6 +299,7 @@ paths:
     patch:
       operationId: updatePatientConsent
       summary: Update Patient Consent
+      description: Available for patients with confirmed profile only.
       tags:
         - Consents
       parameters:
@@ -297,7 +334,7 @@ paths:
         401:
           description: Unauthorized
         403:
-          description: Forbidden
+          description: Forbidden (e.g., patient profile not confirmed)
         404:
           description: Resource not found
         500:
@@ -474,6 +511,7 @@ components:
         - gender
         - residenceAddress
         - profile
+        - bonuses
       properties:
         firstname:
           type: string
@@ -518,6 +556,11 @@ components:
           enum:
             - demo
             - normal
+        bonuses:
+          type: number
+          description: "Patient's bonuses amount"
+          format: double
+          example: 1000.00
         residenceAddress:
           $ref: '#/components/schemas/Address'
         registrationRequest:
@@ -540,7 +583,7 @@ components:
               example: "Your request has been rejected because of profile duplication."
     Address:
       type: object
-      description: "Patient's residence address (not implemented yet)"
+      description: "Patient's residence address"
       properties:
         street:
           type: string
@@ -568,7 +611,7 @@ components:
           example: 'Polska'
     PatientAppointments:
       type: object
-      description: "Patient's residence address (not implemented yet)"
+      description: "Patient's appointments information"
       required:
         - total
         - per_page
@@ -597,6 +640,40 @@ components:
           description: "List of appointments"
           items:
             $ref: '#/components/schemas/Appointment'
+    PatientBonusesHistoryCharges:
+      type: array
+      description: "Patient's bonuses history charges"
+      items:
+        $ref: '#/components/schemas/BonusesHistoryChargesEntry'
+    BonusesHistoryChargesEntry:
+      type: object
+      description: "Entry in the patient's bonuses history"
+      required:
+        - type
+        - date
+        - amount
+        - balance
+      properties:
+        type:
+          type: string
+          enum: [ award, spend ]
+          description: "Type of the bonus history entry, either 'award' or 'spend'."
+          example: award
+        date:
+          type: string
+          description: "Date of the bonus, format: YYYY-MM-DD"
+          format: date
+          example: "1990-01-01"
+        amount:
+          type: number
+          description: "Amount of the bonus, can be negative for type 'spend'"
+          format: double
+          example: 100.00
+        balance:
+          type: number
+          description: "Balance after the bonus operation"
+          format: double
+          example: 900.00
     Appointment:
       type: object
       description: "Patient appointment information"
