@@ -4,6 +4,7 @@ from datetime import date, datetime
 import json
 from typing import Any, Dict, List, Optional
 
+from bson import ObjectId
 from fastapi import HTTPException
 
 from integrations.panamedica.mixins import CRMIntegrationMixin
@@ -29,9 +30,8 @@ from .db.mongo.schemas import (AppointmentSchema, BonusProgramSchema,
 
 class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
     """
-    Админка для вкладки 'Основная информация'
+    Админка для вкладки 'Основная информация'.
     """
-
     model = MainInfoSchema
     collection_name = "patients_main_info"
 
@@ -40,80 +40,54 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         "ru": "Основная информация",
         "pl": "Informacje podstawowe"
     }
-    # plural_name = {
-    #     "en": "Basic information records",
-    #     "ru": "Записи основной информации",
-    #     "pl": "Rekordy podstawowych informacji"
-    # }
-    plural_name = {
-        "en": "Basic information",
-        "ru": "Основная информация",
-        "pl": "Informacje podstawowe"   
-    }
+    plural_name = verbose_name
 
-    icon: str = "pi pi-file"
+    icon = "pi pi-file"
     max_instances_per_user = 1
 
-    list_display = []
+    # ---------------------- отображение ----------------------
+    list_display: list[str] = []          # в списке карточек ничего
 
     detail_fields = [
-        "last_name",
-        "first_name",
-        "patronymic",
-        "birth_date",
-        "gender",
-        "company_name",
-        "avatar",
-        "account_status",
-        "patient_id",
-        "created_at",
-        "updated_at",
-        
+        "last_name", "first_name", "patronymic", "birth_date", "gender",
+        "company_name", "avatar",
+        "crm_link_status",                # ⇽ новое поле
+        "account_status", "patient_id",
+        "created_at", "updated_at",
     ]
 
     computed_fields = [
-        "patient_id",
-        "account_status",
-        "first_name",
-        "last_name",
-        "birth_date",
-        "gender",
-        "company_name"
+        # прежние:
+        "patient_id", "account_status",
+        "first_name", "last_name", "birth_date", "gender", "company_name",
+        # новое:
+        "crm_link_status",
     ]
 
     read_only_fields = [
-        "created_at",
-        "updated_at",
-        "patient_id",
-        "account_status",
-        "last_name",
-        "first_name",
-        "patronymic",
-        "birth_date",
-        "gender",
-        "company_name",
+        "created_at", "updated_at",
+        "patient_id", "account_status",
+        "last_name", "first_name", "patronymic",
+        "birth_date", "gender", "company_name",
+        "crm_link_status",
     ]
 
+    # ---------------------- надписи ----------------------
     field_titles = {
-        "last_name": {"en": "Last Name", "ru": "Фамилия", "pl": "Nazwisko"},
-        "first_name": {"en": "First Name", "ru": "Имя", "pl": "Imię"},
-        "patronymic": {"en": "Patronymic", "ru": "Отчество", "pl": "Drugie imię"},
-        "birth_date": {"en": "Birth Date", "ru": "Дата рождения", "pl": "Data urodzenia"},
-        "gender": {"en": "Gender", "ru": "Пол", "pl": "Płeć"},
-        "company_name": {"en": "Company Name", "ru": "Название компании", "pl": "Nazwa firmy"},
-        "avatar": {
-            "en": "Avatar",
-            "ru": "Аватар",
-            "pl": "Awatar"
-        },
-        "account_status": {
-            "en": "Account Status", "ru": "Статус аккаунта", "pl": "Status konta"
-        },
-
-        "patient_id": {"en": "Patient ID", "ru": "ID пациента", "pl": "ID pacjenta"},
-        "created_at": {"en": "Created At", "ru": "Дата создания", "pl": "Data utworzenia"},
-        "updated_at": {"en": "Updated At", "ru": "Последнее обновление", "pl": "Ostatnia aktualizacja"},
+        "last_name":      {"en": "Last Name",      "ru": "Фамилия",                    "pl": "Nazwisko"},
+        "first_name":     {"en": "First Name",     "ru": "Имя",                        "pl": "Imię"},
+        "patronymic":     {"en": "Patronymic",     "ru": "Отчество",                   "pl": "Drugie imię"},
+        "birth_date":     {"en": "Birth Date",     "ru": "Дата рождения",              "pl": "Data urodzenia"},
+        "gender":         {"en": "Gender",         "ru": "Пол",                        "pl": "Płeć"},
+        "company_name":   {"en": "Company Name",   "ru": "Компания",                   "pl": "Firma"},
+        "avatar":         {"en": "Avatar",         "ru": "Аватар",                    "pl": "Awatar"},
+        "account_status": {"en": "Account Status", "ru": "Статус аккаунта",            "pl": "Status konta"},
+        "crm_link_status":{"en": "CRM link",       "ru": "Связь с CRM",               "pl": "Połączenie z CRM"},
+        "patient_id":     {"en": "Patient ID",     "ru": "ID пациента",                "pl": "ID pacjenta"},
+        "created_at":     {"en": "Created At",     "ru": "Создано",                    "pl": "Utworzono"},
+        "updated_at":     {"en": "Updated At",     "ru": "Обновлено",                  "pl": "Zaktualizowano"},
     }
+
 
     help_texts = {
         "last_name": {
@@ -367,7 +341,7 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         return await super().create(data, current_user)
 
 
-    async def get_patient_id(self, obj: dict) -> str:
+    async def get_patient_id(self, obj: dict, current_user=None) -> str:
         """
         Просто возвращает внешний ID пациента (UUID), если есть.
         """
@@ -378,20 +352,20 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         patient    = await self.get_patient_cached(patient_id) if patient_id else None
         return patient.get(crm_field) if patient and patient.get(crm_field) else obj.get(local_field)
 
-    async def get_first_name(self, obj: dict)  -> str | None:
+    async def get_first_name(self, obj: dict, current_user=None)  -> str | None:
         return await self.crm_or_local(obj, "firstname", "first_name")
 
-    async def get_last_name(self, obj: dict)   -> str | None:
+    async def get_last_name(self, obj: dict, current_user=None)   -> str | None:
         return await self.crm_or_local(obj, "lastname",  "last_name")
 
-    async def get_birth_date(self, obj: dict)  -> datetime | None:
+    async def get_birth_date(self, obj: dict, current_user=None)  -> datetime | None:
         iso = await self.crm_or_local(obj, "birthdate", "birth_date")
         return datetime.fromisoformat(iso) if isinstance(iso, str) else iso
 
-    async def get_gender(self, obj: dict)      -> str | None:
+    async def get_gender(self, obj: dict, current_user=None)      -> str | None:
         return await self.crm_or_local(obj, "gender", "gender")
     
-    async def get_account_status(self, obj: dict) -> str:
+    async def get_account_status(self, obj: dict, current_user=None) -> str:
         """
         Статус верификации аккаунта.
         Берётся из CRM (`profile`) и преобразуется в Enum → JSON-строка.
@@ -412,6 +386,46 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         else:
             return AccountVerificationEnum.UNVERIFIED
 
+    async def get_crm_link_status(self, obj, current_user=None) -> str:
+        """
+        Возвращает мультиязычную строку-статус:
+
+        * «Нет связи с CRM» – patient_id отсутствует  
+        * «Связь есть, профиль не подтверждён» – CRM отдаёт 403 на `/consents`  
+        * «Подтверждён» – CRM отвечает успешно
+        """
+        print('='*100)
+        print(obj.get("patient_id"))
+        if not obj.get("patient_id"):
+            return {
+                "ru": "Нет связи с CRM",
+                "en": "No CRM link",
+                "pl": "Brak połączenia z CRM"
+            }
+
+        patient_id = obj["patient_id"]
+        try:
+            # прямой вызов, чтобы отловить 403, не через кеш-обёртку
+            await get_client().get_consents(patient_id)
+            return {
+                "ru": "Подтверждён",
+                "en": "Verified",
+                "pl": "Zweryfikowany"
+            }
+        except CRMError as e:
+            print(e)
+            if e.status_code == 403:
+                return {
+                    "ru": "Связь есть, профиль не подтверждён",
+                    "en": "Linked, profile unverified",
+                    "pl": "Połączono, profil niezweryfikowany"
+                }
+            # любая другая ошибка – считаем «нет связи»
+            return {
+                "ru": "Нет связи с CRM",
+                "en": "No CRM link",
+                "pl": "Brak połączenia z CRM"
+            }
 
 # ==========
 # Контактная информация
@@ -609,7 +623,7 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
         return patient.get(crm_field) if patient and patient.get(crm_field) else obj.get(local_field)
 
 
-    async def get_address(self, obj: dict) -> str | None:
+    async def get_address(self, obj: dict, current_user=None) -> str | None:
         """
         Склеиваем residenceAddress из CRM → одна строка.
         Fallback — локальный `address`.
@@ -847,40 +861,25 @@ class HealthSurveyAccount(BaseAccount):
 # ==========
 
 
-class FamilyAccount(BaseAccount):
+class FamilyAccount(BaseAccount, CRMIntegrationMixin):
     """
-    Админка для вкладки 'Семья'.
+    Вкладка «Семья».  
+    Создание – приглашение по номеру; подтверждение – со стороны приглашённого.
     """
 
     model = FamilyMemberSchema
     collection_name = "patients_family"
 
-    verbose_name = {"en": "Family", "ru": "Семья", "pl": "Rodzina"}
-    # plural_name = {"en": "Families", "ru": "Семьи", "pl": "Rodziny"}
-    plural_name = {"en": "Family", "ru": "Семья", "pl": "Rodzina"}
-    icon: str = "pi pi-users"
+    verbose_name = {"ru": "Семья", "en": "Family", "pl": "Rodzina"}
+    plural_name  = verbose_name
+    icon = "pi pi-users"
+    max_instances_per_user = None
 
-    list_display = [
-        "member_name",
-        "member_id",
-        "status",
-        "relationship",
-        "bonus_balance"
-    ]
-
-    detail_fields = ["phone", "relationship"]
-
-    computed_fields = [
-        "member_name",
-        "member_id",
-        "bonus_balance"
-    ]
-
-    read_only_fields = [
-        "member_name",
-        "member_id",
-        "bonus_balance"
-    ]
+    list_display   = ["member_name", "member_id", "status",
+                      "relationship", "bonus_balance"]
+    detail_fields  = ["phone", "relationship", "status"]
+    computed_fields = ["member_name", "member_id", "bonus_balance"]
+    read_only_fields = ["member_name", "member_id", "bonus_balance"]
 
     field_titles = {
         "phone": {"en": "Phone", "ru": "Телефон", "pl": "Telefon"},
@@ -983,27 +982,283 @@ class FamilyAccount(BaseAccount):
     allow_crud_actions = {
         "create": True,
         "read": True,
-        "update": True,
+        "update": False,
         "delete": True
     }
 
-    async def get_member_name(self, member: dict) -> Optional[str]:
-        """Вернёт имя, если статус confirmed, иначе None."""
-        if member.get("status") == FamilyStatusEnum.CONFIRMED:
-            return "Анна Петрова"
+    async def get_queryset(
+        self,
+        filters: Optional[dict] = None,
+        sort_by: Optional[str] = None,
+        order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        current_user: Optional[dict] = None,
+    ) -> List[dict]:
+        """
+        Возвращает:
+        • заявки, созданные пользователем;
+        • заявки, где пользователь — приглашённый (по patient_id).
+        """
+        print("===== get_queryset (Семья) =====")
+        print("Текущий пользователь:", current_user.data)
+
+        user_id = str(current_user.data.get("user_id"))
+        client = await self.get_master_client_by_user(current_user)
+        patient_id = str(client["patient_id"]) if client and client.get("patient_id") else None
+
+        print("→ user_id =", user_id)
+        print("→ patient_id =", patient_id)
+
+        docs: list[dict] = []
+
+        # 🔹 1. Заявки, отправленные пользователем
+        print("→ Ищем заявки, отправленные пользователем...")
+        outgoing = await super().get_queryset(
+            filters={"user_id": user_id},
+            sort_by=sort_by,
+            order=order,
+            page=None,
+            page_size=None,
+            current_user=current_user,
+            format=False,
+        )
+        print("→ Найдено исходящих заявок:", len(outgoing))
+        docs.extend(outgoing)
+
+        # 🔹 2. Заявки, где пользователь приглашён (member_id = patient_id)
+        if patient_id:
+            print("→ Ищем входящие заявки через self.db.find...")
+            cursor = self.db.find({"member_id": patient_id})
+            incoming = [doc async for doc in cursor]
+            print("→ Найдено входящих заявок:", len(incoming))
+
+            # Убираем дубликаты
+            existing_ids = {doc["_id"] for doc in docs}
+            new_incoming = [doc for doc in incoming if doc["_id"] not in existing_ids]
+            print("→ После удаления дубликатов:", len(new_incoming))
+            docs.extend(new_incoming)
+        else:
+            print("→ patient_id не найден, входящие заявки не ищем.")
+
+        # 🔹 3. Сортировка
+        if sort_by:
+            reverse = order == -1
+            print(f"→ Сортировка по: {sort_by}, порядок: {'DESC' if reverse else 'ASC'}")
+            docs.sort(key=lambda x: x.get(sort_by), reverse=reverse)
+
+        # 🔹 4. Пагинация
+        if page is not None and page_size is not None:
+            start = (page - 1) * page_size
+            end = start + page_size
+            print(f"→ Пагинация: page={page}, page_size={page_size} → [{start}:{end}]")
+            docs = docs[start:end]
+
+        # 🔹 5. Форматирование
+        print("→ Форматируем документы...")
+        formatted = []
+        for d in docs:
+            formatted_doc = await self.format_document(d, current_user)
+            formatted.append(formatted_doc)
+
+        print("→ Всего документов после форматирования:", len(formatted))
+        return formatted
+
+
+
+
+    async def get_field_overrides(self, obj=None, current_user=None) -> dict:
+        """
+        • Добавляет choices для поля status;
+        • Разрешает менять статус, если пользователь — приглашённый и заявка pending.
+        """
+        readonly = True
+        if obj and obj.get("status") == FamilyStatusEnum.PENDING:
+            client = await self.get_master_client_by_user(current_user)
+            if client and obj.get("member_id") == client.get("patient_id"):
+                readonly = False
+
+        return {
+            "status": {
+                "settings": {"readonly": readonly},
+                "choices": [
+                    {
+                        "value": FamilyStatusEnum.CONFIRMED,
+                        "label": {"ru": "Принять", "en": "Confirm", "pl": "Akceptuj"}
+                    },
+                    {
+                        "value": FamilyStatusEnum.DECLINED,
+                        "label": {"ru": "Отклонить", "en": "Decline", "pl": "Odrzuć"}
+                    }
+                ]
+            }
+        }
+
+    async def get_member_name(self, obj: dict, current_user: Optional[dict] = None) -> Optional[str]:
+        """Показываем имя, если текущий пользователь — приглашённый или заявка подтверждена."""
+        patient_id = obj.get("member_id")
+        if not patient_id:
+            return None
+
+        is_invited = False
+        print("----- NAME -----")
+        print(obj)
+        print(current_user.data.get("user_id"))
+        if current_user:
+            client = await self.get_master_client_by_user(current_user)
+            print(client)
+            is_invited = client and client.get("patient_id") == patient_id
+            print(is_invited)
+
+        if obj.get("status") == FamilyStatusEnum.CONFIRMED or is_invited:
+            print("----- PATIENT -----")
+            main_user_id = obj.get("user_id")
+            main_doc = await mongo_db.patients_main_info.find_one({"user_id": main_user_id})
+            print(main_user_id)
+            
+            
+              
+            if main_doc:
+                main_patient_id = main_doc["patient_id"]
+                print(main_patient_id)
+                patient = await self.get_patient_cached(main_patient_id) or None
+                print(patient)
+                return f'{patient.get("firstname", "")} {patient.get("lastname", "")}'.strip() if patient else None
+
+        return None
+    
+    async def get_phone(self, obj: dict, current_user: Optional[dict] = None) -> Optional[str]:
+        """Показываем телефон, если текущий пользователь — приглашённый или заявка подтверждена."""
+        patient_id = obj.get("member_id")
+        if not patient_id or not current_user:
+            return None
+
+        is_invited = False
+        client = await self.get_master_client_by_user(current_user)
+        is_invited = client and client.get("patient_id") == patient_id
+
+        if obj.get("status") == FamilyStatusEnum.CONFIRMED or is_invited:
+            main_user_id = obj.get("user_id")
+            main_doc = await mongo_db.patients_main_info.find_one({"user_id": main_user_id})
+
+            if main_doc:
+                main_patient_id = main_doc["patient_id"]
+                patient = await self.get_patient_cached(main_patient_id)
+                return patient.get("phone") if patient else None
+
         return None
 
-    async def get_member_id(self, member: dict) -> Optional[str]:
-        """Вернёт ID пациента, если статус confirmed, иначе None."""
-        if member.get("status") == FamilyStatusEnum.CONFIRMED:
-            return "PAT-123456"
+
+
+    async def get_member_id(self, obj: dict, current_user: Optional[dict] = None) -> Optional[str]:
+        """Показываем ID, если текущий пользователь — приглашённый или заявка подтверждена."""
+        patient_id = obj.get("member_id")
+        if not patient_id or not current_user:
+            return None
+
+        is_invited = False
+        client = await self.get_master_client_by_user(current_user)
+        is_invited = client and client.get("patient_id") == patient_id
+
+        if obj.get("status") == FamilyStatusEnum.CONFIRMED or is_invited:
+            main_user_id = obj.get("user_id")
+            main_doc = await mongo_db.patients_main_info.find_one({"user_id": main_user_id})
+
+            if main_doc:
+                return main_doc.get("patient_id")
+
         return None
 
-    async def get_bonus_balance(self, member: dict) -> int:
-        """Возвращает заглушку для бонусов — 250 если confirmed, иначе 0."""
-        if member.get("status") == FamilyStatusEnum.CONFIRMED:
-            return 250
+
+
+    async def get_bonus_balance(self, obj: dict, current_user: Optional[dict] = None) -> Optional[int]:
+        """Показываем бонусы, если текущий пользователь — приглашённый или заявка подтверждена."""
+        patient_id = obj.get("member_id")
+        if not patient_id or not current_user:
+            return None
+
+        is_invited = False
+        client = await self.get_master_client_by_user(current_user)
+        is_invited = client and client.get("patient_id") == patient_id
+
+        if obj.get("status") == FamilyStatusEnum.CONFIRMED or is_invited:
+            main_user_id = obj.get("user_id")
+            main_doc = await mongo_db.patients_main_info.find_one({"user_id": main_user_id})
+
+            if main_doc:
+                main_patient_id = main_doc["patient_id"]
+                patient = await self.get_patient_cached(main_patient_id)
+                return patient.get("bonuses") if patient else None
+
         return None
+
+
+
+    async def create(self, data: dict, current_user=None):
+        """
+        Создаёт приглашение:
+        • нормализует телефон,
+        • сохраняет user_id отправителя и статус pending,
+        • сохраняет имя и бонусы приглашённого, если есть patient_id.
+        """
+        if current_user and getattr(current_user, "data", None):
+            data["user_id"] = str(current_user.data["user_id"])
+        data["status"] = FamilyStatusEnum.PENDING
+        phone_key = normalize_numbers(data["phone"])
+        data["phone"] = phone_key
+        crm_phone = format_crm_phone(phone_key)
+        print("===== Проверка =====")
+        print(phone_key)
+        contact_info = await self.get_contact_info_by_phone(phone_key)
+        print(contact_info)
+        if contact_info:
+            user_id = contact_info.get("user_id")
+            print(user_id)
+            client = await mongo_db.patients_main_info.find_one({"user_id": user_id})
+            print(client)
+
+            if client and client.get("patient_id"):
+                patient = await self.get_patient_cached(client["patient_id"])
+                if patient:
+                    data["member_id"] = patient["externalId"]
+                    data["member_name"] = f'{patient.get("firstname", "")} {patient.get("lastname", "")}'.strip()
+                    data["bonus_balance"] = patient.get("bonuses")
+                    print(data)
+
+        return await super().create(data, current_user)
+
+    async def update(self, object_id: str, data: dict, current_user=None):
+        """
+        Разрешает приглашённому принять / отклонить заявку.
+        При подтверждении:
+        • сохраняет ID пациента, имя, бонусы.
+        """
+        current = await self.get(object_id, current_user)
+        if not current or current.get("status") != FamilyStatusEnum.PENDING:
+            raise HTTPException(400, "Only pending requests can be modified.")
+
+        client = await self.get_master_client_by_user(current_user)
+        if not client or current.get("member_id") != client.get("patient_id"):
+            raise HTTPException(403, "You are not the invited member.")
+
+        new_status = data.get("status")
+        if new_status not in [FamilyStatusEnum.CONFIRMED, FamilyStatusEnum.DECLINED]:
+            raise HTTPException(400, "Invalid status value.")
+
+        patch = {"status": new_status}
+
+        if new_status == FamilyStatusEnum.CONFIRMED:
+            patient = await self.get_patient_cached(client["patient_id"])
+            if patient:
+                patch["member_id"] = patient["externalId"]
+                patch["member_name"] = f'{patient.get("firstname", "")} {patient.get("lastname", "")}'.strip()
+                patch["bonus_balance"] = patient.get("bonuses")
+
+        return await super().update(object_id, patch, current_user)
+
+    async def get_contact_info_by_phone(self, crm_phone: str) -> Optional[dict]:
+        """Находит документ ContactInfo по телефону."""
+        return await mongo_db.patients_contact_info.find_one({"phone": crm_phone})
 
 
 # ==========
@@ -1360,7 +1615,7 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
     # -----------------------------------------------------------------
     # 4.  Вычисляемые поля
     # -----------------------------------------------------------------
-    async def get_balance(self, obj: dict) -> int:
+    async def get_balance(self, obj: dict, current_user=None) -> int:
         """
         Возвращает текущий баланс из CRM (поле bonuses).
         Если не найден — fallback: считаем по транзакциям.
@@ -1384,8 +1639,8 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
         return 0
 
 
-    async def get_referral_code(self, obj: dict) -> str:
-        return obj.get("referral_code") or "IVAN2023"
+    async def get_referral_code(self, obj: dict, current_user=None) -> str:
+        return obj.get("referral_code") or "Error"
 
 
 # ==========

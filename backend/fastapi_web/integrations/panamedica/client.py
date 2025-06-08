@@ -6,6 +6,8 @@ from datetime import date
 from functools import lru_cache
 from uuid import uuid4
 
+from bson import ObjectId
+from db.mongo.db_init import mongo_db
 import httpx
 from fastapi import HTTPException, status
 
@@ -45,6 +47,46 @@ class CRMClient:
             return val
 
         return {k: extract_en(v) for k, v in payload.items()}
+    
+    async def handle_missing_patient_by_id(self, patient_id: str):
+        """
+        Проверяет локальные документы, связанные с patient_id.
+        Если пользователь — клиент, удаляет все.
+        Иначе — сбрасывает patient_id в None.
+        """
+        main_doc = await mongo_db["patients_main_info"].find_one({"patient_id": patient_id})
+        if not main_doc:
+            return  # нечего делать
+
+        user_id = main_doc.get("user_id")
+        if not user_id:
+            return
+
+        user = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+        is_client = user and user.get("role") == "client"
+
+        collections = [
+            "patients_main_info",
+            "patients_contact_info",
+            "patients_bonus",
+            "patients_consents",
+            "patients_family",
+        ]
+
+        if is_client:
+            for coll in collections:
+                await mongo_db[coll].delete_many({"user_id": str(user_id)})
+        else:
+            await mongo_db["patients_contact_info"].update_many(
+                {"user_id": str(user_id)},
+                {"$unset": {"phone": None}}
+            )
+            for coll in collections:
+                await mongo_db[coll].update_many(
+                    {"user_id": str(user_id)},
+                    {"$unset": {"patient_id": None}}
+                )
+
 
 
     # ==============================================================
@@ -125,9 +167,11 @@ class CRMClient:
             )
 
         if resp.status_code == 302:
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, "CRM returned redirect")
+            raise CRMError(status.HTTP_302_FOUND, "CRM returned redirect")
         if resp.status_code == 404:
             raise CRMError(status.HTTP_404_NOT_FOUND, "Not found")
+        if resp.status_code == 403:
+            raise CRMError(status.HTTP_403_FORBIDDEN, "Forbidden")
         if resp.status_code >= 400:
             raise CRMError(status.HTTP_502_BAD_GATEWAY, f"CRM error {resp.status_code}")
         if not resp.content:
@@ -156,9 +200,15 @@ class CRMClient:
         # 1) поиск по нашему внешнему ID
         if patient_id:
             try:
+                print('1')
                 return await self.get_patient(patient_id)
-            except CRMError:
-                return None
+            except CRMError as e:
+                print('2')
+                if e.status_code == status.HTTP_404_NOT_FOUND:
+                    print('3')
+                    await self.handle_missing_patient_by_id(patient_id)
+                    return None
+                raise
 
         # 2) поиск по параметрам
         phone_key = normalize_numbers(phone)
@@ -230,10 +280,11 @@ class CRMClient:
         phone_key = normalize_numbers(contact_data.get("phone"))
         crm_phone = format_crm_phone(phone_key)
         pesel = contact_data.get("pesel")
-        gender = local_data.get("gender")
+        gender = json.loads(local_data.get("gender")).get("en")
         bdate_raw = local_data.get("birth_date")
         bdate = bdate_raw.strftime("%Y-%m-%d") if bdate_raw else None
         email = contact_data.get("email", "")
+        print(crm_phone, gender, bdate)
 
         if not crm_phone or not gender or not bdate:
             raise CRMError(
@@ -265,7 +316,7 @@ class CRMClient:
             pesel=pesel,
         )
         # получаем полную карточку + гарантируем внешний ID
-        full = await self.get_patient(created["externalId"])
+        full = await self.find_patient(patient_id=created["externalId"])
         full.setdefault("externalId", external_id)
         return full, True
 
@@ -308,7 +359,7 @@ class CRMClient:
     async def get_bonus_balance(self, patient_id: str) -> int:
         """Возвращает текущий баланс бонусов пациента."""
         print("\n======= get_bonus_balance() =======")
-        patient = await self.get_patient(patient_id)
+        patient = await self.find_patient(patient_id=patient_id)
         return int(patient.get("bonuses", 0))
 
     async def get_bonus_history(self, patient_id: str) -> list[dict]:

@@ -44,7 +44,7 @@ class CRMIntegrationMixin:
                 pass  # повреждённый кеш игнорируем
 
         try:
-            patient = await get_client().get_patient(patient_id)
+            patient = await get_client().find_patient(patient_id=patient_id)
             await redis_db.set(cache_key, json.dumps(patient), ex=10)
             return patient
         except CRMError:
@@ -64,7 +64,7 @@ class CRMIntegrationMixin:
                 contact_data=contact,
             )
         except CRMError as e:
-            raise HTTPException(502, "CRM error during creation") from e
+            raise HTTPException(e.status_code, "CRM error during creation") from e
 
         valid["patient_id"] = crm_data.get("externalId")
         valid["account_status"] = AccountVerificationEnum.UNVERIFIED
@@ -138,7 +138,7 @@ class CRMIntegrationMixin:
             return AccountVerificationEnum(cached.decode())
 
         try:
-            patient = await get_client().get_patient(patient_id)
+            patient = await get_client().find_patient(patient_id=patient_id)
             status_enum = (
                 AccountVerificationEnum.VERIFIED
                 if patient.get("profile") == "normal"

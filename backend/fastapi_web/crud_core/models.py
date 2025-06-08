@@ -416,10 +416,16 @@ class BaseCrudCore:
         for field in fields_set:
             result[field] = parse_json_recursive(doc.get(field))
 
+        # for cf in self.computed_fields:
+        #     method = getattr(self, f"get_{cf}", None)
+        #     if method:
+        #         result[cf] = parse_json_recursive(await method(doc))
+
         for cf in self.computed_fields:
             method = getattr(self, f"get_{cf}", None)
             if method:
-                result[cf] = parse_json_recursive(await method(doc))
+                result[cf] = parse_json_recursive(await method(doc, current_user=current_user))
+
 
         result.update(await self.get_inlines(doc, current_user))
         return result

@@ -102,11 +102,11 @@ class HealthFormStatus(str, Enum):
 # Семья
 # ==========
 
-
 class RelationshipEnum(BaseJsonEnumMixin, str, Enum):
     SPOUSE = json.dumps({
         "en": "Spouse",
         "ru": "Супруг(а)",
+        "pl": "Współmałżonek",
         "settings": {
             "color": "#8E24AA"
         }
@@ -114,6 +114,7 @@ class RelationshipEnum(BaseJsonEnumMixin, str, Enum):
     CHILD = json.dumps({
         "en": "Child",
         "ru": "Ребёнок",
+        "pl": "Dziecko",
         "settings": {
             "color": "#1E88E5"
         }
@@ -121,6 +122,7 @@ class RelationshipEnum(BaseJsonEnumMixin, str, Enum):
     OTHER = json.dumps({
         "en": "Other",
         "ru": "Другое",
+        "pl": "Inne",
         "settings": {
             "color": "#757575"
         }
@@ -137,6 +139,11 @@ class FamilyStatusEnum(BaseJsonEnumMixin, str, Enum):
         "en": "Confirmed",
         "ru": "Подтверждено",
         "pl": "Potwierdzony"
+    })
+    DECLINED = json.dumps({
+        "en": "Declined",
+        "ru": "Отклонено",
+        "pl": "Odrzucony"
     })
 
 

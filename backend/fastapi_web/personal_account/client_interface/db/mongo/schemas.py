@@ -25,6 +25,8 @@ class RegistrationSchema(BaseModel):
     phone: str
     email: Optional[EmailStr] = None
     full_name: str
+    birth_date: Optional[datetime] = None
+    gender: Optional[GenderEnum] = None
     password: str
     password_confirm: str
     accept_terms: bool = False
@@ -84,8 +86,8 @@ class MainInfoSchema(BaseValidatedModel):
         default=None,
     )
 
-    last_name: str
-    first_name: str
+    last_name: Optional[str] = None
+    first_name: Optional[str] = None
     patronymic: Optional[str] = None
 
     birth_date: Optional[datetime] = Field(
@@ -123,6 +125,11 @@ class MainInfoSchema(BaseValidatedModel):
         default=AccountVerificationEnum.UNVERIFIED,
         json_schema_extra={"settings": {"readonly": True}}
     )
+    crm_link_status: Optional[str] = Field(
+        default="",
+        json_schema_extra={"settings": {"readonly": True}}
+    )
+
 
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
@@ -238,8 +245,8 @@ class HealthSurveySchema(BaseValidatedModel):
         }
     )
 
-    chronic_conditions: List[ConditionEnum] = Field(
-        ...,
+    chronic_conditions: Optional[List[ConditionEnum]] = Field(
+        None,
         json_schema_extra={
             "settings": {
                 # "type": "color_multiselect",
@@ -328,7 +335,7 @@ class HealthSurveySchema(BaseValidatedModel):
 
 class FamilyMemberSchema(BaseValidatedModel):
     """
-    Схема для вкладки 'Семья'. Использует json_schema_extra для настроек UI.
+    Схема одной записи во вкладке «Семья».
     """
 
     phone: str = Field(
@@ -338,8 +345,8 @@ class FamilyMemberSchema(BaseValidatedModel):
                 "type": "phone",
                 "mask": "+9 (999) 999-99-99",
                 "placeholder": {
-                    "en": "Enter phone number",
                     "ru": "Введите номер телефона",
+                    "en": "Enter phone number",
                     "pl": "Wprowadź numer telefonu"
                 }
             }
@@ -352,22 +359,28 @@ class FamilyMemberSchema(BaseValidatedModel):
             "settings": {
                 "type": "select",
                 "placeholder": {
-                    "en": "Select relationship",
                     "ru": "Выберите тип родства",
+                    "en": "Select relationship",
                     "pl": "Wybierz relację"
                 }
             }
         }
     )
 
+    # ▼––– статус оформлен как Enum, но UI получит список «choices»
     status: FamilyStatusEnum = Field(
         default=FamilyStatusEnum.PENDING,
         json_schema_extra={
             "settings": {
                 "type": "select",
+                "choices": [
+                    {"value": FamilyStatusEnum.PENDING,   "label": {"ru": "Ожидает",  "en": "Pending",  "pl": "Oczekuje"}},
+                    {"value": FamilyStatusEnum.CONFIRMED, "label": {"ru": "Принято",  "en": "Confirmed","pl": "Przyjęto"}},
+                    {"value": FamilyStatusEnum.DECLINED,  "label": {"ru": "Отклонено","en": "Declined", "pl": "Odrzucono"}},
+                ],
                 "placeholder": {
-                    "en": "Select status",
                     "ru": "Выберите статус",
+                    "en": "Select status",
                     "pl": "Wybierz status"
                 }
             }
@@ -380,8 +393,8 @@ class FamilyMemberSchema(BaseValidatedModel):
             "settings": {
                 "type": "calendar",
                 "placeholder": {
-                    "en": "Select birth date",
                     "ru": "Выберите дату рождения",
+                    "en": "Select birth date",
                     "pl": "Wybierz datę urodzenia"
                 }
             }
@@ -395,8 +408,8 @@ class FamilyMemberSchema(BaseValidatedModel):
                 "type": "text",
                 "hide_if_none": True,
                 "placeholder": {
-                    "en": "Full name",
                     "ru": "Полное имя",
+                    "en": "Full name",
                     "pl": "Imię i nazwisko"
                 }
             }
@@ -410,8 +423,8 @@ class FamilyMemberSchema(BaseValidatedModel):
                 "type": "text",
                 "hide_if_none": True,
                 "placeholder": {
-                    "en": "Patient ID",
                     "ru": "ID пациента",
+                    "en": "Patient ID",
                     "pl": "ID pacjenta"
                 }
             }
@@ -425,8 +438,8 @@ class FamilyMemberSchema(BaseValidatedModel):
                 "type": "int",
                 "hide_if_none": True,
                 "placeholder": {
-                    "en": "Bonuses",
                     "ru": "Бонусы",
+                    "en": "Bonuses",
                     "pl": "Bonusy"
                 }
             }

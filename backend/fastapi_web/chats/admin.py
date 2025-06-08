@@ -127,7 +127,7 @@ class ChatMessageInline(InlineAdmin):
             for msg in messages
         ])
 
-    async def get_confidence_status(self, obj: dict) -> str:
+    async def get_confidence_status(self, obj: dict, current_user=None) -> str:
         evaluation = obj.get("gpt_evaluation", {})
 
         status = {
@@ -184,7 +184,7 @@ class ChatMessageInline(InlineAdmin):
 
         return json.dumps(status, ensure_ascii=False, cls=DateTimeEncoder)
 
-    async def get_read_by_display(self, obj: dict) -> str:
+    async def get_read_by_display(self, obj: dict, current_user=None) -> str:
         parent = getattr(self, "parent_document", None)
         if not parent:
 
@@ -294,7 +294,7 @@ class ClientInline(InlineAdmin):
 
         return [await self.format_document(client) for client in unique_clients.values()]
 
-    async def get_metadata_display(self, obj: dict) -> str:
+    async def get_metadata_display(self, obj: dict, current_user=None) -> str:
         """Возвращает строковое представление метаданных клиента."""
         metadata = obj.get("metadata")
         return ", ".join(f"{key}: {value}" for key,
@@ -457,18 +457,18 @@ class ChatSessionAdmin(BaseAdmin):
         return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))
 
     # ────────────────────────── вычисляемые поля ──────────────────────────────
-    async def get_status_display(self, obj: dict) -> str:
+    async def get_status_display(self, obj: dict, current_user=None) -> str:
         chat_session = ChatSession(**obj)
         redis_key = f"chat:session:{chat_session.chat_id}"
         status = await calculate_chat_status(chat_session, redis_key)
         print(status)
         return status.value
 
-    async def get_status_emoji(self, obj: dict) -> str:
+    async def get_status_emoji(self, obj: dict, current_user=None) -> str:
         status_json = json.loads(await self.get_status_display(obj))
         return self.STATUS_EMOJI_MAP.get(status_json.get("en"), "❓")
 
-    async def get_duration_display(self, obj: dict) -> str:
+    async def get_duration_display(self, obj: dict, current_user=None) -> str:
         created_at, last_activity = obj.get("created_at"), obj.get("last_activity")
         if not created_at or not last_activity:
             return json.dumps({"en": "0h 0m", "ru": "0ч 0м"}, ensure_ascii=False, cls=DateTimeEncoder)
@@ -481,7 +481,7 @@ class ChatSessionAdmin(BaseAdmin):
             ensure_ascii=False, cls=DateTimeEncoder
         )
 
-    async def get_client_id_display(self, obj: dict) -> str:
+    async def get_client_id_display(self, obj: dict, current_user=None) -> str:
         client_data = obj.get("client")
         value = "N/A"
         if isinstance(client_data, dict):
@@ -491,7 +491,7 @@ class ChatSessionAdmin(BaseAdmin):
                 value = master.client_id
         return value
 
-    async def get_client_source_display(self, obj: dict) -> str:
+    async def get_client_source_display(self, obj: dict, current_user=None) -> str:
         client_data = obj.get("client")
         value = "Unknown"
         if isinstance(client_data, dict):
@@ -500,7 +500,7 @@ class ChatSessionAdmin(BaseAdmin):
                 value = client.source.replace("_", " ").capitalize()
         return json.dumps(value, ensure_ascii=False, cls=DateTimeEncoder)
 
-    async def get_participants_display(self, obj: dict) -> str:
+    async def get_participants_display(self, obj: dict, current_user=None) -> str:
         messages = obj.get("messages", [])
         if not messages:
             return json.dumps([], ensure_ascii=False, cls=DateTimeEncoder)
