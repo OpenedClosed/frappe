@@ -37,6 +37,14 @@ async def create_or_get_chat(
     logging.error(f"user_id {user_id}")
     logging.error(f"timestamp {timestamp}")
     logging.error(f"hash {hash}")
+    token_user_id = None
+    print("ТОКЕН ЕСТЬ" if Authorize else None)
+    if Authorize is not None:
+        print('555')
+        try:
+            token_user_id = Authorize.get_jwt_subject()
+        except Exception:
+            token_user_id = None
     if user_id and timestamp and hash:
         source = ChatSource.TELEGRAM_MINI_APP
 
@@ -61,7 +69,8 @@ async def create_or_get_chat(
         company_name=company_name,
         bot_id=bot_id,
         metadata=metadata,
-        request=request
+        request=request,
+        token_user_id=token_user_id,
     )
 
 

@@ -57,6 +57,9 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     typing_manager = await get_typing_manager(chat_id)
 
     client_id = await get_client_id(websocket, chat_id, is_superuser, user_id=user_id)
+    print('x'*100)
+    print(user_data)
+    print(client_id)
     user_data["client_id"] = client_id
 
     await manager.connect(websocket, client_id)

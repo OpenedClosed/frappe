@@ -1288,7 +1288,8 @@ async def handle_superuser_message(
         name=metadata.get("name"),
         avatar_url=metadata.get("avatar_url"),
         metadata=metadata,
-        user_id=user_id
+        user_id=user_id,
+        
     )
 
     new_msg = ChatMessage(
