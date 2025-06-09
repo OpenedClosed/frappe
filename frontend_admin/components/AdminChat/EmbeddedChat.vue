@@ -57,10 +57,9 @@
       :text-messages="textMessagesJson"
     >
       <div slot="room-header-avatar" class="flex items-center justify-center">
-        
         <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2"/>
         <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2"/>
-      </div>
+      </div> 
       <div slot="room-header-info" class="flex-1">
         <!-- 🔥 Added flex-1 here -->
         <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
