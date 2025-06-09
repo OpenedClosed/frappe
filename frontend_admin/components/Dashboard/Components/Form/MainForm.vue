@@ -69,6 +69,8 @@
           </div>
         </div>
 
+      
+      </div>
         <!-- Control Buttons -->
         <div class="mt-4 flex flex-col md:flex-row gap-2">
           <!-- Existing item: edit, save and delete -->
@@ -106,7 +108,6 @@
             @click="goBack"
           />
         </div>
-      </div>
     </div>
 
     <!-- Chat view -->

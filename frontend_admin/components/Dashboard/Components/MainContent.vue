@@ -1,14 +1,10 @@
 <!-- pages/${currentPageName.value}/[group]/[entity]/index.vue -->
 <template>
-  <div
-    class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight"
-    :class="[currentPageName === 'personal_account' ? '' : '']"
-  >
+  <div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight"
+    :class="[currentPageName === 'personal_account' ? '' : '']">
     <!-- Main Layout with Sidebar and DataTable -->
-    <div
-      class="max-w-full flex flex-row flex-1 w-full"
-      :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-between']"
-    >
+    <div class="max-w-full flex flex-row flex-1 w-full"
+      :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-between']">
       <!-- Navigation Sidebar Component -->
       <NavigationSidebar class="flex justify-start" v-if="currentPageName === 'admin'" :navItems="navItems" />
 
@@ -16,123 +12,65 @@
       <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
 
       <div v-if="isLoading || isLoadingData" class="flex justify-center items-center w-full h-full p-8">
-        <Loader style="width:50px; height:50px" />
-
+        <Loader style="width: 50px; height: 50px" />
       </div>
       <div v-else class="flex flex-1">
         <!-- Check if group is "knowledge-base" -->
         <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col flex-1 min-w-0 justify-start">
           <KnowledgeBase />
         </div>
-        <div v-else-if="currentGroup === 'support'" class="flex flex-col flex-1 flex-1 min-h-0 min-w-0 justify-start p-4">
+        <div v-else-if="currentGroup === 'support'"
+          class="flex flex-col flex-1 flex-1 min-h-0 min-w-0 justify-start p-4">
           <SupportPage class="m-4" />
         </div>
-        <div
-          v-else-if="currentEntity === 'patients_health_survey' && !currentId"
-          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
-        >
-          <Button
-            @click="onClickCreate"
-            icon="pi pi-plus"
-            class="max-w-[350px]"
-            :label="t('MainContent.buttons.fillHealthSurvey')"
-          ></Button>
+        <div v-else-if="currentEntity === 'patients_health_survey' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
+          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
+            :label="t('MainContent.buttons.fillHealthSurvey')"></Button>
         </div>
-        <div
-          v-else-if="currentEntity === 'patients_main_info' && !currentId"
-          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
-        >
-          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillMainInfo')"></Button>
+        <div v-else-if="currentEntity === 'patients_main_info' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
+          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
+            :label="t('MainContent.buttons.fillMainInfo')"></Button>
         </div>
-        <div
-          v-else-if="currentEntity === 'patients_contact_info' && !currentId"
-          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
-        >
-          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillContactInfo')"></Button>
+        <div v-else-if="currentEntity === 'patients_contact_info' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
+          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
+            :label="t('MainContent.buttons.fillContactInfo')"></Button>
         </div>
-        <div
-          v-else-if="currentEntity === 'patients_consents' && !currentId"
-          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
-        >
-          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
+        <div v-else-if="currentEntity === 'patients_consents' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
+          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
+            :label="t('MainContent.buttons.fillConsents')"></Button>
         </div>
-        <div
-          v-else-if="currentEntity === 'crm_appointments' && !currentId"
-          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
-        >
-          <CRMTable
-            :title="currentEntityName"
-            :isInline="isEntityInline"
-            :displayedColumns="displayedColumns"
-            :tableData="tableDataOriginal"
-            :isLoading="isLoading"
-            :fieldOptions="fieldOptions"
-            :rows="pageSize"
-            :first="(currentPage - 1) * pageSize"
-            :totalRecords="totalRecords"
-            :paginator="true"
-            @page="onPageChange"
-            @exportToExcel="onExportToExcel"
-            @showFilter="showFilterDialog"
-            @filterChange="handleFilterChange"
-          />
+        <div v-else-if="currentEntity === 'crm_appointments' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
+          <CRMTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
+            :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
+            :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
+            @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
         </div>
-        <div
-          v-else-if="currentEntity === 'patients_family' && !currentId"
-          class="flex w-full flex-col flex-1 min-w-0 justify-start items-center p-4"
-        >
-          <FamilyTable
-            :title="currentEntityName"
-            :isInline="isEntityInline"
-            :displayedColumns="displayedColumns"
-            :tableData="tableDataOriginal"
-            :isLoading="isLoading"
-            :fieldOptions="fieldOptions"
-            :rows="pageSize"
-            :first="(currentPage - 1) * pageSize"
-            :totalRecords="totalRecords"
-            :paginator="true"
-            @page="onPageChange"
-            @exportToExcel="onExportToExcel"
-            @showFilter="showFilterDialog"
-            @filterChange="handleFilterChange"
-          />
+        <div v-else-if="currentEntity === 'patients_family' && !currentId"
+          class="flex w-full flex-col flex-1 min-w-0 justify-start items-center p-4">
+          <FamilyTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
+            :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
+            :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
+            @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
         </div>
-        <div
-          v-else-if="currentEntity === 'chat_sessions' && !currentId"
-          class="flex w-full flex-col min-w-0 justify-start items-center m-4"
-        >
-          <EmbeddedChat
-            class="w-full"
-            v-if="filteredTableData.length > 0"
-            :id="filteredTableData[0]?.chat_id"
-            :chatsData="filteredTableData"
-            :totalRecords="totalRecords"
-            @page="changeCurrentPage"
-            :isRoomsLoading="isLoading"
-            @exportToExcel="onExportToExcel"
-          />
+        <div v-else-if="currentEntity === 'chat_sessions' && !currentId"
+          class="flex w-full flex-col min-w-0 justify-start items-center m-4">
+          <EmbeddedChat class="w-full" v-if="filteredTableData.length > 0" :id="filteredTableData[0]?.chat_id"
+            :chatsData="filteredTableData" :totalRecords="totalRecords" @page="changeCurrentPage"
+            :isRoomsLoading="isLoading" @exportToExcel="onExportToExcel" />
         </div>
 
         <!-- Default behavior: Show Data Table -->
         <div v-else-if="currentEntity && !currentId" class="flex flex-col flex-1 min-w-0 justify-between m-4">
-          <DynamicDataTable
-            v-if="currentPageInstances > 1 || currentPageName === 'admin'"
-            :title="currentEntityName"
-            :isInline="isEntityInline"
-            :displayedColumns="displayedColumns"
-            :tableData="filteredTableData"
-            :isLoading="isLoading"
-            :fieldOptions="fieldOptions"
-            :rows="pageSize"
-            :first="(currentPage - 1) * pageSize"
-            :totalRecords="totalRecords"
-            :paginator="true"
-            @page="onPageChange"
-            @exportToExcel="onExportToExcel"
-            @showFilter="showFilterDialog"
-            @filterChange="handleFilterChange"
-          />
+          <DynamicDataTable v-if="currentPageInstances > 1 || currentPageName === 'admin'" :title="currentEntityName"
+            :isInline="isEntityInline" :displayedColumns="displayedColumns" :tableData="filteredTableData"
+            :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize" :first="(currentPage - 1) * pageSize"
+            :totalRecords="totalRecords" :paginator="true" @page="onPageChange" @exportToExcel="onExportToExcel"
+            @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
         </div>
 
         <div v-else class="flex flex-col flex-1 min-w-0 justify-start">
@@ -142,13 +80,8 @@
     </div>
 
     <!-- Filter Dialog -->
-    <Dialog
-      :header="t('MainContent.dialog.filterOptions')"
-      v-model:visible="showFilter"
-      :modal="true"
-      :closable="true"
-      :style="{ width: '25rem' }"
-    >
+    <Dialog :header="t('MainContent.dialog.filterOptions')" v-model:visible="showFilter" :modal="true" :closable="true"
+      :style="{ width: '25rem' }">
       <!-- Add additional filter options here -->
       <!-- <DateRangeFilter @applyFilter="applyDateFilter" /> -->
     </Dialog>
