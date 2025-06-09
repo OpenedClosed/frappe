@@ -19,7 +19,7 @@
         <Loader style="width:50px; height:50px" />
 
       </div>
-      <div v-else>
+      <div v-else class="flex flex-1">
         <!-- Check if group is "knowledge-base" -->
         <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col flex-1 min-w-0 justify-start">
           <KnowledgeBase />
