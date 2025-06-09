@@ -169,7 +169,7 @@ class ContactInfoSchema(BaseValidatedModel):
         json_schema_extra={
             "settings": {
                 "type": "phone",
-                "mask": "+9 (999) 999-99-99"
+                "mask": "+99 (999) 999-999"
             }
         }
     )
@@ -208,7 +208,7 @@ class ContactInfoSchema(BaseValidatedModel):
         json_schema_extra={
             "settings": {
                 "type": "phone",
-                "mask": "+9 (999) 999-99-99",
+                "mask": "+99 (999) 999-999",
                 "allowExtraText": True,
                 "placeholder": {
                     "ru": "Введите номер экстренного контакта",
@@ -348,7 +348,7 @@ class FamilyMemberSchema(BaseValidatedModel):
         json_schema_extra={
             "settings": {
                 "type": "phone",
-                "mask": "+9 (999) 999-99-99",
+                "mask": "+99 (999) 999-999",
                 "placeholder": {
                     "ru": "Введите номер телефона",
                     "en": "Enter phone number",

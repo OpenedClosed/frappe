@@ -1808,7 +1808,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
     }
 
     allow_crud_actions = {
-        "create": True,
+        "create": False,
         "read": True,
         "update": True,
         "delete": False
@@ -1823,7 +1823,17 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         if not patient_id:
             return doc
 
-        crm_raw = await self.get_consents_cached(patient_id)
+        crm_raw, e = await self.get_consents_cached(patient_id)
+        if e:
+            raise HTTPException(
+                400,
+                detail={
+                    "ru": "Согласия доступны после подтверждения в системе PaNa",
+                    "en": "Consents are available after confirmation in the PaNa system",
+                    "pl": "Zgody są dostępne po potwierdzeniu w systemie PaNa"
+                }
+            )
+
         crm_set = {(c["id"], c.get("accepted", False)) for c in crm_raw}
         crm_items = [ConsentItem(id=i, accepted=a) for i, a in crm_set]
 
@@ -2067,8 +2077,17 @@ class AppointmentAccount(BaseAccount, CRMIntegrationMixin):
             return []
 
         # берём визиты «с сегодняшнего дня и далее»
-        crm_raw = await self.get_future_appointments_cached(patient_id, date.today())
-        print(crm_raw)
+        crm_raw, e = await self.get_future_appointments_cached(patient_id, date.today())
+
+        if e:
+            raise HTTPException(
+                400,
+                detail={
+                    "ru": "Расписание встреч доступно после подтверждения в системе PaNa",
+                    "en": "Appointment schedule is available after confirmation in the PaNa system",
+                    "pl": "Harmonogram wizyt jest dostępny po potwierdzeniu w systemie PaNa"
+                }
+            )
 
         # энд-поинт может вернуть как список, так и объект-страницу
         rows = crm_raw.get("data") if isinstance(crm_raw, dict) and "data" in crm_raw else crm_raw
