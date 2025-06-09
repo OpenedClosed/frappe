@@ -1,18 +1,18 @@
 <template>
   <div class="flex px-4 py-2">
     <!-- Карточка с основными сведениями о пациенте -->
-    <div class="bg-white dark:bg-neutralDark border-2 shadow rounded flex-1 flex flex-row justify-between items-center p-4 gap-4">
-      <div class="flex items-center gap-4">
-        <Avatar v-if="patientAvatar" :image="currentUrl  + patientAvatar " class="mr-2" size="xlarge" shape="circle" />
-        <Avatar v-else icon="pi pi-user" class="mr-2" size="xlarge" shape="circle" />
-        <div class="flex flex-col">
-          <div class="text-xl font-bold text-black dark:text-white">
+    <div class="bg-white dark:bg-neutralDark border-2 shadow rounded flex-1 flex flex-col md:flex-row justify-between items-center p-4 gap-4">
+      <div class="flex flex-col md:flex-row items-center gap-4">
+        <Avatar v-if="patientAvatar" :image="currentUrl  + patientAvatar " size="xlarge" shape="circle" />
+        <Avatar v-else icon="pi pi-user" size="xlarge" shape="circle" />
+        <div class="flex flex-col ">
+          <div class="text-xl text-center md:text-start font-bold text-black dark:text-white">
             {{ patientName }}
           </div>
-          <div class="text-sm">{{ t('InfoHeader.patientIdPrefix') }} {{ patientId }} • {{ t('InfoHeader.bonusPrefix') }} {{ bonusCount }}</div>
+          <div class="text-sm text-center md:text-start">{{ t('InfoHeader.patientIdPrefix') }} {{ patientId }} • {{ t('InfoHeader.bonusPrefix') }} {{ bonusCount }}</div>
         </div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-col md:flex-row items-center gap-2">
          <Dropdown
             v-model="selectedLocale"
             :options="languageOptions"

@@ -2,7 +2,7 @@
   <div class="p-4 rounded border shadow-sm bg-white dark:bg-secondaryDark">
     <h2 class="text-2xl font-bold mb-4">{{ t("PatientsMainInfoView.sectionTitle") }}</h2>
 
-    <div class="flex gap-10">
+    <div class="flex gap-10 overflow-x-auto flex-col md:flex-row">
       <div v-for="(columnGroups, colIndex) in normalizedGroups" :key="colIndex" class="flex-1 flex flex-col gap-6">
         <div v-for="group in columnGroups" :key="group.title.en">
           <h3 class="text-lg font-bold mb-2">{{ group.title[currentLanguage] || group.title["en"] || "" }}</h3>

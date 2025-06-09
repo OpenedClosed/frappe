@@ -10,7 +10,7 @@
       v-if="tableData && tableData.length > 0"
       v-for="(member, index) in tableData"
       :key="index"
-      class="flex items-center justify-between p-4 rounded-lg border border-gray-200 gap-4"
+      class="flex items-center justify-between p-4 rounded-lg border border-gray-200 gap-4 overflow-x-auto"
     >
       <div class="flex-1 flex flex-row justify-start items-center gap-4">
         <Avatar icon="pi pi-user" class="mr-2" size="medium" shape="circle" />
