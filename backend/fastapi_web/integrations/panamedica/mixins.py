@@ -157,7 +157,9 @@ class CRMIntegrationMixin:
         if cached:
             try:
                 parsed = json.loads(cached)
-                return parsed.get("data", []), parsed.get("error")
+                error_data = parsed.get("error")
+                error = CRMError(**error_data) if error_data else None
+                return parsed.get("data", []), error
             except Exception:
                 print("===== Ошибка чтения кеша appointments =====")
 
@@ -173,10 +175,9 @@ class CRMIntegrationMixin:
         except CRMError as e:
             await redis_db.set(cache_key, json.dumps({
                 "data": [],
-                "error": str(e)
+                "error": {"status_code": e.status_code, "detail": e.detail}
             }), ex=60)
             return [], e
-
 
     async def get_consents_cached(
         self, patient_id: str, ttl: int = 60
@@ -187,10 +188,11 @@ class CRMIntegrationMixin:
         cache_key = f"crm:consents:{patient_id}"
         cached = await redis_db.get(cache_key)
         if cached:
-            print("===== Нашли кеш согласий =====")
             try:
                 parsed = json.loads(cached)
-                return parsed.get("data", []), parsed.get("error")
+                error_data = parsed.get("error")
+                error = CRMError(**error_data) if error_data else None
+                return parsed.get("data", []), error
             except Exception:
                 print("===== Ошибка чтения кеша consents =====")
 
@@ -204,11 +206,9 @@ class CRMIntegrationMixin:
         except CRMError as e:
             await redis_db.set(cache_key, json.dumps({
                 "data": [],
-                "error": str(e)
+                "error": {"status_code": e.status_code, "detail": e.detail}
             }), ex=ttl)
             return [], e
-
-
 
     async def get_bonuses_history_cached(
         self, patient_id: str, ttl: int = 60
