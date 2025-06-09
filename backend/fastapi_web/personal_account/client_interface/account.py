@@ -906,9 +906,9 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
     max_instances_per_user = None
 
     list_display   = ["member_name", "member_id", "status",
-                      "relationship", "bonus_balance"]
+                      "relationship", "bonus_balance", "request_type"]
     detail_fields  = ["phone", "relationship", "status"]
-    computed_fields = ["member_name", "member_id", "bonus_balance", "request_type"]
+    computed_fields = ["member_name", "member_id", "bonus_balance", "request_type", "phone"]
     read_only_fields = ["member_name", "member_id", "bonus_balance"]
 
     field_titles = {
@@ -1116,13 +1116,16 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
 
         if obj and current_user:
             client = await self.get_master_client_by_user(current_user)
+            print('смотри сюда')
+            print(obj.get("member_id"), client.get("patient_id"))
             if client and obj.get("member_id") == client.get("patient_id"):
                 # Это входящая заявка и текущий пользователь — приглашённый
                 readonly = False
-
+        print('READONLY', readonly)
         return {
             "status": {
-                "settings": {"readonly": readonly},
+                "settings": {"read_only": readonly},
+                "read_only": readonly,
                 "choices": [
                     {
                         "value": FamilyStatusEnum.CONFIRMED,
@@ -1133,6 +1136,10 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
                         "label": {"ru": "Отклонить", "en": "Decline", "pl": "Odrzuć"}
                     }
                 ]
+            },
+            "phone": {
+                "settings": {"read_only": False},
+                "read_only": False,
             }
         }
 
@@ -1171,23 +1178,32 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         return None
     
     async def get_phone(self, obj: dict, current_user: Optional[dict] = None) -> Optional[str]:
-        """Показываем телефон, если текущий пользователь — приглашённый или заявка подтверждена."""
-        patient_id = obj.get("member_id")
-        if not patient_id or not current_user:
+        """Показываем телефон второй стороны — всегда, независимо от статуса заявки."""
+        if not obj or not current_user:
             return None
 
-        is_invited = False
         client = await self.get_master_client_by_user(current_user)
-        is_invited = client and client.get("patient_id") == patient_id
+        if not client:
+            return None
 
-        if obj.get("status") == FamilyStatusEnum.CONFIRMED or is_invited:
-            main_user_id = obj.get("user_id")
-            main_doc = await mongo_db.patients_main_info.find_one({"user_id": main_user_id})
+        current_user_id = current_user.data.get("user_id")
+        current_patient_id = client.get("patient_id")
 
-            if main_doc:
-                main_patient_id = main_doc["patient_id"]
-                patient = await self.get_patient_cached(main_patient_id)
-                return patient.get("phone") if patient else None
+        if obj.get("user_id") == current_user_id:
+            # Текущий пользователь — отправитель → показываем телефон получателя
+            member_id = obj.get("member_id")
+            if not member_id:
+                return None
+            main_doc = await mongo_db.patients_main_info.find_one({"patient_id": member_id})
+            if not main_doc:
+                return None
+            contact_doc = await mongo_db.patients_contact_info.find_one({"user_id": main_doc["user_id"]})
+            return contact_doc.get("phone") if contact_doc else None
+
+        elif obj.get("member_id") == current_patient_id:
+            # Текущий пользователь — получатель → показываем телефон отправителя
+            contact_doc = await mongo_db.patients_contact_info.find_one({"user_id": obj.get("user_id")})
+            return contact_doc.get("phone") if contact_doc else None
 
         return None
 
