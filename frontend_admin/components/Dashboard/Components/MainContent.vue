@@ -153,7 +153,7 @@
     </Dialog>
 
     <!-- Toast for Notifications -->
-    <Toast ref="toast" position="top-right" />
+    <Toast />
   </div>
 </template>
 
@@ -297,7 +297,7 @@ const onExportToExcel = async () => {
     // Save as Excel file
     XLSX.writeFile(workbook, `${currentEntity.value}_export.xlsx`);
 
-    toast.value?.add({
+    toast.add({
       severity: "success",
       summary: t("MainContent.toast.exportSuccessSummary"),
       detail: t("MainContent.toast.exportSuccessDetail"),
@@ -305,7 +305,7 @@ const onExportToExcel = async () => {
     });
   } catch (error) {
     console.error("Export Error:", error);
-    toast.value?.add({
+    toast.add({
       severity: "error",
       summary: t("MainContent.toast.exportFailSummary"),
       detail: t("MainContent.toast.exportFailDetail"),
@@ -377,7 +377,7 @@ function validateRoute(data, validCombos) {
   const groupKeys = Object.keys(data || {});
   if (!groupKeys.length) {
     console.error("No groups found in adminData. Nothing to display.");
-    toast.value?.add({
+    toast.add({
       severity: "error",
       summary: t("MainContent.toast.errorSummary"),
       detail: t("MainContent.toast.noDataDetail"),
@@ -391,7 +391,7 @@ function validateRoute(data, validCombos) {
     const firstGroup = groupKeys[0];
     const firstEntity = data[firstGroup].entities[0]?.registered_name;
     if (firstGroup && firstEntity) {
-      // toast.value?.add({
+      // toast.add({
       //   severity: "warn",
       //   summary:t('MainContent.toast.invalidGroupSummary') ,
       //   detail: `${t('MainContent.toast.redirectDetail')} /${currentPageName.value}/${firstGroup}/${firstEntity}`,
@@ -413,7 +413,7 @@ function validateRoute(data, validCombos) {
     // If invalid entity, pick the first entity of the group
     const firstEntity = groupConfig.entities[0]?.registered_name;
     if (firstEntity) {
-      // toast.value?.add({
+      // toast.add({
       //   severity: "warn",
       //   summary: "Invalid Entity",
       //   detail: `${t('MainContent.toast.redirectDetail', { route })} /${currentPageName.value}/${currentGroup.value}/${firstEntity}`,
