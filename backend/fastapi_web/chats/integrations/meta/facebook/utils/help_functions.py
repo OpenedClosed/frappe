@@ -1,10 +1,13 @@
 """Вспомогательные функции интеграции Facebook."""
+import json
+import logging
 from typing import Any, Dict, List
 
-from chats.db.mongo.enums import ChatSource, SenderRole
-from chats.integrations.meta.meta import process_meta_message
-from integrations.basic.handlers import process_integration_message
+import aiohttp
 
+from chats.integrations.basic.handlers import process_integration_message
+from chats.db.mongo.enums import ChatSource, SenderRole
+from infra import settings
 
 def parse_facebook_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Разбирает JSON, приходящий от Facebook Messenger Webhook."""
@@ -78,3 +81,37 @@ async def process_facebook_message(
         external_id=external_id,
         user_language=user_language,
     )
+
+
+async def get_facebook_user_profile(psid: str) -> dict:
+    """Возвращает имя, аватар и язык пользователя Facebook по PSID."""
+    url = f"https://graph.facebook.com/v22.0/{psid}"
+    # access_token = settings.FACEBOOK_ACCESS_TOKEN
+    access_token = settings.FACEBOOK_ACCESS_TOKEN
+    print()
+    print(url)
+
+    params = {
+        "fields": "first_name,last_name,profile_pic,locale,timezone,gender",
+        "access_token": access_token
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params, timeout=5) as resp:
+                text = await resp.text()
+
+                if resp.status == 200:
+                    return json.loads(text)
+
+                if "Invalid OAuth access token" in text:
+                    logging.error("[FB] Invalid access token — проверь settings.FACEBOOK_ACCESS_TOKEN")
+                elif resp.status == 403:
+                    logging.error(f"[FB] Access denied: {text}")
+                else:
+                    logging.warning(f"[FB] Unexpected response ({resp.status}): {text}")
+
+    except Exception as e:
+        logging.exception(f"[FB] Ошибка запроса профиля: {e}")
+
+    return {}

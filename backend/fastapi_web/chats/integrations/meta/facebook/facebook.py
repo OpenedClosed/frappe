@@ -7,10 +7,10 @@ from chats.integrations.meta.meta import (handle_incoming_meta_messages,
 from chats.integrations.meta.utils.help_functions import verify_meta_signature
 from infra import settings
 
-from .utils.help_functions import (parse_facebook_payload,
+from .utils.help_functions import (get_facebook_user_profile, parse_facebook_payload,
                                    process_facebook_message)
 
-facebook_router = APIRouter(prefix="/facebook")
+facebook_router = APIRouter()
 
 
 @facebook_router.get("/webhook")
@@ -20,12 +20,14 @@ async def verify_facebook_webhook(
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
 ):
     """Подтверждение вебхука Facebook Messenger."""
+    print('help2')
     return await verify_meta_webhook(
         hub_mode=hub_mode,
         hub_challenge=hub_challenge,
         hub_verify_token=hub_verify_token,
         expected_token=settings.FACEBOOK_VERIFY_TOKEN,
     )
+
 
 
 @facebook_router.post("/webhook")
@@ -42,6 +44,8 @@ async def handle_facebook_messages(request: Request):
         settings_bot_id=settings.FACEBOOK_PAGE_ID,
         chat_source=ChatSource.FACEBOOK,
         process_fn=process_facebook_message,
+        profile_fetcher=get_facebook_user_profile,
     )
 
     return {"status": "ok"}
+

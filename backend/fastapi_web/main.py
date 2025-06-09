@@ -16,6 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from basic.routers import basic_router
 from chats.integrations.meta.instagram.instagram import instagram_router
 from chats.integrations.meta.whatsapp.whatsapp import whatsapp_router
+from chats.integrations.meta.facebook.facebook import facebook_router
 from chats.integrations.telegram.telegram_bot import telegram_router
 from chats.routers import chat_router
 from crud_core.registry import account_registry, admin_registry
@@ -87,6 +88,7 @@ async def on_shutdown():
     """Действия при остановке приложения."""
     pass
 
+chat_router.include_router(facebook_router, prefix="/facebook")
 chat_router.include_router(instagram_router, prefix="/instagram")
 chat_router.include_router(whatsapp_router, prefix="/whatsapp")
 chat_router.include_router(telegram_router, prefix="/telegram")
