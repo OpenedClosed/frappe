@@ -131,10 +131,10 @@ const toggle = (event) => {
 
 const userData = await useAsyncData("userData", getUserData);
 
-if (userData.data) {
+if (userData?.data) {
   console.log("userData= ", userData.data);
-  if (userData.data.value) {
-    setData(userData.data.value);
+  if (userData.data) {
+    setData(userData.data);
   }
 }
 function setData(data) {
