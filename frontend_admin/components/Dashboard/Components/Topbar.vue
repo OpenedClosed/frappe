@@ -133,8 +133,8 @@ const userData = await useAsyncData("userData", getUserData);
 
 if (userData?.data) {
   console.log("userData= ", userData.data);
-  if (userData.data) {
-    setData(userData.data);
+  if (userData.data.value) {
+    setData(userData.data.value);
   }
 }
 function setData(data) {
