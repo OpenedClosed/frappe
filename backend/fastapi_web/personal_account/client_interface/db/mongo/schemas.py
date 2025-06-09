@@ -3,7 +3,7 @@ from datetime import date, datetime, time
 from typing import Any, Dict, List, Optional
 
 from passlib.hash import bcrypt
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from db.mongo.base.schemas import BaseValidatedModel, Photo
 from integrations.panamedica.client import get_client
@@ -220,6 +220,11 @@ class ContactInfoSchema(BaseValidatedModel):
     )
 
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+    @model_validator(mode="before")
+    def update_timestamp(cls, data):
+        data["updated_at"] = datetime.utcnow()
+        return data
 
 
 # ==========

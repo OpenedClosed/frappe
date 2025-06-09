@@ -1,5 +1,6 @@
 """Базовые сущности панели приложения ядро CRUD создания."""
 import asyncio
+from datetime import datetime, timezone
 import json
 import logging
 from enum import Enum
@@ -214,6 +215,36 @@ class BaseCrudCore:
 
         return await self.format_document(created_raw, current_user)
 
+    # async def update(
+    #     self, object_id: str, data: dict, current_user: Optional[BaseModel] = None
+    # ) -> dict:
+    #     """Обновляет документ, исключая вычисляемые поля."""
+    #     self.check_crud_enabled("update")
+
+    #     obj = await self.db.find_one({"_id": ObjectId(object_id)})
+    #     if not obj:
+    #         raise HTTPException(404, "Item not found.")
+
+    #     self.check_object_permission("update", current_user, obj)
+
+    #     valid_data = await self.process_data(data=data, existing_obj=obj, partial=True)
+
+    #     for field in self.computed_fields:
+    #         valid_data.pop(field, None)
+
+    #     # 🔄 Рекурсивная сериализация перед обновлением в Mongo
+    #     valid_data = self.recursive_model_dump(valid_data)
+
+    #     res = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": valid_data})
+    #     if res.matched_count == 0:
+    #         raise HTTPException(500, "Failed to update object.")
+
+    #     updated_raw = await self.db.find_one({"_id": ObjectId(object_id)})
+    #     if not updated_raw:
+    #         raise HTTPException(500, "Failed to retrieve updated object.")
+
+    #     return await self.format_document(updated_raw, current_user)
+
     async def update(
         self, object_id: str, data: dict, current_user: Optional[BaseModel] = None
     ) -> dict:
@@ -226,12 +257,16 @@ class BaseCrudCore:
 
         self.check_object_permission("update", current_user, obj)
 
+        # 🔥 автообновление updated_at
+        if "updated_at" in self.model.__annotations__:
+            print("обновляем дату")
+            data["updated_at"] = datetime.utcnow()
+
         valid_data = await self.process_data(data=data, existing_obj=obj, partial=True)
 
         for field in self.computed_fields:
             valid_data.pop(field, None)
 
-        # 🔄 Рекурсивная сериализация перед обновлением в Mongo
         valid_data = self.recursive_model_dump(valid_data)
 
         res = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": valid_data})
@@ -392,39 +427,107 @@ class BaseCrudCore:
                 for child in found
             ]
         return inl_data
+    
+    # def parse_json_recursive(self, value: Any) -> Any:
+    #     if isinstance(value, str):
+    #         try:
+    #             # Попробовать как JSON
+    #             parsed = json.loads(value)
+    #             if isinstance(parsed, (dict, list, str)):
+    #                 return self.parse_json_recursive(parsed)
+    #         except json.JSONDecodeError:
+    #             # Попробовать как дату ISO без 'Z'
+    #             try:
+    #                 dt = datetime.fromisoformat(value)
+    #                 if dt.tzinfo is None:
+    #                     dt = dt.replace(tzinfo=timezone.utc)
+    #                 return dt.isoformat().replace('+00:00', 'Z')
+    #             except ValueError as e:
+    #                 print('AAAAAAAAAAAAAAAA')
+    #                 print(e)
+    #                 pass
+    #         return value
+
+    #     if isinstance(value, datetime):
+    #         if value.tzinfo is None:
+    #             value = value.replace(tzinfo=timezone.utc)
+    #         return value.isoformat().replace('+00:00', 'Z')
+
+    #     if isinstance(value, list):
+    #         return [self.parse_json_recursive(i) for i in value]
+
+    #     if isinstance(value, dict):
+    #         return {k: self.parse_json_recursive(v) for k, v in value.items()}
+
+    #     return value
+
+    def parse_json_recursive(self, value: Any) -> Any:
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, (dict, list, str)):
+                    return self.parse_json_recursive(parsed)
+            except json.JSONDecodeError:
+                pass
+
+            # Попробовать как ISO-дату, но только если строка начинается с цифр и имеет T или пробел
+            if any(c in value for c in ("T", " ")) and value[:1].isdigit():
+                try:
+                    dt = datetime.fromisoformat(value)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    return dt.isoformat().replace('+00:00', 'Z')
+                except ValueError:
+                    pass  # Не паникуем
+
+            return value
+
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.isoformat().replace('+00:00', 'Z')
+
+        if isinstance(value, list):
+            return [self.parse_json_recursive(i) for i in value]
+
+        if isinstance(value, dict):
+            return {k: self.parse_json_recursive(v) for k, v in value.items()}
+
+        return value
+
 
     async def format_document(self, doc: dict,
                               current_user: Optional[dict] = None) -> dict:
         """Форматирует документ и добавляет вычисляемые поля с инлайнами."""
-        def parse_json_recursive(value: Any) -> Any:
-            if isinstance(value, str):
-                try:
-                    parsed = json.loads(value)
-                    if isinstance(parsed, (dict, list, str)):
-                        return parsed
-                except json.JSONDecodeError:
-                    pass
-            if isinstance(value, list):
-                return [parse_json_recursive(i) for i in value]
-            if isinstance(value, dict):
-                return {k: parse_json_recursive(v) for k, v in value.items()}
-            return value
+        # def parse_json_recursive(value: Any) -> Any:
+        #     if isinstance(value, str):
+        #         try:
+        #             parsed = json.loads(value)
+        #             if isinstance(parsed, (dict, list, str)):
+        #                 return parsed
+        #         except json.JSONDecodeError:
+        #             pass
+        #     if isinstance(value, list):
+        #         return [parse_json_recursive(i) for i in value]
+        #     if isinstance(value, dict):
+        #         return {k: parse_json_recursive(v) for k, v in value.items()}
+        #     return value
 
         fields_set = list(set(self.list_display + self.detail_fields))
         result: Dict[str, Any] = {"id": str(doc.get("_id", doc.get("id")))}
 
         for field in fields_set:
-            result[field] = parse_json_recursive(doc.get(field))
+            result[field] = self.parse_json_recursive(doc.get(field))
 
         # for cf in self.computed_fields:
         #     method = getattr(self, f"get_{cf}", None)
         #     if method:
-        #         result[cf] = parse_json_recursive(await method(doc))
+        #         result[cf] = self.parse_json_recursive(await method(doc))
 
         for cf in self.computed_fields:
             method = getattr(self, f"get_{cf}", None)
             if method:
-                result[cf] = parse_json_recursive(await method(doc, current_user=current_user))
+                result[cf] = self.parse_json_recursive(await method(doc, current_user=current_user))
 
 
         result.update(await self.get_inlines(doc, current_user))
@@ -448,12 +551,19 @@ class BaseCrudCore:
         try:
             if partial:
                 for field, val in data.items():
-                    if field in ("id", *self.read_only_fields):
+                    # 🔥 Исключаем updated_at из read_only блокировки
+                    print("Нашли поле обновления" if field == "updated_at" else None)
+                    if field in ("id", *self.read_only_fields) and field != "updated_at":
+                        print("попало")
                         continue
+
                     if field in self.inlines:
                         validated[field] = self.serialize_value(val)
                         continue
                     if field in self.model.__annotations__:
+                        # if field == "updated_at" and isinstance(val, datetime):
+                        #     validated[field] = self.serialize_value(val)
+                        #     continue
                         field_type = self.model.__annotations__[field]
                         parsed_val = try_parse_json(val)
                         validated_val = self.model._validate_field_type(
@@ -489,6 +599,8 @@ class BaseCrudCore:
         if self.inlines:
             inline_data = await self.process_inlines(existing_obj, data, partial=partial)
             valid.update(inline_data)
+        print("valid!")
+        print(valid)
         return valid
 
     # --- Поиск во вложенных структурах ---
@@ -628,6 +740,9 @@ class InlineCrud(BaseCrudCore):
                      current_user: Optional[dict] = None) -> dict:
         """Обновляет вложенный объект."""
         self.check_crud_enabled("update")
+        if "updated_at" in self.model.__annotations__:
+            print("обновляем дату")
+            data["updated_at"] = datetime.utcnow()
 
         existing = await self.get(object_id, current_user)
         if not existing:

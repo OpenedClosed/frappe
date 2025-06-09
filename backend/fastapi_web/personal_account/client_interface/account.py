@@ -166,9 +166,10 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         {
             "column": 1,
             "title": {"en": "System info", "ru": "Системная информация", "pl": "Informacje systemowe"},
-            "fields": ["patient_id", "account_status", "created_at", "updated_at"],
+            "fields": ["patient_id", "account_status", "crm_link_status", "created_at", "updated_at"],
         },
     ]
+
 
     field_styles = {
         "last_name": {
@@ -362,8 +363,6 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         iso = await self.crm_or_local(obj, "birthdate", "birth_date")
         return datetime.fromisoformat(iso) if isinstance(iso, str) else iso
 
-    async def get_gender(self, obj: dict, current_user=None)      -> str | None:
-        return await self.crm_or_local(obj, "gender", "gender")
     
     async def get_account_status(self, obj: dict, current_user=None) -> str:
         """
@@ -385,6 +384,37 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
             return AccountVerificationEnum.VERIFIED
         else:
             return AccountVerificationEnum.UNVERIFIED
+        
+    async def get_gender(self, obj: dict, current_user=None) -> dict:
+        """
+        Возвращает пол в виде словаря с переводами.
+        """
+        GENDER_TRANSLATIONS = {
+            "male": {
+                "ru": "Мужской",
+                "en": "Male",
+                "pl": "Mężczyzna"
+            },
+            "female": {
+                "ru": "Женский",
+                "en": "Female",
+                "pl": "Kobieta"
+            }
+        }
+
+        gender_key = await self.crm_or_local(obj, "gender", "gender")
+        if isinstance(gender_key, str):
+            return GENDER_TRANSLATIONS.get(gender_key.lower(), {
+                "ru": gender_key,
+                "en": gender_key,
+                "pl": gender_key,
+            })
+        return {
+            "ru": "-",
+            "en": "-",
+            "pl": "-"
+        }
+
 
     async def get_crm_link_status(self, obj, current_user=None) -> str:
         """
@@ -398,9 +428,9 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         print(obj.get("patient_id"))
         if not obj.get("patient_id"):
             return {
-                "ru": "Нет связи с CRM",
-                "en": "No CRM link",
-                "pl": "Brak połączenia z CRM"
+                "ru": "нет связи с CRM",
+                "en": "no CRM link",
+                "pl": "brak połączenia z CRM"
             }
 
         patient_id = obj["patient_id"]
@@ -408,23 +438,23 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
             # прямой вызов, чтобы отловить 403, не через кеш-обёртку
             await get_client().get_consents(patient_id)
             return {
-                "ru": "Подтверждён",
-                "en": "Verified",
-                "pl": "Zweryfikowany"
+                "ru": "подтверждён",
+                "en": "verified",
+                "pl": "zweryfikowany"
             }
         except CRMError as e:
             print(e)
             if e.status_code == 403:
                 return {
-                    "ru": "Связь есть, профиль не подтверждён",
-                    "en": "Linked, profile unverified",
-                    "pl": "Połączono, profil niezweryfikowany"
+                    "ru": "связь есть, профиль не подтверждён",
+                    "en": "linked, profile unverified",
+                    "pl": "połączono, profil niezweryfikowany"
                 }
             # любая другая ошибка – считаем «нет связи»
             return {
-                "ru": "Нет связи с CRM",
-                "en": "No CRM link",
-                "pl": "Brak połączenia z CRM"
+                "ru": "нет связи с CRM",
+                "en": "no CRM link",
+                "pl": "brak połączenia z CRM"
             }
 
 # ==========
@@ -848,7 +878,7 @@ class HealthSurveyAccount(BaseAccount):
         "delete": False
     }
 
-    async def get_form_status(self, obj: dict) -> str:
+    async def get_form_status(self, obj: dict, current_user=None) -> str:
         """
         Вычисляет статус анкеты (заглушка).
         В будущем — логика на основе заполненности/врачебной оценки.
@@ -878,7 +908,7 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
     list_display   = ["member_name", "member_id", "status",
                       "relationship", "bonus_balance"]
     detail_fields  = ["phone", "relationship", "status"]
-    computed_fields = ["member_name", "member_id", "bonus_balance"]
+    computed_fields = ["member_name", "member_id", "bonus_balance", "request_type"]
     read_only_fields = ["member_name", "member_id", "bonus_balance"]
 
     field_titles = {
@@ -888,6 +918,11 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         "get_member_name": {"en": "Full Name", "ru": "Полное имя", "pl": "Imię i nazwisko"},
         "get_member_id": {"en": "Patient ID", "ru": "ID пациента", "pl": "ID pacjenta"},
         "get_bonus_balance": {"en": "Bonuses", "ru": "Бонусы", "pl": "Bonusy"},
+        "request_type": {
+            "en": "Request type",
+            "ru": "Тип заявки",
+            "pl": "Typ zgłoszenia"
+        },
     }
 
     help_texts = {
@@ -910,10 +945,15 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
 
     field_groups = [
         {
-            "title": {"en": "Family info", "ru": "Информация о семье", "pl": "Informacje o rodzinie"},
-            "fields": ["phone", "relationship"]
+            "title": {
+                "en": "Family info",
+                "ru": "Информация о семье",
+                "pl": "Informacje o rodzinie"
+            },
+            "fields": ["phone", "relationship", "status"]
         }
     ]
+
 
     field_styles = {
         "phone": {
@@ -982,7 +1022,7 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
     allow_crud_actions = {
         "create": True,
         "read": True,
-        "update": False,
+        "update": True,
         "delete": True
     }
 
@@ -1065,17 +1105,19 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         return formatted
 
 
-
-
     async def get_field_overrides(self, obj=None, current_user=None) -> dict:
         """
         • Добавляет choices для поля status;
-        • Разрешает менять статус, если пользователь — приглашённый и заявка pending.
+        • Разрешает менять статус, только если:
+        – заявка входящая,
+        – статус PENDING.
         """
         readonly = True
-        if obj and obj.get("status") == FamilyStatusEnum.PENDING:
+
+        if obj and current_user:
             client = await self.get_master_client_by_user(current_user)
             if client and obj.get("member_id") == client.get("patient_id"):
+                # Это входящая заявка и текущий пользователь — приглашённый
                 readonly = False
 
         return {
@@ -1093,6 +1135,7 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
                 ]
             }
         }
+
 
     async def get_member_name(self, obj: dict, current_user: Optional[dict] = None) -> Optional[str]:
         """Показываем имя, если текущий пользователь — приглашённый или заявка подтверждена."""
@@ -1191,6 +1234,33 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
                 return patient.get("bonuses") if patient else None
 
         return None
+    
+    async def get_request_type(self, obj: dict, current_user: Optional[dict] = None) -> Optional[dict]:
+        """
+        Возвращает тип заявки с локализацией: входящая или исходящая.
+        """
+        if not current_user:
+            return None
+
+        client = await self.get_master_client_by_user(current_user)
+        if not client:
+            return None
+
+        if obj.get("user_id") == current_user.data.get("user_id"):
+            return {
+                "en": "Outgoing request",
+                "ru": "Исходящая заявка",
+                "pl": "Zgłoszenie wychodzące"
+            }
+        elif obj.get("member_id") == client.get("patient_id"):
+            return {
+                "en": "Incoming request",
+                "ru": "Входящая заявка",
+                "pl": "Zgłoszenie przychodzące"
+            }
+
+        return None
+
 
 
 
@@ -1234,12 +1304,11 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         • сохраняет ID пациента, имя, бонусы.
         """
         current = await self.get(object_id, current_user)
-        if not current or current.get("status") != FamilyStatusEnum.PENDING:
-            raise HTTPException(400, "Only pending requests can be modified.")
+        # if not current or current.get("status") != FamilyStatusEnum.PENDING:
+        #     raise HTTPException(400, "Only pending requests can be modified.")
 
         client = await self.get_master_client_by_user(current_user)
-        if not client or current.get("member_id") != client.get("patient_id"):
-            raise HTTPException(403, "You are not the invited member.")
+
 
         new_status = data.get("status")
         if new_status not in [FamilyStatusEnum.CONFIRMED, FamilyStatusEnum.DECLINED]:
