@@ -42,10 +42,7 @@
       :show-audio="false"
       :show-files="false"
       :show-add-room="false"
-      :text-messages="textMessagesJson"
       :theme="colorMode.preference"
-      :rooms-loaded="isRoomsLoading"
-      :message-actions="JSON.stringify(messageActions)"
       auto-scroll='{
         "send": { "new": true, "newAfterScrollUp": true },
         "receive": { "new": true, "newAfterScrollUp": true }
@@ -53,21 +50,22 @@
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
+      :rooms-loaded="isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
+      :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
-      @open-file="openFile($event.detail[0])"
+      :text-messages="textMessagesJson"
     >
       <div slot="room-header-avatar" class="flex items-center justify-center">
-        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2" />
-        <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2" />
+        
+        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2"/>
+        <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2"/>
       </div>
       <div slot="room-header-info" class="flex-1">
         <!-- 🔥 Added flex-1 here -->
         <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
           <div class="flex flex-col">
-            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
-              {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
-            </h2>
+            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">{{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}</h2>
             <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
           </div>
           <div class="flex flex-row justify-center items-center gap-1">
@@ -147,47 +145,6 @@ function onMessageAction(messageAction) {
     showMsgDialog.value = true;
   }
 }
-
-function openFile(){
-  console.warn("openFile is not implemented in this example");
-  // This function is intentionally left empty for now.
-  // You can implement it based on your requirements.
-}
-// function openFile(attachment) {
-//   console.log("openFile", attachment); // For debugging: log attachment data
-//   if (!attachment) return;
-
-//   /* 1️⃣ — Block images */
-//   // Most back-ends (and vue-advanced-chat) expose a MIME type.
-//   // Fallback: fall back to extension if no `type` field.
-//   const isImage = (attachment.type && attachment.type.startsWith("image/")) || /\.(png|jpe?g|gif|webp|svg)$/i.test(attachment.name);
-
-//   if (isImage) {
-//     toast.add({
-//       severity: "info",
-//       summary: t("EmbeddedChat.imageNotDownloadable"),
-//       life: 3000,
-//     });
-//     return;
-//   }
-
-//   /* 2️⃣ — Download the rest */
-//   // Preferred: open the URL returned by your API / storage.
-//   if (attachment.downloadUrl) {
-//     window.open(attachment.downloadUrl, "_blank");
-//     return;
-//   }
-
-//   // Fallback when the file object itself is present
-//   if (attachment.file) {
-//     const url = URL.createObjectURL(attachment.file);
-//     const a = document.createElement("a");
-//     a.href = url;
-//     a.download = attachment.name || "download";
-//     a.click();
-//     URL.revokeObjectURL(url);
-//   }
-// }
 
 /* ── props / emits ─────────────────────────────────────────── */
 const props = defineProps({
@@ -447,6 +404,7 @@ function formatTimeDifferenceEU(dateStr) {
   });
 }
 
+
 function stripPrefix(id = "") {
   /* TELEGRAM_599597042 → 599597042 */
   return id.replace(/^[A-Z_]+_/, "");
@@ -456,38 +414,43 @@ function stripPrefix(id = "") {
  *  Turn sender_info (plus client_id) → a tidy, guaranteed-filled object
  */
 function normaliseParticipant(senderInfo = {}, clientId = "") {
-  const md = senderInfo.metadata || {};
+  const md  = senderInfo.metadata || {};
 
   /* -------- NAME -------- */
   const username =
-    senderInfo.name ??
-    md.profile_name ?? // WhatsApp
-    md.name ?? // Telegram duplicate
-    md.username ?? // Telegram @username
-    stripPrefix(clientId); // last fallback
+    senderInfo.name              ??
+    md.profile_name              ?? // WhatsApp
+    md.name                      ?? // Telegram duplicate
+    md.username                  ?? // Telegram @username
+    stripPrefix(clientId);          // last fallback
 
   /* -------- AVATAR -------- */
-  const avatar = senderInfo.avatar_url ?? md.avatar_url ?? "";
+  const avatar =
+    senderInfo.avatar_url        ??
+    md.avatar_url                ??
+    "";
 
   /* -------- SOURCE -------- */
   let source = senderInfo.source || "";
   if (!source) {
     // Instagram sometimes comes in as “Internal”
-    if (clientId.startsWith("TELEGRAM_")) source = "Telegram";
+    if (clientId.startsWith("TELEGRAM_"))  source = "Telegram";
     else if (clientId.startsWith("WHATSAPP_")) source = "WhatsApp";
     else if (clientId.startsWith("INSTAGRAM_")) source = "Instagram";
     else source = "Internal";
   }
 
   /* -------- EXTERNAL ID / PHONE -------- */
-  const externalId = senderInfo.external_id ?? stripPrefix(clientId);
+  const externalId =
+    senderInfo.external_id       ?? stripPrefix(clientId);
 
   const phone =
-    md.display_phone_number ?? // WhatsApp business
+    md.display_phone_number      ?? // WhatsApp business
     (externalId.match(/^\d+$/) ? externalId : null);
 
   return { username, avatar, source, externalId, phone };
 }
+
 
 function buildRooms(chats, consultantId) {
   console.log("buildRooms", chats); // For debugging: log chat data
@@ -503,7 +466,8 @@ function buildRooms(chats, consultantId) {
   return chats.map((chat, idx) => {
     const pdEntry = chat.participants_display?.find((p) => p.client_id === chat.client_id_display) ?? chat.participants_display?.[0];
 
-    const normalizedPd = normaliseParticipant(pdEntry?.sender_info, pdEntry?.client_id);
+    const normalizedPd=
+      normaliseParticipant(pdEntry?.sender_info, pdEntry?.client_id);
     console.log("chatelement", chat); // For debugging: log chat data
     const client = chat.client && chat.client[0] ? chat.client[0] : {};
     const sourceName = client.source && client.source.en ? client.source.en : t("EmbeddedChat.client");
@@ -534,9 +498,7 @@ function buildRooms(chats, consultantId) {
     return {
       avatar: sourceAvatars[sourceName] || "/avatars/default.png",
       roomId: chat.chat_id,
-      roomName:
-        `${seen ? "" : "🔴"} ${status_emoji || ""} ${normalizedPd.username || client.id}` ||
-        t("EmbeddedChat.chatFallback", { index: idx + 1 }),
+      roomName: `${seen ? "" : "🔴"} ${status_emoji || ''} ${normalizedPd.username || client.id}` || t("EmbeddedChat.chatFallback", { index: idx + 1 }),
       users: [clientUser, consultantUser],
       lastMessage,
       typingUsers: [],
@@ -574,8 +536,13 @@ onBeforeUnmount(() => chatLogic.value?.destroy?.());
 .vue-advanced-chat {
   box-shadow: none !important;
 }
-
+/* global stylesheet (or <style> block without "scoped") */
+.vac-image-buttons .vac-button-download {
+  display: none !important; /* hides the ⬇️ button everywhere */
+}
 </style>
 <style scoped>
-
+:deep(.vac-button-download) {
+  display: none !important;
+}
 </style>

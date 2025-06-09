@@ -60,15 +60,7 @@
             </span>
           </div>
   
-          <!-- Document ID -->
-          <div>
-            <label class="block text-[13px] font-normal ">
-             {{ t('ContactInfoView.docId') }}
-            </label>
-            <span class="text-[15px] font-normal">
-              {{ itemData.doc_id }}
-            </span>
-          </div>
+          
   
           <!-- Last Update -->
           <div>
