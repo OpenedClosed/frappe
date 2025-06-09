@@ -429,27 +429,103 @@ IMAGE_HINT = (
 )
 
 
+# async def ensure_entry_processed(
+#         entry: "ContextEntry", ai_model: str = settings.MODEL_DEFAULT) -> None:
+#     """
+#     Гарантирует, что у ContextEntry заполнены snapshot_text и kb_structure.
+#     При необходимости вызывает LLM.
+#     """
+#     updated: Dict[str, Any] = {}
+
+#     # ---------- 1. Snapshot ----------
+#     if entry.snapshot_text is None:
+#         if entry.type is ContextType.URL and entry.url:
+#             entry.snapshot_text = await cache_url_snapshot(str(entry.url))
+
+#         elif entry.type is ContextType.FILE and entry.file_path:
+#             ext = Path(entry.file_path).suffix.lower()
+#             if ext in DOC_EXT:
+#                 entry.snapshot_text = await parse_file_from_path(entry.file_path)
+#             elif ext in IMG_EXT:
+#                 entry.snapshot_text = f"[Image: {Path(entry.file_path).name}]"
+
+#         elif entry.type is ContextType.TEXT and entry.text:
+#             entry.snapshot_text = entry.text
+
+#         if isinstance(entry.snapshot_text, bytes):
+#             entry.snapshot_text = entry.snapshot_text.decode(errors="ignore")
+
+#         if entry.snapshot_text:
+#             updated["context.$.snapshot_text"] = entry.snapshot_text
+
+#     # ---------- 2. KB-structure ----------
+#     if entry.kb_structure is None:
+#         blocks = await collect_context_blocks([entry])
+
+#         # для картинок добавляем подсказку
+#         if entry.type is ContextType.FILE and entry.file_path and Path(
+#                 entry.file_path).suffix.lower() in IMG_EXT:
+#             blocks.insert(0, {"sender_role": "user", "text": IMAGE_HINT})
+
+#         if blocks:
+#             sys_prompt = AI_PROMPTS["kb_structure_prompt"]
+#             client, real_model = pick_model_and_client(ai_model)
+
+#             msg = build_messages_for_model(sys_prompt, blocks, "", real_model)
+#             raw = await admin_chat_generate_any(client, real_model, msg["messages"], msg.get("system_instruction"))
+
+#             entry.kb_structure = extract_json_from_gpt(raw) or {}
+#             updated["context.$.kb_structure"] = entry.kb_structure
+
+#             # если KB-структура по изображению получена — делаем snapshot
+#             # кратким QA
+#             if entry.snapshot_text and entry.snapshot_text.startswith(
+#                     "[Image:") and entry.kb_structure:
+#                 flat: List[str] = []
+#                 for t in entry.kb_structure.values():
+#                     for s in t.get("subtopics", {}).values():
+#                         for q, a in s.get("questions", {}).items():
+#                             flat.append(f"Q: {q}\nA: {a.get('text', '')}\n")
+#                 if flat:
+#                     entry.snapshot_text = "\n".join(flat)
+#                     updated["context.$.snapshot_text"] = entry.snapshot_text
+
+#     # ---------- 3. Write-back ----------
+#     if updated:
+#         await mongo_db.knowledge_collection.update_one(
+#             {"app_name": settings.APP_NAME, "context.id": entry.id},
+#             {"$set": updated},
+#         )
+
 async def ensure_entry_processed(
-        entry: "ContextEntry", ai_model: str = settings.MODEL_DEFAULT) -> None:
+    entry: "ContextEntry", ai_model: str = settings.MODEL_DEFAULT
+) -> None:
     """
-    Гарантирует, что у ContextEntry заполнены snapshot_text и kb_structure.
+    Гарантирует, что у ContextEntry заполнены актуальные snapshot_text и kb_structure.
     При необходимости вызывает LLM.
     """
     updated: Dict[str, Any] = {}
 
     # ---------- 1. Snapshot ----------
-    if entry.snapshot_text is None:
-        if entry.type is ContextType.URL and entry.url:
-            entry.snapshot_text = await cache_url_snapshot(str(entry.url))
+    should_refresh_snapshot = False
 
-        elif entry.type is ContextType.FILE and entry.file_path:
+    if entry.type == ContextType.URL and entry.url:
+        # всегда обновляем snapshot (обновление кеша зависит от TTL)
+        snapshot_text = await cache_url_snapshot(str(entry.url))
+        if snapshot_text != entry.snapshot_text:
+            entry.snapshot_text = snapshot_text
+            updated["context.$.snapshot_text"] = entry.snapshot_text
+            should_refresh_snapshot = True
+
+    elif entry.snapshot_text is None:
+        if entry.type == ContextType.FILE and entry.file_path:
             ext = Path(entry.file_path).suffix.lower()
             if ext in DOC_EXT:
                 entry.snapshot_text = await parse_file_from_path(entry.file_path)
             elif ext in IMG_EXT:
                 entry.snapshot_text = f"[Image: {Path(entry.file_path).name}]"
 
-        elif entry.type is ContextType.TEXT and entry.text:
+        elif entry.type == ContextType.TEXT and entry.text:
             entry.snapshot_text = entry.text
 
         if isinstance(entry.snapshot_text, bytes):
@@ -457,38 +533,41 @@ async def ensure_entry_processed(
 
         if entry.snapshot_text:
             updated["context.$.snapshot_text"] = entry.snapshot_text
+            should_refresh_snapshot = True
 
+    print("КЛАСС РЕФРЕШ" if should_refresh_snapshot else "Нет")
     # ---------- 2. KB-structure ----------
-    if entry.kb_structure is None:
+    if should_refresh_snapshot or entry.kb_structure is None:
         blocks = await collect_context_blocks([entry])
 
-        # для картинок добавляем подсказку
-        if entry.type is ContextType.FILE and entry.file_path and Path(
-                entry.file_path).suffix.lower() in IMG_EXT:
+        if entry.type == ContextType.FILE and entry.file_path and Path(
+            entry.file_path).suffix.lower() in IMG_EXT:
             blocks.insert(0, {"sender_role": "user", "text": IMAGE_HINT})
 
         if blocks:
             sys_prompt = AI_PROMPTS["kb_structure_prompt"]
             client, real_model = pick_model_and_client(ai_model)
-
             msg = build_messages_for_model(sys_prompt, blocks, "", real_model)
-            raw = await admin_chat_generate_any(client, real_model, msg["messages"], msg.get("system_instruction"))
 
-            entry.kb_structure = extract_json_from_gpt(raw) or {}
-            updated["context.$.kb_structure"] = entry.kb_structure
+            raw = await admin_chat_generate_any(
+                client, real_model, msg["messages"], msg.get("system_instruction")
+            )
 
-            # если KB-структура по изображению получена — делаем snapshot
-            # кратким QA
-            if entry.snapshot_text and entry.snapshot_text.startswith(
-                    "[Image:") and entry.kb_structure:
-                flat: List[str] = []
-                for t in entry.kb_structure.values():
-                    for s in t.get("subtopics", {}).values():
-                        for q, a in s.get("questions", {}).items():
-                            flat.append(f"Q: {q}\nA: {a.get('text', '')}\n")
-                if flat:
-                    entry.snapshot_text = "\n".join(flat)
-                    updated["context.$.snapshot_text"] = entry.snapshot_text
+            new_kb = extract_json_from_gpt(raw) or {}
+            if new_kb != entry.kb_structure:
+                entry.kb_structure = new_kb
+                updated["context.$.kb_structure"] = entry.kb_structure
+
+                # обновляем краткий текст, если это было изображение
+                if entry.snapshot_text and entry.snapshot_text.startswith("[Image:"):
+                    flat: List[str] = []
+                    for t in entry.kb_structure.values():
+                        for s in t.get("subtopics", {}).values():
+                            for q, a in s.get("questions", {}).items():
+                                flat.append(f"Q: {q}\nA: {a.get('text', '')}\n")
+                    if flat:
+                        entry.snapshot_text = "\n".join(flat)
+                        updated["context.$.snapshot_text"] = entry.snapshot_text
 
     # ---------- 3. Write-back ----------
     if updated:
