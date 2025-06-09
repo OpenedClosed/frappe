@@ -45,7 +45,7 @@ class CRMIntegrationMixin:
 
         try:
             patient = await get_client().find_patient(patient_id=patient_id)
-            await redis_db.set(cache_key, json.dumps(patient), ex=10)
+            await redis_db.set(cache_key, json.dumps(patient), ex=30)
             return patient
         except CRMError:
             return None
@@ -144,74 +144,92 @@ class CRMIntegrationMixin:
                 if patient.get("profile") == "normal"
                 else AccountVerificationEnum.UNVERIFIED
             )
-            await redis_db.set(cache_key, status_enum.value, ex=10)
+            await redis_db.set(cache_key, status_enum.value, ex=60)
             return status_enum
         except CRMError:
             return AccountVerificationEnum.UNVERIFIED
 
     async def get_future_appointments_cached(
         self, patient_id: str, from_date: date
-    ) -> list[dict]:
-        """
-        Возвращает список встреч из CRM, с кешированием на 10 секунд.
-        Если CRM недоступна — возвращает пустой список.
-        """
+    ) -> tuple[list[dict], CRMError | None]:
         cache_key = f"crm:appointments:{patient_id}:{from_date.isoformat()}"
         cached = await redis_db.get(cache_key)
         if cached:
             try:
-                return json.loads(cached), None
+                parsed = json.loads(cached)
+                return parsed.get("data", []), parsed.get("error")
             except Exception:
-                pass
+                print("===== Ошибка чтения кеша appointments =====")
 
         try:
             appointments = await get_client().future_appointments(
                 patient_id, from_date=from_date
             )
-            await redis_db.set(cache_key, json.dumps(appointments), ex=10)
+            await redis_db.set(cache_key, json.dumps({
+                "data": appointments,
+                "error": None
+            }), ex=60)
             return appointments, None
         except CRMError as e:
+            await redis_db.set(cache_key, json.dumps({
+                "data": [],
+                "error": str(e)
+            }), ex=60)
             return [], e
-        
-    async def get_consents_cached(self, patient_id: str, ttl: int = 60) -> list[dict]:
-        """Возвращает согласия пациента из CRM, кеш 60 с."""
+
+
+    async def get_consents_cached(
+        self, patient_id: str, ttl: int = 60
+    ) -> tuple[list[dict], CRMError | None]:
         if not patient_id:
             return [], None
 
         cache_key = f"crm:consents:{patient_id}"
         cached = await redis_db.get(cache_key)
         if cached:
+            print("===== Нашли кеш согласий =====")
             try:
-                return json.loads(cached), None
+                parsed = json.loads(cached)
+                return parsed.get("data", []), parsed.get("error")
             except Exception:
-                pass
+                print("===== Ошибка чтения кеша consents =====")
 
         try:
             consents = await get_client().get_consents(patient_id)
-            await redis_db.set(cache_key, json.dumps(consents), ex=ttl)
+            await redis_db.set(cache_key, json.dumps({
+                "data": consents,
+                "error": None
+            }), ex=ttl)
             return consents, None
         except CRMError as e:
+            await redis_db.set(cache_key, json.dumps({
+                "data": [],
+                "error": str(e)
+            }), ex=ttl)
             return [], e
 
-    async def get_bonuses_history_cached(self, patient_id: str, ttl: int = 60) -> list[dict]:
-        """
-        Возвращает историю бонусов пациента из CRM  
-        (энд-поинт `GET /patients/{id}/history-charges`), кеш ‹ttl› сек.
-        """
+
+
+    async def get_bonuses_history_cached(
+        self, patient_id: str, ttl: int = 60
+    ) -> tuple[list[dict], CRMError | None]:
         if not patient_id:
-            return []
+            return [], None
 
         cache_key = f"crm:bonuses:{patient_id}"
         cached = await redis_db.get(cache_key)
         if cached:
             try:
-                return json.loads(cached)
+                return json.loads(cached), None
             except Exception:
+                print("===== Но блин ошибка bonuses =====")
                 pass
 
         try:
             data = await get_client().get_bonus_history(patient_id)
             await redis_db.set(cache_key, json.dumps(data), ex=ttl)
-            return data
-        except CRMError:
-            return []
+            return data, None
+        except CRMError as e:
+            await redis_db.set(cache_key, json.dumps([]), ex=ttl)  # кешируем пусто
+            return [], e
+

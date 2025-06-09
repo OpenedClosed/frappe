@@ -1460,7 +1460,7 @@ class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
         if not patient_id:
             return []
 
-        crm_rows = await self.get_bonuses_history_cached(patient_id)
+        crm_rows, _ = await self.get_bonuses_history_cached(patient_id)
         print(crm_rows)
 
         def map_row(r: dict) -> dict:
@@ -1648,7 +1648,7 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
     # 2.  Полная замена transaction_history + отметка времени
     # -----------------------------------------------------------------
     async def refresh_transactions_from_crm(self, doc: dict, patient_id: str) -> dict:
-        crm_rows = await self.get_bonuses_history_cached(patient_id)
+        crm_rows, _ = await self.get_bonuses_history_cached(patient_id)
 
         def map_row(r: dict) -> dict:
             tx_type = (TransactionTypeEnum.ACCRUED
@@ -1861,7 +1861,17 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         if doc:
             return await self.sync_consents(doc)
 
-        crm_raw, _ = await self.get_consents_cached(patient_id)
+        crm_raw, e = await self.get_consents_cached(patient_id)
+        if e:
+            raise HTTPException(
+                400,
+                detail={
+                    "ru": "Согласия доступны после подтверждения в системе PaNa",
+                    "en": "Consents are available after confirmation in the PaNa system",
+                    "pl": "Zgody są dostępne po potwierdzeniu w systemie PaNa"
+                }
+            )
+
         consents = [ConsentItem(id=c["id"], accepted=c.get("accepted", False)) for c in crm_raw]
 
         now = datetime.utcnow()
