@@ -50,7 +50,7 @@
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
-      :rooms-loaded="isRoomsLoading"
+      :rooms-loaded="!isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
       :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
@@ -513,15 +513,15 @@ const currentRoomSource = computed(() => {
   return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
 });
 
-watch([chatRows], async ([rows]) => {
-  if (!rows.length) return;
+watch(chatRows, (rows) => {
+  if (!rows.length) return
+  rooms.value = buildRooms(rows, currentUserId.value)
 
-  rooms.value = buildRooms(rows, currentUserId.value);
-
-  if (!rooms.value.find((r) => r.roomId === activeRoomId.value)) {
-    activeRoomId.value = rooms.value[0]?.roomId ?? null;
+  // выбрать активную комнату, если ещё не выбрана
+  if (!rooms.value.find(r => r.roomId === activeRoomId.value)) {
+    activeRoomId.value = rooms.value[0]?.roomId ?? null
   }
-});
+}, { immediate: true })
 /* ── external events ───────────────────────────────────────── */
 // $listen("new_message_arrived", (msg) => {
 //   if (!msg || !messagesMap.value[activeRoomId.value]) return;
