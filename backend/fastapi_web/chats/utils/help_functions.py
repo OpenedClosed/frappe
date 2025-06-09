@@ -718,24 +718,81 @@ def is_valid_object_id(oid: str) -> bool:
     except Exception:
         return False
 
-async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[str] = None) -> dict[str, dict[str, Any]]:
-    """Получить информацию об отправителях (мастер-клиент + user_data), включая клиента чата даже без сообщений."""
-    sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
+# async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[str] = None) -> dict[str, dict[str, Any]]:
+#     """Получить информацию об отправителях (мастер-клиент + user_data), включая клиента чата даже без сообщений."""
+#     sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
 
+#     if extra_client_id:
+#         sender_ids.add(extra_client_id)
+
+#     sender_ids.discard(None)
+#     if not sender_ids:
+#         return {}
+
+#     master_docs = await mongo_db.clients.find({"client_id": {"$in": list(sender_ids)}}).to_list(None)
+#     masters = {d["client_id"]: MasterClient(**d) for d in master_docs}
+
+#     valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
+#     user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
+#     users = {str(u["_id"]): u for u in user_docs}
+
+#     sender_data_map = {}
+
+#     for client_id, master in masters.items():
+#         data = {
+#             "name": master.name,
+#             "avatar_url": master.avatar_url,
+#             "source": master.source.en_value,
+#             "external_id": master.external_id,
+#             "metadata": master.metadata,
+#             "client_id": master.client_id,
+#         }
+
+#         if master.user_id and is_valid_object_id(master.user_id):
+#             user_doc = users.get(master.user_id)
+#             if user_doc:
+#                 user_doc["_id"] = str(user_doc["_id"])
+#                 user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
+#                 user_data = await user_data_obj.get_full_user_data()
+#                 data["user"] = user_data
+
+#         sender_data_map[client_id] = data
+
+#     return sender_data_map
+
+async def build_sender_data_map(
+    messages: list[dict],
+    extra_client_id: Optional[str] = None
+) -> dict[str, dict[str, Any]]:
+    """Получить информацию об отправителях (мастер-клиент + user_data + patient info), включая клиента чата даже без сообщений."""
+
+    sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
     if extra_client_id:
         sender_ids.add(extra_client_id)
-
     sender_ids.discard(None)
+
     if not sender_ids:
         return {}
 
+    # --- 1. Master clients ---
     master_docs = await mongo_db.clients.find({"client_id": {"$in": list(sender_ids)}}).to_list(None)
     masters = {d["client_id"]: MasterClient(**d) for d in master_docs}
 
+    # --- 2. Users ---
     valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
     user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
     users = {str(u["_id"]): u for u in user_docs}
 
+    # --- 3. Main info & Contact info ---
+    user_ids_str = [str(uid) for uid in valid_user_ids]
+
+    main_infos = await mongo_db["patients_main_info"].find({"user_id": {"$in": user_ids_str}}).to_list(None)
+    contact_infos = await mongo_db["patients_contact_info"].find({"user_id": {"$in": user_ids_str}}).to_list(None)
+
+    main_info_map = {doc["user_id"]: doc for doc in main_infos}
+    contact_info_map = {doc["user_id"]: doc for doc in contact_infos}
+
+    # --- 4. Сбор итоговых данных ---
     sender_data_map = {}
 
     for client_id, master in masters.items():
@@ -744,7 +801,7 @@ async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[
             "avatar_url": master.avatar_url,
             "source": master.source.en_value,
             "external_id": master.external_id,
-            "metadata": master.metadata,
+            "metadata": dict(master.metadata or {}),
             "client_id": master.client_id,
         }
 
@@ -755,6 +812,15 @@ async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[
                 user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
                 user_data = await user_data_obj.get_full_user_data()
                 data["user"] = user_data
+
+            # Вставляем main_info и contact_info в metadata
+            metadata = data.setdefault("metadata", {})
+
+            if master.user_id in main_info_map:
+                metadata["main_info"] = main_info_map[master.user_id]
+
+            if master.user_id in contact_info_map:
+                metadata["contact_info"] = contact_info_map[master.user_id]
 
         sender_data_map[client_id] = data
 
