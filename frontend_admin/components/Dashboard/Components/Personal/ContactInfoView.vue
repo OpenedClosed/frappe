@@ -63,7 +63,7 @@
           <!-- Document ID -->
           <div>
             <label class="block text-[13px] font-normal ">
-             {{ t('ContactInfoView.emergency') }}
+             {{ t('ContactInfoView.docId') }}
             </label>
             <span class="text-[15px] font-normal">
               {{ itemData.doc_id }}

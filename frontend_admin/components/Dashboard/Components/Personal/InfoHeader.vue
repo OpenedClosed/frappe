@@ -67,14 +67,19 @@ const contactInfo = ref({
 
 // Получаем данные из API через useAsyncData (Nuxt 3)
 const { data: headerData, error } = await useAsyncData("headerData", getHeaderData);
+console.log("headerData", headerData.value);
 
 if (headerData.value) {
   // Destructure the two objects from headerData.value
-  const { responseData, responseDataMe } = headerData.value;
+  const { responseData, responseDataMe, responseBonus } = headerData.value;
   console.log("responseDataMe", responseDataMe);
   console.log("responseData", responseData);
+  console.log("responseBonus", responseBonus);
   if (responseDataMe?.role && (responseDataMe?.role === "admin" || responseDataMe?.role === "superadmin")) {
     isAdmin.value = true;
+  }
+  if (responseBonus) {
+    bonusCount.value = responseBonus.balance || 0;
   }
   // Use responseData (and responseDataMe if needed) inside setData
   setData(responseData);
@@ -91,7 +96,6 @@ function setData(data: any) {
   // Пример: формируем полное имя из first_name и last_name (и patronymic, если есть)
   patientName.value = [data?.first_name, data?.patronymic, data?.last_name].filter(Boolean).join(" ") || "Неизвестный пациент";
   patientId.value = data?.patient_id || "";
-  bonusCount.value = data?.bonus_count || 0;
   patientAvatar.value = data?.avatar?.url || "";
 
   // Если в ответе API присутствует контактная информация, устанавливаем её
@@ -108,21 +112,25 @@ function setData(data: any) {
 }
 
 // Функция для получения данных из API
-async function getHeaderData() {
-  let responseDataMe;
-  let responseData;
+async function getHeaderData () {
   try {
-    const response = await useNuxtApp().$api.get(`api/personal_account/patients_main_info/`);
-    const response_me = await useNuxtApp().$api.get(`/api/users/me`);
-    responseData = response.data;
-    responseDataMe = response_me.data;
-    console.log("Profile responseData =", responseData);
-  } catch (err: any) {
-    if (err.response) {
-      console.error("Ошибка API:", err.response.data);
+    const api = useNuxtApp().$api
+    const [mainInfoRes, meRes, bonusRes] = await Promise.all([
+      api.get('api/personal_account/patients_main_info/'),
+      api.get('/api/users/me'),
+      api.get('api/personal_account/patients_bonus_program/'),
+    ])
+
+    return {
+      responseData:   mainInfoRes.data,
+      responseDataMe: meRes.data,
+      responseBonus:  bonusRes.data,
     }
+  } catch (err) {
+    if (err?.response) console.error('Ошибка API:', err.response.data)
+    else               console.error(err)
+    return null
   }
-  return { responseData, responseDataMe };
 }
 
 const { isSidebarOpen } = useSidebarState();
