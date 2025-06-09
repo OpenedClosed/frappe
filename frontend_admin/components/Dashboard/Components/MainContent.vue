@@ -318,7 +318,7 @@ const onExportToExcel = async () => {
 };
 
 // Use Nuxt's useAsyncData to load adminData once
-const { data: adminData } = await useAsyncData("adminData", getAdminData);
+const { data: adminData } = await useAsyncData("adminDataInfo", getAdminData);
 
 /**
  * Build the navItems from the adminData structure.
