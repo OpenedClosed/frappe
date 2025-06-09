@@ -436,7 +436,9 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         patient_id = obj["patient_id"]
         try:
             # прямой вызов, чтобы отловить 403, не через кеш-обёртку
-            await get_client().get_consents(patient_id)
+            _, e = await self.get_consents_cached(patient_id)
+            if e:
+                raise e
             return {
                 "ru": "подтверждён",
                 "en": "verified",
@@ -1151,20 +1153,14 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
             return None
 
         is_invited = False
-        print("----- NAME -----")
-        print(obj)
-        print(current_user.data.get("user_id"))
+
         if current_user:
             client = await self.get_master_client_by_user(current_user)
-            print(client)
             is_invited = client and client.get("patient_id") == patient_id
-            print(is_invited)
 
         if obj.get("status") == FamilyStatusEnum.CONFIRMED or is_invited:
-            print("----- PATIENT -----")
             main_user_id = obj.get("user_id")
             main_doc = await mongo_db.patients_main_info.find_one({"user_id": main_user_id})
-            print(main_user_id)
             
             
               
@@ -1855,7 +1851,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         if doc:
             return await self.sync_consents(doc)
 
-        crm_raw = await self.get_consents_cached(patient_id)
+        crm_raw, _ = await self.get_consents_cached(patient_id)
         consents = [ConsentItem(id=c["id"], accepted=c.get("accepted", False)) for c in crm_raw]
 
         now = datetime.utcnow()
@@ -1907,7 +1903,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
             raise HTTPException(400, "Invalid consents format: must be list")
 
         # Получаем все согласия из CRM
-        consents = await self.get_consents_cached(patient_id)
+        consents, _ = await self.get_consents_cached(patient_id)
         consents_by_title = {
             c["title"]: c["id"]
             for c in consents
@@ -1966,7 +1962,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
             return {}
 
         try:
-            consents = await self.get_consents_cached(patient_id)
+            consents, _ = await self.get_consents_cached(patient_id)
         except Exception as e:
 
             return {}
@@ -1992,7 +1988,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
             return formatted
 
         try:
-            crm_consents = await self.get_consents_cached(patient_id)
+            crm_consents, _ = await self.get_consents_cached(patient_id)
             accepted_titles = [c["title"] for c in crm_consents if c.get("accepted") and "title" in c]
             formatted["consents"] = accepted_titles
         except Exception:

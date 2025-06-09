@@ -176,22 +176,22 @@ class CRMIntegrationMixin:
     async def get_consents_cached(self, patient_id: str, ttl: int = 60) -> list[dict]:
         """Возвращает согласия пациента из CRM, кеш 60 с."""
         if not patient_id:
-            return []
+            return [], None
 
         cache_key = f"crm:consents:{patient_id}"
         cached = await redis_db.get(cache_key)
         if cached:
             try:
-                return json.loads(cached)
+                return json.loads(cached), None
             except Exception:
                 pass
 
         try:
             consents = await get_client().get_consents(patient_id)
             await redis_db.set(cache_key, json.dumps(consents), ex=ttl)
-            return consents
-        except CRMError:
-            return []
+            return consents, None
+        except CRMError as e:
+            return [], e
 
     async def get_bonuses_history_cached(self, patient_id: str, ttl: int = 60) -> list[dict]:
         """
