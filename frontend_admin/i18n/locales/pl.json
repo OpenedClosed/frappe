@@ -630,7 +630,9 @@
     "errorTitle": "Błąd",
     "unknown": "Wystąpił nieznany błąd"
   },
-
+  "CRMtable": {
+    "empty": "Brak dostępnych danych"
+  },
   "test": {
     "test": "Test"
   }

@@ -608,6 +608,9 @@
     "errorTitle": "Error",
     "unknown": "Unknown error occurred"
   },
+  "CRMtable":{
+    "empty": "No data available"
+  },
   "test": {
     "test": "Test"
   }

@@ -47,6 +47,14 @@
         :aria-label="t('FamilyTable.editAria')"
       />
     </div>
+    <Paginator
+      v-if="paginator"
+      :first="first"
+      :rows="rows"
+      :totalRecords="totalRecords"
+      @page="onPage"
+      class=""
+    />
   </div>
 </template>
 
@@ -80,6 +88,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+
+   /* pagination-specific props (all forwarded from the parent) */
+  paginator: { type: Boolean, default: false },
+  first: { type: Number, default: 0 },           // offset
+  rows: { type: Number, default: 10 },           // rows per page
+  totalRecords: { type: Number, default: 0 },    // total items
 });
 console.log("props.tableData", props.tableData);
 watch(props, (newValue) => {
@@ -91,7 +105,7 @@ const currentEntity = computed(() => route.params.entity);
 const currentId = computed(() => route.params.id);
 
 // Emit if you still need "exportToExcel" or other events
-const emit = defineEmits(["exportToExcel"]);
+const emit = defineEmits(['page',"exportToExcel"]);
 function onExportToExcel() {
   emit("exportToExcel");
 }
@@ -107,6 +121,10 @@ function getRequestTypeClass(reqTypeObj) {
     default:
       return "text-gray-700 bg-gray-100";
   }
+}
+
+function onPage(evt) {
+  emit('page', evt); // evt = { first, rows, page }
 }
 
 // Example of using a computed label for "Create" / "Add"

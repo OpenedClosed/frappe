@@ -1,71 +1,154 @@
 <!-- pages/${currentPageName.value}/[group]/[entity]/index.vue -->
 <template>
-<div class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight"  :class="[currentPageName === 'personal_account' ? '' : '']">
+  <div
+    class="flex flex-col flex-1 shadow-lg max-w-full overflow-x-auto bg-secondaryLight"
+    :class="[currentPageName === 'personal_account' ? '' : '']"
+  >
     <!-- Main Layout with Sidebar and DataTable -->
-    <div class="max-w-full flex flex-row flex-1 w-full "
-      :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-between']">
+    <div
+      class="max-w-full flex flex-row flex-1 w-full"
+      :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-between']"
+    >
       <!-- Navigation Sidebar Component -->
       <NavigationSidebar class="flex justify-start" v-if="currentPageName === 'admin'" :navItems="navItems" />
 
       <InfoHeader v-if="currentPageName === 'personal_account'" />
       <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
 
-      <!-- Check if group is "knowledge-base" -->
-      <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col flex-1 min-w-0 justify-start">
-        <KnowledgeBase />
-      </div>
-      <div v-else-if="currentGroup === 'support'"
-        class="flex flex-col flex-1 flex-1 min-h-0 min-w-0 justify-start p-4">
-        <SupportPage class="m-4" />
-      </div>
-      <div v-else-if="currentEntity === 'patients_health_survey' && !currentId"
-        class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]"
-          :label="	t('MainContent.buttons.fillHealthSurvey')"></Button>
-      </div>
-      <div v-else-if="currentEntity === 'patients_main_info' && !currentId"
-        class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="	t('MainContent.buttons.fillMainInfo')"></Button>
-      </div>
-      <div v-else-if="currentEntity === 'patients_contact_info' && !currentId"
-        class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillContactInfo')"></Button>
-      </div>
-      <div v-else-if="currentEntity === 'patients_consents' && !currentId"
-        class="flex flex-col flex-1 min-w-0 justify-start items-center p-4">
-        <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
-      </div>
-      <div v-else-if="currentEntity === 'patients_family' && !currentId"
-        class="flex w-full flex-col flex-1 min-w-0 justify-start items-center p-4">
-      <FamilyTable :title="currentEntityName" :isInline="isEntityInline" :displayedColumns="displayedColumns"
-          :tableData="tableDataOriginal" :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize"
-          :first="(currentPage - 1) * pageSize" :totalRecords="totalRecords" :paginator="true" @page="onPageChange"
-          @exportToExcel="onExportToExcel" @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
-      </div>
-      <div v-else-if="currentEntity === 'chat_sessions' && !currentId"
-        class="flex w-full flex-col min-w-0 justify-start items-center m-4">
-
-          <EmbeddedChat class="w-full" v-if="filteredTableData.length>0"  :id="filteredTableData[0]?.chat_id" :chatsData="filteredTableData" :totalRecords="totalRecords" @page="changeCurrentPage" :isRoomsLoading="isLoading"  @exportToExcel="onExportToExcel"/>
+      <div v-if="isLoading || isLoadingData" class="flex justify-center items-center w-full h-full p-8">
+        <Loader style="width:50px; height:50px" />
 
       </div>
+      <div v-else>
+        <!-- Check if group is "knowledge-base" -->
+        <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col flex-1 min-w-0 justify-start">
+          <KnowledgeBase />
+        </div>
+        <div v-else-if="currentGroup === 'support'" class="flex flex-col flex-1 flex-1 min-h-0 min-w-0 justify-start p-4">
+          <SupportPage class="m-4" />
+        </div>
+        <div
+          v-else-if="currentEntity === 'patients_health_survey' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
+        >
+          <Button
+            @click="onClickCreate"
+            icon="pi pi-plus"
+            class="max-w-[350px]"
+            :label="t('MainContent.buttons.fillHealthSurvey')"
+          ></Button>
+        </div>
+        <div
+          v-else-if="currentEntity === 'patients_main_info' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
+        >
+          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillMainInfo')"></Button>
+        </div>
+        <div
+          v-else-if="currentEntity === 'patients_contact_info' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
+        >
+          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillContactInfo')"></Button>
+        </div>
+        <div
+          v-else-if="currentEntity === 'patients_consents' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
+        >
+          <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
+        </div>
+        <div
+          v-else-if="currentEntity === 'crm_appointments' && !currentId"
+          class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
+        >
+          <CRMTable
+            :title="currentEntityName"
+            :isInline="isEntityInline"
+            :displayedColumns="displayedColumns"
+            :tableData="tableDataOriginal"
+            :isLoading="isLoading"
+            :fieldOptions="fieldOptions"
+            :rows="pageSize"
+            :first="(currentPage - 1) * pageSize"
+            :totalRecords="totalRecords"
+            :paginator="true"
+            @page="onPageChange"
+            @exportToExcel="onExportToExcel"
+            @showFilter="showFilterDialog"
+            @filterChange="handleFilterChange"
+          />
+        </div>
+        <div
+          v-else-if="currentEntity === 'patients_family' && !currentId"
+          class="flex w-full flex-col flex-1 min-w-0 justify-start items-center p-4"
+        >
+          <FamilyTable
+            :title="currentEntityName"
+            :isInline="isEntityInline"
+            :displayedColumns="displayedColumns"
+            :tableData="tableDataOriginal"
+            :isLoading="isLoading"
+            :fieldOptions="fieldOptions"
+            :rows="pageSize"
+            :first="(currentPage - 1) * pageSize"
+            :totalRecords="totalRecords"
+            :paginator="true"
+            @page="onPageChange"
+            @exportToExcel="onExportToExcel"
+            @showFilter="showFilterDialog"
+            @filterChange="handleFilterChange"
+          />
+        </div>
+        <div
+          v-else-if="currentEntity === 'chat_sessions' && !currentId"
+          class="flex w-full flex-col min-w-0 justify-start items-center m-4"
+        >
+          <EmbeddedChat
+            class="w-full"
+            v-if="filteredTableData.length > 0"
+            :id="filteredTableData[0]?.chat_id"
+            :chatsData="filteredTableData"
+            :totalRecords="totalRecords"
+            @page="changeCurrentPage"
+            :isRoomsLoading="isLoading"
+            @exportToExcel="onExportToExcel"
+          />
+        </div>
 
-      <!-- Default behavior: Show Data Table -->
-      <div v-else-if="currentEntity && !currentId" class="flex flex-col flex-1 min-w-0 justify-between m-4">
-        <DynamicDataTable v-if="currentPageInstances > 1 || currentPageName === 'admin'" :title="currentEntityName"
-          :isInline="isEntityInline" :displayedColumns="displayedColumns" :tableData="filteredTableData"
-          :isLoading="isLoading" :fieldOptions="fieldOptions" :rows="pageSize" :first="(currentPage - 1) * pageSize"
-          :totalRecords="totalRecords" :paginator="true" @page="onPageChange" @exportToExcel="onExportToExcel"
-          @showFilter="showFilterDialog" @filterChange="handleFilterChange" />
-      </div>
+        <!-- Default behavior: Show Data Table -->
+        <div v-else-if="currentEntity && !currentId" class="flex flex-col flex-1 min-w-0 justify-between m-4">
+          <DynamicDataTable
+            v-if="currentPageInstances > 1 || currentPageName === 'admin'"
+            :title="currentEntityName"
+            :isInline="isEntityInline"
+            :displayedColumns="displayedColumns"
+            :tableData="filteredTableData"
+            :isLoading="isLoading"
+            :fieldOptions="fieldOptions"
+            :rows="pageSize"
+            :first="(currentPage - 1) * pageSize"
+            :totalRecords="totalRecords"
+            :paginator="true"
+            @page="onPageChange"
+            @exportToExcel="onExportToExcel"
+            @showFilter="showFilterDialog"
+            @filterChange="handleFilterChange"
+          />
+        </div>
 
-      <div v-else class="flex flex-col flex-1 min-w-0 justify-start">
-        <MainForm />
+        <div v-else class="flex flex-col flex-1 min-w-0 justify-start">
+          <MainForm />
+        </div>
       </div>
     </div>
 
     <!-- Filter Dialog -->
-    <Dialog :header="t('MainContent.dialog.filterOptions')" v-model:visible="showFilter" :modal="true" :closable="true"
-      :style="{ width: '25rem' }">
+    <Dialog
+      :header="t('MainContent.dialog.filterOptions')"
+      v-model:visible="showFilter"
+      :modal="true"
+      :closable="true"
+      :style="{ width: '25rem' }"
+    >
       <!-- Add additional filter options here -->
       <!-- <DateRangeFilter @applyFilter="applyDateFilter" /> -->
     </Dialog>
@@ -101,11 +184,12 @@ import DynamicDataTable from "./DynamicDataTable.vue";
 import MainForm from "~/components/Dashboard/Components/Form/MainForm.vue";
 import KnowledgeBase from "~/components/Dashboard/Components/KnowledgeBase.vue";
 import FamilyTable from "~/components/Dashboard/Components/Personal/FamilyTable.vue";
+import CRMTable from "~/components/Dashboard/Components/Personal/CRMTable.vue";
 import SupportPage from "~/components/Dashboard/Components/Personal/SupportPage.vue";
 import EmbeddedChat from "~/components/AdminChat/EmbeddedChat.vue";
 // ------------------ State & Refs ------------------
-import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const showFilter = ref(false);
 const searchQuery = ref("");
 const dateRange = ref({ start: null, end: null });
@@ -122,6 +206,7 @@ const navItems = ref([]);
 const displayedColumns = ref([]);
 const tableDataOriginal = ref([]);
 const isLoading = ref(false);
+const isLoadingData = ref(false);
 const currentEntityName = ref("");
 const isEntityInline = ref(false);
 
@@ -142,11 +227,9 @@ const onClickCreate = () => {
   navigateTo(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/new`);
 };
 
-
-
 function changeCurrentPage(page) {
   currentPage.value = page + 1;
-  console.log("page =",  currentPage.value);
+  console.log("page =", currentPage.value);
   fetchTableData();
 }
 // ------------------ Data Fetching ------------------
@@ -156,6 +239,7 @@ function changeCurrentPage(page) {
  */
 
 async function getAdminData() {
+  isLoadingData.value = true;
   let responseData;
   try {
     const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/info`);
@@ -167,7 +251,9 @@ async function getAdminData() {
     } else {
       console.error("Error fetching admin data:", err);
     }
+    isLoadingData.value = false;
   }
+  isLoadingData.value = false;
   return responseData;
 }
 
@@ -214,16 +300,16 @@ const onExportToExcel = async () => {
 
     toast.value?.add({
       severity: "success",
-      summary: t('MainContent.toast.exportSuccessSummary'),
-      detail: 	t('MainContent.toast.exportSuccessDetail'),
+      summary: t("MainContent.toast.exportSuccessSummary"),
+      detail: t("MainContent.toast.exportSuccessDetail"),
       life: 3000,
     });
   } catch (error) {
     console.error("Export Error:", error);
     toast.value?.add({
       severity: "error",
-      summary: 	t('MainContent.toast.exportFailSummary'),
-      detail: t('MainContent.toast.exportFailDetail'),
+      summary: t("MainContent.toast.exportFailSummary"),
+      detail: t("MainContent.toast.exportFailDetail"),
       life: 3000,
     });
   } finally {
@@ -294,8 +380,8 @@ function validateRoute(data, validCombos) {
     console.error("No groups found in adminData. Nothing to display.");
     toast.value?.add({
       severity: "error",
-      summary: 	t('MainContent.toast.errorSummary'),
-      detail: t('MainContent.toast.noDataDetail'),
+      summary: t("MainContent.toast.errorSummary"),
+      detail: t("MainContent.toast.noDataDetail"),
       life: 3000,
     });
     return;
@@ -385,9 +471,8 @@ const fetchTableData = async () => {
 
   isLoading.value = true;
   try {
-
     // let url = currentEntity.value === 'chat_sessions'?  `api/${currentPageName.value}/${currentEntity.value}/?page_size=30&order=-1` : `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
-    let url = `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`
+    let url = `api/${currentPageName.value}/${currentEntity.value}/?page_size=${pageSize.value}&page=${currentPage.value}&order=-1`;
     const response = await useNuxtApp().$api.get(url);
 
     let data = response.data.data ? response.data.data : response.data; // То, что вернёт бекенд
@@ -430,7 +515,7 @@ const fetchTableData = async () => {
       toast.value?.add({
         severity: "error",
         summary: "Error",
-        detail: `${t('MainContent.toast.loadFailDetail')} (${error.status})`,
+        detail: `${t("MainContent.toast.loadFailDetail")} (${error.status})`,
         life: 3000,
       });
     }
@@ -508,7 +593,6 @@ const filteredTableData = computed(() => {
 
   return data;
 });
-
 
 // ------------------ Filtering & Dialogs ------------------
 const showFilterDialog = () => {

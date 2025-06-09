@@ -626,9 +626,12 @@
   "LoaderOverlay": {
     "loadingCompleted": "Завантаження завершено!"
   },
-    "toastMessages": {
+  "toastMessages": {
     "errorTitle": "Помилка",
     "unknown": "Сталася невідома помилка"
+  },
+  "CRMtable": {
+    "empty": "Немає доступних даних"
   },
 
   "test": {
