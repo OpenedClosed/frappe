@@ -70,7 +70,7 @@
                 id="full_name"
                 :placeholder="t('PersonalMainRegistration.fullNamePlaceholder')"
                 required
-                class="w-full bg-transparent border-none shadow-none  focus:ring-0 focus:outline-none text-[14px]"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -84,14 +84,14 @@
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.birth_date }">
               <!-- PrimeVue Calendar -->
               <Calendar
-              required
+                required
                 v-model="regForm.birth_date"
                 id="birth_date"
                 :placeholder="t('PersonalMainRegistration.birthDatePlaceholder')"
                 showIcon
                 size="small"
                 dateFormat="dd.mm.yy"
-                class="w-full bg-transparent border-none shadow-none  focus:ring-0 focus:outline-none text-[14px]"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -107,14 +107,14 @@
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.gender }">
               <!-- PrimeVue Dropdown -->
               <Dropdown
-              required
+                required
                 v-model="regForm.gender"
                 :options="genderOptions"
                 optionLabel="label"
                 optionValue="value"
                 id="gender"
                 :placeholder="t('PersonalMainRegistration.genderPlaceholder')"
-                class="w-full bg-transparent border-none shadow-none  focus:ring-0 focus:outline-none text-[14px]"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -135,7 +135,7 @@
                 id="password"
                 :placeholder="t('PersonalMainRegistration.passwordPlaceholder')"
                 required
-                class="w-full bg-transparent border-none shadow-none  focus:ring-0 focus:outline-none text-[14px]"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
               <!-- Кнопка-переключатель для видимости пароля -->
               <button type="button" @click="togglePasswordVisibility" class="px-2 text-gray-600 dark:text-gray-300 text-[14px]">
@@ -164,7 +164,7 @@
                 id="password_confirm"
                 :placeholder="t('PersonalMainRegistration.passwordConfirmPlaceholder')"
                 required
-                class="w-full bg-transparent border-none shadow-none  focus:ring-0 focus:outline-none text-[14px]"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
               <!-- Кнопка-переключатель для видимости пароля -->
               <button type="button" @click="togglePasswordVisibilityConfirm" class="px-2 text-gray-600 dark:text-gray-300 text-[14px]">
@@ -239,7 +239,7 @@
                 id="code"
                 :placeholder="t('PersonalMainRegistration.smsCodePlaceholder')"
                 required
-                class="w-full bg-transparent border-none shadow-none  focus:ring-0 focus:outline-none"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
               />
             </div>
             <small class="text-red-500 mt-1">{{ regError.code }}</small>
@@ -273,6 +273,9 @@ const passwordTypeConfirm = ref("password");
 const { currentLanguage } = useLanguageState();
 
 
+import { useErrorParser } from "~/composables/useErrorParser.js";
+const { parseAxiosError } = useErrorParser();
+
 // язык пользователя из состояния
 const fallbackLang = "en";
 
@@ -287,12 +290,7 @@ function pickError(err) {
 
   // 3) объект вида { en:"...", ru:"..." }
   if (typeof err === "object") {
-    return (
-      err[currentLanguage.value] ||
-      err[fallbackLang] ||
-      Object.values(err)[0] ||
-      ""
-    );
+    return err[currentLanguage.value] || err[fallbackLang] || Object.values(err)[0] || "";
   }
   return "";
 }
@@ -400,52 +398,26 @@ function sendReg() {
       testCode.value = responceData?.debug_code;
     })
    .catch((err) => {
-      const errors = err?.response?.data?.errors || {};
-      Object.keys(regError.value).forEach((field) => {
-        regError.value[field] = pickError(errors[field]);
-      });
-
-      const detail = err?.response?.data?.detail;
-      if (detail) regError.value.general = pickError(detail);
-      is_loading.value = false;
+      console.error("sendReg error", err);
+      parseAxiosError(err, regError.value); // reactive error object
     });
 }
 const { isAuthorized } = useAuthState();
 
 function sendCode() {
   let formData = regForm.value;
-  // const referral_code = localStorage.getItem('referral_code');
   let url = `api/${currentPageName.value}/register_confirm`;
-  // if (referral_code) {
-  //   url += `?referral_code=${referral_code}`;
-  // }
+
   useNuxtApp()
     .$api.post(url, formData)
     .then((response) => {
-      // const subscription_id = localStorage.getItem('subscription_id');
-      // if (subscription_id) {
-      //   if (referral_code && is_payment) {
-      //     reloadNuxtApp({ path: `/payment?subscription_id=${subscription_id}&referral_code=${referral_code}`, ttl: 1000 });
-      //   } else {
-      //     reloadNuxtApp({ path: `/payment?subscription_id=${subscription_id}`, ttl: 1000 });
-      //   }
-      // } else {
-      //   reloadNuxtApp({ path: "/dashboard", ttl: 1000 });
-      // }
       let responceData = response.data;
       console.log("responceData", responceData);
       reloadNuxtApp({ path: `/${currentPageName.value}`, ttl: 1000 });
     })
     .catch((err) => {
-      console.log("err", err);
-      if (err.response) {
-        if (err.response.data.errors) {
-          regError.value.code = pickError(err.response.data.errors.code);
-        }
-        if (err.response.data.detail) {
-          regError.value.code = pickError(err.response.data.detail);
-        }
-      }
+      console.error("sendCode error", err);
+      parseAxiosError(err, regError.value); // reactive error object
     });
 }
 function resetForm() {
