@@ -429,6 +429,8 @@ function goToFormView() {
 
 // ------------------ Helpers ------------------
 function parseError(error) {
+  console.log("HERE")
+  console.log("Parsing error:", error);
   if (error.response && error.response.data) {
     const data = error.response.data;
     console.log("Error data:", data);
