@@ -220,7 +220,7 @@
 
   "FamilyTable": {
     "addMember": "ოჯახის წევრის დამატება",
-    "idPrefix": "ID:",
+    "idPrefix": "ტელეფონი:",
     "nameUnknown": "სახელი არაა მითითებული",
     "relationshipUnknown": "ურთიერთობა არაა მითითებული",
     "statusUnknown": "სტატუსი არაა მითითებული",
@@ -626,6 +626,10 @@
 
   "LoaderOverlay": {
     "loadingCompleted": "ჩატვირთვა დასრულდა!"
+  },
+  "toastMessages": {
+    "errorTitle": "შეცდომა",
+    "unknown": "უცნობი შეცდომა"
   },
 
   "test": {

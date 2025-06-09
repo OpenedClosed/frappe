@@ -140,7 +140,7 @@
     "cancelButton": "Отмена",
     "genderMale": "Мужской",
     "genderFemale": "Женский",
-      "birthDate": "Дата рождения",
+    "birthDate": "Дата рождения",
     "birthDatePlaceholder": "Выберите дату рождения",
     "gender": "Пол",
     "genderPlaceholder": "Выберите пол"
@@ -220,7 +220,7 @@
 
   "FamilyTable": {
     "addMember": "Добавить члена семьи",
-    "idPrefix": "ID:",
+    "idPrefix": "Телефон:",
     "nameUnknown": "Имя не указано",
     "relationshipUnknown": "Отношение не указано",
     "statusUnknown": "Статус не указан",
@@ -627,7 +627,10 @@
   "LoaderOverlay": {
     "loadingCompleted": "Загрузка завершена!"
   },
-
+  "toastMessages": {
+    "errorTitle": "Ошибка",
+    "unknown": "Неизвестная ошибка"
+  },
   "test": {
     "test": "Тест"
   }

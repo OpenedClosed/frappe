@@ -1276,7 +1276,11 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         data["status"] = FamilyStatusEnum.PENDING
         phone_key = normalize_numbers(data["phone"])
         data["phone"] = phone_key
-        crm_phone = format_crm_phone(phone_key)
+        try:
+            crm_phone = format_crm_phone(phone_key)
+        except ValueError as e:
+            # raise HTTPException(400, detail=f"Invalid phone number: {e}")
+            raise HTTPException(400, detail={"ru": "Неверный номер телефона", "en": "Invalid phone number", "pl": "Nieprawidłowy numer telefonu"})
         print("===== Проверка =====")
         print(phone_key)
         contact_info = await self.get_contact_info_by_phone(phone_key)
@@ -1843,7 +1847,7 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
             "patient_id": patient_id,
             "consents": [c.model_dump() for c in consents],
             "last_updated": now,
-            "current_user": current_user,
+            "current_user": current_user.data.get("user_id") if current_user else None,
         }
         result = await self.db.insert_one(data)
         data["_id"] = result.inserted_id

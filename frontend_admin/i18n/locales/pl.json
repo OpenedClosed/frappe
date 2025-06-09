@@ -139,7 +139,7 @@
     "cancelButton": "Anuluj",
     "genderMale": "Mężczyzna",
     "genderFemale": "Kobieta",
-     "birthDate": "Data urodzenia",
+    "birthDate": "Data urodzenia",
     "birthDatePlaceholder": "Wybierz datę urodzenia",
     "gender": "Płeć",
     "genderPlaceholder": "Wybierz płeć"
@@ -219,7 +219,7 @@
 
   "FamilyTable": {
     "addMember": "Dodaj członka rodziny",
-    "idPrefix": "ID:",
+    "idPrefix": "Telefon:",
     "nameUnknown": "Imię nieustawione",
     "relationshipUnknown": "Relacja nieustawiona",
     "statusUnknown": "Status nieustawiony",
@@ -625,6 +625,10 @@
 
   "LoaderOverlay": {
     "loadingCompleted": "Ładowanie zakończone!"
+  },
+  "toastMessages": {
+    "errorTitle": "Błąd",
+    "unknown": "Wystąpił nieznany błąd"
   },
 
   "test": {

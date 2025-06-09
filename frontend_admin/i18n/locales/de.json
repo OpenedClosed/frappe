@@ -223,7 +223,7 @@
 
   "FamilyTable": {
     "addMember": "Familienmitglied hinzufügen",
-    "idPrefix": "ID:",
+    "idPrefix": "Phone:",
     "nameUnknown": "Name nicht festgelegt",
     "relationshipUnknown": "Beziehung nicht festgelegt",
     "statusUnknown": "Status nicht festgelegt",
@@ -630,6 +630,10 @@
 
   "LoaderOverlay": {
     "loadingCompleted": "Ladevorgang abgeschlossen!"
+  },
+   "toastMessages": {
+    "errorTitle": "Fehler",
+    "unknown": "Unbekannter Fehler ist aufgetreten"
   },
 
   "test": {

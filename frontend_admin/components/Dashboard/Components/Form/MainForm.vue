@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- If we are in "form" view -->
+    <Toast/>
     <!-- {{ itemData }} -->
     <div v-if="isForm" class="p-4">
       <!-- {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }} -->
@@ -116,6 +116,8 @@ import { useRoute, useRouter, useAsyncData } from "#imports";
 import _ from "lodash";
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
 
 // ------------------ State & Refs ------------------
 const route = useRoute();
@@ -409,11 +411,58 @@ function parseError(error) {
   if (error.response && error.response.data) {
     const data = error.response.data;
     console.log("Error data:", data);
+
+    let toastMessage = '';
+
     if (data.detail) {
       fieldErrors.value = data.detail;
+
+      if (typeof data.detail === 'string') {
+        toastMessage = data.detail;
+      } else if (Array.isArray(data.detail)) {
+        toastMessage = data.detail.map((e) => e.msg || e).join(', ');
+      } else if (typeof data.detail === 'object') {
+        const isLangKeyed = Object.keys(data.detail).every((key) =>
+          ['en', 'ru', 'pl', 'uk', 'ka', 'de'].includes(key)
+        );
+        if (isLangKeyed) {
+          toastMessage = data.detail[currentLanguage.value] || Object.values(data.detail)[0];
+        } else {
+          toastMessage = Object.values(data.detail).flat().join(', ');
+        }
+      }
+
+      toast.add({
+        severity: 'error',
+        summary: t('toastMessages.errorTitle'),
+        detail: toastMessage,
+        life: 5000,
+      });
+
+      return toastMessage;
     }
-    return data.message || data.detail || error.message;
+
+    toastMessage = data.message || error.message;
+    toast.add({
+      severity: 'error',
+      summary: t('toastMessages.errorTitle'),
+      detail: toastMessage,
+      life: 5000,
+    });
+
+    return toastMessage;
   }
-  return error.message || "Неизвестная ошибка";
+
+  const fallbackMessage = error.message || t('toastMessages.unknown');
+  toast.add({
+    severity: 'error',
+    summary: t('toastMessages.errorTitle'),
+    detail: fallbackMessage,
+    life: 5000,
+  });
+
+  return fallbackMessage;
 }
+
+
 </script>

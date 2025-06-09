@@ -212,7 +212,7 @@
   },
   "FamilyTable": {
     "addMember": "Add family member",
-    "idPrefix": "ID:",
+    "idPrefix": "Phone:",
     "nameUnknown": "Name not set",
     "relationshipUnknown": "Relationship not set",
     "statusUnknown": "Status not set",
@@ -603,6 +603,10 @@
   },
   "LoaderOverlay": {
     "loadingCompleted": "Loading completed!"
+  },
+  "toastMessages": {
+    "errorTitle": "Error",
+    "unknown": "Unknown error occurred"
   },
   "test": {
     "test": "Test"

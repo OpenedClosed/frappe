@@ -11,10 +11,10 @@
           <Avatar icon="pi pi-user" class="mr-2" size="medium" shape="circle" />
           <div class="flex flex-col">
             <div class="text-xl font-bold text-black dark:text-white">
-              {{ member.name || t('FamilyTable.nameUnknown')  }}
+              {{ member.member_name || t('FamilyTable.nameUnknown')  }}
             </div>
             <div class="text-sm">
-              {{ t('FamilyTable.idPrefix') }} {{ member.id }} • 
+              {{ t('FamilyTable.idPrefix') }} {{ member.phone }} • 
               {{ member.relationship?.[currentLanguage] || member.relationship?.en ||  t('FamilyTable.relationshipUnknown') }}
             </div>
           </div>
