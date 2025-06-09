@@ -136,7 +136,13 @@
     "smsCodeLabel": "Kod z SMS",
     "smsCodePlaceholder": "Wprowadź kod SMS",
     "confirmButton": "Potwierdź",
-    "cancelButton": "Anuluj"
+    "cancelButton": "Anuluj",
+    "genderMale": "Mężczyzna",
+    "genderFemale": "Kobieta",
+     "birthDate": "Data urodzenia",
+    "birthDatePlaceholder": "Wybierz datę urodzenia",
+    "gender": "Płeć",
+    "genderPlaceholder": "Wybierz płeć"
   },
 
   "DynamicForm": {

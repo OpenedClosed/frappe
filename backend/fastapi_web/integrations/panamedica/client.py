@@ -280,7 +280,7 @@ class CRMClient:
         phone_key = normalize_numbers(contact_data.get("phone"))
         crm_phone = format_crm_phone(phone_key)
         pesel = contact_data.get("pesel")
-        gender = json.loads(local_data.get("gender")).get("en")
+        gender = local_data.get("gender")
         bdate_raw = local_data.get("birth_date")
         bdate = bdate_raw.strftime("%Y-%m-%d") if bdate_raw else None
         email = contact_data.get("email", "")

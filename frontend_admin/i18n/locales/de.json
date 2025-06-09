@@ -140,7 +140,13 @@
     "smsCodeLabel": "SMS-Code",
     "smsCodePlaceholder": "SMS-Code eingeben",
     "confirmButton": "Bestätigen",
-    "cancelButton": "Abbrechen"
+    "cancelButton": "Abbrechen",
+    "genderMale": "Männlich",
+    "genderFemale": "Weiblich",
+     "birthDate": "Geburtsdatum",
+    "birthDatePlaceholder": "Wählen Sie Ihr Geburtsdatum",
+    "gender": "Geschlecht",
+    "genderPlaceholder": "Wählen Sie Ihr Geschlecht"
   },
 
   "DynamicForm": {

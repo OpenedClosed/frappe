@@ -137,7 +137,13 @@
     "smsCodeLabel": "Код из SMS",
     "smsCodePlaceholder": "Введите код из SMS",
     "confirmButton": "Подтвердить",
-    "cancelButton": "Отмена"
+    "cancelButton": "Отмена",
+    "genderMale": "Мужской",
+    "genderFemale": "Женский",
+      "birthDate": "Дата рождения",
+    "birthDatePlaceholder": "Выберите дату рождения",
+    "gender": "Пол",
+    "genderPlaceholder": "Выберите пол"
   },
 
   "DynamicForm": {

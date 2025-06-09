@@ -26,7 +26,7 @@ class RegistrationSchema(BaseModel):
     email: Optional[EmailStr] = None
     full_name: str
     birth_date: Optional[datetime] = None
-    gender: Optional[GenderEnum] = None
+    gender: Optional[str] = None
     password: str
     password_confirm: str
     accept_terms: bool = False
@@ -104,7 +104,7 @@ class MainInfoSchema(BaseValidatedModel):
         }
     )
 
-    gender: Optional[GenderEnum] = Field(
+    gender: Optional[str] = Field(
         None,
         json_schema_extra={
             "settings": {

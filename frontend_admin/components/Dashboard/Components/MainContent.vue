@@ -5,11 +5,12 @@
     <div class="max-w-full flex flex-row flex-1 w-full "
       :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-between']">
       <!-- Navigation Sidebar Component -->
+      
       <NavigationSidebar class="flex justify-start" v-if="currentPageName === 'admin'" :navItems="navItems" />
 
       <InfoHeader v-if="currentPageName === 'personal_account'" />
       <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
-
+      
       <!-- Check if group is "knowledge-base" -->
       <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col flex-1 min-w-0 justify-start">
         <KnowledgeBase />

@@ -137,7 +137,13 @@
     "smsCodeLabel": "SMS კოდი",
     "smsCodePlaceholder": "შეიყვანეთ SMS კოდი",
     "confirmButton": "დადასტურება",
-    "cancelButton": "გაუქმება"
+    "cancelButton": "გაუქმება",
+    "genderMale": "კაცი",
+    "genderFemale": "ქალი",
+    "birthDate": "დაბადების თარიღი",
+    "birthDatePlaceholder": "აირჩიეთ თქვენი დაბადების თარიღი",
+    "gender": "სქესი",
+    "genderPlaceholder": "აირჩიეთ სქესი"
   },
 
   "DynamicForm": {

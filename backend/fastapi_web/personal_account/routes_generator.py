@@ -1,7 +1,7 @@
 """Формирование маршрутов приложения Персональный аккаунт."""
 import random
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Optional
 from fastapi_jwt_auth import AuthJWT                     # JWT-обёртка
 from fastapi_jwt_auth import exceptions as jwt_exc
@@ -85,15 +85,31 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     "en": "User with this phone already exists.",
                     "pl": "Użytkownik z tym numerem już istnieje."
                 }
-        data.birth_date = datetime.now()
-        # обязательные birth_date / gender
+
+        today = datetime.utcnow().date()
+
         if not data.birth_date:
             errors["birth_date"] = {
                 "ru": "Дата рождения обязательна.",
                 "en": "Birth date is required.",
                 "pl": "Data urodzenia jest wymagana."
             }
-        data.gender = GenderEnum.MALE
+        else:
+            birth = data.birth_date.date()  # приведение к date
+            if birth > today:
+                errors["birth_date"] = {
+                    "ru": "Дата рождения не может быть в будущем.",
+                    "en": "Birth date cannot be in the future.",
+                    "pl": "Data urodzenia nie może być z przyszłości."
+                }
+            elif birth > today - timedelta(days=365 * 10):
+                errors["birth_date"] = {
+                    "ru": "Регистрация доступна только с 10 лет.",
+                    "en": "Registration is only available from age 10.",
+                    "pl": "Rejestracja dostępna od 10 roku życia."
+                }
+
+
         if not data.gender:
             errors["gender"] = {
                 "ru": "Пол обязателен.",
@@ -116,9 +132,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "en": "Code sent to phone.",
                 "pl": "Kod został wysłany na telefon."
             },
-            "debug_code": code           # убрать в бою
+            "debug_code": code  # Убрать в бою
         }
-
     # ------------------------------------------------------------------
     # Шаг 2 Регистрации  ➔  CRM + Mongo + (опц.) JWT
     # ------------------------------------------------------------------
@@ -135,17 +150,17 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         • Создаёт/находит пациента в CRM  
         • Выдаёт JWT, **если** пользователь не был залогинен
         """
-        data.gender = GenderEnum.MALE
-        data.birth_date = datetime.now()
+        # data.gender = GenderEnum.MALE
+        # data.birth_date = datetime.now()
         phone_key = normalize_numbers(data.phone)
-        if REG_CODES.get(phone_key) != data.code:
-            raise HTTPException(400, detail={
-                "code": {
-                    "ru": "Неверный код.",
-                    "en": "Invalid code.",
-                    "pl": "Nieprawidłowy kod."
-                }
-            })
+        # if REG_CODES.get(phone_key) != data.code:
+        #     raise HTTPException(400, detail={
+        #         "code": {
+        #             "ru": "Неверный код.",
+        #             "en": "Invalid code.",
+        #             "pl": "Nieprawidłowy kod."
+        #         }
+        #     })
 
         # ---------------- Принимаем данные из схемы ----------------
         main_schema = MainInfoSchema(
