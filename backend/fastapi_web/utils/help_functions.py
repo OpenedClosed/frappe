@@ -52,8 +52,6 @@ def normalize_numbers(phone: str) -> str:
 
 async def send_sms(phone: str, text: str) -> dict:
     "Отправляет SMS-сообщение через SMS-Fly."
-    test_phone = "48572416005"
-    phone = test_phone
     payload = {
         "auth": {
             "key": settings.SMS_API_KEY
@@ -69,6 +67,7 @@ async def send_sms(phone: str, text: str) -> dict:
             }
         }
     }
+    print("Отправка СМС")
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:

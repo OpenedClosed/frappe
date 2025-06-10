@@ -124,7 +124,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         REG_CODES[phone_key] = code
 
         # --- Пока ничего не шлём, оставляем заглушку ---
-        # await send_sms(phone_key, f"Код подтверждения: {code}")
+        await send_sms(phone_key, f"Код подтверждения: {code}")
 
         return {
             "message": {
@@ -153,14 +153,14 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # data.gender = GenderEnum.MALE
         # data.birth_date = datetime.now()
         phone_key = normalize_numbers(data.phone)
-        # if REG_CODES.get(phone_key) != data.code:
-        #     raise HTTPException(400, detail={
-        #         "code": {
-        #             "ru": "Неверный код.",
-        #             "en": "Invalid code.",
-        #             "pl": "Nieprawidłowy kod."
-        #         }
-        #     })
+        if REG_CODES.get(phone_key) != data.code:
+            raise HTTPException(400, detail={
+                "code": {
+                    "ru": "Неверный код.",
+                    "en": "Invalid code.",
+                    "pl": "Nieprawidłowy kod."
+                }
+            })
 
         # ---------------- Принимаем данные из схемы ----------------
         main_schema = MainInfoSchema(
@@ -335,7 +335,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     "pl": "Użytkownik nie znaleziony."
                 }
             })
-
+ 
         user_doc = await mongo_db["users"].find_one({"_id": ObjectId(contact["user_id"])})
         if not user_doc or not data.check_password(user_doc.get("password", "")):
             raise HTTPException(401, detail={
@@ -350,7 +350,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         TWO_FA_CODES[phone_key] = code_2fa
 
         # Заглушка — SMS пока не отправляем
-        # await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
+        await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
 
         return {
             "message": {
