@@ -392,7 +392,7 @@ def generate_base_routes(registry: BaseRegistry):
         Информация для админа (список зарегистрированных моделей и т.д.).
         """
         current_user = await get_current_user(Authorize)
-        return get_routes_by_apps(registry, current_user)
+        return await get_routes_by_apps(registry, current_user)
 
     return router
 
@@ -429,15 +429,6 @@ def map_python_type_to_ui(py_type):
     return "unknown"
 
 
-def get_schema_data(instance):
-    """
-    Возвращает свойства (properties) и список обязательных полей (required) схемы модели.
-    """
-    try:
-        schema = instance.model.schema(by_alias=False)
-        return schema.get("properties", {}), schema.get("required", [])
-    except Exception:
-        return {}, []
 
 
 def get_instance_attributes(instance):
@@ -602,7 +593,7 @@ def build_field_schema(instance, field, schema_props, model_annotations,
     }
 
 
-def build_inlines(instance, inlines_dict, model_annotations):
+async def build_inlines(instance, inlines_dict, model_annotations, current_user):
     """
     Формирует список inlines (вложенных моделей), учитывая их тип (single или list).
     """
@@ -622,10 +613,11 @@ def build_inlines(instance, inlines_dict, model_annotations):
                     inline_type = "list"
 
         inlines_list.append(
-            build_inline_schema(
+            await build_inline_schema(
                 inline_field,
                 inline_instance,
-                inline_type))
+                inline_type,
+                current_user))
 
     return inlines_list
 
@@ -644,8 +636,15 @@ def build_field_groups(field_groups):
         for group in field_groups
     ]
 
+def deep_update(dst: dict, src: dict) -> None:
+    for k, v in src.items():
+        if isinstance(v, dict) and isinstance(dst.get(k), dict):
+            deep_update(dst[k], v)
+        else:
+            dst[k] = v
 
-def build_model_info(instance) -> dict:
+
+async def build_model_info(instance, current_user) -> dict:
     """
     Формирует структуру описания админ-модели или инлайна.
     """
@@ -663,11 +662,23 @@ def build_model_info(instance) -> dict:
         for field in combined_fields
     ]
 
+    overrides = {}
+    if hasattr(instance, "get_field_overrides"):
+        try:
+            overrides = await instance.get_field_overrides(obj=None, current_user=current_user)
+        except Exception:
+            overrides = {}
+
+    for fld in fields_schema:
+        if fld["name"] in overrides:
+            deep_update(fld, overrides[fld["name"]])
+
     groups_schema = build_field_groups(attrs["field_groups"])
-    inlines_list = build_inlines(
+    inlines_list = await build_inlines(
         instance,
         attrs["inlines_dict"],
-        model_annotations)
+        model_annotations,
+        current_user)
 
     return {
         "name": instance.model.__name__,
@@ -688,10 +699,10 @@ def build_model_info(instance) -> dict:
     }
 
 
-def build_inline_schema(inline_field: str, inline_instance,
-                        inline_type: str) -> dict:
+async def build_inline_schema(inline_field: str, inline_instance,
+                        inline_type: str, current_user) -> dict:
     """Формирует схему для инлайна с учётом вложений и типа (single или list)."""
-    base_schema = build_model_info(inline_instance)
+    base_schema = await build_model_info(inline_instance, current_user)
     base_schema["field"] = inline_field
     base_schema["inline_type"] = inline_type
     return base_schema
@@ -764,17 +775,17 @@ def get_model_routes(api_prefix: str, registered_name: str, instance) -> list:
     return routes
 
 
-def build_model_entry(instance, api_prefix,
-                      registered_name) -> Dict[str, Any]:
+async def build_model_entry(instance, api_prefix,
+                      registered_name, current_user) -> Dict[str, Any]:
     """Формирует информацию о модели, включая маршруты."""
     return {
         "registered_name": registered_name,
-        "model": build_model_info(instance),
+        "model": await build_model_info(instance, current_user),
         "routes": get_model_routes(api_prefix, registered_name, instance)
     }
 
 
-def get_routes_by_apps(registry, current_user) -> Dict[str, Any]:
+async def get_routes_by_apps(registry, current_user) -> Dict[str, Any]:
     """Формирует структуру описания моделей с учётом прав пользователя."""
     apps = {}
     api_prefix = f"/api/{registry.name}"
@@ -798,9 +809,10 @@ def get_routes_by_apps(registry, current_user) -> Dict[str, Any]:
                 "entities": []}
 
         apps[app_name]["entities"].append(
-            build_model_entry(
+            await build_model_entry(
                 instance,
                 api_prefix,
-                registered_name))
+                registered_name,
+                current_user))
 
     return apps

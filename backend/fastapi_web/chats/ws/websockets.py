@@ -41,12 +41,12 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
             logging.warning(f"Cannot load user from JWT: {e}")
 
     qs = parse_qs(urlparse(str(websocket.url)).query)
-    logging.error(f"QUERY {qs}")
     as_admin = qs.get("as_admin", [None])[0]
     is_superuser = bool(
         user and user.role in [
             RoleEnum.ADMIN,
             RoleEnum.SUPERADMIN] and as_admin)
+
 
     # is_superuser = bool(
     #     user and user.role in [

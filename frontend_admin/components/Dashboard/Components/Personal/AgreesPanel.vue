@@ -23,7 +23,7 @@
 import { defineProps, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
-
+const { currentLanguage } = useLanguageState();
 
 const props = defineProps({
   itemData: {
@@ -71,12 +71,13 @@ const consents = computed(() => {
 
   // Создаем набор согласий, которые пользователь заполнил
   // Здесь мы используем русские переводы для сравнения
-  const filledConsents = new Set((props.itemData.consents || []).map(c => c.ru))
+  console.log("consentField", consentField)
+  const filledConsents = new Set((props.itemData.consents || []).map(c => c.ru || c[currentLanguage.value] || c || ''))
 
   // Проходим по всем доступным вариантам согласий и определяем их статус
   return consentField.choices.map(choice => ({
-    title: choice.label.ru, // Отображаем название на русском языке
-    status: filledConsents.has(choice.value.ru) // true, если согласие заполнено
+    title: choice.label[currentLanguage.value] || choice.label['en'] || choice.label || '' , // Отображаем название на русском языке
+    status: filledConsents.has(choice.value[currentLanguage.value] || choice.value['en'] || choice.value || '') // true, если согласие заполнено
   }))
 })
 </script>

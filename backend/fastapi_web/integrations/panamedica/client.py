@@ -1,10 +1,13 @@
 """Клиент для взаимодействия с PaNa."""
 import asyncio
+import json
 import logging
 from datetime import date
 from functools import lru_cache
 from uuid import uuid4
 
+from bson import ObjectId
+from db.mongo.db_init import mongo_db
 import httpx
 from fastapi import HTTPException, status
 
@@ -18,10 +21,73 @@ class CRMError(HTTPException):
 
 class CRMClient:
     """
-    Клиент PaNa CRM.  
-    Авторизация, поиск/создание пациентов, чтение и обновление данных,
-    включая согласия и визиты.
+    Асинхронный клиент PaNa CRM.
+    Обеспечивает авторизацию и методы работы с пациентами, визитами и согласиями.
     """
+
+    # ==============================================================
+    # БЛОК: Базовые методы
+    # ==============================================================
+
+    def normalize_payload(self, payload: dict) -> dict:
+        """
+        Приводит значения-словари или JSON-строки вида {"en": "..."} к payload["ключ"] = значение_en.
+        Остальные значения оставляет без изменений.
+        """
+        def extract_en(val):
+            if isinstance(val, str):
+                try:
+                    parsed = json.loads(val)
+                    if isinstance(parsed, dict) and "en" in parsed:
+                        return parsed["en"]
+                except Exception:
+                    return val
+            elif isinstance(val, dict):
+                return val.get("en", val)
+            return val
+
+        return {k: extract_en(v) for k, v in payload.items()}
+    
+    async def handle_missing_patient_by_id(self, patient_id: str):
+        """
+        Проверяет локальные документы, связанные с patient_id.
+        Если пользователь — клиент, удаляет все.
+        Иначе — сбрасывает patient_id в None.
+        """
+        main_doc = await mongo_db["patients_main_info"].find_one({"patient_id": patient_id})
+        if not main_doc:
+            return  # нечего делать
+
+        user_id = main_doc.get("user_id")
+        if not user_id:
+            return
+
+        user = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+        is_client = user and user.get("role") == "client"
+
+        collections = [
+            "patients_main_info",
+            "patients_contact_info",
+            "patients_bonus",
+            "patients_consents",
+            "patients_family",
+        ]
+
+        if is_client:
+            for coll in collections:
+                await mongo_db[coll].delete_many({"user_id": str(user_id)})
+        else:
+            await mongo_db["patients_contact_info"].update_many(
+                {"user_id": str(user_id)},
+                {"$unset": {"phone": None}}
+            )
+            for coll in collections:
+                await mongo_db[coll].update_many(
+                    {"user_id": str(user_id)},
+                    {"$unset": {"patient_id": None}}
+                )
+
+
 
     # ==============================================================
     # БЛОК: Аутентификация
@@ -33,7 +99,6 @@ class CRMClient:
         self.lock = asyncio.Lock()
 
     async def refresh_token(self) -> str:
-        print("\n======= refresh_token() =======")
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
                 f"{settings.CRM_API_URL}/oauth/token",
@@ -43,14 +108,15 @@ class CRMClient:
                     "client_secret": settings.CRM_CLIENT_SECRET,
                 },
             )
-        print("Ответ от CRM:", resp.status_code, resp.text)
 
         if resp.status_code >= 400:
             raise CRMError(status.HTTP_502_BAD_GATEWAY, "CRM auth failed")
 
         data = resp.json()
         self.token_data = data["access_token"]
-        self.token_expiration = asyncio.get_event_loop().time() + int(data["expires_in"]) - 60
+        self.token_expiration = (
+            asyncio.get_event_loop().time() + int(data["expires_in"]) - 60
+        )
         return self.token_data
 
     async def get_token(self) -> str:
@@ -63,7 +129,7 @@ class CRMClient:
             return await self.refresh_token()
 
     # ==============================================================
-    # БЛОК: Методы вызова
+    # БЛОК: Основной вызов
     # ==============================================================
 
     async def call(
@@ -74,16 +140,14 @@ class CRMClient:
         params: dict | None = None,
         json: dict | None = None,
     ) -> dict:
-        print("\n======= call() =======")
-        print("Method:", method)
-        print("Path:", path)
-        print("Params:", params)
-        print("JSON:", json)
 
         headers = {
             "Authorization": f"Bearer {await self.get_token()}",
             "X-API-Client-Id": "PATIENT-PORTAL",
         }
+
+        json = self.normalize_payload(json) if json else None
+        params = self.normalize_payload(params) if params else None
 
         async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
             resp = await client.request(
@@ -94,25 +158,21 @@ class CRMClient:
                 json=json,
             )
 
-        print("Ответ от CRM:", resp.status_code, resp.text)
-
         if resp.status_code == 302:
-            print("CRM redirect location:", resp.headers.get("Location"))
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, "CRM returned redirect")
-
+            raise CRMError(status.HTTP_302_FOUND, "CRM returned redirect")
         if resp.status_code == 404:
-            raise CRMError(status.HTTP_404_NOT_FOUND, "Не найдено")
-
+            raise CRMError(status.HTTP_404_NOT_FOUND, "Not found")
+        if resp.status_code == 403:
+            raise CRMError(status.HTTP_403_FORBIDDEN, "Forbidden")
         if resp.status_code >= 400:
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, f"Ошибка CRM: {resp.status_code}")
-
+            raise CRMError(status.HTTP_502_BAD_GATEWAY, f"CRM error {resp.status_code}")
         if not resp.content:
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, "Пустой ответ от CRM")
+            raise CRMError(status.HTTP_502_BAD_GATEWAY, "Empty response from CRM")
 
         try:
             return resp.json()
         except Exception:
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, "Невалидный JSON от CRM")
+            raise CRMError(status.HTTP_502_BAD_GATEWAY, "Invalid JSON from CRM")
 
     # ==============================================================
     # БЛОК: Пациенты
@@ -121,22 +181,24 @@ class CRMClient:
     async def find_patient(
         self,
         *,
-        patient_id: int | None = None,
+        patient_id: str | None = None,
         phone: str | None = None,
         pesel: str | None = None,
         gender: str | None = None,
         birth_date: str | None = None,
     ) -> dict | None:
-        print("\n======= find_patient() =======")
 
-        # 1) По внешнему ID
+        # 1) поиск по нашему внешнему ID
         if patient_id:
             try:
                 return await self.get_patient(patient_id)
-            except CRMError:
-                return None
+            except CRMError as e:
+                if e.status_code == status.HTTP_404_NOT_FOUND:
+                    await self.handle_missing_patient_by_id(patient_id)
+                    return None
+                raise
 
-        # 2) По параметрам поиска
+        # 2) поиск по параметрам
         phone_key = normalize_numbers(phone)
         crm_phone = format_crm_phone(phone_key)
         params = {"phone": crm_phone}
@@ -168,7 +230,6 @@ class CRMClient:
         gender: str,
         pesel: str | None = None,
     ) -> dict:
-        print("\n======= create_patient() =======")
         payload = {
             "externalId": external_id,
             "firstname": first_name,
@@ -179,18 +240,26 @@ class CRMClient:
             "gender": gender,
             "pesel": pesel,
         }
-        return await self.call("POST", "/patients", json=payload)
+        data = await self.call("POST", "/patients", json=payload)
+        # CRM может не вернуть externalId — добавляем сами
+        data.setdefault("externalId", external_id)
+        return data
 
-    async def get_patient(self, patient_id: int) -> dict:
-        print("\n======= get_patient() =======")
-        return await self.call("GET", f"/patients/{patient_id}")
+    async def get_patient(self, patient_id: str) -> dict:
+        data = await self.call("GET", f"/patients/{patient_id}")
+        # если CRM не передала externalId, добавляем своё
+        data.setdefault("externalId", patient_id)
+        return data
 
-    async def patch_patient(self, patient_id: int, patch: dict) -> dict:
-        print("\n======= patch_patient() =======")
+    async def patch_patient(self, patient_id: str, patch: dict) -> dict:
         return await self.call("PATCH", f"/patients/{patient_id}", json=patch)
 
-    async def find_or_create_patient(self, *, local_data: dict, contact_data: dict) -> dict:
-        print("\n======= find_or_create_patient() =======")
+    async def find_or_create_patient(
+        self, *, local_data: dict, contact_data: dict
+    ) -> tuple[dict, bool]:
+        """
+        Возвращает (crm_data, created_now).
+        """
 
         phone_key = normalize_numbers(contact_data.get("phone"))
         crm_phone = format_crm_phone(phone_key)
@@ -201,21 +270,23 @@ class CRMClient:
         email = contact_data.get("email", "")
 
         if not crm_phone or not gender or not bdate:
-            raise CRMError(status.HTTP_400_BAD_REQUEST, "Необходимо указать телефон, пол и дату рождения")
+            raise CRMError(
+                status.HTTP_400_BAD_REQUEST,
+                "Телефон, пол и дата рождения обязательны",
+            )
 
-        # Пробуем найти (по ID или по параметрам)
-        patient_id = local_data.get("patient_id")
-        found_data = await self.find_patient(
-            patient_id=patient_id,
+        # ищем
+        found = await self.find_patient(
+            patient_id=local_data.get("patient_id"),
             phone=crm_phone,
             pesel=pesel,
             gender=gender,
             birth_date=bdate,
         )
-        if found_data:
-            return found_data
+        if found:
+            return found, False
 
-        # Создаём нового
+        # создаём
         external_id = str(uuid4())
         created = await self.create_patient(
             external_id=external_id,
@@ -227,14 +298,18 @@ class CRMClient:
             gender=gender,
             pesel=pesel,
         )
-        return await self.get_patient(created["id"])
+        # получаем полную карточку + гарантируем внешний ID
+        full = await self.find_patient(patient_id=created["externalId"])
+        full.setdefault("externalId", external_id)
+        return full, True
 
     # ==============================================================
     # БЛОК: Визиты
     # ==============================================================
 
-    async def future_appointments(self, patient_id: int, *, from_date: date) -> list[dict]:
-        print("\n======= future_appointments() =======")
+    async def future_appointments(
+        self, patient_id: str, *, from_date: date
+    ) -> list[dict]:
         res = await self.call(
             "GET",
             f"/patients/{patient_id}/appointments",
@@ -246,26 +321,29 @@ class CRMClient:
     # БЛОК: Согласия
     # ==============================================================
 
-    async def get_consents(self, patient_id: int) -> list[dict]:
-        """
-        Возвращает список согласий пациента.
-        """
-        print("\n======= get_consents() =======")
+    async def get_consents(self, patient_id: str) -> list[dict]:
         return await self.call("GET", f"/patients/{patient_id}/consents")
 
-    async def update_consent(self, patient_id: int, consent_id: int, accept: bool) -> dict:
-        """
-        Обновляет (принимает/отзывает) конкретное согласие пациента.
-        """
-        print("\n======= update_consent() =======")
+    async def update_consent(
+        self, patient_id: str, consent_id: int, accept: bool
+    ) -> dict:
         payload = {"accept": accept}
         return await self.call(
-            "PATCH",
-            f"/patients/{patient_id}/consents/{consent_id}",
-            json=payload,
+            "PATCH", f"/patients/{patient_id}/consents/{consent_id}", json=payload
         )
+    
+    # ==============================================================
+    # БЛОК: Бонусы
+    # ==============================================================
 
+    async def get_bonus_balance(self, patient_id: str) -> int:
+        """Возвращает текущий баланс бонусов пациента."""
+        patient = await self.find_patient(patient_id=patient_id)
+        return int(patient.get("bonuses", 0))
 
+    async def get_bonus_history(self, patient_id: str) -> list[dict]:
+        """Возвращает историю начислений и списаний бонусов."""
+        return await self.call("GET", f"/patients/{patient_id}/history-charges")
 
 
 

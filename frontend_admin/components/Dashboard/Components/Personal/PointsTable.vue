@@ -43,7 +43,7 @@
             <!-- Левая часть: тип и описание -->
             <div>
               <p class="text-sm font-bold" :style="{ color: txn.transaction_type.settings.color }">
-                {{ txn.transaction_type.ru }}
+                {{ txn.transaction_type[currentLanguage] || txn.transaction_type.en || '' }}
               </p>
               <p class="text-sm">{{ txn.title }}</p>
             </div>
@@ -67,6 +67,7 @@
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
+const { currentLanguage } = useLanguageState();
 // Props
 const props = defineProps({
   itemData: {
@@ -87,8 +88,6 @@ const formattedLastUpdate = computed(() => {
     year: "numeric",
     month: "long",
     day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 });
 
@@ -98,8 +97,6 @@ const formatDate = (date) => {
     year: "numeric",
     month: "long",
     day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 

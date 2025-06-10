@@ -50,17 +50,16 @@
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
-      :rooms-loaded="isRoomsLoading"
+      :rooms-loaded="!isRoomsLoading"
       @fetch-more-rooms="loadMoreChats"
       :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
       :text-messages="textMessagesJson"
     >
       <div slot="room-header-avatar" class="flex items-center justify-center">
-        
         <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2"/>
         <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2"/>
-      </div>
+      </div> 
       <div slot="room-header-info" class="flex-1">
         <!-- 🔥 Added flex-1 here -->
         <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
@@ -513,15 +512,15 @@ const currentRoomSource = computed(() => {
   return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
 });
 
-watch([chatRows], async ([rows]) => {
-  if (!rows.length) return;
+watch(chatRows, (rows) => {
+  if (!rows.length) return
+  rooms.value = buildRooms(rows, currentUserId.value)
 
-  rooms.value = buildRooms(rows, currentUserId.value);
-
-  if (!rooms.value.find((r) => r.roomId === activeRoomId.value)) {
-    activeRoomId.value = rooms.value[0]?.roomId ?? null;
+  // выбрать активную комнату, если ещё не выбрана
+  if (!rooms.value.find(r => r.roomId === activeRoomId.value)) {
+    activeRoomId.value = rooms.value[0]?.roomId ?? null
   }
-});
+}, { immediate: true })
 /* ── external events ───────────────────────────────────────── */
 // $listen("new_message_arrived", (msg) => {
 //   if (!msg || !messagesMap.value[activeRoomId.value]) return;

@@ -3,7 +3,7 @@
   <nav class="w-full px-4 pb-4">
     <ul class="flex bg-neutralLight dark:bg-neutralDark shadow-sm rounded-lg items-center space-x-4 p-1">
       <!-- Loop over each “group” -->
-      <li v-for="group in filteredNavItems" :key="group.header" class="flex items-center">
+      <li v-for="group in filteredNavItems" :key="group.header" class="flex items-center overflow-x-auto">
         <!-- Loop over each item within the group, displayed horizontally -->
         <ul class="flex items-center space-x-3">
           <li v-for="item in group.items" :key="item.name">

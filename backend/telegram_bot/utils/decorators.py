@@ -13,5 +13,6 @@ def check_private_chat(func):
         if chat_info.type == 'private':
             return await func(message, *args, **kwargs)
         else:
-            await message.reply("Эта команда доступна только в личных чатах.")
+            pass
+            # await message.reply("Эта команда доступна только в личных чатах.")
     return wrapper

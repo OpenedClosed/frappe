@@ -136,7 +136,13 @@
     "smsCodeLabel": "Kod z SMS",
     "smsCodePlaceholder": "Wprowadź kod SMS",
     "confirmButton": "Potwierdź",
-    "cancelButton": "Anuluj"
+    "cancelButton": "Anuluj",
+    "genderMale": "Mężczyzna",
+    "genderFemale": "Kobieta",
+    "birthDate": "Data urodzenia",
+    "birthDatePlaceholder": "Wybierz datę urodzenia",
+    "gender": "Płeć",
+    "genderPlaceholder": "Wybierz płeć"
   },
 
   "DynamicForm": {
@@ -213,7 +219,7 @@
 
   "FamilyTable": {
     "addMember": "Dodaj członka rodziny",
-    "idPrefix": "ID:",
+    "idPrefix": "Telefon:",
     "nameUnknown": "Imię nieustawione",
     "relationshipUnknown": "Relacja nieustawiona",
     "statusUnknown": "Status nieustawiony",
@@ -620,7 +626,13 @@
   "LoaderOverlay": {
     "loadingCompleted": "Ładowanie zakończone!"
   },
-
+  "toastMessages": {
+    "errorTitle": "Błąd",
+    "unknown": "Wystąpił nieznany błąd"
+  },
+  "CRMtable": {
+    "empty": "Brak dostępnych danych"
+  },
   "test": {
     "test": "Test"
   }

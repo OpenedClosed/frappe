@@ -1,6 +1,5 @@
 <template>
   <div class="w-full flex justify-center items-center h-screen">
-
     <!-- Основной контейнер -->
     <div class="p-4 m-4 bg-gray-100 dark:bg-gray-800 rounded-md shadow-md w-[30rem]">
       <!-- Шаг 1: Ввод логина и пароля -->
@@ -8,25 +7,23 @@
         <!-- Заголовок / логотип -->
         <div class="w-full flex flex-col justify-center items-center mb-4">
           <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">
-            	{{ t('PersonalMainLogin.titleLogin') }}
+            {{ t("PersonalMainLogin.titleLogin") }}
           </p>
         </div>
-        
+
         <!-- Логин (например, телефон) -->
         <div class="w-full flex flex-col justify-start">
           <label for="phone" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            {{ t('PersonalMainLogin.phone') }} <span class="text-red-500">*</span>
+            {{ t("PersonalMainLogin.phone") }} <span class="text-red-500">*</span>
           </label>
-          <div class="input-container flex items-center border rounded-lg"
-               :class="{ 'p-invalid': Boolean(loginError.phone) }"
-          >
+          <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(loginError.phone) }">
             <InputMask
               v-model="loginForm.phone"
               id="phone"
               type="tel"
               required
-              mask="+9 (999) 999-99-99"
-             :placeholder="t('PersonalMainLogin.phonePlaceholder')"
+              mask="+48 999 999 999"
+              :placeholder="t('PersonalMainLogin.phonePlaceholder')"
               class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
             />
           </div>
@@ -36,12 +33,11 @@
         <!-- Пароль -->
         <div class="w-full flex flex-col justify-start">
           <label for="password" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            {{ t('PersonalMainLogin.password') }} <span class="text-red-500">*</span>
+            {{ t("PersonalMainLogin.password") }} <span class="text-red-500">*</span>
           </label>
-          <div class="input-container flex items-center border rounded-lg"
-               :class="{ 'p-invalid': Boolean(loginError.password) }"
-          >
-            <InputText size="small"
+          <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(loginError.password) }">
+            <InputText
+              size="small"
               :type="showPassword ? 'text' : 'password'"
               v-model="loginForm.password"
               required
@@ -58,14 +54,17 @@
 
         <!-- Кнопка «Войти» -->
         <div class="w-full mt-6">
-          <Button type="submit" :label="t('PersonalMainLogin.loginButton')"
-                  class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full border-none" />
+          <Button
+            type="submit"
+            :label="t('PersonalMainLogin.loginButton')"
+            class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full border-none"
+          />
         </div>
 
         <!-- Ссылка на регистрацию (если не в админке) -->
         <small v-if="currentPageName != 'admin'" class="text-[14px] text-black dark:text-white">
-         {{ t('PersonalMainLogin.noAccount') }}
-          <span @click="goRegistration" class="underline cursor-pointer"> {{ t('PersonalMainLogin.registerLink') }} </span>
+          {{ t("PersonalMainLogin.noAccount") }}
+          <span @click="goRegistration" class="underline cursor-pointer"> {{ t("PersonalMainLogin.registerLink") }} </span>
         </small>
       </form>
 
@@ -74,13 +73,13 @@
         <!-- Заголовок -->
         <div class="w-full flex flex-col justify-center items-center mb-4">
           <p class="text-center text-[20px] text-black dark:text-white font-medium mt-4 w-full">
-            	{{ t('PersonalMainLogin.title2FA') }}
+            {{ t("PersonalMainLogin.title2FA") }}
           </p>
         </div>
- <!-- Для отладки: вывести код, если бэкенд вернул debug_code -->
- <div class="w-full flex flex-col" v-if="debugCode">
+        <!-- Для отладки: вывести код, если бэкенд вернул debug_code -->
+        <div class="w-full flex flex-col" v-if="debugCode">
           <label class="text-[14px] text-black dark:text-white">
-            {{ t('PersonalMainLogin.testCode') }}
+            {{ t("PersonalMainLogin.testCode") }}
           </label>
           <div class="flex items-center gap-2">
             <InputText :value="debugCode" readonly class="w-full" />
@@ -91,12 +90,11 @@
         <!-- Код 2FA -->
         <div class="w-full flex flex-col justify-start">
           <label for="twofa_code" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            {{ t('PersonalMainLogin.twofaLabel') }} <span class="text-red-500">*</span>
+            {{ t("PersonalMainLogin.twofaLabel") }} <span class="text-red-500">*</span>
           </label>
-          <div class="input-container flex items-center border rounded-lg"
-               :class="{ 'p-invalid': Boolean(twoFAError.message) }"
-          >
-            <InputText size="small"
+          <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(twoFAError.message) }">
+            <InputText
+              size="small"
               v-model="twoFAForm.code"
               required
               id="twofa_code"
@@ -107,91 +105,109 @@
           <small class="text-red-500 mt-1">{{ twoFAError.message }}</small>
         </div>
 
-       
         <!-- Кнопка «Подтвердить» -->
         <div class="w-full mt-6">
-          <Button type="submit" :label="t('PersonalMainLogin.confirmButton')"
-                  class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full border-none" />
+          <Button
+            type="submit"
+            :label="t('PersonalMainLogin.confirmButton')"
+            class="bg-black dark:bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-md w-full border-none"
+          />
         </div>
 
         <!-- Кнопка «Отмена» (вернуться к вводу пароля) -->
-        <Button type="button" :label="t('PersonalMainLogin.cancelButton')"
-
-                class="p-button-text mt-2 w-full"
-                @click="cancel2FA"
-        />
+        <Button type="button" :label="t('PersonalMainLogin.cancelButton')" class="p-button-text mt-2 w-full" @click="cancel2FA" />
       </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import InputText from 'primevue/inputtext'
-import Button from 'primevue/button'
-import { useNuxtApp, useAuthState, usePageState, navigateTo, reloadNuxtApp } from '#imports'
+import { ref } from "vue";
+import InputText from "primevue/inputtext";
+import Button from "primevue/button";
+import { useNuxtApp, useAuthState, usePageState, navigateTo, reloadNuxtApp } from "#imports";
 
-import { useI18n } from 'vue-i18n';
+import { useI18n } from "vue-i18n";
+
+const { currentLanguage } = useLanguageState();
 
 const { t } = useI18n();
 
+import { useErrorParser } from "~/composables/useErrorParser.js";
+const { parseAxiosError } = useErrorParser();
 /**
  * Управление видимостью пароля
  */
-const showPassword = ref(false)
+const showPassword = ref(false);
 
 /**
  * Для отслеживания текущего шага
  * is2FA = false → форма логина/пароля
  * is2FA = true  → форма ввода одноразового кода
  */
-const is2FA = ref(false)
+const is2FA = ref(false);
 
 /**
  * Данные формы (шаг 1)
  */
 let loginForm = ref({
-  phone: '',
-  password: '',
-})
+  phone: "",
+  password: "",
+});
 
 /**
  * Ошибка (шаг 1)
  */
 let loginError = ref({
-  phone: '',
-  password: '',
-})
+  phone: "",
+  password: "",
+});
 
 /**
  * Данные формы (шаг 2)
  */
 let twoFAForm = ref({
-  code: '',
-})
+  code: "",
+});
 
 /**
  * Ошибка (шаг 2)
  */
 let twoFAError = ref({
-  message: '',
-})
+  message: "",
+});
 
 /**
  * Для debug-кода, который сервер может вернуть (напр. для теста)
  */
-const debugCode = ref('')
+const debugCode = ref("");
 
 /**
  * Текущая «страница» (admin, personal_account и т.д.)
  */
-const { currentPageName } = usePageState()
+const { currentPageName } = usePageState();
 
 /**
  * При клике на «Зарегистрироваться»
  */
 function goRegistration() {
-  navigateTo(`/${currentPageName.value}/registration/`)
+  navigateTo(`/${currentPageName.value}/registration/`);
+}
+
+function pickError(err) {
+  if (!err) return "";
+
+  // 1) строка
+  if (typeof err === "string") return err;
+
+  // 2) массив строк
+  if (Array.isArray(err)) return err[0] || "";
+
+  // 3) объект вида { en:"...", ru:"..." }
+  if (typeof err === "object") {
+    return err[currentLanguage.value] || err[fallbackLang] || Object.values(err)[0] || "";
+  }
+  return "";
 }
 
 /**
@@ -201,36 +217,29 @@ function goRegistration() {
  */
 function sendLogin() {
   // Очищаем ошибки
-  loginError.value.phone = ''
-  loginError.value.password = ''
-  debugCode.value = ''
+  loginError.value.phone = "";
+  loginError.value.password = "";
+  debugCode.value = "";
 
-  let formData = loginForm.value
-  console.log('Шаг 1 (login) formData:', formData)
+  let formData = loginForm.value;
+  console.log("Шаг 1 (login) formData:", formData);
 
-  useNuxtApp().$api
-    .post(`api/${currentPageName.value}/login`, formData)
-    .then(response => {
-      let responseData = response.data
-      console.log('Шаг 1 (login) ответ: ', responseData)
+  useNuxtApp()
+    .$api.post(`api/${currentPageName.value}/login`, formData)
+    .then((response) => {
+      let responseData = response.data;
+      console.log("Шаг 1 (login) ответ: ", responseData);
       // Предполагаем, что если ответ содержит "2FA code sent", значит требуется код
       // И сервер может вернуть debug_code (только для отладки)
       if (responseData.debug_code) {
-        debugCode.value = responseData.debug_code
+        debugCode.value = responseData.debug_code;
       }
-      is2FA.value = true  // Переключаемся на форму ввода кода
+      is2FA.value = true; // Переключаемся на форму ввода кода
     })
-    .catch(err => {
-      console.log('Ошибка (login):', err)
-      if (err.response) {
-        // Если бэкенд отдает detail { "password": "..."} или { "phone": "..." }
-        // упростим логику и просто выводим detail как message
-        loginError.value =
-          typeof err.response.data.detail === 'string'
-            ? { phone: err.response.data.detail, password: err.response.data.detail }
-            : err.response.data.detail
-      }
-    })
+    .catch((err) => {
+      console.error("sendLogin error", err);
+      parseAxiosError(err, loginError.value); // reactive error object
+    });
 }
 
 /**
@@ -239,32 +248,27 @@ function sendLogin() {
  * 3. Редиректим на /admin (или другую нужную страницу)
  */
 function send2FA() {
-  twoFAError.value.message = ''
+  twoFAError.value.message = "";
   let formData = {
     // Важно: сервер, как правило, требует тот же phone/phone,
     // чтобы понять, для кого подтверждаем код
     phone: loginForm.value.phone.trim(),
     code: twoFAForm.value.code.trim(),
-  }
-  console.log('Шаг 2 (2FA) formData:', formData)
+  };
+  console.log("Шаг 2 (2FA) formData:", formData);
 
-  useNuxtApp().$api
-    .post(`api/${currentPageName.value}/login_confirm`, formData)
-    .then(response => {
-      let responseData = response.data
-      console.log('Шаг 2 (2FA) ответ:', responseData)
+  useNuxtApp()
+    .$api.post(`api/${currentPageName.value}/login_confirm`, formData)
+    .then((response) => {
+      let responseData = response.data;
+      console.log("Шаг 2 (2FA) ответ:", responseData);
       // Если успех — "Logged in", есть access_token и т.д.
-      reloadNuxtApp({ path: `/${currentPageName.value}`, ttl: 1000 })
+      reloadNuxtApp({ path: `/${currentPageName.value}`, ttl: 1000 });
     })
-    .catch(err => {
-      console.log('Ошибка (login_confirm):', err)
-      if (err.response) {
-        twoFAError.value.message =
-          typeof err.response.data.detail === 'string'
-            ? err.response.data.detail
-            : JSON.stringify(err.response.data.detail)
-      }
-    })
+    .catch((err) => {
+      console.error("send2FA error", err);
+      parseAxiosError(err, loginError.value); // reactive error object
+    });
 }
 
 /**
@@ -272,8 +276,8 @@ function send2FA() {
  */
 function cancel2FA() {
   // Сбрасываем форму 2FA
-  twoFAForm.value.code = ''
-  twoFAError.value.message = ''
+  twoFAForm.value.code = "";
+  twoFAError.value.message = "";
 
   // Можно очистить и шаг 1, если нужно
   // loginForm.value.phone = ''
@@ -281,7 +285,7 @@ function cancel2FA() {
   // loginError.value.message = ''
 
   // Возвращаемся к первому шагу
-  is2FA.value = false
+  is2FA.value = false;
 }
 
 /**

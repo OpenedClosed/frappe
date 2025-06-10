@@ -136,7 +136,13 @@
     "smsCodeLabel": "Код із SMS",
     "smsCodePlaceholder": "Введіть код із SMS",
     "confirmButton": "Підтвердити",
-    "cancelButton": "Скасувати"
+    "cancelButton": "Скасувати",
+    "genderMale": "Чоловік",
+    "genderFemale": "Жінка",
+    "birthDate": "Дата народження",
+    "birthDatePlaceholder": "Оберіть дату народження",
+    "gender": "Стать",
+    "genderPlaceholder": "Оберіть стать"
   },
 
   "DynamicForm": {
@@ -213,7 +219,7 @@
 
   "FamilyTable": {
     "addMember": "Додати члена сім’ї",
-    "idPrefix": "ID:",
+    "idPrefix": "Телефон:",
     "nameUnknown": "Ім’я не зазначено",
     "relationshipUnknown": "Стосунок не зазначено",
     "statusUnknown": "Статус не зазначено",
@@ -619,6 +625,13 @@
 
   "LoaderOverlay": {
     "loadingCompleted": "Завантаження завершено!"
+  },
+  "toastMessages": {
+    "errorTitle": "Помилка",
+    "unknown": "Сталася невідома помилка"
+  },
+  "CRMtable": {
+    "empty": "Немає доступних даних"
   },
 
   "test": {

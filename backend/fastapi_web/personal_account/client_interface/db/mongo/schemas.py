@@ -3,7 +3,7 @@ from datetime import date, datetime, time
 from typing import Any, Dict, List, Optional
 
 from passlib.hash import bcrypt
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from db.mongo.base.schemas import BaseValidatedModel, Photo
 from integrations.panamedica.client import get_client
@@ -25,6 +25,8 @@ class RegistrationSchema(BaseModel):
     phone: str
     email: Optional[EmailStr] = None
     full_name: str
+    birth_date: Optional[datetime] = None
+    gender: Optional[str] = None
     password: str
     password_confirm: str
     accept_terms: bool = False
@@ -80,9 +82,12 @@ class MainInfoSchema(BaseValidatedModel):
     """
     Основная информация о пациенте, хранится в MongoDB.
     """
+    patient_id: Optional[str] = Field(
+        default=None,
+    )
 
-    last_name: str
-    first_name: str
+    last_name: Optional[str] = None
+    first_name: Optional[str] = None
     patronymic: Optional[str] = None
 
     birth_date: Optional[datetime] = Field(
@@ -99,7 +104,7 @@ class MainInfoSchema(BaseValidatedModel):
         }
     )
 
-    gender: Optional[GenderEnum] = Field(
+    gender: Optional[str] = Field(
         None,
         json_schema_extra={
             "settings": {
@@ -120,6 +125,11 @@ class MainInfoSchema(BaseValidatedModel):
         default=AccountVerificationEnum.UNVERIFIED,
         json_schema_extra={"settings": {"readonly": True}}
     )
+    crm_link_status: Optional[str] = Field(
+        default="",
+        json_schema_extra={"settings": {"readonly": True}}
+    )
+
 
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
@@ -129,30 +139,6 @@ class MainInfoSchema(BaseValidatedModel):
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    async def get_patient_id_from_crm(
-            self, contact_data: dict) -> Optional[int]:
-        """
-        Получает ID пациента из CRM, если он существует. Возвращает None, если не найден.
-        Используется при логине или синхронизации.
-        """
-        # crm = get_client()
-        # phone = normalize_numbers(contact_data.get("phone", ""))
-        # pesel = contact_data.get("pesel")
-        # gender = self.gender.value if self.gender else None
-        # bdate = self.birth_date.strftime("%Y-%m-%d") if self.birth_date else None
-
-        # try:
-        #     patient_id = await crm.find_patient(
-        #         phone=phone,
-        #         pesel=pesel,
-        #         gender=gender,
-        #         birth_date=bdate
-        #     )
-        #     return patient_id
-        # except Exception as e:
-        #     print(e)
-        #     return None
-        return None
 
 # ==========
 # Контактная информация
@@ -183,13 +169,13 @@ class ContactInfoSchema(BaseValidatedModel):
         json_schema_extra={
             "settings": {
                 "type": "phone",
-                "mask": "+9 (999) 999-99-99"
+                "mask": "+99 (999) 999-999"
             }
         }
     )
 
-    address: str = Field(
-        ...,
+    address: Optional[str] = Field(
+        default=None,
         json_schema_extra={
             "settings": {
                 "type": "textarea",
@@ -203,8 +189,8 @@ class ContactInfoSchema(BaseValidatedModel):
         }
     )
 
-    pesel: str = Field(
-        ...,
+    pesel: Optional[str] = Field(
+        default=None,
         json_schema_extra={
             "settings": {
                 "type": "pesel",
@@ -222,7 +208,7 @@ class ContactInfoSchema(BaseValidatedModel):
         json_schema_extra={
             "settings": {
                 "type": "phone",
-                "mask": "+9 (999) 999-99-99",
+                "mask": "+99 (999) 999-999",
                 "allowExtraText": True,
                 "placeholder": {
                     "ru": "Введите номер экстренного контакта",
@@ -234,6 +220,11 @@ class ContactInfoSchema(BaseValidatedModel):
     )
 
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+    @model_validator(mode="before")
+    def update_timestamp(cls, data):
+        data["updated_at"] = datetime.utcnow()
+        return data
 
 
 # ==========
@@ -259,8 +250,8 @@ class HealthSurveySchema(BaseValidatedModel):
         }
     )
 
-    chronic_conditions: List[ConditionEnum] = Field(
-        ...,
+    chronic_conditions: Optional[List[ConditionEnum]] = Field(
+        None,
         json_schema_extra={
             "settings": {
                 # "type": "color_multiselect",
@@ -349,7 +340,7 @@ class HealthSurveySchema(BaseValidatedModel):
 
 class FamilyMemberSchema(BaseValidatedModel):
     """
-    Схема для вкладки 'Семья'. Использует json_schema_extra для настроек UI.
+    Схема одной записи во вкладке «Семья».
     """
 
     phone: str = Field(
@@ -357,10 +348,10 @@ class FamilyMemberSchema(BaseValidatedModel):
         json_schema_extra={
             "settings": {
                 "type": "phone",
-                "mask": "+9 (999) 999-99-99",
+                "mask": "+99 (999) 999-999",
                 "placeholder": {
-                    "en": "Enter phone number",
                     "ru": "Введите номер телефона",
+                    "en": "Enter phone number",
                     "pl": "Wprowadź numer telefonu"
                 }
             }
@@ -373,22 +364,28 @@ class FamilyMemberSchema(BaseValidatedModel):
             "settings": {
                 "type": "select",
                 "placeholder": {
-                    "en": "Select relationship",
                     "ru": "Выберите тип родства",
+                    "en": "Select relationship",
                     "pl": "Wybierz relację"
                 }
             }
         }
     )
 
+    # ▼––– статус оформлен как Enum, но UI получит список «choices»
     status: FamilyStatusEnum = Field(
         default=FamilyStatusEnum.PENDING,
         json_schema_extra={
             "settings": {
                 "type": "select",
+                "choices": [
+                    {"value": FamilyStatusEnum.PENDING,   "label": {"ru": "Ожидает",  "en": "Pending",  "pl": "Oczekuje"}},
+                    {"value": FamilyStatusEnum.CONFIRMED, "label": {"ru": "Принято",  "en": "Confirmed","pl": "Przyjęto"}},
+                    {"value": FamilyStatusEnum.DECLINED,  "label": {"ru": "Отклонено","en": "Declined", "pl": "Odrzucono"}},
+                ],
                 "placeholder": {
-                    "en": "Select status",
                     "ru": "Выберите статус",
+                    "en": "Select status",
                     "pl": "Wybierz status"
                 }
             }
@@ -401,8 +398,8 @@ class FamilyMemberSchema(BaseValidatedModel):
             "settings": {
                 "type": "calendar",
                 "placeholder": {
-                    "en": "Select birth date",
                     "ru": "Выберите дату рождения",
+                    "en": "Select birth date",
                     "pl": "Wybierz datę urodzenia"
                 }
             }
@@ -416,8 +413,8 @@ class FamilyMemberSchema(BaseValidatedModel):
                 "type": "text",
                 "hide_if_none": True,
                 "placeholder": {
-                    "en": "Full name",
                     "ru": "Полное имя",
+                    "en": "Full name",
                     "pl": "Imię i nazwisko"
                 }
             }
@@ -431,8 +428,8 @@ class FamilyMemberSchema(BaseValidatedModel):
                 "type": "text",
                 "hide_if_none": True,
                 "placeholder": {
-                    "en": "Patient ID",
                     "ru": "ID пациента",
+                    "en": "Patient ID",
                     "pl": "ID pacjenta"
                 }
             }
@@ -446,8 +443,8 @@ class FamilyMemberSchema(BaseValidatedModel):
                 "type": "int",
                 "hide_if_none": True,
                 "placeholder": {
-                    "en": "Bonuses",
                     "ru": "Бонусы",
+                    "en": "Bonuses",
                     "pl": "Bonusy"
                 }
             }
@@ -576,28 +573,24 @@ class BonusProgramSchema(BaseValidatedModel):
 # ==========
 
 
-class ConsentSchema(BaseValidatedModel):
-    """
-    Схема для вкладки 'Согласия пользователя'.
-    """
+class ConsentItem(BaseModel):
+    """Согласие в CRM."""
+    id: int
+    accepted: bool
 
-    consents: List[ConsentEnum] = Field(
+class ConsentSchema(BaseValidatedModel):
+    """Согласия пользователя, кеш 60 с."""
+    consents: List[ConsentItem] = Field(
+        default_factory=list,
         json_schema_extra={
             "settings": {
-                "color_map": {
-                    "yes": "#4CAF50",
-                    "no": "#F44336"
-                },
-                "placeholder": {
-                    "en": "Select consents",
-                    "ru": "Выберите согласия",
-                    "pl": "Wybierz zgody"
-                }
+                "type": "color_multiselect",
+                "color_map": {"true": "#4CAF50", "false": "#F44336"},
+                "searchable": True,
             }
-        }
+        },
     )
-
-    last_updated: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
 
 # ==========
 # Встречи
@@ -619,32 +612,22 @@ class AppointmentSchema(BaseModel):
                     "ru": "Дата визита",
                     "en": "Visit date",
                     "pl": "Data wizyty"
-                }
+                },
             }
-        }
+        },
     )
 
     start: time = Field(
         ...,
-        json_schema_extra={
-            "settings": {
-                "type": "time",
-                "readonly": True
-            }
-        }
+        json_schema_extra={"settings": {"type": "time", "readonly": True}},
     )
 
     end: time = Field(
         ...,
-        json_schema_extra={
-            "settings": {
-                "type": "time",
-                "readonly": True
-            }
-        }
+        json_schema_extra={"settings": {"type": "time", "readonly": True}},
     )
 
-    doctor_name: str = Field(
+    doctor: str = Field(
         ...,
         json_schema_extra={
             "settings": {
@@ -653,13 +636,13 @@ class AppointmentSchema(BaseModel):
                 "placeholder": {
                     "ru": "Имя врача",
                     "en": "Doctor name",
-                    "pl": "Imię lekarza"
-                }
+                    "pl": "Imię lekarza",
+                },
             }
-        }
+        },
     )
 
-    status: Optional[str] = Field(
+    status: str | None = Field(
         None,
         json_schema_extra={
             "settings": {
@@ -668,8 +651,8 @@ class AppointmentSchema(BaseModel):
                 "placeholder": {
                     "ru": "Статус визита",
                     "en": "Appointment status",
-                    "pl": "Status wizyty"
-                }
+                    "pl": "Status wizyty",
+                },
             }
-        }
+        },
     )

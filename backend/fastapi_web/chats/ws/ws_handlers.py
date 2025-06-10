@@ -656,9 +656,6 @@ async def handle_get_messages(
     client_id = user_data.get("client_id")
     user_id = user_data.get("data", {}).get("user_id")
 
-    print("===== USER DATA ====")
-    print(user_data)
-
     if data.get("with_enter"):
         await update_read_state_for_client(
             chat_id=chat_id,
@@ -859,7 +856,6 @@ async def validate_chat_status(
     brief_questions = BRIEF_QUESTIONS
     dynamic_status = chat_session.compute_status(ttl_value)
     status_en = json.loads(dynamic_status.value)["en"]
-    print(status_en)
 
 
     NEGATIVE_STATUSES = {
@@ -867,7 +863,6 @@ async def validate_chat_status(
         ChatStatus.CLOSED_BY_TIMEOUT.en_value,
         ChatStatus.CLOSED_BY_OPERATOR.en_value
     }
-    print(NEGATIVE_STATUSES)
 
     if status_en in NEGATIVE_STATUSES:
         await broadcast_error(
@@ -1288,7 +1283,8 @@ async def handle_superuser_message(
         name=metadata.get("name"),
         avatar_url=metadata.get("avatar_url"),
         metadata=metadata,
-        user_id=user_id
+        user_id=user_id,
+        
     )
 
     new_msg = ChatMessage(
@@ -1325,18 +1321,14 @@ async def process_user_query_after_brief(
             user_data["brief_info"] = extract_brief_info(chat_session)
 
             chat_history = chat_session.messages[-25:]
-            print('5-???')
             kb_doc, kb_model = await get_knowledge_base()
-            print('4-???')
             external_structs, _ = await collect_kb_structures_from_context(kb_model.context)
             merged_kb = merge_external_structures(
                 kb_doc["knowledge_base"],
                 external_structs
             )
-            print('3-???')
 
             client_id = chat_session.client.client_id if chat_session.client else None
-            print('3.1-???')
             gpt_data = await determine_topics_via_ai(
                 user_message=user_msg.message,
                 user_info=user_data,
@@ -1351,11 +1343,9 @@ async def process_user_query_after_brief(
                 out_of_scope=gpt_data["out_of_scope"],
                 consultant_call=gpt_data["consultant_call"]
             )
-            print('3.2-???')
             await update_gpt_evaluation_in_db(chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation)
 
             lang = gpt_data.get("user_language") or user_language
-            print('2-???')
             ai_msg = await build_ai_response(
                 manager=manager,
                 chat_session=chat_session,
@@ -1367,7 +1357,6 @@ async def process_user_query_after_brief(
                 typing_manager=typing_manager,
                 chat_id=chat_id,
             )
-            print('1-???')
 
             if ai_msg:
                 await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
@@ -1401,9 +1390,7 @@ async def determine_topics_via_ai(
     """Возвращает темы, оффтоп, вызов консультанта и язык пользователя."""
     bot_context = await get_bot_context()
     model_name = model_name or bot_context["ai_model"]
-    print('0.1-???')
     kb_outline = build_kb_structure_outline(knowledge_base)
-    print('0.2-???')
     topics_data = await detect_topics_ai(
         user_message=user_message,
         chat_history=chat_history,
@@ -1412,7 +1399,6 @@ async def determine_topics_via_ai(
         model_name=model_name,
         bot_context=bot_context
     )
-    print('0.3-???')
     outcome_data = await detect_outcome_ai(
         user_message=user_message,
         topics=topics_data["topics"],
@@ -1491,9 +1477,6 @@ async def detect_outcome_ai(
         additional_instructions=bot_context.get("app_description"),
         chat_history=formatted_history
     )
-    print("===== СИСТЕМНЫЙ ПРОМПТ ОПРЕДЕЛНИЯ =====")
-    print(system_prompt)
-    print("==========")
 
     bundle = build_messages_for_model(
         system_prompt=system_prompt,
@@ -1515,10 +1498,6 @@ async def detect_outcome_ai(
             {"client_id": client_id},
             {"$set": {"metadata.user_language": user_lang}}
         )
-
-    print("===== РЕЗУЛЬТАТ =====")
-    print(res)
-    print("==========")
 
     return {
         "out_of_scope": res.get("out_of_scope", False),
@@ -1915,10 +1894,6 @@ async def generate_ai_answer(
         user_interface_language=user_language,
         chat_session=chat_session,
     )
-    print("===== ДО =====")
-    print(message_before_postprocessing)
-    print("===== ПОСЛЕ =====")
-    print(ai_text)
 
     await typing_manager.remove_typing(chat_id, "ai_bot", manager)
     final_ai_text = try_parse_json(ai_text) if return_json else ai_text
@@ -1973,7 +1948,6 @@ async def postprocess_ai_response(
         ),
         dynamic_postprocess_rules=dynamic_postprocess_rules,
     )
-    print(system_prompt)
 
     model_name = bot_context["ai_model"]
     bundle = build_messages_for_model(

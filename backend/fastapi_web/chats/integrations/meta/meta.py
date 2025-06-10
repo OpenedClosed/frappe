@@ -143,6 +143,7 @@ async def handle_incoming_meta_messages(
     settings_bot_id: str,
     chat_source: ChatSource,
     process_fn: Callable[..., Awaitable[None]],
+    profile_fetcher: Optional[Callable[[str], Awaitable[Optional[dict]]]] = None,
 ):
     """Конвертирует Meta-webhook → route_incoming_message."""
     token_key = f"{chat_source.name.upper()}_ACCESS_TOKEN"
@@ -159,10 +160,11 @@ async def handle_incoming_meta_messages(
             chat_source=chat_source,
             settings_bot_id=settings_bot_id,
             access_token=access_token,
-            profile_fetcher=None,
+            profile_fetcher=profile_fetcher,
             process_fn=process_fn,
             skip_locale=False,
         )
+
 
 
 

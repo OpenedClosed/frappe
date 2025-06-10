@@ -21,11 +21,11 @@ const props = defineProps({
 }
 
 #spinner #sGD stop {
-    stop-color: var(--main-red);
+    stop-color: white;
 }
 
 #spinner .path-solid {
-    stroke: var(--main-red);
+    stroke: white;
 }
 </style>
 

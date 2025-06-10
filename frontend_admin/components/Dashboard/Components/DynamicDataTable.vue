@@ -153,7 +153,7 @@ const props = defineProps({
     default: null,
   },
 });
-console.log("props", props.fieldOptions);
+// console.log("props", props.fieldOptions);
 
 // Add the "createNew" event to the emitted events
 const emit = defineEmits(["showFilter", "filterChange", "page", "exportToExcel"]);

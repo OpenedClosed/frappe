@@ -1,84 +1,103 @@
 <template>
   <div>
-    <!-- If we are in "form" view -->
-    <!-- {{ itemData }} -->
-    <div v-if="isForm" class="p-4">
+    <Toast />
+
+    <div class="flex justify-center items-center w-full h-full p-8" v-if="isLoading || isLoadingData || !entityTitle?.en">
+      <Loader style="width: 50px; height: 50px" />
+    </div>
+    <div v-else-if="isForm" class="p-4">
       <!-- {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " "  }} -->
       <h2 class="text-xl font-bold mb-4">
-        {{ isNewItem ? t('MainForm.createPrefix') : t('MainForm.detailPrefix') }}: {{ entityTitle[currentLanguage] || entityTitle?.en || " " }}
+        {{ isNewItem ? t("MainForm.createPrefix") : t("MainForm.detailPrefix") }}:
+        {{ entityTitle[currentLanguage] || entityTitle?.en || " " }}
       </h2>
 
       <!-- Global error -->
       <!-- <div v-if="errorMessage" class="my-2 p-2 bg-red-100 text-red-700 rounded">
         {{ errorMessage }}
       </div> -->
-      <p v-if="isLoading">{{ t('MainForm.loading') }}</p>
 
-      <div v-else>
-        <!-- DynamicForm component -->
-        <div v-if="currentEntity === 'patients_main_info' && !isNewItem && isReadOnly">
-          <PatientsMainInfoView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" :fieldGroups="fieldGroups" :filteredFields="filteredFields"/>
-        </div>
-        <div v-else-if="currentEntity === 'patients_contact_info' && !isNewItem && isReadOnly">
-          <ContactInfoView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
-        </div>
-        <div v-else-if="currentEntity === 'patients_health_survey' && !isNewItem && isReadOnly">
-          <PatientsHealthSurveyView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
-        </div>
-        <div v-else-if="currentEntity === 'patients_consents' && !isNewItem && isReadOnly">
-          <AgreesPanel v-if="itemData && Object.keys(itemData).length > 0" :filteredFields="filteredFields" :itemData="itemData" />
-        </div>
-        <div v-else-if="currentEntity === 'patients_bonus_program' && !isNewItem && isReadOnly">
-          <PointsTable v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
-        </div>
+      <!-- DynamicForm component -->
+      <div v-if="currentEntity === 'patients_main_info' && !isNewItem && isReadOnly">
+        <PatientsMainInfoView
+          v-if="itemData && Object.keys(itemData).length > 0"
+          :itemData="itemData"
+          :fieldGroups="fieldGroups"
+          :filteredFields="filteredFields"
+        />
+      </div>
+      <div v-else-if="currentEntity === 'patients_contact_info' && !isNewItem && isReadOnly">
+        <ContactInfoView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+      </div>
+      <div v-else-if="currentEntity === 'patients_health_survey' && !isNewItem && isReadOnly">
+        <PatientsHealthSurveyView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+      </div>
+      <div v-else-if="currentEntity === 'patients_consents' && !isNewItem && isReadOnly">
+        <AgreesPanel v-if="itemData && Object.keys(itemData).length > 0" :filteredFields="filteredFields" :itemData="itemData" />
+      </div>
+      <div v-else-if="currentEntity === 'patients_bonus_program' && !isNewItem && isReadOnly">
+        <PointsTable v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
+      </div>
 
-        <div class="flex flex-col" v-else>
-          <DynamicForm
-            :fields="filteredFields"
-            :fieldGroups="fieldGroups"
-            :modelValue="itemData"
-            :read-only="isReadOnly"
-            :isNewItem="isNewItem"
-            :fieldErrors="fieldErrors"
-            @update:modelValue="updateItemData"
-          />
+      <div class="flex flex-col" v-else>
+        <DynamicForm
+          :fields="filteredFields"
+          :fieldGroups="fieldGroups"
+          :modelValue="itemData"
+          :read-only="isReadOnly"
+          :isNewItem="isNewItem"
+          :fieldErrors="fieldErrors"
+          @update:modelValue="updateItemData"
+        />
 
-          <!-- 2) Inlines rendering -->
-          <!-- {{ inlines }} -->
-          <div v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
-            <div>
-              <h3 class="text-lg font-bold mb-2">
-                {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " " }}
-              </h3>
+        <!-- 2) Inlines rendering -->
+        <!-- {{ inlines }} -->
+        <div v-for="inlineDef in inlines" :key="inlineDef.name" class="mt-8">
+          <div>
+            <h3 class="text-lg font-bold mb-2">
+              {{ inlineDef.verbose_name[currentLanguage] || inlineDef.verbose_name?.en || " " }}
+            </h3>
 
-              <InlineList
-                :inlineDef="inlineDef"
-                :parentEntity="currentEntity"
-                :parentId="currentId"
-                :items="itemData[inlineDef.field]"
-                :readOnly="isReadOnly"
-                @reloadParent="reloadCurrentData"
-              />
-            </div>
+            <InlineList
+              :inlineDef="inlineDef"
+              :parentEntity="currentEntity"
+              :parentId="currentId"
+              :items="itemData[inlineDef.field]"
+              :readOnly="isReadOnly"
+              @reloadParent="reloadCurrentData"
+            />
           </div>
         </div>
 
+      
+      </div>
         <!-- Control Buttons -->
         <div class="mt-4 flex flex-col md:flex-row gap-2">
           <!-- Existing item: edit, save and delete -->
           <template v-if="!isNewItem">
             <!-- Show edit/save only if update is allowed -->
             <Button v-if="isReadOnly && allowCrudActions.update" :label="t('MainForm.edit')" icon="pi pi-pencil" @click="toggleEditMode" />
-            <Button v-else-if="!isReadOnly && allowCrudActions.update"	:label="t('MainForm.save')" icon="pi pi-save" @click="saveItem" />
+            <Button v-else-if="!isReadOnly && allowCrudActions.update" :label="t('MainForm.save')" icon="pi pi-save" @click="saveItem" />
             <!-- Show delete button only if delete is allowed -->
-            <Button v-if="allowCrudActions.delete" :label="t('MainForm.delete')" icon="pi pi-trash" class="p-button-danger" @click="deleteItem" />
+            <Button
+              v-if="allowCrudActions.delete"
+              :label="t('MainForm.delete')"
+              icon="pi pi-trash"
+              class="p-button-danger"
+              @click="deleteItem"
+            />
           </template>
 
           <!-- New record: create -->
           <Button v-else-if="allowCrudActions.create" :label="t('MainForm.create')" icon="pi pi-check" @click="createItem" />
 
           <!-- Special button for chat_sessions entity -->
-          <Button v-if="currentEntity === 'chat_sessions'" :label="t('MainForm.openChat')" icon="pi pi-comments" @click="openChat(itemData?.chat_id)" />
+          <Button
+            v-if="currentEntity === 'chat_sessions'"
+            :label="t('MainForm.openChat')"
+            icon="pi pi-comments"
+            @click="openChat(itemData?.chat_id)"
+          />
 
           <!-- Navigation: go back to list -->
           <Button
@@ -89,7 +108,6 @@
             @click="goBack"
           />
         </div>
-      </div>
     </div>
 
     <!-- Chat view -->
@@ -114,8 +132,10 @@ import PointsTable from "~/components/Dashboard/Components/Personal/PointsTable.
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter, useAsyncData } from "#imports";
 import _ from "lodash";
-import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+import { useToast } from "primevue/usetoast";
+const toast = useToast();
 
 // ------------------ State & Refs ------------------
 const route = useRoute();
@@ -126,6 +146,7 @@ const inlines = ref([]);
 const currentChatId = ref("");
 const isForm = ref(true);
 const isLoading = ref(false);
+const isLoadingData = ref(false);
 const itemData = ref({});
 const isReadOnly = ref(true);
 const errorMessage = ref("");
@@ -149,6 +170,7 @@ const { currentPageName, currentPageInstances } = usePageState();
 
 // ------------------ Lifecycle & Data Loading ------------------
 async function getAdminData() {
+  isLoadingData.value = true;
   let responseData;
   try {
     const response = await nuxtApp.$api.get(`api/${currentPageName.value}/info`);
@@ -160,7 +182,9 @@ async function getAdminData() {
     } else {
       console.error("Error fetching admin data:", err);
     }
+    isLoadingData.value = false;
   }
+  isLoadingData.value = false;
   return responseData;
 }
 
@@ -176,9 +200,8 @@ const filteredFields = computed(() => {
 });
 
 watch(filteredFields, (newValue) => {
-    console.log("filteredFields.value", filteredFields.value);
-    console.log("itemData.value", itemData.value);
-
+  console.log("filteredFields.value", filteredFields.value);
+  console.log("itemData.value", itemData.value);
 });
 
 onMounted(() => {
@@ -370,7 +393,7 @@ async function createItem() {
 }
 
 async function deleteItem() {
-  const confirmation = confirm(t('MainForm.confirmDelete'))
+  const confirmation = confirm(t("MainForm.confirmDelete"));
   if (!confirmation) return;
 
   errorMessage.value = "";
@@ -406,14 +429,59 @@ function goToFormView() {
 
 // ------------------ Helpers ------------------
 function parseError(error) {
+  console.log("HERE")
+  console.log("Parsing error:", error);
   if (error.response && error.response.data) {
     const data = error.response.data;
     console.log("Error data:", data);
+
+    let toastMessage = "";
+
     if (data.detail) {
       fieldErrors.value = data.detail;
+
+      if (typeof data.detail === "string") {
+        toastMessage = data.detail;
+      } else if (Array.isArray(data.detail)) {
+        toastMessage = data.detail.map((e) => e.msg || e).join(", ");
+      } else if (typeof data.detail === "object") {
+        const isLangKeyed = Object.keys(data.detail).every((key) => ["en", "ru", "pl", "uk", "ka", "de"].includes(key));
+        if (isLangKeyed) {
+          toastMessage = data.detail[currentLanguage.value] || Object.values(data.detail)[0];
+        } else {
+          toastMessage = Object.values(data.detail).flat().join(", ");
+        }
+      }
+
+      toast.add({
+        severity: "error",
+        summary: t("toastMessages.errorTitle"),
+        detail: toastMessage,
+        life: 5000,
+      });
+
+      return toastMessage;
     }
-    return data.message || data.detail || error.message;
+
+    toastMessage = data.message || error.message;
+    toast.add({
+      severity: "error",
+      summary: t("toastMessages.errorTitle"),
+      detail: toastMessage,
+      life: 5000,
+    });
+
+    return toastMessage;
   }
-  return error.message || "Неизвестная ошибка";
+
+  const fallbackMessage = error.message || t("toastMessages.unknown");
+  toast.add({
+    severity: "error",
+    summary: t("toastMessages.errorTitle"),
+    detail: fallbackMessage,
+    life: 5000,
+  });
+
+  return fallbackMessage;
 }
 </script>

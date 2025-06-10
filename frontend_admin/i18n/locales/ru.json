@@ -137,7 +137,13 @@
     "smsCodeLabel": "Код из SMS",
     "smsCodePlaceholder": "Введите код из SMS",
     "confirmButton": "Подтвердить",
-    "cancelButton": "Отмена"
+    "cancelButton": "Отмена",
+    "genderMale": "Мужской",
+    "genderFemale": "Женский",
+    "birthDate": "Дата рождения",
+    "birthDatePlaceholder": "Выберите дату рождения",
+    "gender": "Пол",
+    "genderPlaceholder": "Выберите пол"
   },
 
   "DynamicForm": {
@@ -214,7 +220,7 @@
 
   "FamilyTable": {
     "addMember": "Добавить члена семьи",
-    "idPrefix": "ID:",
+    "idPrefix": "Телефон:",
     "nameUnknown": "Имя не указано",
     "relationshipUnknown": "Отношение не указано",
     "statusUnknown": "Статус не указан",
@@ -621,7 +627,13 @@
   "LoaderOverlay": {
     "loadingCompleted": "Загрузка завершена!"
   },
-
+  "toastMessages": {
+    "errorTitle": "Ошибка",
+    "unknown": "Неизвестная ошибка"
+  },
+  "CRMtable": {
+    "empty": "Нет доступных данных"
+  },
   "test": {
     "test": "Тест"
   }

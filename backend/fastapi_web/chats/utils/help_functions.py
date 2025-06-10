@@ -159,11 +159,15 @@ async def get_client_id(
                 chat_source=ChatSource.TELEGRAM_MINI_APP,
                 external_id=tg_user_id
             )
-
-    # ---------- 2. Суперюзер с JWT ----------
+        
     if is_superuser:
         base_id = await generate_client_id(websocket)
         return f"{user_id}:{base_id}" if user_id else base_id
+
+    # ---------- 2. Суперюзер с JWT ----------
+    # if is_superuser or user_id:
+    #     base_id = await generate_client_id(websocket)
+    #     return f"{user_id}:{base_id}" if user_id else base_id
 
     # ---------- 3. Обычный клиент ----------
     return await generate_client_id(websocket)
@@ -249,6 +253,81 @@ def determine_language(accept_language: str) -> str:
 #     return client
 
 
+# async def get_or_create_master_client(
+#     source: ChatSource,
+#     external_id: str,
+#     internal_client_id: str,
+#     name: Optional[str] = None,
+#     avatar_url: Optional[str] = None,
+#     metadata: Optional[Dict[str, Any]] = None,
+#     user_id: Optional[str] = None,
+# ) -> MasterClient:
+#     """Возвращает существующего или создаёт нового MasterClient с защитой от гонки."""
+#     col = mongo_db.clients
+#     metadata = metadata or {}
+#     save_external_id = external_id if external_id and external_id != "anonymous" else "anonymous"
+#     is_internal = source == ChatSource.INTERNAL
+#     is_anonymous = not external_id or external_id == "anonymous"
+
+#     # 🔐 Redis-блокировка от гонки
+#     lock_key = f"lock:client:create:{source.value}:{save_external_id}"
+#     got_lock = await redis_db.set(lock_key, "1", ex=5, nx=True)
+
+#     try:
+#         if is_internal and is_anonymous:
+#             doc = await col.find_one({"client_id": internal_client_id})
+#         else:
+#             doc = await col.find_one({"source": source.value, "external_id": save_external_id})
+
+#         if doc:
+#             update_fields: Dict[str, Any] = {}
+
+#             if name and name != doc.get("name"):
+#                 update_fields["name"] = name
+#             if avatar_url and avatar_url != doc.get("avatar_url"):
+#                 update_fields["avatar_url"] = avatar_url
+#             if user_id and user_id != doc.get("user_id"):
+#                 update_fields["user_id"] = user_id
+
+#             current_metadata = doc.get("metadata", {})
+#             merged_metadata = {**current_metadata, **metadata}
+#             if merged_metadata != current_metadata:
+#                 update_fields["metadata"] = merged_metadata
+
+#             if update_fields:
+#                 await col.update_one({"_id": doc["_id"]}, {"$set": update_fields})
+#                 doc = await col.find_one({"_id": doc["_id"]})
+
+#             doc.pop("id", None)
+#             return MasterClient(**doc)
+
+#         # ⏱ fallback: если гонка, ждём и пытаемся найти
+#         if not got_lock:
+#             await asyncio.sleep(0.2)
+#             doc = await col.find_one({"client_id": internal_client_id})
+#             if doc:
+#                 doc.pop("id", None)
+#                 return MasterClient(**doc)
+#             raise RuntimeError("Race condition: client creation lost")
+
+#         # ✅ создаём нового клиента
+#         client = MasterClient(
+#             client_id=internal_client_id,
+#             source=source,
+#             external_id=save_external_id,
+#             name=name,
+#             avatar_url=avatar_url,
+#             metadata=metadata,
+#             created_at=datetime.utcnow(),
+#             user_id=user_id,
+#         )
+#         await col.insert_one(client.dict(exclude={"id"}))
+#         return client
+
+#     finally:
+#         if got_lock:
+#             await redis_db.delete(lock_key)
+
 async def get_or_create_master_client(
     source: ChatSource,
     external_id: str,
@@ -269,12 +348,15 @@ async def get_or_create_master_client(
     lock_key = f"lock:client:create:{source.value}:{save_external_id}"
     got_lock = await redis_db.set(lock_key, "1", ex=5, nx=True)
 
+    if user_id and len(internal_client_id.split(":")) < 2:
+        internal_client_id = f"{user_id}:{internal_client_id}"
+
     try:
+        # --- 1. Попытка найти существующего клиента ---
         if is_internal and is_anonymous:
             doc = await col.find_one({"client_id": internal_client_id})
         else:
             doc = await col.find_one({"source": source.value, "external_id": save_external_id})
-
         if doc:
             update_fields: Dict[str, Any] = {}
 
@@ -282,7 +364,7 @@ async def get_or_create_master_client(
                 update_fields["name"] = name
             if avatar_url and avatar_url != doc.get("avatar_url"):
                 update_fields["avatar_url"] = avatar_url
-            if user_id and user_id != doc.get("user_id"):
+            if user_id and (not doc.get("user_id")):
                 update_fields["user_id"] = user_id
 
             current_metadata = doc.get("metadata", {})
@@ -297,7 +379,7 @@ async def get_or_create_master_client(
             doc.pop("id", None)
             return MasterClient(**doc)
 
-        # ⏱ fallback: если гонка, ждём и пытаемся найти
+        # 🕒 fallback: если гонка, ждём и ищем по client_id
         if not got_lock:
             await asyncio.sleep(0.2)
             doc = await col.find_one({"client_id": internal_client_id})
@@ -306,7 +388,7 @@ async def get_or_create_master_client(
                 return MasterClient(**doc)
             raise RuntimeError("Race condition: client creation lost")
 
-        # ✅ создаём нового клиента
+        # --- 2. Создаём нового клиента ---
         client = MasterClient(
             client_id=internal_client_id,
             source=source,
@@ -423,7 +505,6 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
     message_thread_id = None
 
     
-    logging.error(f"📤 URL: {bot_webhook_url}")
     if "/" in admin_chat_id:
         parts = admin_chat_id.split("/")
         if len(parts) >= 2:
@@ -439,14 +520,6 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
             }
             if message_thread_id:
                 payload["message_thread_id"] = message_thread_id
-            logging.error(f"📨 Отправка в бота → chat_id: {admin_chat_id}, thread_id: {message_thread_id}")
-            logging.error("📦 Payload:")
-            logging.error(json.dumps(payload, ensure_ascii=False, indent=2))
-
-            logging.error(f"🛠 Используемый chat_id: {payload['chat_id']}")
-            if "message_thread_id" in payload:
-                logging.error(f"🧵 Используемый thread_id: {payload.get('message_thread_id', None)}")
-
 
             response = await client.post(
                 bot_webhook_url,
@@ -574,15 +647,9 @@ async def resolve_chat_identity(
     3. Иначе — старая схема (external_id || 'anonymous').
     """
     from chats.integrations.telegram.telegram_bot import verify_telegram_hash
-    logging.error(f"===== ПОСЛЕ: {user_id} =====")
-    logging.error(source)
-    logging.error(f"user_id {user_id}")
-    logging.error(f"timestamp {timestamp}")
-    logging.error(f"hash {hash}")
     if hash:
 
         res = verify_telegram_hash(user_id, timestamp, hash, settings.TELEGRAM_BOT_TOKEN)
-        logging.error(f"res {res}")
     if source == ChatSource.TELEGRAM_MINI_APP:
         if not (user_id and timestamp and hash):
             raise HTTPException(400, "Telegram auth params missing")
@@ -622,7 +689,8 @@ async def handle_chat_creation(
     company_name: Optional[str] = None,
     bot_id: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
-    request: Optional[Request] = None
+    request: Optional[Request] = None,
+    token_user_id: Optional[str] = None,
 ) -> dict:
     """Создаёт или получает чат-сессию, используя Redis и MongoDB."""
     metadata = metadata or {}
@@ -641,7 +709,8 @@ async def handle_chat_creation(
         internal_client_id=client_id,
         name=metadata.get("name"),
         avatar_url=metadata.get("avatar_url"),
-        metadata=metadata
+        metadata=metadata,
+        user_id=token_user_id,
     )
 
     client_id = master_client.client_id
@@ -718,24 +787,81 @@ def is_valid_object_id(oid: str) -> bool:
     except Exception:
         return False
 
-async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[str] = None) -> dict[str, dict[str, Any]]:
-    """Получить информацию об отправителях (мастер-клиент + user_data), включая клиента чата даже без сообщений."""
-    sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
+# async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[str] = None) -> dict[str, dict[str, Any]]:
+#     """Получить информацию об отправителях (мастер-клиент + user_data), включая клиента чата даже без сообщений."""
+#     sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
 
+#     if extra_client_id:
+#         sender_ids.add(extra_client_id)
+
+#     sender_ids.discard(None)
+#     if not sender_ids:
+#         return {}
+
+#     master_docs = await mongo_db.clients.find({"client_id": {"$in": list(sender_ids)}}).to_list(None)
+#     masters = {d["client_id"]: MasterClient(**d) for d in master_docs}
+
+#     valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
+#     user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
+#     users = {str(u["_id"]): u for u in user_docs}
+
+#     sender_data_map = {}
+
+#     for client_id, master in masters.items():
+#         data = {
+#             "name": master.name,
+#             "avatar_url": master.avatar_url,
+#             "source": master.source.en_value,
+#             "external_id": master.external_id,
+#             "metadata": master.metadata,
+#             "client_id": master.client_id,
+#         }
+
+#         if master.user_id and is_valid_object_id(master.user_id):
+#             user_doc = users.get(master.user_id)
+#             if user_doc:
+#                 user_doc["_id"] = str(user_doc["_id"])
+#                 user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
+#                 user_data = await user_data_obj.get_full_user_data()
+#                 data["user"] = user_data
+
+#         sender_data_map[client_id] = data
+
+#     return sender_data_map
+
+async def build_sender_data_map(
+    messages: list[dict],
+    extra_client_id: Optional[str] = None
+) -> dict[str, dict[str, Any]]:
+    """Получить информацию об отправителях (мастер-клиент + user_data + patient info), включая клиента чата даже без сообщений."""
+
+    sender_ids = {m.get("sender_id") for m in messages if m.get("sender_id")}
     if extra_client_id:
         sender_ids.add(extra_client_id)
-
     sender_ids.discard(None)
+
     if not sender_ids:
         return {}
 
+    # --- 1. Master clients ---
     master_docs = await mongo_db.clients.find({"client_id": {"$in": list(sender_ids)}}).to_list(None)
     masters = {d["client_id"]: MasterClient(**d) for d in master_docs}
 
+    # --- 2. Users ---
     valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
     user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
     users = {str(u["_id"]): u for u in user_docs}
 
+    # --- 3. Main info & Contact info ---
+    user_ids_str = [str(uid) for uid in valid_user_ids]
+
+    main_infos = await mongo_db["patients_main_info"].find({"user_id": {"$in": user_ids_str}}).to_list(None)
+    contact_infos = await mongo_db["patients_contact_info"].find({"user_id": {"$in": user_ids_str}}).to_list(None)
+
+    main_info_map = {doc["user_id"]: doc for doc in main_infos}
+    contact_info_map = {doc["user_id"]: doc for doc in contact_infos}
+
+    # --- 4. Сбор итоговых данных ---
     sender_data_map = {}
 
     for client_id, master in masters.items():
@@ -744,7 +870,7 @@ async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[
             "avatar_url": master.avatar_url,
             "source": master.source.en_value,
             "external_id": master.external_id,
-            "metadata": master.metadata,
+            "metadata": dict(master.metadata or {}),
             "client_id": master.client_id,
         }
 
@@ -755,6 +881,32 @@ async def build_sender_data_map(messages: list[dict], extra_client_id: Optional[
                 user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
                 user_data = await user_data_obj.get_full_user_data()
                 data["user"] = user_data
+
+            metadata = data.setdefault("metadata", {})
+
+            main_info = main_info_map.get(master.user_id)
+            main_info = {key: value for key, value in main_info.items() if key in ["first_name", "patronymic", "last_name", "avatar"]}
+            contact_info = contact_info_map.get(master.user_id)
+            contact_info = {key: value for key, value in main_info.items() if key in []}
+
+            if main_info:
+                metadata["main_info"] = main_info
+                # fallback name
+                if not data["name"]:
+                    name_parts = [
+                        main_info.get("first_name"),
+                        main_info.get("patronymic"),
+                        main_info.get("last_name")
+                    ]
+                    data["name"] = " ".join(filter(None, name_parts)).strip() or None
+
+                # fallback avatar
+                avatar = main_info.get("avatar", {})
+                if not data["avatar_url"] and avatar and avatar.get("url"):
+                    data["avatar_url"] = avatar["url"]
+
+            if contact_info:
+                metadata["contact_info"] = contact_info
 
         sender_data_map[client_id] = data
 

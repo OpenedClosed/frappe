@@ -11,22 +11,33 @@ from db.mongo.base.enums import BaseJsonEnumMixin
 
 class GenderEnum(BaseJsonEnumMixin, str, Enum):
     MALE = json.dumps({
-        "ru": "Мужской",
-        "en": "Male",
-        "pl": "Mężczyzna",
+        "ru": "мужской",
+        "en": "male",
+        "pl": "mężczyzna",
         "settings": {}
     })
     FEMALE = json.dumps({
-        "ru": "Женский",
-        "en": "Female",
-        "pl": "Kobieta",
+        "ru": "женский",
+        "en": "female",
+        "pl": "kobieta",
         "settings": {}
     })
 
 
-class AccountVerificationEnum(str, Enum):
-    UNVERIFIED = "unverified"
-    VERIFIED = "verified"
+class AccountVerificationEnum(BaseJsonEnumMixin, str, Enum):
+    UNVERIFIED = json.dumps({
+        "ru": "не верифицирован",
+        "en": "unverified",
+        "pl": "niezweryfikowany",
+        "settings": {}
+    })
+    VERIFIED = json.dumps({
+        "ru": "верифицирован",
+        "en": "verified",
+        "pl": "zweryfikowany",
+        "settings": {}
+    })
+
 
 # ==========
 # Анкета здоровья
@@ -91,11 +102,11 @@ class HealthFormStatus(str, Enum):
 # Семья
 # ==========
 
-
 class RelationshipEnum(BaseJsonEnumMixin, str, Enum):
     SPOUSE = json.dumps({
         "en": "Spouse",
         "ru": "Супруг(а)",
+        "pl": "Współmałżonek",
         "settings": {
             "color": "#8E24AA"
         }
@@ -103,6 +114,7 @@ class RelationshipEnum(BaseJsonEnumMixin, str, Enum):
     CHILD = json.dumps({
         "en": "Child",
         "ru": "Ребёнок",
+        "pl": "Dziecko",
         "settings": {
             "color": "#1E88E5"
         }
@@ -110,6 +122,7 @@ class RelationshipEnum(BaseJsonEnumMixin, str, Enum):
     OTHER = json.dumps({
         "en": "Other",
         "ru": "Другое",
+        "pl": "Inne",
         "settings": {
             "color": "#757575"
         }
@@ -126,6 +139,11 @@ class FamilyStatusEnum(BaseJsonEnumMixin, str, Enum):
         "en": "Confirmed",
         "ru": "Подтверждено",
         "pl": "Potwierdzony"
+    })
+    DECLINED = json.dumps({
+        "en": "Declined",
+        "ru": "Отклонено",
+        "pl": "Odrzucony"
     })
 
 

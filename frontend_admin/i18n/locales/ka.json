@@ -137,7 +137,13 @@
     "smsCodeLabel": "SMS კოდი",
     "smsCodePlaceholder": "შეიყვანეთ SMS კოდი",
     "confirmButton": "დადასტურება",
-    "cancelButton": "გაუქმება"
+    "cancelButton": "გაუქმება",
+    "genderMale": "კაცი",
+    "genderFemale": "ქალი",
+    "birthDate": "დაბადების თარიღი",
+    "birthDatePlaceholder": "აირჩიეთ თქვენი დაბადების თარიღი",
+    "gender": "სქესი",
+    "genderPlaceholder": "აირჩიეთ სქესი"
   },
 
   "DynamicForm": {
@@ -214,7 +220,7 @@
 
   "FamilyTable": {
     "addMember": "ოჯახის წევრის დამატება",
-    "idPrefix": "ID:",
+    "idPrefix": "ტელეფონი:",
     "nameUnknown": "სახელი არაა მითითებული",
     "relationshipUnknown": "ურთიერთობა არაა მითითებული",
     "statusUnknown": "სტატუსი არაა მითითებული",
@@ -621,7 +627,13 @@
   "LoaderOverlay": {
     "loadingCompleted": "ჩატვირთვა დასრულდა!"
   },
-
+  "toastMessages": {
+    "errorTitle": "შეცდომა",
+    "unknown": "უცნობი შეცდომა"
+  },
+  "CRMtable": {
+    "empty": "მონაცემები არ არის ხელმისაწვდომი"
+  },
   "test": {
     "test": "ტესტი"
   }
