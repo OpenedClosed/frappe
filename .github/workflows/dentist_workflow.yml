@@ -42,6 +42,11 @@ env:
   CONSTRUCTOR_TOKEN: ${{ secrets.CONSTRUCTOR_TOKEN }}
   CONSTRUCTOR_ASSISTANT_ID: ${{ secrets.CONSTRUCTOR_ASSISTANT_ID }}
 
+
+  CRM_API_URL: ${{ secrets.CRM_API_URL }}
+  CRM_CLIENT_ID: ${{ secrets.CRM_CLIENT_ID }}
+  CRM_CLIENT_SECRET: ${{ secrets.CRM_CLIENT_SECRET }}
+
 jobs:
   build_and_push_to_docker_hub:
     name: Push Docker images to Docker Hub
@@ -253,6 +258,9 @@ jobs:
             WHATSAPP_VERIFY_TOKEN=${{ env.WHATSAPP_VERIFY_TOKEN }}
             CONSTRUCTOR_TOKEN=${{ env.CONSTRUCTOR_TOKEN }}
             CONSTRUCTOR_ASSISTANT_ID=${{ env.CONSTRUCTOR_ASSISTANT_ID }}
+            CRM_API_URL=${{ env.CRM_API_URL }}
+            CRM_CLIENT_ID=${{ env.CRM_CLIENT_ID }}
+            CRM_CLIENT_SECRET=${{ env.CRM_CLIENT_SECRET }}
             EOF
 
             # Подтягиваем свежие образы (те, что мы успели запушить)
