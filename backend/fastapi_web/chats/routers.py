@@ -32,25 +32,33 @@ async def create_or_get_chat(
     Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> dict:
     """API-обработчик получения или создания чата."""
-
+    print("получаем чат")
     logging.error(f"===== ДО: {user_id} =====")
     logging.error(f"user_id {user_id}")
     logging.error(f"timestamp {timestamp}")
     logging.error(f"hash {hash}")
     token_user_id = None
-    print("ТОКЕН ЕСТЬ" if Authorize else None)
+    if Authorize:
+        logging.error("ТОКЕН ЕСТЬ")
+    else:
+        logging.error("ТОКЕН НЕТ")
     if Authorize is not None:
         print('555')
         try:
             token_user_id = Authorize.get_jwt_subject()
         except Exception:
             token_user_id = None
+    # token_user_id = "6844539b006b0fd6b595ba48" # для теста
     if user_id and timestamp and hash:
         source = ChatSource.TELEGRAM_MINI_APP
+
+    if not user_id:
+        user_id = token_user_id
 
     client_id, external_id = await resolve_chat_identity(
         request, source, client_external_id, user_id, timestamp, hash, Authorize
     )
+    print('айдишники')
     print(client_id, external_id)
 
     metadata = {

@@ -161,7 +161,7 @@ async def get_client_id(
             )
 
     # ---------- 2. Суперюзер с JWT ----------
-    if is_superuser:
+    if is_superuser or user_id:
         base_id = await generate_client_id(websocket)
         return f"{user_id}:{base_id}" if user_id else base_id
 
@@ -343,6 +343,9 @@ async def get_or_create_master_client(
     # 🔐 Redis-блокировка от гонки
     lock_key = f"lock:client:create:{source.value}:{save_external_id}"
     got_lock = await redis_db.set(lock_key, "1", ex=5, nx=True)
+
+    if user_id and len(internal_client_id.split(":")) < 2:
+        internal_client_id = f"{user_id}:{internal_client_id}"
 
     try:
         # --- 1. Попытка найти существующего клиента ---
@@ -894,14 +897,29 @@ async def build_sender_data_map(
                 user_data = await user_data_obj.get_full_user_data()
                 data["user"] = user_data
 
-            # Вставляем main_info и contact_info в metadata
             metadata = data.setdefault("metadata", {})
 
-            if master.user_id in main_info_map:
-                metadata["main_info"] = main_info_map[master.user_id]
+            main_info = main_info_map.get(master.user_id)
+            contact_info = contact_info_map.get(master.user_id)
 
-            if master.user_id in contact_info_map:
-                metadata["contact_info"] = contact_info_map[master.user_id]
+            if main_info:
+                metadata["main_info"] = main_info
+                # fallback name
+                if not data["name"]:
+                    name_parts = [
+                        main_info.get("first_name"),
+                        main_info.get("patronymic"),
+                        main_info.get("last_name")
+                    ]
+                    data["name"] = " ".join(filter(None, name_parts)).strip() or None
+
+                # fallback avatar
+                avatar = main_info.get("avatar", {})
+                if not data["avatar_url"] and avatar and avatar.get("url"):
+                    data["avatar_url"] = avatar["url"]
+
+            if contact_info:
+                metadata["contact_info"] = contact_info
 
         sender_data_map[client_id] = data
 
