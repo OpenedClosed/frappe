@@ -32,18 +32,8 @@ async def create_or_get_chat(
     Authorize: Optional[AuthJWT] = Depends(lambda: None),
 ) -> dict:
     """API-обработчик получения или создания чата."""
-    print("получаем чат")
-    logging.error(f"===== ДО: {user_id} =====")
-    logging.error(f"user_id {user_id}")
-    logging.error(f"timestamp {timestamp}")
-    logging.error(f"hash {hash}")
     token_user_id = None
-    if Authorize:
-        logging.error("ТОКЕН ЕСТЬ")
-    else:
-        logging.error("ТОКЕН НЕТ")
     if Authorize is not None:
-        print('555')
         try:
             token_user_id = Authorize.get_jwt_subject()
         except Exception:
@@ -58,8 +48,6 @@ async def create_or_get_chat(
     client_id, external_id = await resolve_chat_identity(
         request, source, client_external_id, user_id, timestamp, hash, Authorize
     )
-    print('айдишники')
-    print(client_id, external_id)
 
     metadata = {
         k: v for k, v in request.query_params.items()

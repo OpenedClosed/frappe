@@ -88,8 +88,6 @@ async def get_facebook_user_profile(psid: str) -> dict:
     url = f"https://graph.facebook.com/v22.0/{psid}"
     # access_token = settings.FACEBOOK_ACCESS_TOKEN
     access_token = settings.FACEBOOK_ACCESS_TOKEN
-    print()
-    print(url)
 
     params = {
         "fields": "first_name,last_name,profile_pic,locale,timezone,gender",

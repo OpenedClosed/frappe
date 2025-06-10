@@ -424,8 +424,6 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         * «Связь есть, профиль не подтверждён» – CRM отдаёт 403 на `/consents`  
         * «Подтверждён» – CRM отвечает успешно
         """
-        print('='*100)
-        print(obj.get("patient_id"))
         if not obj.get("patient_id"):
             return {
                 "ru": "нет связи с CRM",
@@ -445,7 +443,6 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
                 "pl": "zweryfikowany"
             }
         except CRMError as e:
-            print(e)
             if e.status_code == 403:
                 return {
                     "ru": "связь есть, профиль не подтверждён",
@@ -660,7 +657,6 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
         Склеиваем residenceAddress из CRM → одна строка.
         Fallback — локальный `address`.
         """
-        print('here1')
         main = await mongo_db["patients_main_info"].find_one({"user_id": obj["user_id"]})
         patient_id = main.get("patient_id") if main else None
         patient    = await self.get_patient_cached(patient_id) if patient_id else None
@@ -669,8 +665,6 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
             parts = [addr.get(k) for k in ("street", "building", "apartment",
                                            "city", "zip", "country") if addr.get(k)]
             return ", ".join(parts)
-        
-        print('here2')
 
         return obj.get("address")
 
@@ -1042,20 +1036,13 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         • заявки, созданные пользователем;
         • заявки, где пользователь — приглашённый (по patient_id).
         """
-        print("===== get_queryset (Семья) =====")
-        print("Текущий пользователь:", current_user.data)
 
         user_id = str(current_user.data.get("user_id"))
         client = await self.get_master_client_by_user(current_user)
         patient_id = str(client["patient_id"]) if client and client.get("patient_id") else None
 
-        print("→ user_id =", user_id)
-        print("→ patient_id =", patient_id)
-
         docs: list[dict] = []
 
-        # 🔹 1. Заявки, отправленные пользователем
-        print("→ Ищем заявки, отправленные пользователем...")
         outgoing = await super().get_queryset(
             filters={"user_id": user_id},
             sort_by=sort_by,
@@ -1065,45 +1052,37 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
             current_user=current_user,
             format=False,
         )
-        print("→ Найдено исходящих заявок:", len(outgoing))
         docs.extend(outgoing)
 
         # 🔹 2. Заявки, где пользователь приглашён (member_id = patient_id)
         if patient_id:
-            print("→ Ищем входящие заявки через self.db.find...")
             cursor = self.db.find({"member_id": patient_id})
             incoming = [doc async for doc in cursor]
-            print("→ Найдено входящих заявок:", len(incoming))
 
             # Убираем дубликаты
             existing_ids = {doc["_id"] for doc in docs}
             new_incoming = [doc for doc in incoming if doc["_id"] not in existing_ids]
-            print("→ После удаления дубликатов:", len(new_incoming))
+
             docs.extend(new_incoming)
         else:
-            print("→ patient_id не найден, входящие заявки не ищем.")
+            pass
 
         # 🔹 3. Сортировка
         if sort_by:
             reverse = order == -1
-            print(f"→ Сортировка по: {sort_by}, порядок: {'DESC' if reverse else 'ASC'}")
             docs.sort(key=lambda x: x.get(sort_by), reverse=reverse)
 
         # 🔹 4. Пагинация
         if page is not None and page_size is not None:
             start = (page - 1) * page_size
             end = start + page_size
-            print(f"→ Пагинация: page={page}, page_size={page_size} → [{start}:{end}]")
             docs = docs[start:end]
 
-        # 🔹 5. Форматирование
-        print("→ Форматируем документы...")
         formatted = []
         for d in docs:
             formatted_doc = await self.format_document(d, current_user)
             formatted.append(formatted_doc)
 
-        print("→ Всего документов после форматирования:", len(formatted))
         return formatted
 
 
@@ -1118,12 +1097,9 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
 
         if obj and current_user:
             client = await self.get_master_client_by_user(current_user)
-            print('смотри сюда')
-            print(obj.get("member_id"), client.get("patient_id"))
             if client and obj.get("member_id") == client.get("patient_id"):
                 # Это входящая заявка и текущий пользователь — приглашённый
                 readonly = False
-        print('READONLY', readonly)
         return {
             "status": {
                 "settings": {"read_only": readonly},
@@ -1166,9 +1142,7 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
               
             if main_doc:
                 main_patient_id = main_doc["patient_id"]
-                print(main_patient_id)
                 patient = await self.get_patient_cached(main_patient_id) or None
-                print(patient)
                 return f'{patient.get("firstname", "")} {patient.get("lastname", "")}'.strip() if patient else None
 
         return None
@@ -1293,15 +1267,10 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         except ValueError as e:
             # raise HTTPException(400, detail=f"Invalid phone number: {e}")
             raise HTTPException(400, detail={"ru": "Неверный номер телефона", "en": "Invalid phone number", "pl": "Nieprawidłowy numer telefonu"})
-        print("===== Проверка =====")
-        print(phone_key)
         contact_info = await self.get_contact_info_by_phone(phone_key)
-        print(contact_info)
         if contact_info:
             user_id = contact_info.get("user_id")
-            print(user_id)
             client = await mongo_db.patients_main_info.find_one({"user_id": user_id})
-            print(client)
 
             if client and client.get("patient_id"):
                 patient = await self.get_patient_cached(client["patient_id"])
@@ -1309,7 +1278,6 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
                     data["member_id"] = patient["externalId"]
                     data["member_name"] = f'{patient.get("firstname", "")} {patient.get("lastname", "")}'.strip()
                     data["bonus_balance"] = patient.get("bonuses")
-                    print(data)
 
         return await super().create(data, current_user)
 
@@ -1461,7 +1429,6 @@ class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
             return []
 
         crm_rows, _ = await self.get_bonuses_history_cached(patient_id)
-        print(crm_rows)
 
         def map_row(r: dict) -> dict:
             tx_type = (TransactionTypeEnum.ACCRUED

@@ -20,7 +20,6 @@ async def verify_facebook_webhook(
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
 ):
     """Подтверждение вебхука Facebook Messenger."""
-    print('help2')
     return await verify_meta_webhook(
         hub_mode=hub_mode,
         hub_challenge=hub_challenge,

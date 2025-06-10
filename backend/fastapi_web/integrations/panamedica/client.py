@@ -99,7 +99,6 @@ class CRMClient:
         self.lock = asyncio.Lock()
 
     async def refresh_token(self) -> str:
-        print("\n======= refresh_token() =======")
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
                 f"{settings.CRM_API_URL}/oauth/token",
@@ -109,7 +108,6 @@ class CRMClient:
                     "client_secret": settings.CRM_CLIENT_SECRET,
                 },
             )
-        print("Ответ от CRM:", resp.status_code, resp.text)
 
         if resp.status_code >= 400:
             raise CRMError(status.HTTP_502_BAD_GATEWAY, "CRM auth failed")
@@ -151,12 +149,6 @@ class CRMClient:
         json = self.normalize_payload(json) if json else None
         params = self.normalize_payload(params) if params else None
 
-        print("\n======= call() =======")
-        print("Method:", method)
-        print("Path:", path)
-        print("Params:", params)
-        print("JSON:", json)
-
         async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
             resp = await client.request(
                 method.upper(),
@@ -195,17 +187,13 @@ class CRMClient:
         gender: str | None = None,
         birth_date: str | None = None,
     ) -> dict | None:
-        print("\n======= find_patient() =======")
 
         # 1) поиск по нашему внешнему ID
         if patient_id:
             try:
-                print('1')
                 return await self.get_patient(patient_id)
             except CRMError as e:
-                print('2')
                 if e.status_code == status.HTTP_404_NOT_FOUND:
-                    print('3')
                     await self.handle_missing_patient_by_id(patient_id)
                     return None
                 raise
@@ -242,7 +230,6 @@ class CRMClient:
         gender: str,
         pesel: str | None = None,
     ) -> dict:
-        print("\n======= create_patient() =======")
         payload = {
             "externalId": external_id,
             "firstname": first_name,
@@ -259,14 +246,12 @@ class CRMClient:
         return data
 
     async def get_patient(self, patient_id: str) -> dict:
-        print("\n======= get_patient() =======")
         data = await self.call("GET", f"/patients/{patient_id}")
         # если CRM не передала externalId, добавляем своё
         data.setdefault("externalId", patient_id)
         return data
 
     async def patch_patient(self, patient_id: str, patch: dict) -> dict:
-        print("\n======= patch_patient() =======")
         return await self.call("PATCH", f"/patients/{patient_id}", json=patch)
 
     async def find_or_create_patient(
@@ -275,7 +260,6 @@ class CRMClient:
         """
         Возвращает (crm_data, created_now).
         """
-        print("\n======= find_or_create_patient() =======")
 
         phone_key = normalize_numbers(contact_data.get("phone"))
         crm_phone = format_crm_phone(phone_key)
@@ -284,7 +268,6 @@ class CRMClient:
         bdate_raw = local_data.get("birth_date")
         bdate = bdate_raw.strftime("%Y-%m-%d") if bdate_raw else None
         email = contact_data.get("email", "")
-        print(crm_phone, gender, bdate)
 
         if not crm_phone or not gender or not bdate:
             raise CRMError(
@@ -327,7 +310,6 @@ class CRMClient:
     async def future_appointments(
         self, patient_id: str, *, from_date: date
     ) -> list[dict]:
-        print("\n======= future_appointments() =======")
         res = await self.call(
             "GET",
             f"/patients/{patient_id}/appointments",
@@ -340,13 +322,11 @@ class CRMClient:
     # ==============================================================
 
     async def get_consents(self, patient_id: str) -> list[dict]:
-        print("\n======= get_consents() =======")
         return await self.call("GET", f"/patients/{patient_id}/consents")
 
     async def update_consent(
         self, patient_id: str, consent_id: int, accept: bool
     ) -> dict:
-        print("\n======= update_consent() =======")
         payload = {"accept": accept}
         return await self.call(
             "PATCH", f"/patients/{patient_id}/consents/{consent_id}", json=payload
@@ -358,13 +338,11 @@ class CRMClient:
 
     async def get_bonus_balance(self, patient_id: str) -> int:
         """Возвращает текущий баланс бонусов пациента."""
-        print("\n======= get_bonus_balance() =======")
         patient = await self.find_patient(patient_id=patient_id)
         return int(patient.get("bonuses", 0))
 
     async def get_bonus_history(self, patient_id: str) -> list[dict]:
         """Возвращает историю начислений и списаний бонусов."""
-        print("\n======= get_bonus_history() =======")
         return await self.call("GET", f"/patients/{patient_id}/history-charges")
 
 

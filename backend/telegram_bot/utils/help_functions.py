@@ -62,7 +62,6 @@ async def set_menu_webapp_for_user(user: User, bot: Bot):
     Назначает WebApp-кнопку с безопасной ссылкой.
     """
     url = await generate_secure_webapp_url(user, bot)
-    logging.error(url)
     await bot.set_chat_menu_button(
         chat_id=user.id,
         menu_button=MenuButtonWebApp(

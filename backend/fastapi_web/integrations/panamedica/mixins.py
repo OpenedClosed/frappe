@@ -161,7 +161,7 @@ class CRMIntegrationMixin:
                 error = CRMError(**error_data) if error_data else None
                 return parsed.get("data", []), error
             except Exception:
-                print("===== Ошибка чтения кеша appointments =====")
+                pass
 
         try:
             appointments = await get_client().future_appointments(
@@ -194,7 +194,7 @@ class CRMIntegrationMixin:
                 error = CRMError(**error_data) if error_data else None
                 return parsed.get("data", []), error
             except Exception:
-                print("===== Ошибка чтения кеша consents =====")
+                pass
 
         try:
             consents = await get_client().get_consents(patient_id)
@@ -222,7 +222,6 @@ class CRMIntegrationMixin:
             try:
                 return json.loads(cached), None
             except Exception:
-                print("===== Но блин ошибка bonuses =====")
                 pass
 
         try:

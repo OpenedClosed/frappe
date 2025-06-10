@@ -461,7 +461,6 @@ class ChatSessionAdmin(BaseAdmin):
         chat_session = ChatSession(**obj)
         redis_key = f"chat:session:{chat_session.chat_id}"
         status = await calculate_chat_status(chat_session, redis_key)
-        print(status)
         return status.value
 
     async def get_status_emoji(self, obj: dict, current_user=None) -> str:

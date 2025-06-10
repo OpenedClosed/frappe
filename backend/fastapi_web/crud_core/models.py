@@ -259,7 +259,6 @@ class BaseCrudCore:
 
         # 🔥 автообновление updated_at
         if "updated_at" in self.model.__annotations__:
-            print("обновляем дату")
             data["updated_at"] = datetime.utcnow()
 
         valid_data = await self.process_data(data=data, existing_obj=obj, partial=True)
@@ -443,8 +442,6 @@ class BaseCrudCore:
     #                     dt = dt.replace(tzinfo=timezone.utc)
     #                 return dt.isoformat().replace('+00:00', 'Z')
     #             except ValueError as e:
-    #                 print('AAAAAAAAAAAAAAAA')
-    #                 print(e)
     #                 pass
     #         return value
 
@@ -552,9 +549,7 @@ class BaseCrudCore:
             if partial:
                 for field, val in data.items():
                     # 🔥 Исключаем updated_at из read_only блокировки
-                    print("Нашли поле обновления" if field == "updated_at" else None)
                     if field in ("id", *self.read_only_fields) and field != "updated_at":
-                        print("попало")
                         continue
 
                     if field in self.inlines:
@@ -599,8 +594,6 @@ class BaseCrudCore:
         if self.inlines:
             inline_data = await self.process_inlines(existing_obj, data, partial=partial)
             valid.update(inline_data)
-        print("valid!")
-        print(valid)
         return valid
 
     # --- Поиск во вложенных структурах ---
@@ -741,7 +734,6 @@ class InlineCrud(BaseCrudCore):
         """Обновляет вложенный объект."""
         self.check_crud_enabled("update")
         if "updated_at" in self.model.__annotations__:
-            print("обновляем дату")
             data["updated_at"] = datetime.utcnow()
 
         existing = await self.get(object_id, current_user)

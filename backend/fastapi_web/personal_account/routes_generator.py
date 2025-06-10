@@ -171,8 +171,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             phone=phone_key,
             metadata=dict(request.query_params),
         )
-        # print(data.gender)
-        # print(main_schema.gender)
+
         
         contact_schema = ContactInfoSchema(
             phone=phone_key,
@@ -182,9 +181,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ---------------- Определяем текущего пользователя ----------------
         current_user_id: Optional[str] = None
         current_user_doc = None
-        print('перед авторизацией')
         if Authorize is not None:
-            print("есть авторизация")
             try:
                 current_user_id = Authorize.get_jwt_subject()
             except jwt_exc.MissingTokenError:
@@ -192,21 +189,17 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # заглушка
         # current_user_id = "67e489affa4507fba7de630e"
         if current_user_id:
-            print("id", current_user_id)
             current_user_doc = await mongo_db["users"].find_one({"_id": ObjectId(current_user_id)})
         # raise HTTPException(502)
 
         # ---------------- Работа с CRM ----------------
         crm = get_client()
         try:
-            print(main_schema.model_dump())
-            print(contact_schema.model_dump())
             crm_data, created_now = await crm.find_or_create_patient(
                 local_data=main_schema.model_dump(),
                 contact_data=contact_schema.model_dump(),
             )
         except CRMError as e:
-            print(e)
             raise HTTPException(e.status_code, detail={
                 "__all__": {
                     "ru": "Ошибка CRM при регистрации.",

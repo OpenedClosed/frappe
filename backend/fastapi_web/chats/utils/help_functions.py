@@ -159,11 +159,15 @@ async def get_client_id(
                 chat_source=ChatSource.TELEGRAM_MINI_APP,
                 external_id=tg_user_id
             )
-
-    # ---------- 2. Суперюзер с JWT ----------
-    if is_superuser or user_id:
+        
+    if is_superuser:
         base_id = await generate_client_id(websocket)
         return f"{user_id}:{base_id}" if user_id else base_id
+
+    # ---------- 2. Суперюзер с JWT ----------
+    # if is_superuser or user_id:
+    #     base_id = await generate_client_id(websocket)
+    #     return f"{user_id}:{base_id}" if user_id else base_id
 
     # ---------- 3. Обычный клиент ----------
     return await generate_client_id(websocket)
@@ -353,8 +357,6 @@ async def get_or_create_master_client(
             doc = await col.find_one({"client_id": internal_client_id})
         else:
             doc = await col.find_one({"source": source.value, "external_id": save_external_id})
-        print("Найден мастер")
-        print(doc)
         if doc:
             update_fields: Dict[str, Any] = {}
 
@@ -362,8 +364,6 @@ async def get_or_create_master_client(
                 update_fields["name"] = name
             if avatar_url and avatar_url != doc.get("avatar_url"):
                 update_fields["avatar_url"] = avatar_url
-            print('и есть user_id в аргументах' if user_id else None)
-            print('и даже user_id в есть в мастере' if doc.get("user_id") else None)
             if user_id and (not doc.get("user_id")):
                 update_fields["user_id"] = user_id
 
@@ -505,7 +505,6 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
     message_thread_id = None
 
     
-    logging.error(f"📤 URL: {bot_webhook_url}")
     if "/" in admin_chat_id:
         parts = admin_chat_id.split("/")
         if len(parts) >= 2:
@@ -521,14 +520,6 @@ async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> Non
             }
             if message_thread_id:
                 payload["message_thread_id"] = message_thread_id
-            logging.error(f"📨 Отправка в бота → chat_id: {admin_chat_id}, thread_id: {message_thread_id}")
-            logging.error("📦 Payload:")
-            logging.error(json.dumps(payload, ensure_ascii=False, indent=2))
-
-            logging.error(f"🛠 Используемый chat_id: {payload['chat_id']}")
-            if "message_thread_id" in payload:
-                logging.error(f"🧵 Используемый thread_id: {payload.get('message_thread_id', None)}")
-
 
             response = await client.post(
                 bot_webhook_url,
@@ -656,15 +647,9 @@ async def resolve_chat_identity(
     3. Иначе — старая схема (external_id || 'anonymous').
     """
     from chats.integrations.telegram.telegram_bot import verify_telegram_hash
-    logging.error(f"===== ПОСЛЕ: {user_id} =====")
-    logging.error(source)
-    logging.error(f"user_id {user_id}")
-    logging.error(f"timestamp {timestamp}")
-    logging.error(f"hash {hash}")
     if hash:
 
         res = verify_telegram_hash(user_id, timestamp, hash, settings.TELEGRAM_BOT_TOKEN)
-        logging.error(f"res {res}")
     if source == ChatSource.TELEGRAM_MINI_APP:
         if not (user_id and timestamp and hash):
             raise HTTPException(400, "Telegram auth params missing")

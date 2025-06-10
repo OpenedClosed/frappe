@@ -535,7 +535,6 @@ async def ensure_entry_processed(
             updated["context.$.snapshot_text"] = entry.snapshot_text
             should_refresh_snapshot = True
 
-    print("КЛАСС РЕФРЕШ" if should_refresh_snapshot else "Нет")
     # ---------- 2. KB-structure ----------
     if should_refresh_snapshot or entry.kb_structure is None:
         blocks = await collect_context_blocks([entry])
