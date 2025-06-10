@@ -900,7 +900,9 @@ async def build_sender_data_map(
             metadata = data.setdefault("metadata", {})
 
             main_info = main_info_map.get(master.user_id)
+            main_info = {key: value for key, value in main_info.items() if key in ["first_name", "patronymic", "last_name", "avatar"]}
             contact_info = contact_info_map.get(master.user_id)
+            contact_info = {key: value for key, value in main_info.items() if key in []}
 
             if main_info:
                 metadata["main_info"] = main_info
