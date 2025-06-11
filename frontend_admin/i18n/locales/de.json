@@ -638,6 +638,19 @@
   "CRMtable": {
     "empty": "Keine Daten verfügbar"
   },
+  "Legend": {
+    "NewSession": "💬🆕 Neue Sitzung — neue Sitzung",
+    "WaitingForAI": "🤖⏳ Warten auf KI — wartet auf Bot-Antwort",
+    "AIWaitingForClient": "🤖✅ Warten auf Kunden (KI) — Bot hat geantwortet, wartet auf Kunden",
+    "WaitingForConsultant": "👨‍⚕️❗ Warten auf Berater — wartet auf Berater",
+    "ReadByConsultant": "👨‍⚕️⚠️ Vom Berater gelesen — Nachricht gelesen",
+    "ConsultantWaitingForClient": "👨‍⚕️✅ Warten auf Kunden — Berater hat geantwortet",
+    "ClosedNoMessages": "📪🚫 Geschlossen – Keine Nachrichten",
+    "ClosedByTimeout": "📪⌛️ Geschlossen wegen Timeout",
+    "ClosedByOperator": "📪🔒 Manuell geschlossen",
+    "BriefInProgress": "📋🛠️ Brief wird ausgefüllt",
+    "BriefCompleted": "📋✅ Brief abgeschlossen"
+  },
   "test": {
     "test": "Test"
   }

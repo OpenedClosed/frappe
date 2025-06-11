@@ -144,5 +144,9 @@
       "workspacePlayground": "Workspace",
       "readonlyKnowledgeBase": "Knowledge base (read-only)"
     }
+  },
+  "toastMessages": {
+    "infoTitle": "Info",
+    "filesOnly": "Only documents can be downloaded — images are shown directly in the chat."
   }
 }

@@ -1,11 +1,25 @@
 <template>
   <div>
     <!-- Floating toggle -->
-    <Button icon="pi pi-comments" label="Open Chat" class="chat-toggle-button text-white" @click="toggleChat" />
+    <Button text v-if="projectKey === 'aihub' || projectKey === 'localhost' " size="large"
+      class="chat-toggle-button flex flex-row gap-2" @click="toggleChat">
+      <div ref="logoRef" class="relative w-[100px] pointer-events-none">
+
+        <img src="/main/logo_gregg.png" alt="Chat Icon" class="w-full h-full" />
+        <div v-for="(eye, index) in eyes" :key="index"
+          class="absolute w-[12px] h-[12px] bg-white rounded-full border border-black"
+          :style="{ top: eye.top, left: eye.left }">
+          <div class="w-[6px] h-[6px] bg-black rounded-full"
+            :style="{ transform: `translate(${eye.pupilX}px, ${eye.pupilY}px)` }" />
+        </div>
+      </div>
+    </Button>
+    <Button v-else icon="pi pi-comments" label="Open Chat" size="large" class="chat-toggle-button text-white"
+      @click="toggleChat" />
 
     <!-- Chat box -->
     <transition name="fade">
-      <div v-if="showChat" class="chat-box"   :class="{ 'chat-box--mobile': isMobile }">
+      <div v-if="showChat" class="chat-box" :class="{ 'chat-box--mobile': isMobile }">
         <ChatComponent :is-telegram="false" @close-chat="toggleChat" />
       </div>
     </transition>
@@ -16,6 +30,7 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import ChatComponent from "./ChatComponent.vue";
 import Button from "primevue/button";
+const { projectKey } = useProjectState()
 const showChat = ref(false); // Controls whether the chat is visible
 const isMobile = ref(false); // Tracks if we're on a mobile screen
 function postSizeToParent() {
@@ -45,14 +60,48 @@ function checkScreenSize() {
   isMobile.value = window.innerWidth < 768;
 }
 
+
+const eyes = ref([
+  { top: '15px', left: '29px', pupilX: 0, pupilY: 0 },  // left eye
+  { top: '15px', left: '47px', pupilX: 0, pupilY: 0 }  // right eye
+])
+
+const logoRef = ref(null)
+
+function handleMouseMove(event) {
+  const logoEl = logoRef.value
+  if (!logoEl) return
+
+  const rect = logoEl.getBoundingClientRect()
+
+  eyes.value.forEach((eye) => {
+    const eyeCenterX = rect.left + parseInt(eye.left) 
+    const eyeCenterY = rect.top + parseInt(eye.top) 
+    const dx = event.clientX - eyeCenterX
+    const dy = event.clientY - eyeCenterY
+    const angle = Math.atan2(dy, dx)
+    const distance = 2
+    eye.pupilX = Math.cos(angle) * distance
+    eye.pupilY = Math.sin(angle) * distance
+  })
+}
+
+
 onMounted(() => {
   checkScreenSize();
   window.addEventListener("resize", checkScreenSize);
+  window.addEventListener('mousemove', handleMouseMove)
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", checkScreenSize);
+  window.removeEventListener('mousemove', handleMouseMove)
 });
+
+
+
+
+
 </script>
 <!-- http://localhost:4000/chats/chat/index.html -->
 <style>
