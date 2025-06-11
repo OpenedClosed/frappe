@@ -16,7 +16,7 @@
     </Button>
     <Button v-else icon="pi pi-comments" label="Open Chat" size="large" class="chat-toggle-button text-white"
       @click="toggleChat" />
-
+ 
     <!-- Chat box -->
     <transition name="fade">
       <div v-if="showChat" class="chat-box" :class="{ 'chat-box--mobile': isMobile }">
