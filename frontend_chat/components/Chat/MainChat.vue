@@ -5,7 +5,7 @@
       class="chat-toggle-button flex flex-row gap-2" @click="toggleChat">
       <div ref="logoRef" class="relative w-[100px] pointer-events-none">
 
-        <!-- <img src="/main/logo_gregg.png" alt="Chat Icon" class="w-full h-full" /> -->
+        <img src="/images/logo_gregg.png" alt="Chat Icon" class="w-full h-full" />
         <!-- <div v-for="(eye, index) in eyes" :key="index"
           class="absolute w-[12px] h-[12px] bg-white rounded-full border border-black"
           :style="{ top: eye.top, left: eye.left }">
