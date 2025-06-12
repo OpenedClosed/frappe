@@ -6,12 +6,12 @@
       <div ref="logoRef" class="relative w-[100px] pointer-events-none">
 
         <img src="/main/logo_gregg.png" alt="Chat Icon" class="w-full h-full" />
-        <div v-for="(eye, index) in eyes" :key="index"
+        <!-- <div v-for="(eye, index) in eyes" :key="index"
           class="absolute w-[12px] h-[12px] bg-white rounded-full border border-black"
           :style="{ top: eye.top, left: eye.left }">
           <div class="w-[6px] h-[6px] bg-black rounded-full"
             :style="{ transform: `translate(${eye.pupilX}px, ${eye.pupilY}px)` }" />
-        </div>
+        </div> -->
       </div>
     </Button>
     <Button v-else icon="pi pi-comments" label="Open Chat" size="large" class="chat-toggle-button text-white"
@@ -38,7 +38,8 @@ function postSizeToParent() {
   if (!window.parent) return;
   console.log("postSizeToParent", window.parent);
 
-  const collapsedSize = { width: 162, height: 62 };
+  const collapsedSize = (projectKey === 'aihub' || projectKey === 'localhost') ? { width: 162, height: 62 } : { width: 162, height: 162 };
+  console.log("collapsedSize", collapsedSize);
 
   const expandedSize = { width: 420, height: 700, };
 
