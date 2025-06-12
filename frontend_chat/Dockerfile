@@ -8,6 +8,6 @@ COPY yarn.lock .
 RUN yarn
 
 FROM base as prod
-COPY public ./public  
 COPY . .
+COPY public ./public  
 RUN yarn build
