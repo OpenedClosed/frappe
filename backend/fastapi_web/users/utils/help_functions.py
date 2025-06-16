@@ -1,4 +1,5 @@
 """Вспомогательные функции приложения Пользователи."""
+import json
 from typing import Optional
 
 from bson import ObjectId
@@ -30,15 +31,42 @@ async def get_current_user(
     return user
 
 
-async def get_user_by_id(
-        user_id: str, data: Optional[dict] = {}) -> UserWithData:
-    """
-    Получает пользователя по ID из MongoDB и возвращает в виде UserWithData.
-    """
-    user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
-    if not user_doc:
-        raise HTTPException(status_code=401, detail="User not found")
+# async def get_user_by_id(
+#         user_id: str, data: Optional[dict] = {}) -> UserWithData:
+#     """
+#     Получает пользователя по ID из MongoDB и возвращает в виде UserWithData.
+#     """
+#     user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+#     if not user_doc:
+#         raise HTTPException(status_code=401, detail="User not found")
 
-    user_doc["_id"] = str(user_doc["_id"])
+#     user_doc["_id"] = str(user_doc["_id"])
+#     data["user_id"] = user_id
+#     return UserWithData(**user_doc, data=data)
+
+async def get_user_by_id(user_id: str, data: Optional[dict] = {}) -> UserWithData:
+    """
+    Получает пользователя по ID из кеша Redis или MongoDB.
+    Если в Redis нет — загружает из базы и сохраняет в Redis на 60 секунд.
+    """
+    cache_key = f"user:data:{user_id}"
+
+    # 1. Пробуем достать из кеша
+    cached = await redis_db.get(cache_key)
+    if cached:
+        user_doc = json.loads(cached)
+    else:
+        # 2. Загружаем из MongoDB
+        user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+        if not user_doc:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        # Преобразуем _id в строку для сериализации
+        user_doc["_id"] = str(user_doc["_id"])
+
+        # 3. Кладём в Redis на 60 секунд
+        await redis_db.set(cache_key, json.dumps(user_doc), ex=60)
+
+    # Добавляем дополнительное поле
     data["user_id"] = user_id
     return UserWithData(**user_doc, data=data)
