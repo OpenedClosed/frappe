@@ -75,7 +75,7 @@ if (headerData.value) {
   console.log("responseDataMe", responseDataMe);
   console.log("responseData", responseData);
   console.log("responseBonus", responseBonus);
-  if (responseDataMe?.role && (responseDataMe?.role === "admin" || responseDataMe?.role === "superadmin")) {
+  if (responseDataMe?.role && (responseDataMe?.role === "admin" || responseDataMe?.role === "superadmin" || responseDataMe?.role === "demo_admin")) {
     isAdmin.value = true;
   }
   if (responseBonus) {
