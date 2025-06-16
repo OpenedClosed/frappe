@@ -29,11 +29,15 @@ async def create_or_get_chat(
     user_id: Optional[str] = Query(default=None),
     timestamp: Optional[str] = Query(default=None),
     hash: Optional[str] = Query(default=None),
-    Authorize: Optional[AuthJWT] = Depends(lambda: None),
+    # Authorize: Optional[AuthJWT] = Depends(lambda: None),
+    Authorize: AuthJWT = Depends(),
 ) -> dict:
     """API-обработчик получения или создания чата."""
+    print('???')
     token_user_id = None
-    if Authorize is not None:
+    if Authorize is not None and Authorize.get_jwt_subject():
+        print(Authorize.get_jwt_subject())
+        print('1?')
         try:
             token_user_id = Authorize.get_jwt_subject()
         except Exception:
@@ -44,10 +48,11 @@ async def create_or_get_chat(
 
     if not user_id:
         user_id = token_user_id
-
+    print('2?')
     client_id, external_id = await resolve_chat_identity(
         request, source, client_external_id, user_id, timestamp, hash, Authorize
     )
+    print('3?')
 
     metadata = {
         k: v for k, v in request.query_params.items()
@@ -79,7 +84,7 @@ async def get_chat_by_id(
     user_id: Optional[str] = Query(default=None),
     timestamp: Optional[str] = Query(default=None),
     hash: Optional[str] = Query(default=None),
-    Authorize: Optional[AuthJWT] = Depends(lambda: None),
+    Authorize: AuthJWT = Depends(),
 ) -> dict:
     """Получает чат по ID, если он активен и принадлежит вызывающему клиенту."""
     if user_id and timestamp and hash:
@@ -110,7 +115,7 @@ async def get_active_chats(
     user_id: Optional[str] = Query(default=None),
     timestamp: Optional[str] = Query(default=None),
     hash: Optional[str] = Query(default=None),
-    Authorize: Optional[AuthJWT] = Depends(lambda: None),
+    Authorize: AuthJWT = Depends(),
 ) -> list[dict]:
     """Получает список всех активных чатов клиента."""
     if user_id and timestamp and hash:

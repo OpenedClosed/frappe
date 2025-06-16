@@ -32,6 +32,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     user_data = {}
     user = None
     user_id = await websocket_jwt_required(websocket)
+    print(user_id)
 
     if user_id:
         try:
@@ -129,6 +130,8 @@ async def validate_session(
     """Проверяет, что чат активен у клиента."""
     if is_superuser:
         return True
+    
+    print(client_id)
 
     active_chats = await get_active_chats_for_client(client_id)
     active_chat_ids = {chat["chat_id"] for chat, _ in active_chats}

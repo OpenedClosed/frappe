@@ -160,14 +160,14 @@ async def get_client_id(
                 external_id=tg_user_id
             )
         
-    if is_superuser:
-        base_id = await generate_client_id(websocket)
-        return f"{user_id}:{base_id}" if user_id else base_id
-
-    # ---------- 2. Суперюзер с JWT ----------
-    # if is_superuser or user_id:
+    # if is_superuser:
     #     base_id = await generate_client_id(websocket)
     #     return f"{user_id}:{base_id}" if user_id else base_id
+
+    # ---------- 2. Суперюзер с JWT ----------
+    if is_superuser or user_id:
+        base_id = await generate_client_id(websocket)
+        return f"{user_id}:{base_id}" if user_id else base_id
 
     # ---------- 3. Обычный клиент ----------
     return await generate_client_id(websocket)
@@ -659,7 +659,8 @@ async def resolve_chat_identity(
 
     else:
         user_doc = None
-        if Authorize is not None:
+        
+        if Authorize is not None and Authorize.get_jwt_subject():
             try:
                 user_id = Authorize.get_jwt_subject()
                 if not user_id:
@@ -847,9 +848,13 @@ async def build_sender_data_map(
     master_docs = await mongo_db.clients.find({"client_id": {"$in": list(sender_ids)}}).to_list(None)
     masters = {d["client_id"]: MasterClient(**d) for d in master_docs}
 
+    
+
     # --- 2. Users ---
     valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
     user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
+    print('---------')
+    print(user_docs)
     users = {str(u["_id"]): u for u in user_docs}
 
     # --- 3. Main info & Contact info ---
@@ -876,19 +881,23 @@ async def build_sender_data_map(
 
         if master.user_id and is_valid_object_id(master.user_id):
             user_doc = users.get(master.user_id)
+            user_name = None
             if user_doc:
+                print('есть документ')
                 user_doc["_id"] = str(user_doc["_id"])
                 user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
                 user_data = await user_data_obj.get_full_user_data()
                 data["user"] = user_data
+                user_name = user_doc["full_name"]
 
             metadata = data.setdefault("metadata", {})
 
-            main_info = main_info_map.get(master.user_id)
+            main_info = main_info_map.get(master.user_id, {})
             main_info = {key: value for key, value in main_info.items() if key in ["first_name", "patronymic", "last_name", "avatar"]}
-            contact_info = contact_info_map.get(master.user_id)
+            contact_info = contact_info_map.get(master.user_id, {})
             contact_info = {key: value for key, value in main_info.items() if key in []}
-
+            main_info_name = None
+            
             if main_info:
                 metadata["main_info"] = main_info
                 # fallback name
@@ -898,7 +907,7 @@ async def build_sender_data_map(
                         main_info.get("patronymic"),
                         main_info.get("last_name")
                     ]
-                    data["name"] = " ".join(filter(None, name_parts)).strip() or None
+                    main_info_name = " ".join(filter(None, name_parts)).strip() or None
 
                 # fallback avatar
                 avatar = main_info.get("avatar", {})
@@ -907,6 +916,8 @@ async def build_sender_data_map(
 
             if contact_info:
                 metadata["contact_info"] = contact_info
+
+            data["name"] = main_info_name or user_name
 
         sender_data_map[client_id] = data
 
@@ -1086,19 +1097,10 @@ def parse_weather_data(data: Dict[str, Any]) -> Dict[str, Any]:
 # БЛОК: Контекст бота
 # ==============================
 
-async def get_bot_context(app_name: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Загружает настройки бота по app_name либо берёт значения по умолчанию.
-    Если app_name=None — используется settings.APP_NAME (общая конфигурация).
-    """
-    app_name = app_name or settings.APP_NAME
-
-    data = await mongo_db.bot_settings.find_one(
-        {"app_name": app_name}
-    ) or await mongo_db.bot_settings.find_one(
-        {}, sort=[("_id", DESCENDING)]
-    )
-    bot_settings = BotSettings(**data) if data else BotSettings(
+def get_default_bot_settings(app_name: str) -> BotSettings:
+    """Создаёт дефолтные настройки бота для указанного app_name."""
+    return BotSettings(
+        app_name=app_name,
         project_name="Default Project",
         employee_name="Default Employee",
         mention_name=False,
@@ -1143,6 +1145,24 @@ async def get_bot_context(app_name: Optional[str] = None) -> Dict[str, Any]:
         ai_model=AIModelEnum.GPT_4_O,
         created_at=datetime.utcnow()
     )
+
+
+async def get_bot_context(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Загружает настройки бота по app_name или создаёт дефолтные, если это демо-приложение."""
+    app_name = app_name or settings.APP_NAME
+
+    data = await mongo_db.bot_settings.find_one({"app_name": app_name})
+
+    if not data:
+        # Если имя демо-приложения — сразу отдаём заглушку
+        if app_name.startswith("demo_"):
+            bot_settings = get_default_bot_settings(app_name)
+        else:
+            # Пробуем взять последнюю настройку, если она есть
+            data = await mongo_db.bot_settings.find_one({}, sort=[("_id", DESCENDING)])
+            bot_settings = BotSettings(**data) if data else get_default_bot_settings(app_name)
+    else:
+        bot_settings = BotSettings(**data)
     return build_bot_settings_context(bot_settings, BotSettingsAdmin(mongo_db))
 
 
@@ -1150,7 +1170,7 @@ def build_bot_settings_context(
     settings: BotSettings,
     admin_model: BotSettingsAdmin
 ) -> Dict[str, Any]:
-    """Формирует контекст бота из настроек."""
+    """Формирует словарь с настройками бота на основе модели BotSettings."""
     bot_config = {
         "ai_model": settings.ai_model.value if settings.ai_model else "gpt-4o",
         "temperature": PERSONALITY_TRAITS_DETAILS.get(settings.personality_traits, 0.1),
@@ -1174,7 +1194,6 @@ def build_bot_settings_context(
     }
     bot_config["prompt_text"] = generate_prompt_text(settings, admin_model)
     return bot_config
-
 
 # ==============================
 # БЛОК: Генерация промпта

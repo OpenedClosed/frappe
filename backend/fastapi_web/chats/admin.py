@@ -411,6 +411,51 @@ class ChatSessionAdmin(BaseAdmin):
 
 
     # ─────────────────────────── queryset с сортировкой ────────────────────────
+    # async def get_queryset(
+    #     self, filters: Optional[dict] = None, sort_by: Optional[str] = None,
+    #     order: int = 1, page: Optional[int] = None, page_size: Optional[int] = None,
+    #     current_user: Optional[dict] = None, format: bool = True
+    # ) -> List[dict]:
+    #     filters = filters or {}
+    #     filters["messages"] = {"$exists": True, "$ne": []}
+    #     is_updated_at_sort = not sort_by or sort_by == "updated_at"
+
+    #     if not is_updated_at_sort:
+    #         return await super().get_queryset(
+    #             filters=filters, sort_by=sort_by, order=order,
+    #             page=page, page_size=page_size,
+    #             current_user=current_user, format=format
+    #         )
+
+    #     raw_docs = await super().get_queryset(
+    #         filters=filters, sort_by=None, order=order, page=None, page_size=None,
+    #         current_user=current_user, format=False
+    #     )
+
+    #     def get_updated_at(doc: dict) -> datetime:
+    #         messages = doc.get("messages") or []
+    #         for msg in reversed(messages):
+    #             role = msg.get("sender_role")
+    #             if isinstance(role, str):
+    #                 try:
+    #                     role = json.loads(role)
+    #                 except Exception:
+    #                     continue
+    #             if isinstance(role, dict) and role.get("en") == SenderRole.CLIENT.en_value:
+    #                 return msg.get("timestamp") or doc.get("last_activity") or doc.get("created_at")
+    #         return doc.get("last_activity") or doc.get("created_at")
+
+    #     raw_docs.sort(key=get_updated_at, reverse=(order == -1))
+
+    #     if page is not None and page_size:
+    #         start, end = (page - 1) * page_size, (page - 1) * page_size + page_size
+    #         raw_docs = raw_docs[start:end]
+
+    #     if not format:
+    #         return raw_docs
+
+    #     return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))
+
     async def get_queryset(
         self, filters: Optional[dict] = None, sort_by: Optional[str] = None,
         order: int = 1, page: Optional[int] = None, page_size: Optional[int] = None,
@@ -418,6 +463,26 @@ class ChatSessionAdmin(BaseAdmin):
     ) -> List[dict]:
         filters = filters or {}
         filters["messages"] = {"$exists": True, "$ne": []}
+
+        if current_user and getattr(current_user, "role", None) == "demo_admin":
+            print('тут 1')
+            current_user_id = current_user.data.get("user_id", None)
+            print(current_user_id)
+            if not current_user_id:
+                return []
+
+            master_clients = await mongo_db.clients.find(
+                {"user_id": current_user_id}, {"client_id": 1}
+            ).to_list(None)
+            allowed_client_ids = [c["client_id"] for c in master_clients]
+            print(allowed_client_ids)
+
+            if allowed_client_ids:
+                filters["client.client_id"] = {"$in": allowed_client_ids}
+            else:
+                return []
+
+
         is_updated_at_sort = not sort_by or sort_by == "updated_at"
 
         if not is_updated_at_sort:
@@ -455,6 +520,7 @@ class ChatSessionAdmin(BaseAdmin):
             return raw_docs
 
         return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))
+
 
     # ────────────────────────── вычисляемые поля ──────────────────────────────
     async def get_status_display(self, obj: dict, current_user=None) -> str:

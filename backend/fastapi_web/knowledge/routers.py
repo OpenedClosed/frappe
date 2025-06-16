@@ -157,7 +157,8 @@ async def generate_patch(
 async def get_bot_info(
     request: Request,
     response: Response,
-    Authorize: Optional[AuthJWT] = Depends(lambda: None),
+    # Authorize: Optional[AuthJWT] = Depends(lambda: None),
+    Authorize: AuthJWT = Depends()
 ) -> Dict[str, Any]:
     """
     Возвращает публичную информацию о боте.
@@ -166,14 +167,17 @@ async def get_bot_info(
     """
     app_name = settings.APP_NAME
 
-    if Authorize is not None:
+    if Authorize is not None and Authorize.get_jwt_subject():
         try:
             user = await get_current_user(Authorize)
             app_name = get_app_name_for_user(user)
         except Exception:
             pass
+    print('='*100)
+    print(app_name)
 
     bot_context = await get_bot_context(app_name)
+    print(bot_context)
     safe_fields = {"app_name", "bot_name", "avatar", "ai_model"}
     return {k: v for k, v in bot_context.items() if k in safe_fields}
 

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from db.mongo.base.schemas import BaseValidatedModel, IdModel, Photo
 
+
 from .enums import (AIModelEnum, BotColorEnum, CommunicationStyleEnum,
                     ContextPurpose, ContextType, ForbiddenTopicsEnum,
                     FunctionalityEnum, PersonalityTraitsEnum, TargetActionEnum)
@@ -170,3 +171,4 @@ class BotSettings(BaseValidatedModel):
 
     ai_model: AIModelEnum
     created_at: datetime = Field(default_factory=datetime.utcnow)
+

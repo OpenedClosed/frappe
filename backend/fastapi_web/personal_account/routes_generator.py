@@ -142,7 +142,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         data: ConfirmationSchema,
         request: Request,
         response: Response,
-        Authorize: Optional[AuthJWT] = Depends(lambda: None),   # token опционален
+        # Authorize: Optional[AuthJWT] = Depends(lambda: None),   # token опционален
+        Authorize: AuthJWT = Depends()
     ):
         """
         • Валидирует 6-значный код  
@@ -181,7 +182,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ---------------- Определяем текущего пользователя ----------------
         current_user_id: Optional[str] = None
         current_user_doc = None
-        if Authorize is not None:
+        if Authorize is not None and Authorize.get_jwt_subject():
             try:
                 current_user_id = Authorize.get_jwt_subject()
             except jwt_exc.MissingTokenError:
