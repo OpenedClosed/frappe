@@ -608,8 +608,21 @@
     "errorTitle": "Error",
     "unknown": "Unknown error occurred"
   },
-  "CRMtable":{
+  "CRMtable": {
     "empty": "No data available"
+  },
+  "Legend": {
+    "NewSession": "💬🆕 New Session — new session",
+    "WaitingForAI": "🤖⏳ Waiting for AI — awaiting bot response",
+    "AIWaitingForClient": "🤖✅ Waiting for Client (AI) — bot responded, waiting for client",
+    "WaitingForConsultant": "👨‍⚕️❗ Waiting for Consultant — waiting for consultant",
+    "ReadByConsultant": "👨‍⚕️⚠️ Read by Consultant — message read by consultant",
+    "ConsultantWaitingForClient": "👨‍⚕️✅ Waiting for Client — consultant responded, waiting for client",
+    "ClosedNoMessages": "📪🚫 Closed – No Messages — closed without messages",
+    "ClosedByTimeout": "📪⌛️ Closed by Timeout — closed by timeout",
+    "ClosedByOperator": "📪🔒 Closed by Operator — manually closed",
+    "BriefInProgress": "📋🛠️ Brief In Progress — brief in progress",
+    "BriefCompleted": "📋✅ Brief Completed — brief completed"
   },
   "test": {
     "test": "Test"

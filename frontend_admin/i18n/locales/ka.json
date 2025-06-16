@@ -634,6 +634,19 @@
   "CRMtable": {
     "empty": "მონაცემები არ არის ხელმისაწვდომი"
   },
+  "Legend": {
+    "NewSession": "💬🆕 ახალი სესია",
+    "WaitingForAI": "🤖⏳ ელოდება ბოტის პასუხს",
+    "AIWaitingForClient": "🤖✅ ბოტმა უპასუხა — ელოდება მომხმარებელს",
+    "WaitingForConsultant": "👨‍⚕️❗ ელოდება კონსულტანტს",
+    "ReadByConsultant": "👨‍⚕️⚠️ კონსულტანტმა წაიკითხა",
+    "ConsultantWaitingForClient": "👨‍⚕️✅ კონსულტანტის პასუხი — ველოდებით კლიენტს",
+    "ClosedNoMessages": "📪🚫 დახურულია — შეტყობინებების გარეშე",
+    "ClosedByTimeout": "📪⌛️ დროის ამოწურვით დახურული",
+    "ClosedByOperator": "📪🔒 ოპერატორმა დახურა",
+    "BriefInProgress": "📋🛠️ კითხვარის შევსება მიმდინარეობს",
+    "BriefCompleted": "📋✅ კითხვარი დასრულებულია"
+  },
   "test": {
     "test": "ტესტი"
   }

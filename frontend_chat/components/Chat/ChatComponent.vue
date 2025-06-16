@@ -15,7 +15,7 @@
       @focusin="handleFocus($event, true)" :selected-room-id="activeRoomId" @focusout="handleFocus($event, false)"
       :single-room="true" :show-audio="false" :show-files="false" :show-footer="!isChoiceStrict && !timerExpired"
       :text-messages="textMessagesJson" :theme="colorMode.preference" @send-message="sendMessage($event.detail[0])"
-      @fetch-messages="fetchMessages($event.detail[0])">
+      @fetch-messages="fetchMessages($event.detail[0])" @open-file="handleOpenFile($event.detail[0])">
       <div slot="room-header-info" class="w-full">
         <ChatHeader :isTelegram="isTelegram" :refreshChat="refreshChat" :closeChat="closeChat" :rooms="rooms"
           :currentUserId="currentUserId" @toggle-chat-mode="toggleChatMode($event)" />
@@ -80,6 +80,7 @@ $listen("choice_options_arrived", async (options) => {
     choiceOptions.value = options;
   }
 });
+const toast = useToast()
 
 const isTextareaFocused = ref(false);
 
@@ -90,6 +91,30 @@ function handleFocus(e, value) {
   }
 }
 
+
+function handleOpenFile(payload) {
+  console.log('handleOpenFile payload:', payload)
+  const { file } = payload
+  let fileName = file.file.name || ""; 
+  let fileUrl = file.file.url || "";
+  const isImage =
+    /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName) 
+
+  if (isImage) {
+    // Показываем предупреждение и ничего не скачиваем
+    toast.add({
+      severity: 'info',
+      summary: t?.('toastMessages.infoTitle') ?? 'Информация',
+      detail:
+        t?.('toastMessages.filesOnly') ??
+        'Скачать можно только документы — изображения уже отображаются в чате.',
+      life: 4000,
+    })
+    return
+  }
+
+  window.open(fileUrl, '_blank')
+}
 const showIphoneMargin = computed(() => isIphone.value && !isTextareaFocused.value);
 // Получаем из composable все нужные refs и методы
 // (кроме closeChat - его оставляем здесь локально)

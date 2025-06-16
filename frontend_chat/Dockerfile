@@ -9,4 +9,5 @@ RUN yarn
 
 FROM base as prod
 COPY . .
+COPY public ./public  
 RUN yarn build

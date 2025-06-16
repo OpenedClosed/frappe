@@ -99,5 +99,9 @@
     "pageIsHiddenPausingUpdates": "Strona jest ukryta. Wstrzymano aktualizacje.",
     "windowInFocus": "Okno w fokuse",
     "webSocketIsNotOpenReconnecting": "WebSocket nie jest otwarty. Ponowne łączenie..."
+  },
+  "toastMessages": {
+    "infoTitle": "Informacja",
+    "filesOnly": "Można pobierać tylko dokumenty — obrazy są już widoczne na czacie."
   }
 }

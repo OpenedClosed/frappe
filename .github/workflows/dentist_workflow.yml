@@ -47,6 +47,10 @@ env:
   CRM_CLIENT_ID: ${{ secrets.CRM_CLIENT_ID }}
   CRM_CLIENT_SECRET: ${{ secrets.CRM_CLIENT_SECRET }}
 
+  SMS_API_URL: ${{ secrets.SMS_API_URL }}
+  SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
+  SMS_API_SENDER: ${{ secrets.SMS_API_SENDER }}
+
 jobs:
   build_and_push_to_docker_hub:
     name: Push Docker images to Docker Hub
@@ -261,6 +265,9 @@ jobs:
             CRM_API_URL=${{ env.CRM_API_URL }}
             CRM_CLIENT_ID=${{ env.CRM_CLIENT_ID }}
             CRM_CLIENT_SECRET=${{ env.CRM_CLIENT_SECRET }}
+            SMS_API_URL=${{ env.SMS_API_URL }}
+            SMS_API_KEY=${{ env.SMS_API_KEY }}
+            SMS_API_SENDER=${{ env.SMS_API_SENDER }}
             EOF
 
             # Подтягиваем свежие образы (те, что мы успели запушить)

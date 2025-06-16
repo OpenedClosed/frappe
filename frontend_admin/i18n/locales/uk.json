@@ -633,6 +633,19 @@
   "CRMtable": {
     "empty": "Немає доступних даних"
   },
+  "Legend": {
+    "NewSession": "💬🆕 Нова сесія",
+    "WaitingForAI": "🤖⏳ Очікування відповіді бота",
+    "AIWaitingForClient": "🤖✅ Бот відповів — чекаємо на клієнта",
+    "WaitingForConsultant": "👨‍⚕️❗ Очікування консультанта",
+    "ReadByConsultant": "👨‍⚕️⚠️ Прочитано консультантом",
+    "ConsultantWaitingForClient": "👨‍⚕️✅ Консультант відповів — чекаємо на клієнта",
+    "ClosedNoMessages": "📪🚫 Закрито — без повідомлень",
+    "ClosedByTimeout": "📪⌛️ Закрито через тайм-аут",
+    "ClosedByOperator": "📪🔒 Закрито оператором",
+    "BriefInProgress": "📋🛠️ Анкетування триває",
+    "BriefCompleted": "📋✅ Анкетування завершено"
+  },
 
   "test": {
     "test": "Тест"

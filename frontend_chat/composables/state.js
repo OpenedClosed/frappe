@@ -38,3 +38,34 @@ export function useChatState() {
   };
 }
 
+export const useProjectState = () => {
+  /**
+   * 🔑 The project slug you’re running right now.
+   * Stored in Nuxt’s global reactive state so every component can read/update it.
+   */
+  const projectKey = useState('project-key', () => {
+    // 1) Prefer an explicit env var set per deployment
+    const { public: pub } = useRuntimeConfig()
+    if (pub?.projectKey) return pub.projectKey        // e.g. 'dantist'
+
+    // 2) Fallback: derive from the current host
+    // Works both during SSR and on the client
+    const host =
+      process.server
+        ? useRequestHeaders()[':host']                // SSR
+        : window.location.hostname                    // Client
+
+    if (!host) return 'unknown'
+
+    if (host.includes('panamed-aihubworks.com')) return 'dantist'
+    if (host.includes('nika.aihubworks.com'))    return 'hotel'
+    if (host.includes('chat.aihubworks.com'))    return 'aihub'
+    if (host.includes('denisdrive-aihub.com'))   return 'denisdrive'
+    if (host.includes('aihubworks.com'))         return 'test'
+    if (host.includes('localhost'))         return 'localhost'
+
+    return 'unknown'
+  })
+
+  return { projectKey }
+}

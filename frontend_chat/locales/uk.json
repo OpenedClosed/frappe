@@ -144,5 +144,9 @@
       "workspacePlayground": "Робочий простір",
       "readonlyKnowledgeBase": "База знань (лише для читання)"
     }
+  },
+  "toastMessages": {
+    "infoTitle": "Інформація",
+    "filesOnly": "Можна завантажувати лише документи — зображення вже показані в чаті."
   }
 }

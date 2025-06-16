@@ -6,7 +6,7 @@
   >
     <!-- Main Layout with Sidebar and DataTable -->
     <div
-      class="max-w-full flex flex-row flex-1 w-full"
+      class="max-w-full flex flex-row flex-1 w-full max-w-full"
       :class="[currentPageName === 'personal_account' ? 'flex-col justify-start' : 'flex-row justify-between']"
     >
       <!-- Navigation Sidebar Component -->
@@ -15,10 +15,10 @@
       <InfoHeader v-if="currentPageName === 'personal_account'" />
       <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
 
-      <div v-if="isLoading || isLoadingData" class="flex justify-center items-center w-full h-full p-8">
+      <div v-if="(isLoading || isLoadingData) && currentPageName === 'personal_account'" class="flex justify-center items-center w-full h-full p-8">
         <Loader style="width: 50px; height: 50px" />
       </div>
-      <div v-else class="flex flex-1">
+      <div v-else class="flex flex-col flex-1 min-w-0 max-w-full">
         <!-- Check if group is "knowledge-base" -->
         <div v-if="currentGroup === 'knowledge-base'" class="flex flex-col flex-1 min-w-0 justify-start">
           <KnowledgeBase />
@@ -99,7 +99,7 @@
         </div>
         <div
           v-else-if="currentEntity === 'chat_sessions' && !currentId"
-          class="flex w-full flex-col min-w-0 justify-start items-center m-4"
+          class="flex  flex-col min-w-0 max-w-full justify-start items-center m-4"
         >
           <EmbeddedChat
             class="w-full"

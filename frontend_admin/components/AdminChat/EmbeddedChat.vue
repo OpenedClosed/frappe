@@ -19,6 +19,23 @@
 
         <!-- “Unread” label -->
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.unreadLabel") }} </span>
+        <Button icon="pi pi-info-circle" text @click="toggleLegend" />
+
+        <OverlayPanel ref="legendPanel">
+          <div class="text-sm space-y-1">
+            <div>{{ t("Legend.NewSession") }}</div>
+            <div>{{ t("Legend.WaitingForAI") }}</div>
+            <div>{{ t("Legend.AIWaitingForClient") }}</div>
+            <div>{{ t("Legend.WaitingForConsultant") }}</div>
+            <div>{{ t("Legend.ReadByConsultant") }}</div>
+            <div>{{ t("Legend.ConsultantWaitingForClient") }}</div>
+            <div>{{ t("Legend.ClosedNoMessages") }}</div>
+            <div>{{ t("Legend.ClosedByTimeout") }}</div>
+            <div>{{ t("Legend.ClosedByOperator") }}</div>
+            <div>{{ t("Legend.BriefInProgress") }}</div>
+            <div>{{ t("Legend.BriefCompleted") }}</div>
+          </div>
+        </OverlayPanel>
       </div>
       <SplitButton
         :label="t('EmbeddedChat.exportButton')"
@@ -57,14 +74,16 @@
       :text-messages="textMessagesJson"
     >
       <div slot="room-header-avatar" class="flex items-center justify-center">
-        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2"/>
-        <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2"/>
-      </div> 
+        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2" />
+        <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2" />
+      </div>
       <div slot="room-header-info" class="flex-1">
         <!-- 🔥 Added flex-1 here -->
         <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
           <div class="flex flex-col">
-            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">{{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}</h2>
+            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
+              {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
+            </h2>
             <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
           </div>
           <div class="flex flex-row justify-center items-center gap-1">
@@ -124,7 +143,11 @@ const colorMode = useColorMode();
 const { $listen } = useNuxtApp();
 const roomsLoaded = computed(() => rooms.value.length > 0);
 const unreadOnly = ref(false); // false → “All”, true → “Unread”
+const legendPanel = ref()
 
+const toggleLegend = (event) => {
+  legendPanel.value.toggle(event)
+}
 /* ── REFS ───────────────────────────────────────────── */
 const showMsgDialog = ref(false);
 const selectedMsg = ref(null);
@@ -403,7 +426,6 @@ function formatTimeDifferenceEU(dateStr) {
   });
 }
 
-
 function stripPrefix(id = "") {
   /* TELEGRAM_599597042 → 599597042 */
   return id.replace(/^[A-Z_]+_/, "");
@@ -413,43 +435,38 @@ function stripPrefix(id = "") {
  *  Turn sender_info (plus client_id) → a tidy, guaranteed-filled object
  */
 function normaliseParticipant(senderInfo = {}, clientId = "") {
-  const md  = senderInfo.metadata || {};
+  const md = senderInfo.metadata || {};
 
   /* -------- NAME -------- */
   const username =
-    senderInfo.name              ??
-    md.profile_name              ?? // WhatsApp
-    md.name                      ?? // Telegram duplicate
-    md.username                  ?? // Telegram @username
-    stripPrefix(clientId);          // last fallback
+    senderInfo.name ??
+    md.profile_name ?? // WhatsApp
+    md.name ?? // Telegram duplicate
+    md.username ?? // Telegram @username
+    stripPrefix(clientId); // last fallback
 
   /* -------- AVATAR -------- */
-  const avatar =
-    senderInfo.avatar_url        ??
-    md.avatar_url                ??
-    "";
+  const avatar = senderInfo.avatar_url ?? md.avatar_url ?? "";
 
   /* -------- SOURCE -------- */
   let source = senderInfo.source || "";
   if (!source) {
     // Instagram sometimes comes in as “Internal”
-    if (clientId.startsWith("TELEGRAM_"))  source = "Telegram";
+    if (clientId.startsWith("TELEGRAM_")) source = "Telegram";
     else if (clientId.startsWith("WHATSAPP_")) source = "WhatsApp";
     else if (clientId.startsWith("INSTAGRAM_")) source = "Instagram";
     else source = "Internal";
   }
 
   /* -------- EXTERNAL ID / PHONE -------- */
-  const externalId =
-    senderInfo.external_id       ?? stripPrefix(clientId);
+  const externalId = senderInfo.external_id ?? stripPrefix(clientId);
 
   const phone =
-    md.display_phone_number      ?? // WhatsApp business
+    md.display_phone_number ?? // WhatsApp business
     (externalId.match(/^\d+$/) ? externalId : null);
 
   return { username, avatar, source, externalId, phone };
 }
-
 
 function buildRooms(chats, consultantId) {
   console.log("buildRooms", chats); // For debugging: log chat data
@@ -465,8 +482,7 @@ function buildRooms(chats, consultantId) {
   return chats.map((chat, idx) => {
     const pdEntry = chat.participants_display?.find((p) => p.client_id === chat.client_id_display) ?? chat.participants_display?.[0];
 
-    const normalizedPd=
-      normaliseParticipant(pdEntry?.sender_info, pdEntry?.client_id);
+    const normalizedPd = normaliseParticipant(pdEntry?.sender_info, pdEntry?.client_id);
     console.log("chatelement", chat); // For debugging: log chat data
     const client = chat.client && chat.client[0] ? chat.client[0] : {};
     const sourceName = client.source && client.source.en ? client.source.en : t("EmbeddedChat.client");
@@ -497,7 +513,9 @@ function buildRooms(chats, consultantId) {
     return {
       avatar: sourceAvatars[sourceName] || "/avatars/default.png",
       roomId: chat.chat_id,
-      roomName: `${seen ? "" : "🔴"} ${status_emoji || ''} ${normalizedPd.username || client.id}` || t("EmbeddedChat.chatFallback", { index: idx + 1 }),
+      roomName:
+        `${seen ? "" : "🔴"} ${status_emoji || ""} ${normalizedPd.username || client.id}` ||
+        t("EmbeddedChat.chatFallback", { index: idx + 1 }),
       users: [clientUser, consultantUser],
       lastMessage,
       typingUsers: [],
@@ -512,15 +530,19 @@ const currentRoomSource = computed(() => {
   return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
 });
 
-watch(chatRows, (rows) => {
-  if (!rows.length) return
-  rooms.value = buildRooms(rows, currentUserId.value)
+watch(
+  chatRows,
+  (rows) => {
+    if (!rows.length) return;
+    rooms.value = buildRooms(rows, currentUserId.value);
 
-  // выбрать активную комнату, если ещё не выбрана
-  if (!rooms.value.find(r => r.roomId === activeRoomId.value)) {
-    activeRoomId.value = rooms.value[0]?.roomId ?? null
-  }
-}, { immediate: true })
+    // выбрать активную комнату, если ещё не выбрана
+    if (!rooms.value.find((r) => r.roomId === activeRoomId.value)) {
+      activeRoomId.value = rooms.value[0]?.roomId ?? null;
+    }
+  },
+  { immediate: true }
+);
 /* ── external events ───────────────────────────────────────── */
 // $listen("new_message_arrived", (msg) => {
 //   if (!msg || !messagesMap.value[activeRoomId.value]) return;
