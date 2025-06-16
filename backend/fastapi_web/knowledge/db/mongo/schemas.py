@@ -166,5 +166,7 @@ class BotSettings(BaseValidatedModel):
         }
     )
 
+    app_name: Optional[str] = None
+
     ai_model: AIModelEnum
     created_at: datetime = Field(default_factory=datetime.utcnow)

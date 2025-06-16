@@ -102,11 +102,11 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     "en": "Birth date cannot be in the future.",
                     "pl": "Data urodzenia nie może być z przyszłości."
                 }
-            elif birth > today - timedelta(days=365 * 10):
+            elif birth > today - timedelta(days=365 * 18):
                 errors["birth_date"] = {
-                    "ru": "Регистрация доступна только с 10 лет.",
-                    "en": "Registration is only available from age 10.",
-                    "pl": "Rejestracja dostępna od 10 roku życia."
+                    "ru": "Регистрация доступна только с 18 лет.",
+                    "en": "Registration is only available from age 18.",
+                    "pl": "Rejestracja dostępna od 18 roku życia."
                 }
 
 

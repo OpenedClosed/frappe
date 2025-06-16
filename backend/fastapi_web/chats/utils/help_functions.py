@@ -564,7 +564,7 @@ async def get_active_chats_for_client(
 async def calculate_chat_status(chat_session: ChatSession, redis_key_session: str):
     remaining_time = max(await redis_db.ttl(redis_key_session), 0)
 
-    staff_roles = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    staff_roles = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN, RoleEnum.DEMO_ADMIN]
     staff_users_cursor = mongo_db.users.find(
         {"role": {"$in": [role.value for role in staff_roles]}},
         {"_id": 1}
@@ -1086,9 +1086,18 @@ def parse_weather_data(data: Dict[str, Any]) -> Dict[str, Any]:
 # БЛОК: Контекст бота
 # ==============================
 
-async def get_bot_context() -> Dict[str, Any]:
-    """Загружает настройки бота или берёт значения по умолчанию."""
-    data = await mongo_db.bot_settings.find_one({}, sort=[("_id", DESCENDING)])
+async def get_bot_context(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Загружает настройки бота по app_name либо берёт значения по умолчанию.
+    Если app_name=None — используется settings.APP_NAME (общая конфигурация).
+    """
+    app_name = app_name or settings.APP_NAME
+
+    data = await mongo_db.bot_settings.find_one(
+        {"app_name": app_name}
+    ) or await mongo_db.bot_settings.find_one(
+        {}, sort=[("_id", DESCENDING)]
+    )
     bot_settings = BotSettings(**data) if data else BotSettings(
         project_name="Default Project",
         employee_name="Default Employee",

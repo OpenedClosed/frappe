@@ -45,7 +45,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
     is_superuser = bool(
         user and user.role in [
             RoleEnum.ADMIN,
-            RoleEnum.SUPERADMIN] and as_admin)
+            RoleEnum.SUPERADMIN, RoleEnum.DEMO_ADMIN] and as_admin)
 
 
     # is_superuser = bool(
@@ -81,7 +81,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, chat_id: str):
         user_data=user_data,
         data={}
     ):
-        await start_brief(chat_session, manager, redis_session_key, user_language)
+        await start_brief(chat_session, user_data, manager, redis_session_key, user_language)
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
