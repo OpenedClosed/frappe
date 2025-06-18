@@ -42,8 +42,9 @@ from ..utils.help_functions import (build_sender_data_map, chat_generate_any,
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
-from .ws_helpers import (ConnectionManager, DateTimeEncoder, TypingManager,
+from .ws_helpers import (ConnectionManager, TypingManager,
                          custom_json_dumps, gpt_task_manager)
+from utils.encoders import DateTimeEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -1323,29 +1324,29 @@ async def process_user_query_after_brief(
     """Обрабатывает запрос после брифа двухшаговой GPT-логикой."""
     try:
         async with gpt_lock:
-            print("1")
+
             user_data = user_data or {}
-            print("2")
+
             user_data["brief_info"] = extract_brief_info(chat_session)
-            print("3")
+
 
             app_name = await get_app_name_by_user_data(user_data)
-            print("4", app_name)
+
 
             chat_history = chat_session.messages[-25:]
-            print("5")
+
 
             kb_doc, kb_model = await get_knowledge_base(app_name)
-            print("6")
+
 
             external_structs, _ = await collect_kb_structures_from_context(kb_model.context)
-            print("7")
+
 
             merged_kb = merge_external_structures(kb_doc["knowledge_base"], external_structs)
-            print("8")
+
 
             client_id = chat_session.client.client_id if chat_session.client else None
-            print("9", client_id)
+
 
             gpt_data = await determine_topics_via_ai(
                 user_message=user_msg.message,

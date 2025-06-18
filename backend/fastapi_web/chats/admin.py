@@ -11,7 +11,7 @@ from crud_core.permissions import OperatorPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 from infra import settings
-from .ws.ws_helpers import DateTimeEncoder
+from utils.encoders import DateTimeEncoder
 
 from .db.mongo.schemas import ChatMessage, ChatSession, Client
 
@@ -465,9 +465,7 @@ class ChatSessionAdmin(BaseAdmin):
         filters["messages"] = {"$exists": True, "$ne": []}
 
         if current_user and getattr(current_user, "role", None) == "demo_admin":
-            print('тут 1')
             current_user_id = current_user.data.get("user_id", None)
-            print(current_user_id)
             if not current_user_id:
                 return []
 
@@ -475,7 +473,6 @@ class ChatSessionAdmin(BaseAdmin):
                 {"user_id": current_user_id}, {"client_id": 1}
             ).to_list(None)
             allowed_client_ids = [c["client_id"] for c in master_clients]
-            print(allowed_client_ids)
 
             if allowed_client_ids:
                 filters["client.client_id"] = {"$in": allowed_client_ids}

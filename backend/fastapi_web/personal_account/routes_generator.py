@@ -182,11 +182,10 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ---------------- Определяем текущего пользователя ----------------
         current_user_id: Optional[str] = None
         current_user_doc = None
-        if Authorize is not None and Authorize.get_jwt_subject():
-            try:
-                current_user_id = Authorize.get_jwt_subject()
-            except jwt_exc.MissingTokenError:
-                current_user_id = None
+        try:
+            current_user_id = Authorize.get_jwt_subject()
+        except jwt_exc.MissingTokenError:
+            current_user_id = None
         # заглушка
         # current_user_id = "67e489affa4507fba7de630e"
         if current_user_id:

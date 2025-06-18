@@ -67,7 +67,6 @@ async def send_sms(phone: str, text: str) -> dict:
             }
         }
     }
-    print("Отправка СМС")
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:

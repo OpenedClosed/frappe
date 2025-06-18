@@ -659,17 +659,16 @@ async def resolve_chat_identity(
 
     else:
         user_doc = None
+        user_id = None
         
-        if Authorize is not None and Authorize.get_jwt_subject():
-            try:
-                user_id = Authorize.get_jwt_subject()
-                if not user_id:
-                    raise HTTPException(status_code=401, detail="Not authenticated")
-                user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
-            except (jwt_exc.MissingTokenError, jwt_exc.RevokedTokenError):
-                user_doc = None
-        else:
-            user_id = None
+        try:
+            user_id = Authorize.get_jwt_subject()
+            # if not user_id:
+            #     raise HTTPException(status_code=401, detail="Not authenticated")
+            user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
+        except (jwt_exc.MissingTokenError, jwt_exc.RevokedTokenError):
+            user_doc = None
+
 
         if user_doc and user_id:
             master = await mongo_db.master_clients.find_one({"user_id": user_id})
@@ -853,8 +852,6 @@ async def build_sender_data_map(
     # --- 2. Users ---
     valid_user_ids = [ObjectId(m.user_id) for m in masters.values() if m.user_id and is_valid_object_id(m.user_id)]
     user_docs = await mongo_db.users.find({"_id": {"$in": valid_user_ids}}).to_list(None)
-    print('---------')
-    print(user_docs)
     users = {str(u["_id"]): u for u in user_docs}
 
     # --- 3. Main info & Contact info ---
@@ -883,7 +880,6 @@ async def build_sender_data_map(
             user_doc = users.get(master.user_id)
             user_name = None
             if user_doc:
-                print('есть документ')
                 user_doc["_id"] = str(user_doc["_id"])
                 user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
                 user_data = await user_data_obj.get_full_user_data()

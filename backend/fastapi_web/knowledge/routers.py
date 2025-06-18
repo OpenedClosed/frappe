@@ -167,12 +167,11 @@ async def get_bot_info(
     """
     app_name = settings.APP_NAME
 
-    if Authorize is not None and Authorize.get_jwt_subject():
-        try:
-            user = await get_current_user(Authorize)
-            app_name = get_app_name_for_user(user)
-        except Exception:
-            pass
+    try:
+        user = await get_current_user(Authorize)
+        app_name = get_app_name_for_user(user)
+    except Exception:
+        pass
     print('='*100)
     print(app_name)
 

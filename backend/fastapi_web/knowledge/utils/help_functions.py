@@ -109,8 +109,9 @@ def merge_external_structures(main_kb: dict, externals: list[dict]) -> dict:
 
 def get_app_name_for_user(user: UserWithData) -> Optional[str]:
     """Определяет имя проекта (app_name) на основе роли пользователя."""
-    if user.role == RoleEnum.DEMO_ADMIN:
-        return f"demo_{user.data['user_id']}"
+    if user:
+        if user.role == RoleEnum.DEMO_ADMIN:
+            return f"demo_{user.data['user_id']}"
     return settings.APP_NAME
 
 async def get_app_name_by_user_data(user_data: dict) -> str:

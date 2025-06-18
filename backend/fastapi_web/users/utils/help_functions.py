@@ -5,9 +5,10 @@ from typing import Optional
 from bson import ObjectId
 from fastapi import Depends, HTTPException
 from fastapi_jwt_auth import AuthJWT
-
+from utils.encoders import DateTimeEncoder
 from db.mongo.db_init import mongo_db
 from users.db.mongo.schemas import UserWithData
+from db.redis.db_init import redis_db
 
 
 async def get_current_user(
@@ -17,13 +18,19 @@ async def get_current_user(
     """
     Извлекает user_id из JWT, ищет пользователя в Mongo и возвращает его в виде словаря.
     """
-    user_id = Authorize.get_jwt_subject()
+    print('тут?')
+    try:
+        user_id = Authorize.get_jwt_subject()
+    except Exception:
+        user_id = None
     if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        return None
+        # raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
     if not user_doc:
-        raise HTTPException(status_code=401, detail="User not found")
+        # raise HTTPException(status_code=401, detail="User not found")
+        return None
 
     user_doc["_id"] = str(user_doc["_id"])
     data["user_id"] = user_id
@@ -65,7 +72,7 @@ async def get_user_by_id(user_id: str, data: Optional[dict] = {}) -> UserWithDat
         user_doc["_id"] = str(user_doc["_id"])
 
         # 3. Кладём в Redis на 60 секунд
-        await redis_db.set(cache_key, json.dumps(user_doc), ex=60)
+        await redis_db.set(cache_key, json.dumps(user_doc, cls=DateTimeEncoder), ex=60)
 
     # Добавляем дополнительное поле
     data["user_id"] = user_id
