@@ -29,8 +29,8 @@
       container.style.position = 'fixed';
       container.style.bottom = '0';
       container.style.right = '0';
-      container.style.width = '162px';
-      container.style.height = '62px';
+      container.style.width = '214px';
+      container.style.height = '82px';
       container.style.zIndex = '9999';
       container.style.background = 'transparent';
       container.style.pointerEvents = 'auto';
@@ -51,8 +51,8 @@
       container.style.maxHeight = '90vh';
       container.style.maxWidth = '90vw';
       container.style.overflow = 'hidden';
-      container.style.width = '162px';
-      container.style.height = '62px';
+      container.style.width = '214px';
+      container.style.height = '82px';
 
       iframe.style.width = '100%';
       iframe.style.height = '100%';
@@ -86,7 +86,7 @@
         container.style.height = '100vh';
         container.style.width = '100vw';
       }else {
-        container.style.width = '162px';
+        container.style.width = '174px';
         container.style.height = '62px';
       }
       }
