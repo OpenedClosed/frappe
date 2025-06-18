@@ -12,7 +12,7 @@ from fastapi import WebSocket, status
 from fastapi_jwt_auth import AuthJWT
 from starlette.websockets import WebSocketState
 from bson import ObjectId  
-
+from utils.encoders import DateTimeEncoder
 # ==============================
 # Глобальные менеджеры
 # ==============================
@@ -159,14 +159,14 @@ gpt_task_manager = GptTaskManager()
 # Сериализаторы и утилиты
 # ==============================
 
-class DateTimeEncoder(json.JSONEncoder):
-    """JSONEncoder для datetime."""
+# class DateTimeEncoder(json.JSONEncoder):
+#     """JSONEncoder для datetime."""
 
-    def default(self, o: Any) -> Any:
-        if isinstance(o, datetime):
-            return o.isoformat() 
-        elif isinstance(o, ObjectId):
-            return str(o)
+#     def default(self, o: Any) -> Any:
+#         if isinstance(o, datetime):
+#             return o.isoformat() 
+#         elif isinstance(o, ObjectId):
+#             return str(o)
 
 def custom_json_dumps(obj: Any) -> str:
     """Сериализует объект в JSON с поддержкой datetime."""

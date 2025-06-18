@@ -102,11 +102,11 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     "en": "Birth date cannot be in the future.",
                     "pl": "Data urodzenia nie może być z przyszłości."
                 }
-            elif birth > today - timedelta(days=365 * 10):
+            elif birth > today - timedelta(days=365 * 18):
                 errors["birth_date"] = {
-                    "ru": "Регистрация доступна только с 10 лет.",
-                    "en": "Registration is only available from age 10.",
-                    "pl": "Rejestracja dostępna od 10 roku życia."
+                    "ru": "Регистрация доступна только с 18 лет.",
+                    "en": "Registration is only available from age 18.",
+                    "pl": "Rejestracja dostępna od 18 roku życia."
                 }
 
 
@@ -142,7 +142,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         data: ConfirmationSchema,
         request: Request,
         response: Response,
-        Authorize: Optional[AuthJWT] = Depends(lambda: None),   # token опционален
+        # Authorize: Optional[AuthJWT] = Depends(lambda: None),   # token опционален
+        Authorize: AuthJWT = Depends()
     ):
         """
         • Валидирует 6-значный код  
@@ -181,11 +182,10 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ---------------- Определяем текущего пользователя ----------------
         current_user_id: Optional[str] = None
         current_user_doc = None
-        if Authorize is not None:
-            try:
-                current_user_id = Authorize.get_jwt_subject()
-            except jwt_exc.MissingTokenError:
-                current_user_id = None
+        try:
+            current_user_id = Authorize.get_jwt_subject()
+        except jwt_exc.MissingTokenError:
+            current_user_id = None
         # заглушка
         # current_user_id = "67e489affa4507fba7de630e"
         if current_user_id:

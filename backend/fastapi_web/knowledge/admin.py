@@ -1,5 +1,7 @@
 """Админ-панель приложения Знания."""
+from typing import List, Optional
 from admin_core.base_admin import BaseAdmin
+from .utils.help_functions import get_app_name_by_user_data
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
 
@@ -358,5 +360,51 @@ class BotSettingsAdmin(BaseAdmin):
         }
     ]
 
+    async def get_queryset(
+        self,
+        filters: Optional[dict] = None,
+        sort_by: Optional[str] = None,
+        order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        current_user: Optional[dict] = None,
+        format: bool = True
+    ) -> List[dict]:
+        """
+        Получить список настроек ботов.
+        Для демо-админов — только по их app_name (demo_<user_id>).
+        """
+
+        filters = filters or {}
+
+        if current_user and getattr(current_user, "role", None) == "demo_admin":
+            user_id = current_user.data.get("user_id")
+            if not user_id:
+                return []
+
+            demo_app_name = f"demo_{user_id}"
+            filters["app_name"] = demo_app_name
+
+        return await super().get_queryset(
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            page=page,
+            page_size=page_size,
+            current_user=current_user,
+            format=format
+        )
+
+
+    async def create(self, data: dict, current_user=None):
+        """
+        Создание настроек бота.
+        Если пользователь — демо-админ, автоматически подставляется app_name.
+        """
+        if current_user:
+            app_name = await get_app_name_by_user_data(current_user.data)
+            data["app_name"] = app_name
+
+        return await super().create(data, current_user)
 
 admin_registry.register("bot_settings", BotSettingsAdmin(mongo_db))

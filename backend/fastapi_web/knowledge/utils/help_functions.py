@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import aiofiles
+from users.utils.help_functions import get_user_by_id
+from users.db.mongo.enums import RoleEnum
+from users.db.mongo.schemas import UserWithData
 import docx
 import httpx
 import openpyxl
@@ -104,31 +107,67 @@ def merge_external_structures(main_kb: dict, externals: list[dict]) -> dict:
 # БЛОК: БАЗА ЗНАНИЙ
 # ==============================
 
+def get_app_name_for_user(user: UserWithData) -> Optional[str]:
+    """Определяет имя проекта (app_name) на основе роли пользователя."""
+    if user:
+        if user.role == RoleEnum.DEMO_ADMIN:
+            return f"demo_{user.data['user_id']}"
+    return settings.APP_NAME
 
-async def get_knowledge_full_document() -> dict:
-    """Документ БЗ «main» без `_id`."""
-    doc = await mongo_db.knowledge_collection.find_one({"app_name": settings.APP_NAME})
+async def get_app_name_by_user_data(user_data: dict) -> str:
+    """
+    Определяет app_name по user_id и роли пользователя.
+    Запрашивает пользователя из БД и возвращает 'demo_<id>' только для DEMO_ADMIN.
+    """
+    print('шаг1')
+    print(user_data)
+    user_id = (
+        user_data.get("data", {}).get("user_id")
+        or user_data.get("user_id")
+    )
+    print('шаг2')
+    if not user_id:
+        return settings.APP_NAME
+
+    user = await get_user_by_id(user_id)
+    return f"demo_{user_id}" if user.role == RoleEnum.DEMO_ADMIN else settings.APP_NAME
+
+
+
+async def get_knowledge_full_document(app_name: Optional[str]) -> dict:
+    """Возвращает документ базы знаний по app_name без поля _id. Если не найден — создаёт новый."""
+    doc = await mongo_db.knowledge_collection.find_one({"app_name": app_name})
+
     if not doc:
-        raise HTTPException(404, "Knowledge base not found")
+        print(f"[INIT] Не найден документ KB для {app_name}, создаём...")
+        kb = {
+            "app_name": app_name,
+            "knowledge_base": {},
+        }
+        kb_doc = KnowledgeBase(**kb).model_dump(mode="python")
+        await mongo_db.knowledge_collection.insert_one(kb_doc)
+        doc = kb_doc
+
     doc.pop("_id", None)
     return doc
 
 
-async def get_knowledge_base() -> Tuple[dict, Optional[KnowledgeBase]]:
-    """(dict, pydantic-model|None)."""
-    doc = await get_knowledge_full_document()
-    return (doc, KnowledgeBase(
-        **doc)) if doc.get("knowledge_base") is not None else (KNOWLEDGE_BASE, None)
+
+async def get_knowledge_base(app_name: Optional[str]) -> Tuple[dict, Optional[KnowledgeBase]]:
+    """Возвращает документ базы знаний и Pydantic-модель (если knowledge_base присутствует)."""
+    doc = await get_knowledge_full_document(app_name)
+    return (doc, KnowledgeBase(**doc)) if doc.get("knowledge_base") is not None else (doc, None)
 
 
-async def save_kb_doc(data: dict) -> bool:
-    """Сохраняет документ БЗ."""
+async def save_kb_doc(data: dict, app_name: Optional[str]) -> bool:
+    """Сохраняет документ базы знаний с привязкой к app_name."""
     res = await mongo_db.knowledge_collection.replace_one(
-        {"app_name": settings.APP_NAME},
+        {"app_name": app_name},
         data,
         upsert=True,
     )
     return bool(res.modified_count or res.upserted_id)
+
 
 
 # ==============================
@@ -673,13 +712,13 @@ async def analyze_update_snippets_via_gpt(
     knowledge_base: dict,
     bot_context_prompt: str,
     ai_model: str = settings.MODEL_DEFAULT,
+    app_name: Optional[str] = settings.APP_NAME,
 ) -> dict:
-    """
-    Определяет релевантные темы/подтемы, которые пользователь затронул,
-    чтобы сократить KB-контекст для генерации патча.
-    """
-    _, kb_model = await get_knowledge_base()
-    ctx_blocks = await collect_context_blocks(kb_model.context, {ContextPurpose.BOTH, ContextPurpose.KB})
+    """Определяет релевантные темы/подтемы для сокращения KB-контекста."""
+    _, kb_model = await get_knowledge_base(app_name)
+    ctx_blocks = await collect_context_blocks(
+        kb_model.context, {ContextPurpose.BOTH, ContextPurpose.KB}
+    )
 
     sys_prompt = AI_PROMPTS["analyze_update_snippets_prompt"].format(
         kb_full_structure=json.dumps(
@@ -698,9 +737,12 @@ async def analyze_update_snippets_via_gpt(
     )
 
     msg_bundle = build_messages_for_model(
-        sys_prompt, ctx_blocks + user_blocks, "", ai_model)
+        sys_prompt, ctx_blocks + user_blocks, "", ai_model
+    )
     client, real_model = pick_model_and_client(ai_model)
-    raw = await admin_chat_generate_any(client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction"))
+    raw = await admin_chat_generate_any(
+        client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction")
+    )
     return {"topics": normalize_snippets_structure(extract_json_from_gpt(raw))}
 
 
@@ -750,12 +792,14 @@ async def generate_patch_body_via_gpt(
     user_info: str,
     knowledge_base: dict,
     ai_model: str = settings.MODEL_DEFAULT,
+    app_name: Optional[str] = settings.APP_NAME,
 ) -> dict:
     """Генерирует JSON-патч для базы знаний."""
-    _, kb_model = await get_knowledge_base()
+    _, kb_model = await get_knowledge_base(app_name)
 
-    ctx_blocks = await collect_context_blocks(kb_model.context, {ContextPurpose.BOTH, ContextPurpose.KB})
-
+    ctx_blocks = await collect_context_blocks(
+        kb_model.context, {ContextPurpose.BOTH, ContextPurpose.KB}
+    )
     _, bot_prompt = await collect_bot_context_snippets(kb_model.context)
 
     snippets = await analyze_update_snippets_via_gpt(
@@ -764,9 +808,12 @@ async def generate_patch_body_via_gpt(
         knowledge_base=knowledge_base,
         bot_context_prompt=bot_prompt,
         ai_model=ai_model,
+        app_name=app_name,
     )
 
-    kb_snippets_text = await extract_knowledge_with_structure(snippets["topics"], knowledge_base)
+    kb_snippets_text = await extract_knowledge_with_structure(
+        snippets["topics"], knowledge_base
+    )
 
     sys_prompt = AI_PROMPTS["patch_body_prompt"].format(
         bot_snippets_text=bot_prompt,
@@ -774,9 +821,12 @@ async def generate_patch_body_via_gpt(
     )
 
     msg_bundle = build_messages_for_model(
-        sys_prompt, ctx_blocks + user_blocks, "", ai_model)
+        sys_prompt, ctx_blocks + user_blocks, "", ai_model
+    )
     client, real_model = pick_model_and_client(ai_model)
-    raw = await admin_chat_generate_any(client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction"))
+    raw = await admin_chat_generate_any(
+        client, real_model, msg_bundle["messages"], msg_bundle.get("system_instruction")
+    )
 
     return extract_json_from_gpt(raw)
 

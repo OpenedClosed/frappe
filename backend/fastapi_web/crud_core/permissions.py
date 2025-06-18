@@ -106,10 +106,10 @@ class RoleBasedPermission(MethodPermissionMixin):
     Переопределите списки roles_create / read / update / delete.
     """
 
-    roles_create: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN]
-    roles_read: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN]
-    roles_update: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN]
-    roles_delete: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN]
+    roles_create: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN]
+    roles_read: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN]
+    roles_update: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN]
+    roles_delete: List[RoleEnum] = [RoleEnum.SUPERADMIN, RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN]
 
     def can_create(self, user, obj):
         return user and user.role in self.roles_create
@@ -129,30 +129,31 @@ class OperatorPermission(RoleBasedPermission):
     Просмотр чатов для main-operator + остальных,
     изменение/удаление ‒ только для (super)admin.
     """
-    roles_create = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    roles_create = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN, RoleEnum.DEMO_ADMIN]
     roles_read = [
         RoleEnum.MAIN_OPERATOR,
         RoleEnum.STAFF,
         RoleEnum.ADMIN,
+        RoleEnum.DEMO_ADMIN,
         RoleEnum.SUPERADMIN,
     ]
-    roles_update = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
-    roles_delete = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    roles_update = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN, RoleEnum.DEMO_ADMIN]
+    roles_delete = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN, RoleEnum.DEMO_ADMIN]
 
 
 class AdminPanelPermission(RoleBasedPermission):
     """
     Permission-класс, для Админ-панели.
     """
-    roles_create = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
-    roles_read = [RoleEnum.STAFF, RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
-    roles_update = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
-    roles_delete = [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]
+    roles_create = [RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN, RoleEnum.SUPERADMIN]
+    roles_read = [RoleEnum.STAFF, RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN, RoleEnum.SUPERADMIN]
+    roles_update = [RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN, RoleEnum.SUPERADMIN]
+    roles_delete = [RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN, RoleEnum.SUPERADMIN]
 
     async def get_base_filter(self, user: Optional[BaseModel]) -> dict:
         if not user:
             raise HTTPException(403, "Authentication required.")
-        if user.role in [RoleEnum.ADMIN, RoleEnum.SUPERADMIN]:
+        if user.role in [RoleEnum.ADMIN, RoleEnum.DEMO_ADMIN, RoleEnum.SUPERADMIN]:
 
             return {}
         user_doc = await mongo_db["users"].find_one({"username": user.username})
@@ -191,21 +192,25 @@ class PersonalCabinetPermission(RoleBasedPermission):
         RoleEnum.CLIENT,
         RoleEnum.STAFF,
         RoleEnum.ADMIN,
+        RoleEnum.DEMO_ADMIN,
         RoleEnum.SUPERADMIN]
     roles_read = [
         RoleEnum.CLIENT,
         RoleEnum.STAFF,
         RoleEnum.ADMIN,
+        RoleEnum.DEMO_ADMIN,
         RoleEnum.SUPERADMIN]
     roles_update = [
         RoleEnum.CLIENT,
         RoleEnum.STAFF,
         RoleEnum.ADMIN,
+        RoleEnum.DEMO_ADMIN,
         RoleEnum.SUPERADMIN]
     roles_delete = [
         RoleEnum.CLIENT,
         RoleEnum.STAFF,
         RoleEnum.ADMIN,
+        RoleEnum.DEMO_ADMIN,
         RoleEnum.SUPERADMIN]
 
     async def get_base_filter(self, user: Optional[BaseModel]) -> dict:
