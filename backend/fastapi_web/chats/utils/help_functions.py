@@ -884,7 +884,7 @@ async def build_sender_data_map(
                 user_data_obj = UserWithData(**user_doc, data={"user_id": str(user_doc["_id"])})
                 user_data = await user_data_obj.get_full_user_data()
                 data["user"] = user_data
-                user_name = user_doc["full_name"]
+                user_name = user_doc.get("full_name")
 
             metadata = data.setdefault("metadata", {})
 
@@ -897,7 +897,7 @@ async def build_sender_data_map(
             if main_info:
                 metadata["main_info"] = main_info
                 # fallback name
-                if not data["name"]:
+                if not data.get("name"):
                     name_parts = [
                         main_info.get("first_name"),
                         main_info.get("patronymic"),
