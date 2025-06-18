@@ -10,8 +10,8 @@
     iframe = document.createElement('iframe');
 
     // Set common iframe styles
-    iframe.src = 'http://localhost:4000/chats/chat/';
-    // iframe.src = `https://panamed-aihubworks.com/chats/chat/`;
+    // iframe.src = 'http://localhost:4000/chats/chat/';
+    iframe.src = `https://panamed-aihubworks.com/chats/chat/`;
     iframe.style.border = 'none';
     iframe.style.pointerEvents = 'auto';
 
@@ -52,7 +52,7 @@
       container.style.maxWidth = '90vw';
       container.style.overflow = 'hidden';
       container.style.width = '162px';
-      container.style.height = '162px';
+      container.style.height = '62px';
 
       iframe.style.width = '100%';
       iframe.style.height = '100%';
@@ -87,7 +87,7 @@
         container.style.width = '100vw';
       }else {
         container.style.width = '162px';
-        container.style.height = '162px';
+        container.style.height = '62px';
       }
       }
     
