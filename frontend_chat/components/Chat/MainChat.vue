@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Floating toggle -->
-    <Button text v-if="projectKey === 'aihub' || projectKey === 'localhost' " size="large"
+    <Button text v-if="projectKey === 'aihub'  " size="large"
       class="chat-toggle-button flex flex-row gap-2" @click="toggleChat">
       <div ref="logoRef" class="relative w-[100px] pointer-events-none">
 
@@ -38,7 +38,7 @@ function postSizeToParent() {
   if (!window.parent) return;
   console.log("postSizeToParent", window.parent);
 
-  const collapsedSize = (projectKey === 'aihub' || projectKey === 'localhost') ? { width: 162, height: 62 } : { width: 162, height: 162 };
+  const collapsedSize = (projectKey === 'aihub') ? { width: 214, height: 214 } : { width: 214, height: 82 };
   console.log("collapsedSize", collapsedSize);
 
   const expandedSize = { width: 420, height: 700, };
