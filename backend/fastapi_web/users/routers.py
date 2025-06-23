@@ -21,7 +21,11 @@ async def get_my_info(
     """
     Возвращает информацию о текущем пользователе по JWT.
     """
-    current_user_id = Authorize.get_jwt_subject()
+    try:
+        current_user_id = Authorize.get_jwt_subject()
+    except Exception:
+        current_user_id = None
+
     if not current_user_id:
         raise HTTPException(status_code=401, detail="User not authenticated.")
 

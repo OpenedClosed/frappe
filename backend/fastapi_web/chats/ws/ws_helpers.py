@@ -13,6 +13,7 @@ from fastapi_jwt_auth import AuthJWT
 from starlette.websockets import WebSocketState
 from bson import ObjectId  
 from utils.encoders import DateTimeEncoder
+from fastapi_jwt_auth.exceptions import JWTDecodeError, MissingTokenError
 # ==============================
 # Глобальные менеджеры
 # ==============================
@@ -225,5 +226,5 @@ async def websocket_jwt_required(websocket: WebSocket) -> Optional[str]:
 
         return authorize.get_jwt_subject()
 
-    except (JWTError, KeyError, Exception):
+    except (JWTDecodeError, KeyError, Exception):
         return None

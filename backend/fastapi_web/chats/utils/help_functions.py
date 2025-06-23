@@ -17,6 +17,7 @@ import httpx
 from fastapi import HTTPException, Request, WebSocket
 from pymongo import DESCENDING
 from fastapi import Request, HTTPException, Depends
+from fastapi_jwt_auth.exceptions import JWTDecodeError, MissingTokenError
 
 from fastapi_jwt_auth import AuthJWT, exceptions as jwt_exc
 
@@ -666,7 +667,7 @@ async def resolve_chat_identity(
             # if not user_id:
             #     raise HTTPException(status_code=401, detail="Not authenticated")
             user_doc = await mongo_db["users"].find_one({"_id": ObjectId(user_id)})
-        except (jwt_exc.MissingTokenError, jwt_exc.RevokedTokenError):
+        except Exception:
             user_doc = None
 
 
