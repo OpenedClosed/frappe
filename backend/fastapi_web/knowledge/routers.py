@@ -172,11 +172,8 @@ async def get_bot_info(
         app_name = get_app_name_for_user(user)
     except Exception:
         pass
-    print('='*100)
-    print(app_name)
 
     bot_context = await get_bot_context(app_name)
-    print(bot_context)
     safe_fields = {"app_name", "bot_name", "avatar", "ai_model"}
     return {k: v for k, v in bot_context.items() if k in safe_fields}
 

@@ -18,7 +18,6 @@ async def get_current_user(
     """
     Извлекает user_id из JWT, ищет пользователя в Mongo и возвращает его в виде словаря.
     """
-    print('тут?')
     try:
         user_id = Authorize.get_jwt_subject()
     except Exception:
