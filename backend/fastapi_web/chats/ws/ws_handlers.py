@@ -1068,6 +1068,7 @@ async def start_brief(
     """
     Инициализирует бриф.
     """
+    return
     welcome_flag_key = f"chat:welcome:{chat_session.chat_id}"
 
     if len(chat_session.messages) > 0 or not await redis_db.set(welcome_flag_key, "1", ex=60, nx=True):
@@ -1355,7 +1356,6 @@ async def process_user_query_after_brief(
                 chat_history=chat_history,
                 client_id=client_id,
             )
-            print("10", gpt_data)
 
             user_msg.gpt_evaluation = GptEvaluation(
                 topics=gpt_data["topics"],
@@ -1363,13 +1363,10 @@ async def process_user_query_after_brief(
                 out_of_scope=gpt_data["out_of_scope"],
                 consultant_call=gpt_data["consultant_call"],
             )
-            print("11")
 
             await update_gpt_evaluation_in_db(chat_session.chat_id, user_msg.id, user_msg.gpt_evaluation)
-            print("12")
 
             lang = gpt_data.get("user_language") or user_language
-            print("13", lang)
 
             ai_msg = await build_ai_response(
                 manager=manager,
@@ -1382,36 +1379,29 @@ async def process_user_query_after_brief(
                 typing_manager=typing_manager,
                 chat_id=chat_id,
             )
-            print("14")
 
             if ai_msg:
                 await save_and_broadcast_new_message(manager, chat_session, ai_msg, redis_key_session)
-                print("15")
 
             return ai_msg
 
     except asyncio.CancelledError:
-        print("X — Cancelled")
         return None
 
     except Exception as e:
-        print("E", e)
         logger.critical(f"[AI]: {e}")
         try:
             app_name = await get_app_name_by_user_data(user_data)
-            print("16", app_name)
             fallback = (
                 await get_bot_context(app_name)
             ).get("fallback_ai_error_message", {}).get(
                 user_language, "The assistant is currently unavailable."
             )
         except Exception as ee:
-            print("E2", ee)
             fallback = "The assistant is currently unavailable."
 
         fallback_msg = ChatMessage(message=fallback, sender_role=SenderRole.AI)
         await save_and_broadcast_new_message(manager, chat_session, fallback_msg, redis_key_session)
-        print("17 — fallback sent")
         return None
 
 
@@ -1426,18 +1416,14 @@ async def determine_topics_via_ai(
     client_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Возвращает темы, оффтоп, вызов консультанта и язык пользователя."""
-    print("DT 1 — start")
 
     app_name = await get_app_name_by_user_data(user_info)
-    print("DT 2 — app_name:", app_name)
 
     bot_context = await get_bot_context(app_name)
-    print("DT 3 — ai_model:", bot_context.get("ai_model"))
 
     model_name = model_name or bot_context["ai_model"]
 
     kb_outline = build_kb_structure_outline(knowledge_base)
-    print("DT 4 — kb_outline keys:", list(kb_outline.keys())[:3])  # усечённо
 
     topics_data = await detect_topics_ai(
         user_message=user_message,
@@ -1447,8 +1433,6 @@ async def determine_topics_via_ai(
         model_name=model_name,
         bot_context=bot_context
     )
-    print("DT 5 — topics_data type:", type(topics_data))
-    print("DT 6 — topics_data content:", topics_data)
 
     outcome_data = await detect_outcome_ai(
         user_message=user_message,
@@ -1461,11 +1445,8 @@ async def determine_topics_via_ai(
         bot_context=bot_context,
         client_id=client_id
     )
-    print("DT 7 — outcome_data type:", type(outcome_data))
-    print("DT 8 — outcome_data content:", outcome_data)
 
     result = {**topics_data, **outcome_data} if isinstance(topics_data, dict) and isinstance(outcome_data, dict) else {}
-    print("DT 9 — merged result keys:", list(result.keys()))
 
     return result
 
@@ -1478,10 +1459,7 @@ async def detect_topics_ai(
     bot_context: dict
 ) -> Dict[str, Any]:
     """Определяет темы и confidence сообщения."""
-    print("TOPIC 1 — format_chat_history_from_models")
     formatted_history = format_chat_history_from_models(chat_history)
-
-    print("TOPIC 2 — сбор system_prompt")
     system_prompt = AI_PROMPTS["system_topics_prompt"].format(
         user_info=json.dumps(user_info, ensure_ascii=False, indent=2, cls=DateTimeEncoder),
         chat_history=formatted_history,
@@ -1489,7 +1467,6 @@ async def detect_topics_ai(
         app_description=bot_context["app_description"],
     )
 
-    print("TOPIC 3 — сбор messages для модели")
     bundle = build_messages_for_model(
         system_prompt=system_prompt,
         messages_data=[],
@@ -1497,16 +1474,13 @@ async def detect_topics_ai(
         model=model_name
     )
 
-    print("TOPIC 4 — вызов chat_generate_any")
     resp = await chat_generate_any(
         model_name,
         bundle["messages"],
         system_instruction=bundle["system_instruction"]
     )
 
-    print("TOPIC 5 — разбор ответа модели")
     res = extract_json_from_response(resp)
-    print("TOPIC 6 — результат:", res)
 
     return {
         "topics": res.get("topics", []),
@@ -1525,16 +1499,13 @@ async def detect_outcome_ai(
     client_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Определяет оффтоп, вызов консультанта и язык ответа."""
-    print("OUTCOME 1 — extract_knowledge")
     snippets = await extract_knowledge(topics, user_data, user_message, knowledge_base)
-    print("OUTCOME 2 — snippets:", snippets)
+
 
     last_messages = chat_history[-history_tail:] if chat_history else []
-    print("OUTCOME 3 — последние сообщения:", len(last_messages))
 
     formatted_history = format_chat_history_from_models(last_messages)
 
-    print("OUTCOME 4 — сбор system_prompt")
     system_prompt = AI_PROMPTS["system_outcome_analysis_prompt"].format(
         forbidden_topics=json.dumps(bot_context.get("forbidden_topics", []), ensure_ascii=False),
         snippets=json.dumps(snippets, ensure_ascii=False),
@@ -1542,7 +1513,6 @@ async def detect_outcome_ai(
         chat_history=formatted_history
     )
 
-    print("OUTCOME 5 — сбор messages")
     bundle = build_messages_for_model(
         system_prompt=system_prompt,
         messages_data=[],
@@ -1550,20 +1520,16 @@ async def detect_outcome_ai(
         model=model_name
     )
 
-    print("OUTCOME 6 — вызов chat_generate_any")
     resp = await chat_generate_any(
         model_name,
         bundle["messages"],
         system_instruction=bundle["system_instruction"]
     )
 
-    print("OUTCOME 7 — парсинг ответа")
     res = extract_json_from_response(resp)
-    print("OUTCOME 8 — результат:", res)
 
     user_lang = res.get("user_language")
     if client_id and user_lang:
-        print(f"OUTCOME 9 — обновление языка для {client_id}: {user_lang}")
         await mongo_db.clients.update_one(
             {"client_id": client_id},
             {"$set": {"metadata.user_language": user_lang}}
@@ -1651,18 +1617,14 @@ async def build_ai_response(
     chat_id: str
 ) -> Optional[ChatMessage]:
     """Формирует финальный ответ бота с учётом confidence и snippets."""
-    print("===== Смотрим 1 — user_data =====")
-    print(user_data)
 
     confidence = user_msg.gpt_evaluation.confidence
-    print(f"===== Смотрим 2 — confidence: {confidence} =====")
 
     if (
         user_msg.gpt_evaluation.out_of_scope
         or user_msg.gpt_evaluation.consultant_call
         or confidence < 0.2
     ):
-        print("===== Смотрим 3 — ручной режим =====")
         chat_session.manual_mode = True
         await mongo_db.chats.update_one(
             {"chat_id": chat_session.chat_id},
@@ -1670,7 +1632,6 @@ async def build_ai_response(
         )
 
         app_name = await get_app_name_by_user_data(user_data)
-        print(f"===== Смотрим 4 — app_name: {app_name} =====")
 
         bot_context = await get_bot_context(app_name)
         redirect_msg = bot_context.get("redirect_message", {}).get(
@@ -1679,7 +1640,6 @@ async def build_ai_response(
 
         session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
         if session_doc:
-            print("===== Смотрим 5 — отправка в бота, ручной режим =====")
             await send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump(mode="python"))
 
         return ChatMessage(
@@ -1691,14 +1651,12 @@ async def build_ai_response(
             choice_strict=False
         )
 
-    print("===== Смотрим 6 — вызов extract_knowledge_with_sources =====")
     snippets_by_source = await extract_knowledge_with_sources(
         user_msg.gpt_evaluation.topics,
         user_data,
         user_msg.message
     )
-    print("===== Смотрим 7 — snippets_by_source =====")
-    print(snippets_by_source)
+
 
     files: list[str] = []
     for topic_dict in snippets_by_source.values():
@@ -1707,15 +1665,12 @@ async def build_ai_response(
                 for answer in sub.questions.values():
                     files.extend(answer.files or [])
     files = list(set(files))
-    print("===== Смотрим 8 — собранные файлы =====")
-    print(files)
 
     merged_snippet_tree: Dict[str, Topic] = {}
     for topic_dict in snippets_by_source.values():
         for name, topic in topic_dict.items():
             merged_snippet_tree.setdefault(name, topic).subtopics.update(topic.subtopics)
 
-    print("===== Смотрим 9 — генерация ответа ИИ =====")
     message_before_postprocessing, final_text = await generate_ai_answer(
         user_message=user_msg.message,
         snippets=merged_snippet_tree,
@@ -1727,8 +1682,11 @@ async def build_ai_response(
         manager=manager,
         chat_session=chat_session
     )
-    print("===== Смотрим 10 — финальный текст =====")
+    print("===== Смотрим 101 — текст до =====")
+    print(message_before_postprocessing)
+    print("===== Смотрим 102 — финальный текст =====")
     print(final_text)
+    
 
     ai_msg = ChatMessage(
         message=final_text if final_text else message_before_postprocessing,
@@ -1739,13 +1697,11 @@ async def build_ai_response(
     )
 
     if 0.3 <= confidence < 0.7:
-        print("===== Смотрим 11 — добавляем кнопку 'Жду консультанта' =====")
         ai_msg.choice_options = [
             get_translation("choices", "consultant", user_language)
         ]
         ai_msg.choice_strict = False
 
-    print("===== Смотрим 12 — возвращаем сообщение =====")
     return ai_msg
 
 
@@ -1774,35 +1730,23 @@ async def extract_knowledge(
     knowledge_base: Optional[Dict[str, dict]] = None,
 ) -> Dict[str, Any]:
     """Возвращает релевантные фрагменты базы знаний по темам."""
-    logger.info("EK 1 — start extract_knowledge")
-    logger.info(f"EK 2 — topics type: {type(topics)}")
-    logger.info(f"EK 3 — topics raw: {topics} types: {[type(t) for t in topics]}")
 
-    print('===== user data =====')
-    print(user_data)
-    print(type(user_data))
     app_name = await get_app_name_by_user_data(user_data)
-    logger.info(f"EK 4 — app_name: {app_name}")
 
     if knowledge_base is None:
-        logger.info("EK 5 — loading KB")
         kb_doc, kb_model = await get_knowledge_base(app_name)
         external_structs, _ = await collect_kb_structures_from_context(kb_model.context)
         merged = merge_external_structures(kb_doc["knowledge_base"], external_structs)
         knowledge_base = merged
-    logger.info(f"EK 6 — KB keys: {list(knowledge_base.keys())}")
 
     result = {"topics": []}
     for idx, item in enumerate(topics):
-        logger.info(f"EK 7.{idx} — processing item: {item} ({type(item)})")
         try:
             topic_name = item.get("topic", "")
         except Exception as e:
-            logger.critical(f"EK 8.{idx} — error accessing item.get('topic'): {e}")
             continue
 
         if topic_name not in knowledge_base:
-            logger.info(f"EK 9.{idx} — topic not in KB: {topic_name}")
             continue
 
         try:
@@ -1812,14 +1756,11 @@ async def extract_knowledge(
                 knowledge_base[topic_name]
             )
         except Exception as e:
-            logger.critical(f"EK 10.{idx} — error in extract_topic_data: {e}")
             continue
 
         if topic_entry["subtopics"]:
             result["topics"].append(topic_entry)
-            logger.info(f"EK 11.{idx} — added topic: {topic_name}")
 
-    logger.info(f"EK 12 — result keys: {[t['topic'] for t in result['topics']]}")
     return result if result["topics"] else {"topics": []}
 
 
@@ -1964,9 +1905,7 @@ async def generate_ai_answer(
     return_json: bool = False,
 ) -> Union[str, Dict[str, Any]]:
     """Генерирует ответ бота, учитывая историю, язык и сниппеты."""
-    print(user_info)
     app_name = await get_app_name_by_user_data(user_info)
-    print('ага')
     bot_ctx = await get_bot_context(app_name)
 
     model_name = bot_ctx["ai_model"]
@@ -2138,8 +2077,7 @@ def assemble_system_prompt(
         user_info=str(user_info),
         joined_snippets=snippets,
         system_language_instruction=(
-            "Language settings:\n"
-            "- Always respond in the language of the user's last message.\n"
+            f"- You have to answer in the user's language. user language:`{user_language}`." 
         ),
         dynamic_rules=dynamic_rules,
     )

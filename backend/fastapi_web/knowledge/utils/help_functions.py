@@ -119,13 +119,10 @@ async def get_app_name_by_user_data(user_data: dict) -> str:
     Определяет app_name по user_id и роли пользователя.
     Запрашивает пользователя из БД и возвращает 'demo_<id>' только для DEMO_ADMIN.
     """
-    print('шаг1')
-    print(user_data)
     user_id = (
         user_data.get("data", {}).get("user_id")
         or user_data.get("user_id")
     )
-    print('шаг2')
     if not user_id:
         return settings.APP_NAME
 
@@ -139,7 +136,6 @@ async def get_knowledge_full_document(app_name: Optional[str]) -> dict:
     doc = await mongo_db.knowledge_collection.find_one({"app_name": app_name})
 
     if not doc:
-        print(f"[INIT] Не найден документ KB для {app_name}, создаём...")
         kb = {
             "app_name": app_name,
             "knowledge_base": {},
