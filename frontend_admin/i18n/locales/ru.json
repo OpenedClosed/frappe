@@ -143,7 +143,9 @@
     "birthDate": "Дата рождения",
     "birthDatePlaceholder": "Выберите дату рождения",
     "gender": "Пол",
-    "genderPlaceholder": "Выберите пол"
+    "genderPlaceholder": "Выберите пол",
+    "numberImportant":"Важно:",
+    "numberInfo":"Для двухфакторной аутентификации и оперативной связи при необходимости."
   },
 
   "DynamicForm": {

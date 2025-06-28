@@ -142,7 +142,9 @@
     "birthDate": "Дата народження",
     "birthDatePlaceholder": "Оберіть дату народження",
     "gender": "Стать",
-    "genderPlaceholder": "Оберіть стать"
+    "genderPlaceholder": "Оберіть стать",
+    "numberImportant":"Важливо:",
+    "numberInfo":"Для двофакторної автентифікації та оперативного зв'язку за необхідності."
   },
 
   "DynamicForm": {

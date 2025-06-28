@@ -141,7 +141,9 @@
     "birthDate": "Date of Birth",
     "birthDatePlaceholder": "Select your birth date",
     "gender": "Gender",
-    "genderPlaceholder": "Select your gender"
+    "genderPlaceholder": "Select your gender",
+    "numberImportant":"Important:",
+    "numberInfo":"For two-factor authentication and operational communication if necessary."
   },
   "DynamicForm": {
     "upload": "Upload",

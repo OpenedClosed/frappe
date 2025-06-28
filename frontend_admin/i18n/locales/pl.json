@@ -142,7 +142,9 @@
     "birthDate": "Data urodzenia",
     "birthDatePlaceholder": "Wybierz datę urodzenia",
     "gender": "Płeć",
-    "genderPlaceholder": "Wybierz płeć"
+    "genderPlaceholder": "Wybierz płeć",
+    "numberImportant":"Ważne:",
+    "numberInfo":"Do uwierzytelniania dwuskładnikowego i komunikacji operacyjnej w razie potrzeby."
   },
 
   "DynamicForm": {

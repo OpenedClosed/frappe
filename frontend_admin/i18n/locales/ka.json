@@ -143,7 +143,9 @@
     "birthDate": "დაბადების თარიღი",
     "birthDatePlaceholder": "აირჩიეთ თქვენი დაბადების თარიღი",
     "gender": "სქესი",
-    "genderPlaceholder": "აირჩიეთ სქესი"
+    "genderPlaceholder": "აირჩიეთ სქესი",
+    "numberImportant": "მნიშვნელოვანია:",
+    "numberInfo": "ორეტაპიანი ავთენტიფიკაციისა და საჭიროების შემთხვევაში ოპერატიული კავშირისათვის."
   },
 
   "DynamicForm": {
