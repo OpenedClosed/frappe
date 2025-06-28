@@ -609,7 +609,9 @@ class BaseCrudCore:
         FIELD_REQUIRED_MESSAGE = {
             "ru": "Поле обязательно для заполнения.",
             "en": "This field is required.",
-            "pl": "To pole jest wymagane."
+            "pl": "To pole jest wymagane.",
+            "uk": "Це поле є обовʼязковим.",
+            "de": "Dieses Feld ist erforderlich."
         }
 
         def try_parse_json(value: Any) -> Any:
