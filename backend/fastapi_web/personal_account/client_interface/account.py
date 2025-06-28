@@ -53,7 +53,7 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         "company_name", "avatar",
         "crm_link_status",                # ⇽ новое поле
         "account_status", "patient_id",
-        "created_at", "updated_at",
+        # "created_at", "updated_at",
     ]
 
     computed_fields = [
@@ -65,7 +65,7 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
     ]
 
     read_only_fields = [
-        "created_at", "updated_at",
+        # "created_at", "updated_at",
         "patient_id", "account_status",
         "last_name", "first_name", "patronymic",
         "birth_date", "gender", "company_name",
@@ -166,7 +166,10 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         {
             "column": 1,
             "title": {"en": "System info", "ru": "Системная информация", "pl": "Informacje systemowe"},
-            "fields": ["patient_id", "account_status", "crm_link_status", "created_at", "updated_at"],
+            "fields": [
+                "patient_id", "account_status", "crm_link_status",
+                # "created_at", "updated_at"
+            ],
         },
     ]
 
@@ -362,6 +365,12 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
     async def get_birth_date(self, obj: dict, current_user=None)  -> datetime | None:
         iso = await self.crm_or_local(obj, "birthdate", "birth_date")
         return datetime.fromisoformat(iso) if isinstance(iso, str) else iso
+    
+    async def get_company_name(self, obj: dict, current_user=None) -> str:
+        """
+        Пока компания не используется — всегда показываем заглушку.
+        """
+        return "Coming Soon"
 
     
     async def get_account_status(self, obj: dict, current_user=None) -> str:
@@ -461,212 +470,523 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
 # ==========
 
 
+# class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
+#     """
+#     Админка для вкладки «Контактная информация».
+#     """
+
+#     model = ContactInfoSchema
+#     collection_name = "patients_contact_info"
+
+#     verbose_name = {
+#         "en": "Contact information",
+#         "ru": "Контактная информация",
+#         "pl": "Informacje kontaktowe"
+#     }
+#     plural_name = verbose_name
+
+#     icon = "pi pi-envelope"
+#     max_instances_per_user = 1
+
+#     list_display: list[str] = []
+
+#     detail_fields = [
+#         "email", "phone", "address", "pesel",
+#         "emergency_contact", "updated_at"
+#     ]
+
+#     computed_fields = ["address"]
+#     read_only_fields = ["updated_at", "address", "pesel"]
+
+#     field_titles = {
+#         "email": {"en": "Email", "ru": "Email", "pl": "E-mail"},
+#         "phone": {"en": "Phone", "ru": "Телефон", "pl": "Telefon"},
+#         "address": {"en": "Address", "ru": "Адрес", "pl": "Adres"},
+#         "pesel": {"en": "PESEL", "ru": "PESEL", "pl": "PESEL"},
+#         "emergency_contact": {"en": "Emergency contact", "ru": "Экстренный контакт", "pl": "Kontakt awaryjny"},
+#         "updated_at": {"en": "Last update", "ru": "Последнее обновление", "pl": "Ostatnia aktualizacja"},
+#     }
+
+#     help_texts = {
+#         "email": {"en": "Valid e-mail", "ru": "Действующий e-mail", "pl": "Poprawny e-mail"},
+#         "phone": {"en": "Primary phone", "ru": "Основной телефон", "pl": "Główny telefon"},
+#         "address": {"en": "Postal address", "ru": "Адрес проживания", "pl": "Adres zamieszkania"},
+#         "pesel": {"en": "National ID", "ru": "Нац. идентификатор", "pl": "Numer PESEL"},
+#         "emergency_contact": {"en": "Emergency phone", "ru": "Телефон для экстренной связи", "pl": "Telefon awaryjny"},
+#         "updated_at": {"en": "Timestamp", "ru": "Отметка времени", "pl": "Znacznik czasu"},
+#     }
+
+#     field_groups = [
+#         {
+#             "column": 0,
+#             "title": {"en": "Contacts", "ru": "Контакты", "pl": "Kontakty"},
+#             "fields": ["email", "phone", "emergency_contact"],
+#         },
+#         {
+#             "column": 1,
+#             "title": {"en": "Address & IDs", "ru": "Адрес и идентификаторы", "pl": "Adres i ID"},
+#             "fields": ["address", "pesel", "updated_at"],
+#         },
+#     ]
+
+#     field_styles = {
+#         "email": {
+#             "label_styles": {
+#                 "font_size": "13px",
+#                 "font_weight": "normal",
+#                 "text_color": "#6B6B7B"
+#             },
+#             "value_styles": {
+#                 "font_size": "15px",
+#                 "font_weight": "normal",
+#                 "text_color": "#1F1F29"
+#             }
+#         },
+#         "phone": {
+#             "label_styles": {
+#                 "font_size": "13px",
+#                 "font_weight": "normal",
+#                 "text_color": "#6B6B7B"
+#             },
+#             "value_styles": {
+#                 "font_size": "15px",
+#                 "font_weight": "bold",
+#                 "text_color": "#1F1F29"
+#             }
+#         },
+#         "address": {
+#             "label_styles": {
+#                 "font_size": "13px",
+#                 "font_weight": "normal",
+#                 "text_color": "#6B6B7B"
+#             },
+#             "value_styles": {
+#                 "font_size": "15px",
+#                 "font_weight": "normal",
+#                 "text_color": "#1F1F29"
+#             }
+#         },
+#         "pesel": {
+#             "label_styles": {
+#                 "font_size": "13px",
+#                 "font_weight": "normal",
+#                 "text_color": "#6B6B7B"
+#             },
+#             "value_styles": {
+#                 "font_size": "15px",
+#                 "font_weight": "normal",
+#                 "text_color": "#1F1F29"
+#             }
+#         },
+#         "emergency_contact": {
+#             "label_styles": {
+#                 "font_size": "13px",
+#                 "font_weight": "normal",
+#                 "text_color": "#6B6B7B"
+#             },
+#             "value_styles": {
+#                 "font_size": "15px",
+#                 "font_weight": "bold",
+#                 "text_color": "#1F1F29"
+#             }
+#         },
+#         "updated_at": {
+#             "label_styles": {
+#                 "font_size": "12px",
+#                 "font_weight": "normal",
+#                 "text_color": "#8B8B99"
+#             },
+#             "value_styles": {
+#                 "font_size": "14px",
+#                 "font_weight": "normal",
+#                 "text_color": "#4F4F59"
+#             }
+#         }
+#     }
+
+#     allow_crud_actions = {
+#         "create": True,
+#         "read": True,
+#         "update": True,
+#         "delete": False
+#     }
+
+#     async def create(self, data: dict, current_user=None):
+#         """
+#         Создание контактной информации.
+#         Обновляет CRM, если есть `patient_id` в основной информации.
+#         """
+#         created = await super().create(data, current_user)
+
+#         user_id = current_user.data.get("user_id")
+#         if user_id:
+#             main = await mongo_db["patients_main_info"].find_one({"user_id": str(user_id)})
+#             patient_id = main.get("patient_id") if main else None
+
+#             if patient_id:
+#                 patch = {
+#                     "phone": format_crm_phone(normalize_numbers(created["phone"])) if created.get("phone") else None,
+#                     "email": created.get("email")
+#                 }
+#                 await self.patch_contacts_in_crm(patient_id, patch)
+
+#         return created
+
+
+#     async def update(self, object_id: str, data: dict, current_user=None):
+#         """
+#         Обновление контактной информации.
+#         Обновляет CRM, если есть `patient_id` в основной информации.
+#         """
+#         updated = await super().update(object_id, data, current_user)
+
+#         user_id = current_user.data.get("user_id")
+#         if user_id:
+#             main = await mongo_db["patients_main_info"].find_one({"user_id": str(user_id)})
+#             patient_id = main.get("patient_id") if main else None
+
+#             if patient_id:
+#                 patch = {
+#                     "phone": format_crm_phone(normalize_numbers(updated["phone"])) if updated.get("phone") else None,
+#                     "email": updated.get("email")
+#                 }
+#                 asyncio.create_task(self.patch_contacts_in_crm(patient_id, patch))
+
+#         return updated
+
+#     async def crm_or_local(self, obj: dict, crm_field: str, local_field: str):
+#         main = await mongo_db["patients_main_info"].find_one({"user_id": obj["user_id"]})
+#         patient_id = main.get("patient_id") if main else None
+#         patient    = await self.get_patient_cached(patient_id) if patient_id else None
+#         return patient.get(crm_field) if patient and patient.get(crm_field) else obj.get(local_field)
+
+
+#     async def get_address(self, obj: dict, current_user=None) -> str | None:
+#         """
+#         Склеиваем residenceAddress из CRM → одна строка.
+#         Fallback — локальный `address`.
+#         """
+#         main = await mongo_db["patients_main_info"].find_one({"user_id": obj["user_id"]})
+#         patient_id = main.get("patient_id") if main else None
+#         patient    = await self.get_patient_cached(patient_id) if patient_id else None
+
+#         if patient and (addr := patient.get("residenceAddress")):
+#             parts = [addr.get(k) for k in ("street", "building", "apartment",
+#                                            "city", "zip", "country") if addr.get(k)]
+#             return ", ".join(parts)
+
+#         return obj.get("address")
+
 class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
     """
     Админка для вкладки «Контактная информация».
     """
 
+    # ------------------------------------------------------------------
+    # Базовые параметры
+    # ------------------------------------------------------------------
     model = ContactInfoSchema
     collection_name = "patients_contact_info"
 
     verbose_name = {
         "en": "Contact information",
         "ru": "Контактная информация",
-        "pl": "Informacje kontaktowe"
+        "pl": "Informacje kontaktowe",
     }
     plural_name = verbose_name
 
     icon = "pi pi-envelope"
     max_instances_per_user = 1
-
     list_display: list[str] = []
 
+    # ------------------------------------------------------------------
+    # Отображаемые, вычисляемые и только-для-чтения поля
+    # ------------------------------------------------------------------
     detail_fields = [
-        "email", "phone", "address", "pesel",
-        "emergency_contact", "updated_at"
+        # контакты
+        "email", "phone",
+        # экстренный контакт
+        "emergency_contact_name", "emergency_contact_phone", "emergency_contact_consent",
+        # адрес (структурированный ввод)
+        "country", "region", "city", "street",
+        "building_number", "apartment", "zip",
+        # вычисляемая склейка для удобства
+        "address",
+        # идентификаторы
+        "pesel",
+        "passport",
+        "updated_at",
     ]
 
-    computed_fields = ["address"]
-    read_only_fields = ["updated_at", "address", "pesel"]
+    computed_fields = ["address", "passport"]
 
+    # телефон пока не редактируем (нет 2FA на смену),
+    # адрес собирается из новых полей, `address` выводится как строка
+    read_only_fields = ["phone", "address", "pesel", "updated_at"]
+
+    # ------------------------------------------------------------------
+    # Локализация заголовков
+    # ------------------------------------------------------------------
     field_titles = {
-        "email": {"en": "Email", "ru": "Email", "pl": "E-mail"},
-        "phone": {"en": "Phone", "ru": "Телефон", "pl": "Telefon"},
-        "address": {"en": "Address", "ru": "Адрес", "pl": "Adres"},
-        "pesel": {"en": "PESEL", "ru": "PESEL", "pl": "PESEL"},
-        "emergency_contact": {"en": "Emergency contact", "ru": "Экстренный контакт", "pl": "Kontakt awaryjny"},
+        # базовые
+        "email":   {"en": "E-mail", "ru": "E-mail", "pl": "E-mail"},
+        "phone":   {"en": "Phone", "ru": "Телефон", "pl": "Telefon"},
+        "pesel":   {"en": "PESEL", "ru": "PESEL", "pl": "PESEL"},
+        "passport": {
+            "ru": "Паспорт",
+            "en": "Passport",
+            "pl": "Paszport"
+        },
         "updated_at": {"en": "Last update", "ru": "Последнее обновление", "pl": "Ostatnia aktualizacja"},
+        # экстренный контакт
+        "emergency_contact_name":  {"en": "Emergency contact name",  "ru": "Имя экстренного контакта",  "pl": "Imię kontaktu awaryjnego"},
+        "emergency_contact_phone": {"en": "Emergency contact phone", "ru": "Телефон экстренного контакта", "pl": "Telefon kontaktu awaryjnego"},
+        "emergency_contact_consent": {
+            "en": "Consent to share health info",
+            "ru": "Согласие на передачу данных о здоровье",
+            "pl": "Zgoda na udostępnienie danych zdrowotnych",
+        },
+        # адрес
+        "country":         {"en": "Country",         "ru": "Страна",          "pl": "Kraj"},
+        "region":          {"en": "Voivodeship / Region", "ru": "Воеводство / Регион", "pl": "Województwo / Region"},
+        "city":            {"en": "City",            "ru": "Город",           "pl": "Miasto"},
+        "street":          {"en": "Street",          "ru": "Улица",           "pl": "Ulica"},
+        "building_number": {"en": "Building number", "ru": "Номер дома",      "pl": "Numer budynku"},
+        "apartment":       {"en": "Apartment",       "ru": "Кв./пом.",        "pl": "Mieszkanie"},
+        "zip":             {"en": "Postal code",     "ru": "Почтовый индекс", "pl": "Kod pocztowy"},
+        "address":         {"en": "Address (full)",  "ru": "Адрес (строкой)", "pl": "Adres (pełny)"},
     }
 
-    help_texts = {
-        "email": {"en": "Valid e-mail", "ru": "Действующий e-mail", "pl": "Poprawny e-mail"},
-        "phone": {"en": "Primary phone", "ru": "Основной телефон", "pl": "Główny telefon"},
-        "address": {"en": "Postal address", "ru": "Адрес проживания", "pl": "Adres zamieszkania"},
-        "pesel": {"en": "National ID", "ru": "Нац. идентификатор", "pl": "Numer PESEL"},
-        "emergency_contact": {"en": "Emergency phone", "ru": "Телефон для экстренной связи", "pl": "Telefon awaryjny"},
-        "updated_at": {"en": "Timestamp", "ru": "Отметка времени", "pl": "Znacznik czasu"},
-    }
-
+    # ------------------------------------------------------------------
+    # Группы полей (две колонки)
+    # ------------------------------------------------------------------
     field_groups = [
         {
             "column": 0,
             "title": {"en": "Contacts", "ru": "Контакты", "pl": "Kontakty"},
-            "fields": ["email", "phone", "emergency_contact"],
+            "fields": ["email", "phone",
+                       "emergency_contact_name", "emergency_contact_phone", "emergency_contact_consent"],
         },
         {
             "column": 1,
-            "title": {"en": "Address & IDs", "ru": "Адрес и идентификаторы", "pl": "Adres i ID"},
-            "fields": ["address", "pesel", "updated_at"],
+            "title": {"en": "Address", "ru": "Адрес", "pl": "Adres"},
+            "fields": [
+                "country", "region", "city", "street",
+                "building_number", "apartment", "zip",
+                "address",
+                "pesel", "passport", "updated_at",
+            ],
         },
     ]
 
-    field_styles = {
-        "email": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
-        },
-        "phone": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "bold",
-                "text_color": "#1F1F29"
-            }
-        },
-        "address": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
-        },
-        "pesel": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
-        },
-        "emergency_contact": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "bold",
-                "text_color": "#1F1F29"
-            }
-        },
-        "updated_at": {
-            "label_styles": {
-                "font_size": "12px",
-                "font_weight": "normal",
-                "text_color": "#8B8B99"
-            },
-            "value_styles": {
-                "font_size": "14px",
-                "font_weight": "normal",
-                "text_color": "#4F4F59"
-            }
-        }
-    }
+    # (старые field_styles остаются без изменений — опущены для краткости)
 
-    allow_crud_actions = {
-        "create": True,
-        "read": True,
-        "update": True,
-        "delete": False
-    }
+    allow_crud_actions = {"create": True, "read": True, "update": True, "delete": False}
 
+    # ------------------------------------------------------------------
+    # Информационный блок «заполните Personal Info»
+    # ------------------------------------------------------------------
+
+
+    # ------------------------------------------------------------------
+    # Создание / обновление — синхронизация с CRM
+    # ------------------------------------------------------------------
     async def create(self, data: dict, current_user=None):
         """
         Создание контактной информации.
-        Обновляет CRM, если есть `patient_id` в основной информации.
+        В CRM отправляем только email и структурированный адрес.
         """
         created = await super().create(data, current_user)
-
-        user_id = current_user.data.get("user_id")
-        if user_id:
-            main = await mongo_db["patients_main_info"].find_one({"user_id": str(user_id)})
-            patient_id = main.get("patient_id") if main else None
-
-            if patient_id:
-                patch = {
-                    "phone": format_crm_phone(normalize_numbers(created["phone"])) if created.get("phone") else None,
-                    "email": created.get("email")
-                }
-                await self.patch_contacts_in_crm(patient_id, patch)
-
+        await self._patch_crm_contacts(created, current_user)
         return created
-
 
     async def update(self, object_id: str, data: dict, current_user=None):
         """
         Обновление контактной информации.
-        Обновляет CRM, если есть `patient_id` в основной информации.
+        Телефон изменять нельзя (нет 2FA), поэтому не передаём его в CRM.
         """
         updated = await super().update(object_id, data, current_user)
-
-        user_id = current_user.data.get("user_id")
-        if user_id:
-            main = await mongo_db["patients_main_info"].find_one({"user_id": str(user_id)})
-            patient_id = main.get("patient_id") if main else None
-
-            if patient_id:
-                patch = {
-                    "phone": format_crm_phone(normalize_numbers(updated["phone"])) if updated.get("phone") else None,
-                    "email": updated.get("email")
-                }
-                asyncio.create_task(self.patch_contacts_in_crm(patient_id, patch))
-
+        asyncio.create_task(self._patch_crm_contacts(updated, current_user))
         return updated
 
+    # ------------------------------------------------------------------
+    # Вспомогательные методы
+    # ------------------------------------------------------------------
+    async def _patch_crm_contacts(self, local_doc: dict, current_user=None) -> None:
+        """
+        Формирует `PATCH`-тело и отправляет его в CRM (email + residenceAddress).
+        """
+        user_id = current_user.data.get("user_id") if current_user else None
+        if not user_id:
+            return
+
+        main = await mongo_db["patients_main_info"].find_one({"user_id": str(user_id)})
+        patient_id = main.get("patient_id") if main else None
+        if not patient_id:
+            return
+
+        # формируем тело PATCH
+        patch: dict[str, Any] = {}
+        if local_doc.get("email"):
+            patch["email"] = local_doc["email"]
+
+        # адрес: передаём, только если указано хоть одно из полей
+        addr_fields = ("street", "building_number", "apartment", "city", "zip", "country")
+        if any(local_doc.get(f) for f in addr_fields):
+            patch["residenceAddress"] = {
+                "street":   local_doc.get("street"),
+                "building": local_doc.get("building_number"),
+                "apartment": local_doc.get("apartment"),
+                "city":     local_doc.get("city"),
+                "zip":      local_doc.get("zip"),
+                "country":  local_doc.get("country") or "Polska",
+            }
+
+        if patch:
+            print(patch)
+            await self.patch_contacts_in_crm(patient_id, patch)
+
+    # ------------------------------------------------------------------
+    # CRM-vs-локальные данные
+    # ------------------------------------------------------------------
     async def crm_or_local(self, obj: dict, crm_field: str, local_field: str):
+        """
+        Берёт поле либо из CRM (если есть patient_id), либо из локального документа.
+        """
         main = await mongo_db["patients_main_info"].find_one({"user_id": obj["user_id"]})
         patient_id = main.get("patient_id") if main else None
-        patient    = await self.get_patient_cached(patient_id) if patient_id else None
+        patient = await self.get_patient_cached(patient_id) if patient_id else None
         return patient.get(crm_field) if patient and patient.get(crm_field) else obj.get(local_field)
-
 
     async def get_address(self, obj: dict, current_user=None) -> str | None:
         """
-        Склеиваем residenceAddress из CRM → одна строка.
-        Fallback — локальный `address`.
+        Возвращает человеко-читаемую строку адреса:
+        1. Из CRM → residenceAddress
+        2. Собирает из локальных полей (street, building_number, …)
         """
         main = await mongo_db["patients_main_info"].find_one({"user_id": obj["user_id"]})
         patient_id = main.get("patient_id") if main else None
-        patient    = await self.get_patient_cached(patient_id) if patient_id else None
+        patient = await self.get_patient_cached(patient_id) if patient_id else None
 
         if patient and (addr := patient.get("residenceAddress")):
             parts = [addr.get(k) for k in ("street", "building", "apartment",
                                            "city", "zip", "country") if addr.get(k)]
             return ", ".join(parts)
 
-        return obj.get("address")
+        local = obj
+        parts_local = [local.get(k) for k in ("street", "building_number", "apartment",
+                                              "city", "zip", "country") if local.get(k)]
+        return ", ".join(parts_local) or None
+    
+
+    async def get_passport(self, obj, current_user=None) -> Optional[str]:
+        """
+        Возвращает паспорт из CRM, если он есть.
+        """
+        user_id = current_user.data.get("user_id") if current_user else None
+        if not user_id:
+            return None
+
+        main_info = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
+        if not main_info or not main_info.get("patient_id"):
+            return None
+        
+        patient_id = main_info.get("patient_id")
+
+        try:
+            crm_data = await self.get_patient_cached(patient_id) if patient_id else None
+            return crm_data.get("passport")
+        except Exception:
+            return None
+
+        
+    # async def get_field_overrides(self, obj=None, current_user=None) -> dict:
+    #     """
+    #     Делает email и поля адреса read_only, если профиль не подтверждён в CRM.
+    #     """
+    #     print('мы тут')
+
+    #     # По умолчанию: можно редактировать
+    #     readonly_address_fields = False
+    #     print(obj)
+
+    #     if obj and obj.get("patient_id"):
+    #         try:
+    #             _, e = await self.get_consents_cached(obj["patient_id"])
+    #             print(_)
+    #             print(e)
+    #             if e:
+    #                 raise e
+    #         except CRMError as e:
+    #             print('err')
+    #             if e.status_code == 403:
+    #                 readonly_address_fields = True
+
+    #     return {
+    #         "email": {
+    #             "settings": {"read_only": readonly_address_fields},
+    #             "read_only": readonly_address_fields,
+    #         },
+    #         "address": {
+    #             "settings": {"read_only": readonly_address_fields},
+    #             "read_only": readonly_address_fields,
+    #         },
+    #         "zip": {
+    #             "settings": {"read_only": readonly_address_fields},
+    #             "read_only": readonly_address_fields,
+    #         },
+    #         "city": {
+    #             "settings": {"read_only": readonly_address_fields},
+    #             "read_only": readonly_address_fields,
+    #         },
+    #         "country": {
+    #             "settings": {"read_only": readonly_address_fields},
+    #             "read_only": readonly_address_fields,
+    #         },
+    #     }
+
+    async def get_field_overrides(self, obj=None, current_user=None) -> dict:
+        """
+        Делает email и все поля адреса read_only, если профиль не подтверждён в CRM.
+        """
+        readonly_fields = False
+
+        # Пытаемся найти MainInfo по current_user
+        patient_id = None
+        if current_user:
+            user_id = current_user.data.get("user_id")
+            if user_id:
+                main_info = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
+                if main_info:
+                    patient_id = main_info.get("patient_id")
+
+        # Проверяем статус CRM
+        if patient_id:
+            try:
+                _, e = await self.get_consents_cached(patient_id)
+                if e:
+                    raise e
+            except CRMError as e:
+                if e.status_code == 403:
+                    readonly_fields = True
+
+        # Список всех полей, которые нужно заблокировать при неподтверждённом профиле
+        fields_to_lock = [
+            "email", "zip", "city", "country",
+            "region", "street", "building_number", "apartment"
+        ]
+
+        # Формируем словарь overrides
+        overrides = {
+            field: {
+                "settings": {"read_only": readonly_fields},
+                "read_only": readonly_fields
+            } for field in fields_to_lock
+        }
+
+        return overrides
+
+
 
 # ==========
 # Анкета здоровья

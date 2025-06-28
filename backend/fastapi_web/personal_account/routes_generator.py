@@ -1,5 +1,6 @@
 """Формирование маршрутов приложения Персональный аккаунт."""
 import random
+import re
 import string
 from datetime import datetime, timedelta
 from typing import Dict, Optional
@@ -27,7 +28,7 @@ from .client_interface.db.mongo.schemas import (ConfirmationSchema, ContactInfoS
                                                 TwoFASchema)
 
 
-REG_CODES: Dict[str, str] = {}
+REG_CODES: Dict[str, dict] = {}
 TWO_FA_CODES: Dict[str, str] = {}
 
 
@@ -69,6 +70,10 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "pl": "Hasła nie pasują do siebie."
             }
             errors["password"] = errors["password_confirm"] = msg
+
+        pwd_error = data.password_strength_errors()
+        if pwd_error:
+            errors["password"] = pwd_error
 
         phone_key = normalize_numbers(data.phone)
         if not phone_key:
@@ -117,14 +122,46 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "pl": "Płeć jest wymagana."
             }
 
+    # ----- ПРОВЕРКА REFERRAL CODE ------------------------------------
+        referral_id: Optional[str] = None
+        data.referral_code = "CODE_0XL59O"
+        if data.referral_code:
+            # Ожидаем формат PREFIX_<patientId>
+            # Префикс: 2–10 латиница/цифры, затем "_", затем patientId (3–36 лат/циф/дефис)
+            m = re.fullmatch(r"([A-Za-z0-9]{2,10})_([A-Za-z0-9\-]{3,36})", data.referral_code)
+            if not m:
+                errors["referral_code"] = {
+                    "ru": "Некорректный формат реферального кода.",
+                    "en": "Invalid referral-code format.",
+                    "pl": "Nieprawidłowy format kodu polecającego."
+                }
+            else:
+                patient_key = m.group(2)          # ← то, что после «_»
+                try:
+                    ref_patient = await get_client().find_patient(patient_id=patient_key)
+                    if not ref_patient:
+                        errors["referral_code"] = {
+                            "ru": "Такой реферальный код не найден.",
+                            "en": "Referral code not found.",
+                            "pl": "Nie znaleziono takiego kodu polecającego."
+                        }
+                    else:
+                        referral_id = ref_patient["externalId"]
+                except CRMError:
+                    errors["referral_code"] = {
+                        "ru": "Ошибка CRM при проверке кода.",
+                        "en": "CRM error while validating code.",
+                        "pl": "Błąd CRM podczas weryfikacji kodu."
+                    }
+
         if errors:
             return JSONResponse(status_code=400, content={"errors": errors})
 
         code = "".join(random.choices("0123456789", k=6))
-        REG_CODES[phone_key] = code
+        REG_CODES[phone_key] = {"code": code, "referral_id": referral_id}
 
         # --- Пока ничего не шлём, оставляем заглушку ---
-        await send_sms(phone_key, f"Код подтверждения: {code}")
+        # await send_sms(phone_key, f"Код подтверждения: {code}")
 
         return {
             "message": {
@@ -154,7 +191,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # data.gender = GenderEnum.MALE
         # data.birth_date = datetime.now()
         phone_key = normalize_numbers(data.phone)
-        if REG_CODES.get(phone_key) != data.code:
+        stored = REG_CODES.get(phone_key) or {}
+        if stored.get("code") != data.code:
             raise HTTPException(400, detail={
                 "code": {
                     "ru": "Неверный код.",
@@ -162,6 +200,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     "pl": "Nieprawidłowy kod."
                 }
             })
+        
+        referral_id = stored.get("referral_id")
 
         # ---------------- Принимаем данные из схемы ----------------
         main_schema = MainInfoSchema(
@@ -170,6 +210,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             birth_date=data.birth_date,
             gender=data.gender,
             phone=phone_key,
+            referral_id=referral_id,
             metadata=dict(request.query_params),
         )
 
@@ -350,7 +391,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         TWO_FA_CODES[phone_key] = code_2fa
 
         # Заглушка — SMS пока не отправляем
-        await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
+        # await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
 
         return {
             "message": {

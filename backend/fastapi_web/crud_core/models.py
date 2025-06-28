@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Type
 from bson import ObjectId
 from fastapi import HTTPException
 from fastapi.exceptions import HTTPException
+from pydantic import TypeAdapter
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 from pydantic import BaseModel, ValidationError
 
@@ -113,6 +114,15 @@ class BaseCrudCore:
         async for raw_doc in cursor:
             objs.append(await self.format_document(raw_doc, current_user) if format else raw_doc)
         return objs
+    
+    async def get_singleton_object(self, current_user) -> Optional[dict]:
+        """
+        Возвращает единственный объект пользователя, если max_instances == 1.
+        """
+        filters = {"user_id": current_user.data.get("user_id")}  # или patient_id, в зависимости от модели
+        result = await self.db.find_one(filters)
+        return result
+
 
     async def list(
         self,
@@ -530,8 +540,78 @@ class BaseCrudCore:
         result.update(await self.get_inlines(doc, current_user))
         return result
 
+    # async def validate_data(self, data: dict, partial: bool = False) -> dict:
+    #     """Валидирует данные модели (без инлайнов)."""
+    #     def try_parse_json(value: Any) -> Any:
+    #         if isinstance(value, str):
+    #             try:
+    #                 parsed = json.loads(value)
+    #                 if isinstance(parsed, dict):
+    #                     return parsed
+    #             except json.JSONDecodeError:
+    #                 pass
+    #         return value
+
+    #     errors: Dict[str, Any] = {}
+    #     validated: Dict[str, Any] = {}
+
+    #     try:
+    #         if partial:
+    #             for field, val in data.items():
+    #                 # 🔥 Исключаем updated_at из read_only блокировки
+    #                 if field in ("id", *self.read_only_fields) and field != "updated_at":
+    #                     continue
+
+    #                 if field in self.inlines:
+    #                     validated[field] = self.serialize_value(val)
+    #                     continue
+    #                 if field in self.model.__annotations__:
+    #                     # if field == "updated_at" and isinstance(val, datetime):
+    #                     #     validated[field] = self.serialize_value(val)
+    #                     #     continue
+    #                     field_type = self.model.__annotations__[field]
+    #                     parsed_val = try_parse_json(val)
+    #                     # validated_val = self.model._validate_field_type(
+    #                     #     field, field_type, parsed_val)
+    #                     try:
+    #                         validated_val = TypeAdapter(field_type).validate_python(parsed_val)
+    #                     except ValidationError as ve:
+    #                         errors[field] = ve.errors()[0]["msg"]
+    #                         continue
+    #                     validated[field] = self.serialize_value(validated_val)
+    #         else:
+    #             filtered = {
+    #                 k: try_parse_json(v) for k,
+    #                 v in data.items() if k not in self.inlines}
+    #             print('=====')
+    #             print(filtered)
+    #             obj = self.model(**filtered)
+    #             validated = {
+    #                 k: self.serialize_value(v) for k,
+    #                 v in obj.dict().items()}
+
+    #     except ValidationError as e:
+    #         for err in e.errors():
+    #             loc, msg = err["loc"], err["msg"]
+    #             ref = errors
+    #             for part in loc[:-1]:
+    #                 ref = ref.setdefault(part, {})
+    #             ref[loc[-1]] = msg
+
+    #     if errors:
+    #         raise HTTPException(400, detail=errors)
+
+    #     return validated
+
     async def validate_data(self, data: dict, partial: bool = False) -> dict:
-        """Валидирует данные модели (без инлайнов)."""
+        """Валидирует данные модели (с поддержкой partial и мультиязычных ошибок)."""
+
+        FIELD_REQUIRED_MESSAGE = {
+            "ru": "Поле обязательно для заполнения.",
+            "en": "This field is required.",
+            "pl": "To pole jest wymagane."
+        }
+
         def try_parse_json(value: Any) -> Any:
             if isinstance(value, str):
                 try:
@@ -546,40 +626,45 @@ class BaseCrudCore:
         validated: Dict[str, Any] = {}
 
         try:
-            if partial:
-                for field, val in data.items():
-                    # 🔥 Исключаем updated_at из read_only блокировки
-                    if field in ("id", *self.read_only_fields) and field != "updated_at":
-                        continue
+            filtered = {
+                k: try_parse_json(v)
+                for k, v in data.items()
+                if k not in self.inlines
+            }
+            obj = self.model(**filtered)
 
-                    if field in self.inlines:
-                        validated[field] = self.serialize_value(val)
-                        continue
-                    if field in self.model.__annotations__:
-                        # if field == "updated_at" and isinstance(val, datetime):
-                        #     validated[field] = self.serialize_value(val)
-                        #     continue
-                        field_type = self.model.__annotations__[field]
-                        parsed_val = try_parse_json(val)
-                        validated_val = self.model._validate_field_type(
-                            field, field_type, parsed_val)
-                        validated[field] = self.serialize_value(validated_val)
-            else:
-                filtered = {
-                    k: try_parse_json(v) for k,
-                    v in data.items() if k not in self.inlines}
-                obj = self.model(**filtered)
-                validated = {
-                    k: self.serialize_value(v) for k,
-                    v in obj.dict().items()}
+            validated = {
+                k: self.serialize_value(v)
+                for k, v in obj.model_dump().items()
+            }
 
         except ValidationError as e:
             for err in e.errors():
-                loc, msg = err["loc"], err["msg"]
-                ref = errors
-                for part in loc[:-1]:
-                    ref = ref.setdefault(part, {})
-                ref[loc[-1]] = msg
+                loc = err["loc"]
+                msg = err["msg"]
+
+                if not loc:
+                    continue
+                field = loc[0]
+
+                if partial and field not in data:
+                    continue  # ❗ Пропускаем обязательность, если поле не передано
+
+                # 👇 Обработка сообщений
+                if msg in {"Field required", "Missing required field", "value is required"}:
+                    final_msg = FIELD_REQUIRED_MESSAGE
+                elif isinstance(msg, dict):
+                    final_msg = msg
+                elif isinstance(msg, str):
+                    try:
+                        parsed = json.loads(msg)
+                        final_msg = parsed if isinstance(parsed, dict) else msg
+                    except Exception:
+                        final_msg = msg.split(", ", 1)[-1] if ", " in msg else msg
+                else:
+                    final_msg = msg
+
+                errors[field] = final_msg
 
         if errors:
             raise HTTPException(400, detail=errors)
