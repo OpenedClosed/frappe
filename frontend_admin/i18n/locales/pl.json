@@ -144,7 +144,9 @@
     "gender": "Płeć",
     "genderPlaceholder": "Wybierz płeć",
     "numberImportant":"Ważne:",
-    "numberInfo":"Do uwierzytelniania dwuskładnikowego i komunikacji operacyjnej w razie potrzeby."
+    "numberInfo":"Do uwierzytelniania dwuskładnikowego i komunikacji operacyjnej w razie potrzeby.",
+    "birthImportant":"Ważne:",
+    "birthInfo":"Rejestracja jest dostępna tylko dla pełnoletnich pacjentów."
   },
 
   "DynamicForm": {

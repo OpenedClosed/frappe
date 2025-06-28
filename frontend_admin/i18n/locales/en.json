@@ -143,7 +143,10 @@
     "gender": "Gender",
     "genderPlaceholder": "Select your gender",
     "numberImportant":"Important:",
-    "numberInfo":"For two-factor authentication and operational communication if necessary."
+    "numberInfo":"For two-factor authentication and operational communication if necessary.",
+    "birthImportant":"Important:",
+    "birthInfo":"Registration is available only for adult patients."
+    
   },
   "DynamicForm": {
     "upload": "Upload",

@@ -100,6 +100,11 @@
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
+            <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+              <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
+                >{{ t("PersonalMainRegistration.birthImportant") }} &nbsp;</span
+              >{{ t("PersonalMainRegistration.birthInfo") }}</small
+            >
             <small class="text-red-500 mt-1 text-[12px]">
               {{ regError.birth_date }}
             </small>

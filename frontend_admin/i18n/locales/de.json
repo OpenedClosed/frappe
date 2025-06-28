@@ -148,7 +148,9 @@
     "gender": "Geschlecht",
     "genderPlaceholder": "Wählen Sie Ihr Geschlecht",
     "numberImportant":"Wichtig:",
-    "numberInfo":"Für die Zwei-Faktor-Authentifizierung und bei Bedarf für die operative Kommunikation."
+    "numberInfo":"Für die Zwei-Faktor-Authentifizierung und bei Bedarf für die operative Kommunikation.",
+    "birthImportant":"Wichtig:",
+    "birthInfo":"Die Registrierung ist nur für volljährige Patienten möglich."
   },
 
   "DynamicForm": {
