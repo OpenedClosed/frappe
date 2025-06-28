@@ -28,6 +28,7 @@
                 type="tel"
                 required
                 mask="+48 999 999 999"
+                placeholder="+48 ___ ___ ___"
                 :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />

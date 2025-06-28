@@ -112,25 +112,38 @@ function setData(data: any) {
 }
 
 // Функция для получения данных из API
-async function getHeaderData () {
-  try {
-    const api = useNuxtApp().$api
-    const [mainInfoRes, meRes, bonusRes] = await Promise.all([
-      api.get('api/personal_account/patients_main_info/'),
-      api.get('/api/users/me'),
-      api.get('api/personal_account/patients_bonus_program/'),
-    ])
+async function getHeaderData() {
+  const api = useNuxtApp().$api;
+  let responseData = null;
+  let responseDataMe = null;
+  let responseBonus = null;
 
-    return {
-      responseData:   mainInfoRes.data,
-      responseDataMe: meRes.data,
-      responseBonus:  bonusRes.data,
-    }
+  try {
+    const mainInfoRes = await api.get("api/personal_account/patients_main_info/");
+    responseData = mainInfoRes.data;
   } catch (err) {
-    if (err?.response) console.error('Ошибка API:', err.response.data)
-    else               console.error(err)
-    return null
+    console.error("Ошибка при получении основной информации:", err);
   }
+
+  try {
+    const meRes = await api.get("/api/users/me");
+    responseDataMe = meRes.data;
+  } catch (err) {
+    console.error("Ошибка при получении информации о пользователе:", err);
+  }
+
+  try {
+    const bonusRes = await api.get("api/personal_account/patients_bonus_program/");
+    responseBonus = bonusRes.data;
+  } catch (err) {
+    console.error("Ошибка при получении бонусной информации:", err);
+  }
+
+  return {
+    responseData,
+    responseDataMe,
+    responseBonus,
+  };
 }
 
 const { isSidebarOpen } = useSidebarState();

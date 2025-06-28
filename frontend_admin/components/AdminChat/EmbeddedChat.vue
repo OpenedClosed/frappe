@@ -339,6 +339,7 @@ const textMessagesJson = computed(() => JSON.stringify(textMessagesObject.value)
 
 function getChatId(data) {
   console.log("getChatId", data?.detail?.[0]?.room?.roomId); // For debugging: log chat ID retrieval
+  console.log("getChatId data", data); // For debugging: log chat ID retrieval
   if (data?.detail?.[0]?.room?.roomId) {
     activeRoomId.value = data.detail[0].room.roomId;
 
