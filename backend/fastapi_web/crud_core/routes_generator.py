@@ -561,6 +561,8 @@ def build_field_schema(instance, field, schema_props, model_annotations,
     if "type" in field_settings:
         field_type = field_settings["type"]
 
+    print('+'*100)
+    
     placeholder = field_settings.pop("placeholder", None)
 
     has_explicit_default = field_default is not None
@@ -574,17 +576,22 @@ def build_field_schema(instance, field, schema_props, model_annotations,
     is_empty_dict = isinstance(field_default, dict) and not field_default
     has_only_settings = isinstance(
         field_info, dict) and "settings" in field_info and len(field_info) == 1
+    read_only = field in read_only_fields or field in computed_fields
+
     required_flag = not is_optional or (
         not has_explicit_default and not has_factory and (
             is_empty_dict or has_only_settings)
     )
+    print(field, read_only)
+    # if read_only:
+    #     required_flag = False
 
     return {
         "name": field,
         "type": field_type,
         "title": field_title,
         "help_text": help_texts.get(field, {}),
-        "read_only": field in read_only_fields or field in computed_fields,
+        "read_only": read_only,
         "default": field_default if has_explicit_default else None,
         "required": required_flag,
         "choices": choices,

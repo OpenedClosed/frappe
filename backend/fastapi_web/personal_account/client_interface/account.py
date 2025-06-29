@@ -50,7 +50,9 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
     list_display: list[str] = []          # в списке карточек ничего
 
     detail_fields = [
-        "last_name", "first_name", "patronymic", "birth_date", "gender",
+        "last_name", "first_name",
+        # "patronymic",
+        "birth_date", "gender",
         "company_name", "avatar",
         "crm_link_status",
         "account_status", "patient_id",
@@ -64,7 +66,8 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
 
     read_only_fields = [
         "patient_id", "account_status",
-        "last_name", "first_name", "patronymic",
+        "last_name", "first_name",
+        # "patronymic",
         "birth_date", "gender", "company_name",
         "crm_link_status",
     ]
@@ -175,7 +178,9 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
                 "uk": "Особисті дані",
                 "de": "Persönliche Daten"
             },
-            "fields": ["last_name", "first_name", "patronymic", "birth_date", "gender", "avatar"],
+            "fields": ["last_name", "first_name",
+                    #    "patronymic",
+                       "birth_date", "gender", "avatar"],
         },
         {
             "column": 1,
@@ -283,11 +288,18 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         iso = await self.crm_or_local(obj, "birthdate", "birth_date")
         return datetime.fromisoformat(iso) if isinstance(iso, str) else iso
 
-    async def get_company_name(self, obj: dict, current_user=None) -> str:
+    async def get_company_name(self, obj: dict, current_user=None) -> dict:
         """
-        Пока компания не используется — всегда показываем заглушку.
+        Пока компания не используется — всегда показываем заглушку с переводом.
         """
-        return "Coming Soon"
+        return {
+            "ru": "Скоро будет",
+            "en": "Coming soon",
+            "pl": "Wkrótce dostępne",
+            "uk": "Скоро буде",
+            "de": "Kommt bald"
+        }
+
 
     async def get_account_status(self, obj: dict, current_user=None) -> str:
         """
@@ -1212,28 +1224,6 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
             "status": {
                 "settings": {"read_only": readonly},
                 "read_only": readonly,
-                "choices": [
-                    {
-                        "value": FamilyStatusEnum.CONFIRMED,
-                        "label": {
-                            "ru": "Принять",
-                            "en": "Confirm",
-                            "pl": "Akceptuj",
-                            "uk": "Прийняти",
-                            "de": "Bestätigen"
-                        }
-                    },
-                    {
-                        "value": FamilyStatusEnum.DECLINED,
-                        "label": {
-                            "ru": "Отклонить",
-                            "en": "Decline",
-                            "pl": "Odrzuć",
-                            "uk": "Відхилити",
-                            "de": "Ablehnen"
-                        }
-                    }
-                ]
             },
             "phone": {
                 "settings": {"read_only": False},
@@ -1851,12 +1841,12 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         if e:
             raise HTTPException(
                 400,
-                detail={
-                    "ru": "Согласия доступны после подтверждения в системе PaNa",
-                    "en": "Consents are available after confirmation in the PaNa system",
-                    "pl": "Zgody są dostępne po potwierdzeniu w systemie PaNa",
-                    "uk": "Згоди доступні після підтвердження в системі PaNa",
-                    "de": "Einwilligungen sind nach Bestätigung im PaNa-System verfügbar"
+                detail = {
+                    "ru": "Согласия становятся доступны только после подтверждения аккаунта.",
+                    "en": "Consents are only available after account verification.",
+                    "pl": "Zgody są dostępne dopiero po weryfikacji konta.",
+                    "uk": "Згоди доступні лише після підтвердження облікового запису.",
+                    "de": "Einwilligungen sind erst nach der Konto­bestätigung verfügbar."
                 }
             )
 

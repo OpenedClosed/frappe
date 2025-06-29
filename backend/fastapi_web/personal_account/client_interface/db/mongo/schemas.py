@@ -28,7 +28,8 @@ class RegistrationSchema(BaseModel):
     """
     phone: str
     email: Optional[EmailStr] = None
-    full_name: str
+    first_name: str
+    last_name: str
     birth_date: Optional[datetime] = None
     gender: Optional[str] = None
     password: str
@@ -652,19 +653,31 @@ class FamilyMemberSchema(BaseValidatedModel):
 
     # ▼––– статус оформлен как Enum, но UI получит список «choices»
     status: FamilyStatusEnum = Field(
-        default=FamilyStatusEnum.PENDING,
-        json_schema_extra={
-            "settings": {
-                "type": "select",
+        # default=FamilyStatusEnum.PENDING,
+        # json_schema_extra={
+        #     "settings": {
+        #         "type": "select",
                 # "choices": [
                 #     {"value": FamilyStatusEnum.PENDING,   "label": {"ru": "Ожидает",  "en": "Pending",  "pl": "Oczekuje"}},
                 #     {"value": FamilyStatusEnum.CONFIRMED, "label": {"ru": "Принято",  "en": "Confirmed","pl": "Przyjęto"}},
                 #     {"value": FamilyStatusEnum.DECLINED,  "label": {"ru": "Отклонено","en": "Declined", "pl": "Odrzucono"}},
                 # ],
+                # "placeholder": {
+                #     "ru": "Выберите статус",
+                #     "en": "Select status",
+                #     "pl": "Wybierz status"
+                # }
+            # }
+        # }
+
+        ...,
+        json_schema_extra={
+            "settings": {
+                "type": "select",
                 "placeholder": {
-                    "ru": "Выберите статус",
-                    "en": "Select status",
-                    "pl": "Wybierz status"
+                    "ru": "Выберите тип родства",
+                    "en": "Select relationship",
+                    "pl": "Wybierz relację"
                 }
             }
         }

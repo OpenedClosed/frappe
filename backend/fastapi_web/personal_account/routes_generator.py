@@ -178,7 +178,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         code = "".join(random.choices("0123456789", k=6))
         REG_CODES[phone_key] = {"code": code, "referral_id": referral_id}
 
-        # await send_sms(phone_key, f"Код подтверждения: {code}")
+        await send_sms(phone_key, f"Код подтверждения: {code}")
 
         return {
             "message": {
@@ -223,8 +223,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         referral_id = stored.get("referral_id")
 
         main_schema = MainInfoSchema(
-            last_name=data.full_name.split()[0],
-            first_name=" ".join(data.full_name.split()[1:]) or "-",
+            last_name=data.last_name.strip(),
+            first_name=data.first_name.strip(),
             birth_date=data.birth_date,
             gender=data.gender,
             phone=phone_key,
@@ -322,7 +322,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             }
 
         user = User(
-            full_name=data.full_name,
+            full_name=f"{data.first_name.strip()} {data.last_name.strip()}",
             role=RoleEnum.CLIENT,
             password=data.password,
         )
@@ -406,7 +406,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         code_2fa = "".join(random.choices("0123456789", k=6))
         TWO_FA_CODES[phone_key] = code_2fa
 
-        # await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
+        await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
 
         return {
             "message": {
