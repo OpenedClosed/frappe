@@ -178,7 +178,19 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         code = "".join(random.choices("0123456789", k=6))
         REG_CODES[phone_key] = {"code": code, "referral_id": referral_id}
 
-        await send_sms(phone_key, f"Код подтверждения: {code}")
+
+        try:
+            await send_sms(phone_key, f"Your confirmation code is: {code}")
+        except HTTPException:
+            errors["phone"] = {
+                "ru": "Ошибка при отправке SMS. Пожалуйста, проверьте номер телефона.",
+                "en": "Failed to send SMS. Please check your phone number.",
+                "pl": "Nie udało się wysłać SMS-a. Sprawdź numer telefonu.",
+                "uk": "Не вдалося надіслати SMS. Перевірте номер телефону.",
+                "de": "SMS konnte nicht gesendet werden. Bitte überprüfen Sie die Telefonnummer."
+            }
+            return JSONResponse(status_code=400, content={"errors": errors})
+
 
         return {
             "message": {
@@ -405,8 +417,20 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
 
         code_2fa = "".join(random.choices("0123456789", k=6))
         TWO_FA_CODES[phone_key] = code_2fa
+        errors = {}
 
-        await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
+        try:
+            await send_sms(phone_key, f"Your 2FA code is: {code_2fa}")
+        except HTTPException:
+            errors["phone"] = {
+                "ru": "Ошибка при отправке SMS. Пожалуйста, проверьте номер телефона.",
+                "en": "Failed to send SMS. Please check your phone number.",
+                "pl": "Nie udało się wysłać SMS-a. Sprawdź numer telefonu.",
+                "uk": "Не вдалося надіслати SMS. Перевірте номер телефону.",
+                "de": "SMS konnte nicht gesendet werden. Bitte überprüfen Sie die Telefonnummer."
+            }
+            return JSONResponse(status_code=400, content={"errors": errors})
+
 
         return {
             "message": {
