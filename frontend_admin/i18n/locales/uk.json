@@ -294,6 +294,8 @@
     "transactionsCard": "Історія транзакцій",
     "transactionsSubtitle": "Останні бонусні операції",
 
+    "toastTitleLink": "Посилання скопійовано",
+    "toastBodyLink": "Реферальне посилання скопійовано в буфер обміну!",
     "toastTitle": "Код скопійовано",
     "toastBody": "Реферальний код скопійовано!",
     "tooltipCopy": "Скопіювати код"

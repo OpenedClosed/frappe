@@ -147,10 +147,10 @@
     "birthDatePlaceholder": "Wählen Sie Ihr Geburtsdatum",
     "gender": "Geschlecht",
     "genderPlaceholder": "Wählen Sie Ihr Geschlecht",
-    "numberImportant":"Wichtig:",
-    "numberInfo":"Für die Zwei-Faktor-Authentifizierung und bei Bedarf für die operative Kommunikation.",
-    "birthImportant":"Wichtig:",
-    "birthInfo":"Die Registrierung ist nur für volljährige Patienten möglich."
+    "numberImportant": "Wichtig:",
+    "numberInfo": "Für die Zwei-Faktor-Authentifizierung und bei Bedarf für die operative Kommunikation.",
+    "birthImportant": "Wichtig:",
+    "birthInfo": "Die Registrierung ist nur für volljährige Patienten möglich."
   },
 
   "DynamicForm": {
@@ -224,7 +224,7 @@
 
     "invalidDate": "Ungültiges Datum",
     "dash": "—",
-      "fillPersonalInfoNotice": "Füllen Sie die Seite „Persönliche Informationen“ aus – so sparen Sie bei Ihrem ersten Besuch in der Klinik Zeit bei der Dokumentenerstellung. Die Bearbeitung einiger Felder wird nach der Verifizierung Ihres Kontos verfügbar."
+    "fillPersonalInfoNotice": "Füllen Sie die Seite „Persönliche Informationen“ aus – so sparen Sie bei Ihrem ersten Besuch in der Klinik Zeit bei der Dokumentenerstellung. Die Bearbeitung einiger Felder wird nach der Verifizierung Ihres Kontos verfügbar."
   },
 
   "FamilyTable": {
@@ -298,6 +298,8 @@
     "transactionsCard": "Transaktionshistorie",
     "transactionsSubtitle": "Neueste Bonusvorgänge",
 
+    "toastTitleLink": "Link kopiert",
+    "toastBodyLink": "Empfehlungslink in die Zwischenablage kopiert!",
     "toastTitle": "Code kopiert",
     "toastBody": "Empfehlungscode in die Zwischenablage kopiert!",
     "tooltipCopy": "Empfehlungscode kopieren"

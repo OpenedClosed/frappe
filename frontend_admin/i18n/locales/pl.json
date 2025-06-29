@@ -143,10 +143,10 @@
     "birthDatePlaceholder": "Wybierz datę urodzenia",
     "gender": "Płeć",
     "genderPlaceholder": "Wybierz płeć",
-    "numberImportant":"Ważne:",
-    "numberInfo":"Do uwierzytelniania dwuskładnikowego i komunikacji operacyjnej w razie potrzeby.",
-    "birthImportant":"Ważne:",
-    "birthInfo":"Rejestracja jest dostępna tylko dla pełnoletnich pacjentów."
+    "numberImportant": "Ważne:",
+    "numberInfo": "Do uwierzytelniania dwuskładnikowego i komunikacji operacyjnej w razie potrzeby.",
+    "birthImportant": "Ważne:",
+    "birthInfo": "Rejestracja jest dostępna tylko dla pełnoletnich pacjentów."
   },
 
   "DynamicForm": {
@@ -294,6 +294,8 @@
     "transactionsCard": "Historia transakcji",
     "transactionsSubtitle": "Ostatnie operacje bonusowe",
 
+    "toastTitleLink": "Link skopiowany",
+    "toastBodyLink": "Link polecający został skopiowany do schowka!",
     "toastTitle": "Kod skopiowany",
     "toastBody": "Kod polecający skopiowany do schowka!",
     "tooltipCopy": "Kopiuj kod"

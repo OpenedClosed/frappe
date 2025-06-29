@@ -295,6 +295,8 @@
     "transactionsCard": "ტრანზაქციების ისტორია",
     "transactionsSubtitle": "ბოლო ბონუს ოპერაციები",
 
+    "toastTitleLink": "ბმული დაკოპირებულია",
+    "toastBodyLink": "რეფერალური ბმული დაკოპირებულია ბუფერში!",
     "toastTitle": "კოდი დაკოპირდა",
     "toastBody": "რეფერალის კოდი დაკოპირდა!",
     "tooltipCopy": "კოდის კოპირება"

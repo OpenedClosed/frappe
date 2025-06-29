@@ -127,8 +127,8 @@ const copyReferralLink = () => {
   navigator.clipboard.writeText(referralLink.value);
   toast.add({
     severity: "success",
-    summary: t("PointsTable.toastTitle"),
-    detail: t("PointsTable.toastBody"),
+    summary: t("PointsTable.toastTitleLink"),
+    detail: t("PointsTable.toastBodyLink"),
     life: 3000,
   });
 };
