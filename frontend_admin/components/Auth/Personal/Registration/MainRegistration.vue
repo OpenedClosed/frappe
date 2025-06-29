@@ -1,6 +1,7 @@
 <template>
   <!-- Корневой контейнер -->
   <div class="w-full flex justify-center items-center h-screen overflow-hidden">
+    <Toast />
     <div class="p-4 m-4 bg-gray-100 dark:bg-gray-800 rounded-md shadow-md w-[30rem] h-[80vh] overflow-auto">
       <!-- Заголовок -->
       <div class="w-full flex flex-col justify-center items-center mb-4">
@@ -28,13 +29,23 @@
                 type="tel"
                 required
                 mask="+48 999 999 999"
+                placeholder="+48 ___ ___ ___"
+                :minlength="8"
+                :maxlength="30"
                 :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
-            <small class="text-red-500 mt-1 text-[12px]">
-              {{ regError.phone }}
-            </small>
+            <div class="flex flex-col">
+              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
+                  >{{ t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
+                >{{ t("PersonalMainRegistration.numberInfo") }}</small
+              >
+              <small class="text-red-500 mt-1 text-[12px]">
+                {{ regError.phone }}
+              </small>
+            </div>
           </div>
 
           <!-- Email (required) -->
@@ -57,24 +68,44 @@
             </small>
           </div>
 
-          <!-- ФИО (required) -->
+          <!-- Имя (required) -->
           <div>
-            <label for="full_name" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.fullName") }} <span class="text-red-500">*</span>
+            <label for="first_name" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.firstName") }} <span class="text-red-500">*</span>
             </label>
-            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.full_name }">
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.first_name }">
               <InputText
                 size="small"
-                v-model="regForm.full_name"
+                v-model="regForm.first_name"
                 type="text"
-                id="full_name"
-                :placeholder="t('PersonalMainRegistration.fullNamePlaceholder')"
+                id="first_name"
+                :placeholder="t('PersonalMainRegistration.firstNamePlaceholder')"
                 required
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
-              {{ regError.full_name }}
+              {{ regError.first_name }}
+            </small>
+          </div>
+          <!-- Фамилия (required) -->
+          <div>
+            <label for="last_name" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.lastName") }} <span class="text-red-500">*</span>
+            </label>
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.last_name }">
+              <InputText
+                size="small"
+                v-model="regForm.last_name"
+                type="text"
+                id="last_name"
+                :placeholder="t('PersonalMainRegistration.lastNamePlaceholder')"
+                required
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              />
+            </div>
+            <small class="text-red-500 mt-1 text-[12px]">
+              {{ regError.last_name }}
             </small>
           </div>
           <div>
@@ -92,11 +123,19 @@
                 size="small"
                 dateFormat="dd.mm.yy"
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+                :maxDate="maxBirthDate"
               />
             </div>
-            <small class="text-red-500 mt-1 text-[12px]">
-              {{ regError.birth_date }}
-            </small>
+            <div class="flex flex-col">
+              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
+                  >{{ t("PersonalMainRegistration.birthImportant") }} &nbsp;</span
+                >{{ t("PersonalMainRegistration.birthInfo") }}</small
+              >
+              <small class="text-red-500 mt-1 text-[12px]">
+                {{ regError.birth_date }}
+              </small>
+            </div>
           </div>
 
           <!-- Пол -->
@@ -143,12 +182,14 @@
                 <span v-else>{{ t("PersonalMainRegistration.hide") }}</span>
               </button>
             </div>
-            <small class="text-gray-500 block mt-1 text-[12px]">
-              {{ t("PersonalMainRegistration.passwordHint") }}
-            </small>
-            <small class="text-red-500 mt-1 block text-[12px]">
-              {{ regError.password }}
-            </small>
+            <div class="flex flex-col">
+              <small class="text-gray-500 dark:text-gray-300 block mt-1 text-[12px]">
+                {{ t("PersonalMainRegistration.passwordHint") }}
+              </small>
+              <small class="text-red-500 mt-1 block text-[12px]">
+                {{ regError.password }}
+              </small>
+            </div>
           </div>
 
           <!-- Подтверждение пароля (required) -->
@@ -177,6 +218,39 @@
             </small>
           </div>
 
+          <!-- Checkbox (referralCode) - required -->
+          <div>
+            <div class="flex items-center" @click="onReferralCheckboxClick">
+              <Checkbox
+                v-model="hasReferralCode"
+                :binary="true"
+                inputId="referralCode"
+                class="mr-2"
+                :disabled="regForm?.referral_code?.length > 0"
+              />
+              <label for="referralCode" class="text-[14px] text-black dark:text-white">
+                {{ t("PersonalMainRegistration.IHaveReferralCode") }}
+              </label>
+            </div>
+          </div>
+          <div v-if="hasReferralCode">
+            <label for="referral_code" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.ReferralCode") }}
+            </label>
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.referral_code }">
+              <InputText
+                size="small"
+                v-model="regForm.referral_code"
+                type="text"
+                :disabled="referralCode"
+                id="referral_code"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              />
+            </div>
+            <small class="text-red-500 mt-1 text-[12px]">
+              {{ regError.referral_code }}
+            </small>
+          </div>
           <!-- Checkbox (Согласие с условиями) - required -->
           <div>
             <div class="flex items-center">
@@ -217,15 +291,6 @@
         <h2 class="text-center text-[20px] text-black dark:text-white font-semibold mb-4">
           {{ t("PersonalMainRegistration.confirmTitle") }}
         </h2>
-
-        <div>
-          <h3 class="text-[18px] text-center">{{ t("PersonalMainRegistration.debugCode") }}</h3>
-          <div class="flex flex-row items-center gap-1">
-            <InputText v-model="testCode" readonly id="code" class="w-full" />
-            <Button icon="pi pi-copy" @click="onCopy"></Button>
-          </div>
-        </div>
-
         <form @submit.prevent="sendCode" class="flex flex-col gap-4">
           <div>
             <label for="code" class="block mb-1 text-[14px] text-black dark:text-white">
@@ -260,22 +325,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute, navigateTo, reloadNuxtApp } from "#imports";
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 const is_loading = ref(false);
 const loading_text_displayed = ref(false);
+const hasReferralCode = ref(false);
 const isCode = ref(false);
 // Управление видом пароля
 const passwordType = ref("password");
 const passwordTypeConfirm = ref("password");
 const { currentLanguage } = useLanguageState();
 
-
 import { useErrorParser } from "~/composables/useErrorParser.js";
 const { parseAxiosError } = useErrorParser();
-
+const toast = useToast();
 // язык пользователя из состояния
 const fallbackLang = "en";
 
@@ -298,23 +363,27 @@ function pickError(err) {
 const regForm = ref({
   phone: "",
   email: "",
-  full_name: "",
-  birth_date: null, // 👈 новое поле
-  gender: "", // 👈 новое поле
+  first_name: "",
+  last_name: "",
+  birth_date: null,
+  gender: "",
   password: "",
   password_confirm: "",
+  referral_code: "",
   accept_terms: false,
 });
 
 const regError = ref({
   phone: "",
   email: "",
-  full_name: "",
-  birth_date: "", // 👈 новое поле
-  gender: "", // 👈 новое поле
+  first_name: "",
+  last_name: "",
+  birth_date: "",
+  gender: "",
   password: "",
   password_confirm: "",
   accept_terms: "",
+  referral_code: "",
   code: "",
 });
 /*--- варианты для Dropdown (Enum → value) ---*/
@@ -322,6 +391,11 @@ const genderOptions = [
   { label: t("PersonalMainRegistration.genderMale"), value: "male" },
   { label: t("PersonalMainRegistration.genderFemale"), value: "female" },
 ];
+
+const maxBirthDate = computed(() => {
+  const today = new Date();
+  return new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+});
 
 function onCopy() {
   navigator.clipboard.writeText(testCode.value);
@@ -342,9 +416,10 @@ function goNoCode() {
   regForm.value = {
     phone: "",
     email: "",
-    full_name: "",
-    birth_date: null, // 👈
-    gender: "", // 👈
+    first_name: "",
+    last_name: "",
+    birth_date: null,
+    gender: "",
     password: "",
     password_confirm: "",
     accept_terms: false,
@@ -355,14 +430,21 @@ function goNoCode() {
 const testCode = ref("");
 const { currentPageName } = usePageState();
 const route = useRoute();
-const is_payment = route.query.is_payment === "true";
+const referralCode = route.query.referralCode || null;
 
 function goLogin() {
-  console.log("currentPageName.value", currentPageName.value);
-  if (is_payment) {
-    navigateTo(`/${currentPageName.value}/login?is_payment=true`);
-  } else {
-    navigateTo(`/${currentPageName.value}/login/`);
+  navigateTo(`/${currentPageName.value}/login/`);
+}
+
+function onReferralCheckboxClick(event) {
+  if (regForm.value?.referral_code?.length > 0) {
+    event.preventDefault();
+    toast.add({
+      severity: "info",
+      summary: t("PersonalMainRegistration.Information"),
+      detail: t("PersonalMainRegistration.ReferralCodeEntered"),
+      life: 3000,
+    });
   }
 }
 
@@ -373,15 +455,16 @@ function sendReg() {
   }
 
   regError.value = {
-    email: "",
     phone: "",
+    email: "",
     first_name: "",
     last_name: "",
-    birth_date: "",
-    city: "",
-    gender: "",
-    code: "",
-    terms: "",
+    birth_date: null, // 👈
+    gender: "", // 👈
+    password: "",
+    password_confirm: "",
+    referral_code: "",
+    accept_terms: "",
   };
   const { currentPageName } = usePageState();
   is_loading.value = true;
@@ -397,7 +480,7 @@ function sendReg() {
       console.log("responceData", responceData);
       testCode.value = responceData?.debug_code;
     })
-   .catch((err) => {
+    .catch((err) => {
       console.error("sendReg error", err);
       parseAxiosError(err, regError.value); // reactive error object
     });
@@ -424,7 +507,8 @@ function resetForm() {
   regForm.value = {
     phone: "",
     email: "",
-    full_name: "",
+    first_name: "",
+    last_name: "",
     password: "",
     password_confirm: "",
     accept_terms: false,
@@ -433,10 +517,23 @@ function resetForm() {
   Object.keys(regError.value).forEach((field) => {
     regError.value[field] = "";
   });
-  isCodeStep.value = false;
+  isCode.value = false;
 }
 
+watch(hasReferralCode, (newValue) => {
+  if (newValue) {
+    regForm.value.referral_code = referralCode;
+  } else {
+    regForm.value.referral_code = "";
+  }
+});
 onMounted(() => {
+  if (referralCode) {
+    regForm.value.referral_code = referralCode;
+    hasReferralCode.value = true;
+  } else {
+    hasReferralCode.value = false;
+  }
   if (currentPageName.value != "personal_account") {
     reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
   }

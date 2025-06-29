@@ -114,13 +114,15 @@
     "phonePlaceholder": "Enter your phone number",
     "email": "Email",
     "emailPlaceholder": "{'mail@example.com'}",
-    "fullName": "Full name",
-    "fullNamePlaceholder": "John Doe",
+    "firstName": "First Name:",
+    "firstNamePlaceholder": "Enter your first name",
+    "lastName": "Last Name:",
+    "lastNamePlaceholder": "Enter your last name",
     "password": "Password",
-    "passwordPlaceholder": "Minimum 10 characters",
+    "passwordPlaceholder": "Minimum 8 characters",
     "show": "Show",
     "hide": "Hide",
-    "passwordHint": "Minimum of 10 characters, including uppercase, lowercase, numbers and symbols",
+    "passwordHint": "Minimum of 8 characters, including uppercase, lowercase, numbers and symbols",
     "passwordConfirm": "Confirm password",
     "passwordConfirmPlaceholder": "Repeat the password",
     "termsPrefix": "I agree to the",
@@ -141,7 +143,15 @@
     "birthDate": "Date of Birth",
     "birthDatePlaceholder": "Select your birth date",
     "gender": "Gender",
-    "genderPlaceholder": "Select your gender"
+    "genderPlaceholder": "Select your gender",
+    "numberImportant": "Important:",
+    "numberInfo": "For two-factor authentication and operational communication if necessary.",
+    "birthImportant": "Important:",
+    "birthInfo": "Registration is available only for adult patients.",
+    "IHaveReferralCode": "I have a referral code",
+    "ReferralCode": "Referral code",
+    "Information": "Information",
+    "ReferralCodeEntered": "You have entered a referral code."
   },
   "DynamicForm": {
     "upload": "Upload",
@@ -202,13 +212,15 @@
     "phone": "Phone",
     "address": "Address",
     "pesel": "PESEL / Identifier",
+    "passport": "Passport",
 
     "emergency": "Emergency contact",
     "docId": "Document ID",
     "lastUpdate": "Last update",
 
     "invalidDate": "Invalid date",
-    "dash": "—"
+    "dash": "—",
+    "fillPersonalInfoNotice": "Fill in the 'Contact information' page — this will help you save time on paperwork during your first visit to the clinic. Editing some fields will become available after your account is verified."
   },
   "FamilyTable": {
     "addMember": "Add family member",
@@ -218,7 +230,8 @@
     "statusUnknown": "Status not set",
     "bonusSuffix": "bonus points",
     "noBonus": "No bonuses",
-    "editAria": "Edit"
+    "editAria": "Edit",
+    "infoText": "Add family members, and you'll soon be able to earn bonus points!"
   },
   "InfoHeader": {
     "patientIdPrefix": "Patient ID:",
@@ -269,11 +282,14 @@
     "balanceSubtitle": "User bonus information",
     "currentBalance": "Current balance:",
     "referralCode": "Referral code:",
+    "referralLink": "Referral link:",
     "lastUpdate": "Last update",
 
     "transactionsCard": "Transaction history",
     "transactionsSubtitle": "Latest bonus operations",
 
+    "toastTitleLink": "Link copied",
+    "toastBodyLink": "Referral link copied to clipboard!",
     "toastTitle": "Code copied",
     "toastBody": "Referral code copied to clipboard!",
     "tooltipCopy": "Copy referral code"

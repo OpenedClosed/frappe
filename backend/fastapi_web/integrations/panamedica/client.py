@@ -4,6 +4,8 @@ import json
 import logging
 from datetime import date
 from functools import lru_cache
+import random
+import string
 from uuid import uuid4
 
 from bson import ObjectId
@@ -87,6 +89,29 @@ class CRMClient:
                     {"$unset": {"patient_id": None}}
                 )
 
+    async def is_patient_id_unique(self, candidate_id: str) -> bool:
+        """
+        Проверяет, существует ли такой patient_id в локальной базе main_info.
+        """
+        existing = await mongo_db["patients_main_info"].find_one({"patient_id": candidate_id})
+        return existing is None
+    
+    async def generate_unique_patient_id(self) -> str:
+        """
+        Генерирует ID формата ABC123 (ровно 6 символов: 3 буквы + 3 цифры),
+        перемешивая их в случайном порядке. Гарантирует уникальность.
+        """
+        for _ in range(100):
+            letters = random.choices(string.ascii_uppercase, k=3)
+            digits  = random.choices(string.digits,           k=3)
+            mixed   = letters + digits
+            random.shuffle(mixed)
+            candidate_id = "".join(mixed)
+
+            if await self.is_patient_id_unique(candidate_id):
+                return candidate_id
+
+        raise RuntimeError("Не удалось сгенерировать уникальный patient_id")
 
 
     # ==============================================================
@@ -228,6 +253,7 @@ class CRMClient:
         phone: str,
         email: str,
         gender: str,
+        referral_id: str,
         pesel: str | None = None,
     ) -> dict:
         payload = {
@@ -239,6 +265,7 @@ class CRMClient:
             "email": email,
             "gender": gender,
             "pesel": pesel,
+            "referralId": referral_id,
         }
         data = await self.call("POST", "/patients", json=payload)
         # CRM может не вернуть externalId — добавляем сами
@@ -252,6 +279,8 @@ class CRMClient:
         return data
 
     async def patch_patient(self, patient_id: str, patch: dict) -> dict:
+        print('===== PATCH =====')
+        print(patch)
         return await self.call("PATCH", f"/patients/{patient_id}", json=patch)
 
     async def find_or_create_patient(
@@ -266,6 +295,7 @@ class CRMClient:
         pesel = contact_data.get("pesel")
         gender = local_data.get("gender")
         bdate_raw = local_data.get("birth_date")
+        referral_id = local_data.get("referral_id")
         bdate = bdate_raw.strftime("%Y-%m-%d") if bdate_raw else None
         email = contact_data.get("email", "")
 
@@ -287,7 +317,7 @@ class CRMClient:
             return found, False
 
         # создаём
-        external_id = str(uuid4())
+        external_id = await self.generate_unique_patient_id()
         created = await self.create_patient(
             external_id=external_id,
             first_name=local_data["first_name"],
@@ -296,6 +326,7 @@ class CRMClient:
             phone=crm_phone,
             email=email,
             gender=gender,
+            referral_id=referral_id,
             pesel=pesel,
         )
         # получаем полную карточку + гарантируем внешний ID

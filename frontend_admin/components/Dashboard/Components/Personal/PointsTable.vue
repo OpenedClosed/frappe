@@ -14,11 +14,18 @@
         <p class="text-4xl font-bold text-blue-600">{{ balance }}</p>
       </div>
 
-      <div class="flex flex-col items-start w-full gap-4">
+      <div class="flex flex-col items-start w-full gap-4 mb-4">
         <span class="block text-lg font-bold">{{ t("PointsTable.referralCode") }}</span>
         <div class="flex w-full">
           <InputText v-model="referralCode" readonly class="text-lg font-medium flex-1" />
           <Button icon="pi pi-copy" class="ml-2" @click="copyReferralCode" :tooltip="t('PointsTable.tooltipCopy')" />
+        </div>
+      </div>
+      <div class="flex flex-col items-start w-full gap-4">
+        <span class="block text-lg font-bold">{{ t("PointsTable.referralLink") }}</span>
+        <div class="flex w-full">
+          <InputText v-model="referralLink" readonly class="text-lg font-medium flex-1" />
+          <Button icon="pi pi-copy" class="ml-2" @click="copyReferralLink" :tooltip="t('PointsTable.tooltipCopy')" />
         </div>
       </div>
 
@@ -43,7 +50,7 @@
             <!-- Левая часть: тип и описание -->
             <div>
               <p class="text-sm font-bold" :style="{ color: txn.transaction_type.settings.color }">
-                {{ txn.transaction_type[currentLanguage] || txn.transaction_type.en || '' }}
+                {{ txn.transaction_type[currentLanguage] || txn.transaction_type.en || "" }}
               </p>
               <p class="text-sm">{{ txn.title }}</p>
             </div>
@@ -110,6 +117,22 @@ const copyReferralCode = () => {
     life: 3000,
   });
 };
+
+const referralLink = computed(() => {
+  const baseUrl = window.location.origin + "/personal_account/registration";
+  return `${baseUrl}?referralCode=${encodeURIComponent(referralCode.value)}`;
+});
+
+const copyReferralLink = () => {
+  navigator.clipboard.writeText(referralLink.value);
+  toast.add({
+    severity: "success",
+    summary: t("PointsTable.toastTitleLink"),
+    detail: t("PointsTable.toastBodyLink"),
+    life: 3000,
+  });
+};
+
 </script>
 
 <style scoped>

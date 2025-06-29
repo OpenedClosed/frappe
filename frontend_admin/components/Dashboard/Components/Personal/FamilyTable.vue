@@ -6,6 +6,14 @@
       </h2>
       <Button @click="onClickCreate" :label="t('FamilyTable.addMember')" size="small" icon="pi pi-plus" class=""></Button>
     </div>
+    <div v-if="showInfo && tableData.length === 0" class="flex items-start relative mb-2">
+      <p
+        class="flex text-[16px] font-semibold text-blue-700 bg-blue-50 border-l-4 border-blue-400 px-4 py-2 rounded shadow-sm justify-between items-center gap-2"
+      >
+        {{ t("FamilyTable.infoText") }}
+        <Button icon="pi pi-times" class="p-2 ml-2 mt-1" @click="closeInfo" size="small" aria-label="Close" />
+      </p>
+    </div>
     <div
       v-if="tableData && tableData.length > 0"
       v-for="(member, index) in tableData"
@@ -47,14 +55,7 @@
         :aria-label="t('FamilyTable.editAria')"
       />
     </div>
-    <Paginator
-      v-if="paginator"
-      :first="first"
-      :rows="rows"
-      :totalRecords="totalRecords"
-      @page="onPage"
-      class=""
-    />
+    <Paginator v-if="paginator" :first="first" :rows="rows" :totalRecords="totalRecords" @page="onPage" class="" />
   </div>
 </template>
 
@@ -89,11 +90,11 @@ const props = defineProps({
     default: false,
   },
 
-   /* pagination-specific props (all forwarded from the parent) */
+  /* pagination-specific props (all forwarded from the parent) */
   paginator: { type: Boolean, default: false },
-  first: { type: Number, default: 0 },           // offset
-  rows: { type: Number, default: 10 },           // rows per page
-  totalRecords: { type: Number, default: 0 },    // total items
+  first: { type: Number, default: 0 }, // offset
+  rows: { type: Number, default: 10 }, // rows per page
+  totalRecords: { type: Number, default: 0 }, // total items
 });
 console.log("props.tableData", props.tableData);
 watch(props, (newValue) => {
@@ -103,9 +104,20 @@ const route = useRoute();
 const currentGroup = computed(() => route.params.group);
 const currentEntity = computed(() => route.params.entity);
 const currentId = computed(() => route.params.id);
+const INFO_KEY = "familyTableInfoClosed";
+const showInfo = ref(false);
+
+onMounted(() => {
+  showInfo.value = localStorage.getItem(INFO_KEY) !== "1";
+});
+
+function closeInfo() {
+  showInfo.value = false;
+  localStorage.setItem(INFO_KEY, "1");
+}
 
 // Emit if you still need "exportToExcel" or other events
-const emit = defineEmits(['page',"exportToExcel"]);
+const emit = defineEmits(["page", "exportToExcel"]);
 function onExportToExcel() {
   emit("exportToExcel");
 }
@@ -124,7 +136,7 @@ function getRequestTypeClass(reqTypeObj) {
 }
 
 function onPage(evt) {
-  emit('page', evt); // evt = { first, rows, page }
+  emit("page", evt); // evt = { first, rows, page }
 }
 
 // Example of using a computed label for "Create" / "Add"

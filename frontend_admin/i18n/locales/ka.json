@@ -116,13 +116,15 @@
     "phonePlaceholder": "შეიყვანეთ ტელეფონის ნომერი",
     "email": "ელ-ფოსტა",
     "emailPlaceholder": "{'mail@example.com'}",
-    "fullName": "სრული სახელი",
-    "fullNamePlaceholder": "ჯონ დოუ",
+    "firstName": "სახელი:",
+    "firstNamePlaceholder": "შეიყვანეთ სახელი",
+    "lastName": "გვარი:",
+    "lastNamePlaceholder": "შეიყვანეთ გვარი",
     "password": "პაროლი",
-    "passwordPlaceholder": "მინიმუმ 10 სიმბოლო",
+    "passwordPlaceholder": "მინიმუმ 8 სიმბოლო",
     "show": "ჩვენება",
     "hide": "დამალვა",
-    "passwordHint": "მინიმუმ 10 სიმბოლო: დიდი/პატარა ასოები, ციფრი და სიმბოლოები",
+    "passwordHint": "მინიმუმ 8 სიმბოლო: დიდი/პატარა ასოები, ციფრი და სიმბოლოები",
     "passwordConfirm": "პაროლის დადასტურება",
     "passwordConfirmPlaceholder": "გაიმეორეთ პაროლი",
     "termsPrefix": "ვეთანხმები",
@@ -143,7 +145,15 @@
     "birthDate": "დაბადების თარიღი",
     "birthDatePlaceholder": "აირჩიეთ თქვენი დაბადების თარიღი",
     "gender": "სქესი",
-    "genderPlaceholder": "აირჩიეთ სქესი"
+    "genderPlaceholder": "აირჩიეთ სქესი",
+    "numberImportant": "მნიშვნელოვანია:",
+    "numberInfo": "ორეტაპიანი ავთენტიფიკაციისა და საჭიროების შემთხვევაში ოპერატიული კავშირისათვის.",
+    "birthImportant": "მნიშვნელოვანია:",
+    "birthInfo": "რეგისტრაცია ხელმისაწვდომია მხოლოდ სრულწლოვანი პაციენტებისთვის.",
+    "IHaveReferralCode": "მაქვს რეფერალური კოდი",
+    "ReferralCode": "რეფერალური კოდი",
+    "Information": "ინფორმაცია",
+    "ReferralCodeEntered": "თქვენ შეიყვანეთ რეფერალური კოდი."
   },
 
   "DynamicForm": {
@@ -209,13 +219,15 @@
     "phone": "ტელეფონი",
     "address": "მისამართი",
     "pesel": "PESEL / იდენტიფიკატორი",
+    "passport": "პასპორტი",
 
     "emergency": "საგანგებო контакт",
     "docId": "დოკ. ID",
     "lastUpdate": "ბოლო განახლება",
 
     "invalidDate": "არასწორი თარიღი",
-    "dash": "—"
+    "dash": "—",
+    "fillPersonalInfoNotice": "შეავსეთ გვერდი 'საკონტაქტო ინფორმაცია' — ეს დაგეხმარებათ დაზოგოთ დრო დოკუმენტაციის შევსებისას კლინიკაში პირველი ვიზიტის დროს. ზოგიერთი ველის რედაქტირება ხელმისაწვდომი გახდება თქვენი ანგარიშის გადამოწმების შემდეგ."
   },
 
   "FamilyTable": {
@@ -226,7 +238,8 @@
     "statusUnknown": "სტატუსი არაა მითითებული",
     "bonusSuffix": "ბონუს ქულა",
     "noBonus": "ბონუსები არ არის",
-    "editAria": "რედაქტირება"
+    "editAria": "რედაქტირება",
+    "infoText": "დაამატეთ ოჯახის წევრები და მალე შეძლებთ ბონუს ქულების მიღებას!"
   },
 
   "InfoHeader": {
@@ -282,11 +295,14 @@
     "balanceSubtitle": "მომხმარებლის ბონუს ინფორმაცია",
     "currentBalance": "მიმდინარე ბალანსი:",
     "referralCode": "რეფერალის კოდი:",
+    "referralLink": "რეფერალური ბმული:",
     "lastUpdate": "ბოლო განახლება",
 
     "transactionsCard": "ტრანზაქციების ისტორია",
     "transactionsSubtitle": "ბოლო ბონუს ოპერაციები",
 
+    "toastTitleLink": "ბმული დაკოპირებულია",
+    "toastBodyLink": "რეფერალური ბმული დაკოპირებულია ბუფერში!",
     "toastTitle": "კოდი დაკოპირდა",
     "toastBody": "რეფერალის კოდი დაკოპირდა!",
     "tooltipCopy": "კოდის კოპირება"

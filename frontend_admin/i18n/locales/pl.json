@@ -115,13 +115,15 @@
     "phonePlaceholder": "Wprowadź numer telefonu",
     "email": "E-mail",
     "emailPlaceholder": "{'mail@example.com'}",
-    "fullName": "Imię i nazwisko",
-    "fullNamePlaceholder": "John Doe",
+    "firstName": "Imię:",
+    "firstNamePlaceholder": "Wprowadź imię",
+    "lastName": "Nazwisko:",
+    "lastNamePlaceholder": "Wprowadź nazwisko",
     "password": "Hasło",
-    "passwordPlaceholder": "Minimum 10 znaków",
+    "passwordPlaceholder": "Minimum 8 znaków",
     "show": "Pokaż",
     "hide": "Ukryj",
-    "passwordHint": "Minimum 10 znaków, w tym wielkie i małe litery, cyfry i symbole",
+    "passwordHint": "Minimum 8 znaków, w tym wielkie i małe litery, cyfry i symbole",
     "passwordConfirm": "Potwierdź hasło",
     "passwordConfirmPlaceholder": "Powtórz hasło",
     "termsPrefix": "Akceptuję",
@@ -142,7 +144,15 @@
     "birthDate": "Data urodzenia",
     "birthDatePlaceholder": "Wybierz datę urodzenia",
     "gender": "Płeć",
-    "genderPlaceholder": "Wybierz płeć"
+    "genderPlaceholder": "Wybierz płeć",
+    "numberImportant": "Ważne:",
+    "numberInfo": "Do uwierzytelniania dwuskładnikowego i komunikacji operacyjnej w razie potrzeby.",
+    "birthImportant": "Ważne:",
+    "birthInfo": "Rejestracja jest dostępna tylko dla pełnoletnich pacjentów.",
+    "IHaveReferralCode": "Mam kod polecający",
+    "ReferralCode": "Kod polecający",
+    "Information": "Informacja",
+    "ReferralCodeEntered": "Wpisałeś kod polecający."
   },
 
   "DynamicForm": {
@@ -208,13 +218,15 @@
     "phone": "Telefon",
     "address": "Adres",
     "pesel": "PESEL / Identyfikator",
+    "passport": "Paszport",
 
     "emergency": "Kontakt awaryjny",
     "docId": "ID dokumentu",
     "lastUpdate": "Ostatnia aktualizacja",
 
     "invalidDate": "Nieprawidłowa data",
-    "dash": "—"
+    "dash": "—",
+    "fillPersonalInfoNotice": "Wypełnij stronę 'Dane kontaktowe' — to pozwoli zaoszczędzić czas na formalnościach podczas pierwszej wizyty w klinice. Edycja niektórych pól będzie możliwa po weryfikacji konta."
   },
 
   "FamilyTable": {
@@ -225,7 +237,8 @@
     "statusUnknown": "Status nieustawiony",
     "bonusSuffix": "punktów bonusowych",
     "noBonus": "Brak bonusów",
-    "editAria": "Edytuj"
+    "editAria": "Edytuj",
+    "infoText": "Dodaj członków rodziny, a wkrótce będziesz mógł zdobywać punkty bonusowe!"
   },
 
   "InfoHeader": {
@@ -281,11 +294,14 @@
     "balanceSubtitle": "Informacje o bonusach",
     "currentBalance": "Aktualny stan:",
     "referralCode": "Kod polecający:",
+    "referralLink": "Link polecający:",
     "lastUpdate": "Ostatnia aktualizacja",
 
     "transactionsCard": "Historia transakcji",
     "transactionsSubtitle": "Ostatnie operacje bonusowe",
 
+    "toastTitleLink": "Link skopiowany",
+    "toastBodyLink": "Link polecający został skopiowany do schowka!",
     "toastTitle": "Kod skopiowany",
     "toastBody": "Kod polecający skopiowany do schowka!",
     "tooltipCopy": "Kopiuj kod"

@@ -119,13 +119,15 @@
     "phonePlaceholder": "Telefonnummer eingeben",
     "email": "E-Mail",
     "emailPlaceholder": "{'mail@example.com'}",
-    "fullName": "Vollständiger Name",
-    "fullNamePlaceholder": "Max Mustermann",
+    "firstName": "Vorname:",
+    "firstNamePlaceholder": "Vornamen eingeben",
+    "lastName": "Nachname:",
+    "lastNamePlaceholder": "Nachnamen eingeben",
     "password": "Passwort",
-    "passwordPlaceholder": "Mindestens 10 Zeichen",
+    "passwordPlaceholder": "Mindestens 8 Zeichen",
     "show": "Anzeigen",
     "hide": "Verbergen",
-    "passwordHint": "Mindestens 10 Zeichen, einschließlich Groß-/Kleinbuchstaben, Zahlen und Symbole",
+    "passwordHint": "Mindestens 8 Zeichen, einschließlich Groß-/Kleinbuchstaben, Zahlen und Symbole",
     "passwordConfirm": "Passwort bestätigen",
     "passwordConfirmPlaceholder": "Passwort wiederholen",
     "termsPrefix": "Ich stimme den",
@@ -146,7 +148,15 @@
     "birthDate": "Geburtsdatum",
     "birthDatePlaceholder": "Wählen Sie Ihr Geburtsdatum",
     "gender": "Geschlecht",
-    "genderPlaceholder": "Wählen Sie Ihr Geschlecht"
+    "genderPlaceholder": "Wählen Sie Ihr Geschlecht",
+    "numberImportant": "Wichtig:",
+    "numberInfo": "Für die Zwei-Faktor-Authentifizierung und bei Bedarf für die operative Kommunikation.",
+    "birthImportant": "Wichtig:",
+    "birthInfo": "Die Registrierung ist nur für volljährige Patienten möglich.",
+    "IHaveReferralCode": "I have a referral code",
+    "ReferralCode": "Referral code",
+    "Information": "Information",
+    "ReferralCodeEntered": "You have entered a referral code."
   },
 
   "DynamicForm": {
@@ -212,13 +222,15 @@
     "phone": "Telefon",
     "address": "Adresse",
     "pesel": "PESEL / Kennung",
+    "passport": "Reisepass",
 
     "emergency": "Notfallkontakt",
     "docId": "Dokument-ID",
     "lastUpdate": "Letzte Aktualisierung",
 
     "invalidDate": "Ungültiges Datum",
-    "dash": "—"
+    "dash": "—",
+    "fillPersonalInfoNotice": "Füllen Sie die Seite 'Kontaktinformationen' aus – das spart Ihnen Zeit bei der Bürokratie während Ihres ersten Besuchs in der Klinik. Das Bearbeiten einiger Felder wird verfügbar, nachdem Ihr Konto verifiziert wurde."
   },
 
   "FamilyTable": {
@@ -229,7 +241,8 @@
     "statusUnknown": "Status nicht festgelegt",
     "bonusSuffix": "Bonuspunkte",
     "noBonus": "Keine Boni",
-    "editAria": "Bearbeiten"
+    "editAria": "Bearbeiten",
+    "infoText": "Fügen Sie Familienmitglieder hinzu, und Sie werden bald Bonuspunkte sammeln können!"
   },
 
   "InfoHeader": {
@@ -285,11 +298,14 @@
     "balanceSubtitle": "Informationen zum Benutzerbonus",
     "currentBalance": "Aktuelles Guthaben:",
     "referralCode": "Empfehlungscode:",
+    "referralLink": "Empfehlungslink:",
     "lastUpdate": "Letzte Aktualisierung",
 
     "transactionsCard": "Transaktionshistorie",
     "transactionsSubtitle": "Neueste Bonusvorgänge",
 
+    "toastTitleLink": "Link kopiert",
+    "toastBodyLink": "Empfehlungslink in die Zwischenablage kopiert!",
     "toastTitle": "Code kopiert",
     "toastBody": "Empfehlungscode in die Zwischenablage kopiert!",
     "tooltipCopy": "Empfehlungscode kopieren"

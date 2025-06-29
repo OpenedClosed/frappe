@@ -23,6 +23,9 @@
               type="tel"
               required
               mask="+48 999 999 999"
+              placeholder="+48 ___ ___ ___"
+              :minlength="8"
+              :maxlength="30"
               :placeholder="t('PersonalMainLogin.phonePlaceholder')"
               class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
             />
@@ -76,16 +79,7 @@
             {{ t("PersonalMainLogin.title2FA") }}
           </p>
         </div>
-        <!-- Для отладки: вывести код, если бэкенд вернул debug_code -->
-        <div class="w-full flex flex-col" v-if="debugCode">
-          <label class="text-[14px] text-black dark:text-white">
-            {{ t("PersonalMainLogin.testCode") }}
-          </label>
-          <div class="flex items-center gap-2">
-            <InputText :value="debugCode" readonly class="w-full" />
-            <Button icon="pi pi-copy" @click="copyDebugCode" />
-          </div>
-        </div>
+      
 
         <!-- Код 2FA -->
         <div class="w-full flex flex-col justify-start">

@@ -1,5 +1,6 @@
 """Формирование маршрутов приложения Персональный аккаунт."""
 import random
+import re
 import string
 from datetime import datetime, timedelta
 from typing import Dict, Optional
@@ -27,7 +28,7 @@ from .client_interface.db.mongo.schemas import (ConfirmationSchema, ContactInfoS
                                                 TwoFASchema)
 
 
-REG_CODES: Dict[str, str] = {}
+REG_CODES: Dict[str, dict] = {}
 TWO_FA_CODES: Dict[str, str] = {}
 
 
@@ -41,7 +42,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
     5.  CRUD-маршруты всех админ-моделей из `registry`
 
     *Все сообщения и ошибки возвращаются как словари вида
-    `{"ru": "...", "en": "...", "pl": "..."}`.*
+    `{"ru": "...", "en": "...", "pl": "...", "uk": "...", "de": "..."}`.*
     """
     router = APIRouter()
 
@@ -59,23 +60,33 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             errors["accept_terms"] = {
                 "ru": "Необходимо принять условия.",
                 "en": "Terms must be accepted.",
-                "pl": "Warunki muszą zostać zaakceptowane."
+                "pl": "Warunki muszą zostać zaakceptowane.",
+                "uk": "Потрібно прийняти умови.",
+                "de": "Die Bedingungen müssen akzeptiert werden."
             }
 
         if not data.passwords_match():
             msg = {
                 "ru": "Пароли не совпадают.",
                 "en": "Passwords do not match.",
-                "pl": "Hasła nie pasują do siebie."
+                "pl": "Hasła nie pasują do siebie.",
+                "uk": "Паролі не співпадають.",
+                "de": "Passwörter stimmen nicht überein."
             }
             errors["password"] = errors["password_confirm"] = msg
+
+        pwd_error = data.password_strength_errors()
+        if pwd_error:
+            errors["password"] = pwd_error
 
         phone_key = normalize_numbers(data.phone)
         if not phone_key:
             errors["phone"] = {
                 "ru": "Телефон обязателен.",
                 "en": "Phone is required.",
-                "pl": "Telefon jest wymagany."
+                "pl": "Telefon jest wymagany.",
+                "uk": "Телефон обов'язковий.",
+                "de": "Telefonnummer ist erforderlich."
             }
         else:
             exists = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
@@ -83,7 +94,9 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 errors["phone"] = {
                     "ru": "Пользователь с таким телефоном уже существует.",
                     "en": "User with this phone already exists.",
-                    "pl": "Użytkownik z tym numerem już istnieje."
+                    "pl": "Użytkownik z tym numerem już istnieje.",
+                    "uk": "Користувач з таким телефоном вже існує.",
+                    "de": "Ein Benutzer mit dieser Telefonnummer existiert bereits."
                 }
 
         today = datetime.utcnow().date()
@@ -92,48 +105,92 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             errors["birth_date"] = {
                 "ru": "Дата рождения обязательна.",
                 "en": "Birth date is required.",
-                "pl": "Data urodzenia jest wymagana."
+                "pl": "Data urodzenia jest wymagana.",
+                "uk": "Дата народження обов'язкова.",
+                "de": "Geburtsdatum ist erforderlich."
             }
         else:
-            birth = data.birth_date.date()  # приведение к date
+            birth = data.birth_date.date()
             if birth > today:
                 errors["birth_date"] = {
                     "ru": "Дата рождения не может быть в будущем.",
                     "en": "Birth date cannot be in the future.",
-                    "pl": "Data urodzenia nie może być z przyszłości."
+                    "pl": "Data urodzenia nie może być z przyszłości.",
+                    "uk": "Дата народження не може бути в майбутньому.",
+                    "de": "Geburtsdatum kann nicht in der Zukunft liegen."
                 }
             elif birth > today - timedelta(days=365 * 18):
                 errors["birth_date"] = {
                     "ru": "Регистрация доступна только с 18 лет.",
                     "en": "Registration is only available from age 18.",
-                    "pl": "Rejestracja dostępna od 18 roku życia."
+                    "pl": "Rejestracja dostępna od 18 roku życia.",
+                    "uk": "Реєстрація доступна лише з 18 років.",
+                    "de": "Registrierung ist erst ab 18 Jahren möglich."
                 }
-
 
         if not data.gender:
             errors["gender"] = {
                 "ru": "Пол обязателен.",
                 "en": "Gender is required.",
-                "pl": "Płeć jest wymagana."
+                "pl": "Płeć jest wymagana.",
+                "uk": "Стать обов'язкова.",
+                "de": "Geschlecht ist erforderlich."
             }
+
+        # ----- ПРОВЕРКА REFERRAL CODE ------------------------------------
+        referral_id: Optional[str] = None
+        if data.referral_code:
+            m = re.fullmatch(r"([A-Za-z0-9]{2,10})_([A-Za-z0-9\-]{3,36})", data.referral_code)
+            if not m:
+                errors["referral_code"] = {
+                    "ru": "Некорректный формат реферального кода.",
+                    "en": "Invalid referral-code format.",
+                    "pl": "Nieprawidłowy format kodu polecającego.",
+                    "uk": "Некоректний формат реферального коду.",
+                    "de": "Ungültiges Format des Empfehlungscodes."
+                }
+            else:
+                patient_key = m.group(2)
+                try:
+                    ref_patient = await get_client().find_patient(patient_id=patient_key)
+                    if not ref_patient:
+                        errors["referral_code"] = {
+                            "ru": "Такой реферальный код не найден.",
+                            "en": "Referral code not found.",
+                            "pl": "Nie znaleziono takiego kodu polecającego.",
+                            "uk": "Такий реферальний код не знайдено.",
+                            "de": "Empfehlungscode nicht gefunden."
+                        }
+                    else:
+                        referral_id = ref_patient["externalId"]
+                except CRMError:
+                    errors["referral_code"] = {
+                        "ru": "Ошибка CRM при проверке кода.",
+                        "en": "CRM error while validating code.",
+                        "pl": "Błąd CRM podczas weryfikacji kodu.",
+                        "uk": "Помилка CRM під час перевірки коду.",
+                        "de": "CRM-Fehler bei der Codeüberprüfung."
+                    }
 
         if errors:
             return JSONResponse(status_code=400, content={"errors": errors})
 
         code = "".join(random.choices("0123456789", k=6))
-        REG_CODES[phone_key] = code
+        REG_CODES[phone_key] = {"code": code, "referral_id": referral_id}
 
-        # --- Пока ничего не шлём, оставляем заглушку ---
         await send_sms(phone_key, f"Код подтверждения: {code}")
 
         return {
             "message": {
                 "ru": "Код отправлен на телефон.",
                 "en": "Code sent to phone.",
-                "pl": "Kod został wysłany na telefon."
+                "pl": "Kod został wysłany na telefon.",
+                "uk": "Код надіслано на телефон.",
+                "de": "Code wurde an das Telefon gesendet."
             },
-            "debug_code": code  # Убрать в бою
+            # "debug_code": code
         }
+
     # ------------------------------------------------------------------
     # Шаг 2 Регистрации  ➔  CRM + Mongo + (опц.) JWT
     # ------------------------------------------------------------------
@@ -142,57 +199,53 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         data: ConfirmationSchema,
         request: Request,
         response: Response,
-        # Authorize: Optional[AuthJWT] = Depends(lambda: None),   # token опционален
         Authorize: AuthJWT = Depends()
     ):
         """
         • Валидирует 6-значный код  
         • Создаёт (или достраивает) локальные документы  
         • Создаёт/находит пациента в CRM  
-        • Выдаёт JWT, **если** пользователь не был залогинен
+        • Выдаёт JWT, если пользователь не был залогинен
         """
-        # data.gender = GenderEnum.MALE
-        # data.birth_date = datetime.now()
         phone_key = normalize_numbers(data.phone)
-        if REG_CODES.get(phone_key) != data.code:
+        stored = REG_CODES.get(phone_key) or {}
+        if stored.get("code") != data.code:
             raise HTTPException(400, detail={
                 "code": {
                     "ru": "Неверный код.",
                     "en": "Invalid code.",
-                    "pl": "Nieprawidłowy kod."
+                    "pl": "Nieprawidłowy kod.",
+                    "uk": "Невірний код.",
+                    "de": "Ungültiger Code."
                 }
             })
 
-        # ---------------- Принимаем данные из схемы ----------------
+        referral_id = stored.get("referral_id")
+
         main_schema = MainInfoSchema(
-            last_name=data.full_name.split()[0],
-            first_name=" ".join(data.full_name.split()[1:]) or "-",
+            last_name=data.last_name.strip(),
+            first_name=data.first_name.strip(),
             birth_date=data.birth_date,
             gender=data.gender,
             phone=phone_key,
+            referral_id=referral_id,
             metadata=dict(request.query_params),
         )
 
-        
         contact_schema = ContactInfoSchema(
             phone=phone_key,
             email=data.email or ""
         )
 
-        # ---------------- Определяем текущего пользователя ----------------
         current_user_id: Optional[str] = None
         current_user_doc = None
         try:
             current_user_id = Authorize.get_jwt_subject()
         except Exception:
             current_user_id = None
-        # заглушка
-        # current_user_id = "67e489affa4507fba7de630e"
         if current_user_id:
             current_user_doc = await mongo_db["users"].find_one({"_id": ObjectId(current_user_id)})
-        # raise HTTPException(502)
 
-        # ---------------- Работа с CRM ----------------
         crm = get_client()
         try:
             crm_data, created_now = await crm.find_or_create_patient(
@@ -204,21 +257,20 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "__all__": {
                     "ru": "Ошибка CRM при регистрации.",
                     "en": "CRM error during registration.",
-                    "pl": "Błąd CRM podczas rejestracji."
+                    "pl": "Błąd CRM podczas rejestracji.",
+                    "uk": "Помилка CRM під час реєстрації.",
+                    "de": "CRM-Fehler während der Registrierung."
                 }
             }) from e
 
-        # ---------------- Mongo: создаём/обновляем ----------------
         patient_id = crm_data["externalId"]
 
-        # (а) Пользователь существует ➔ обновляем / создаём patient-доки
         if current_user_doc:
             user_id = str(current_user_doc["_id"])
 
             main_doc = await mongo_db["patients_main_info"].find_one({"user_id": user_id})
             contact_doc = await mongo_db["patients_contact_info"].find_one({"user_id": user_id})
 
-            # обновляем или создаём MainInfo
             if main_doc:
                 await mongo_db["patients_main_info"].update_one(
                     {"_id": main_doc["_id"]},
@@ -242,7 +294,6 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     }
                 )
 
-            # обновляем / создаём ContactInfo
             if contact_doc:
                 await mongo_db["patients_contact_info"].update_one(
                     {"_id": contact_doc["_id"]},
@@ -264,13 +315,14 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "message": {
                     "ru": "Профиль успешно обновлён.",
                     "en": "Profile updated successfully.",
-                    "pl": "Profil został pomyślnie zaktualizowany."
+                    "pl": "Profil został pomyślnie zaktualizowany.",
+                    "uk": "Профіль успішно оновлено.",
+                    "de": "Profil erfolgreich aktualisiert."
                 }
             }
 
-        # (б) Нет JWT ➔ создаём нового пользователя
         user = User(
-            full_name=data.full_name,
+            full_name=f"{data.first_name.strip()} {data.last_name.strip()}",
             role=RoleEnum.CLIENT,
             password=data.password,
         )
@@ -294,8 +346,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             }
         )
 
-        # --- JWT ---
-        Authorize = AuthJWT()  # локальный экземпляр
+        Authorize = AuthJWT()
         access_token = Authorize.create_access_token(subject=str(user_id))
         refresh_token = Authorize.create_refresh_token(subject=str(user_id))
 
@@ -312,7 +363,9 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             "message": {
                 "ru": "Регистрация завершена.",
                 "en": "Registration completed.",
-                "pl": "Rejestracja zakończona."
+                "pl": "Rejestracja zakończona.",
+                "uk": "Реєстрацію завершено.",
+                "de": "Registrierung abgeschlossen."
             },
             "access_token": access_token
         }
@@ -332,33 +385,38 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "phone": {
                     "ru": "Пользователь не найден.",
                     "en": "User not found.",
-                    "pl": "Użytkownik nie znaleziony."
+                    "pl": "Użytkownik nie znaleziony.",
+                    "uk": "Користувача не знайдено.",
+                    "de": "Benutzer nicht gefunden."
                 }
             })
- 
+
         user_doc = await mongo_db["users"].find_one({"_id": ObjectId(contact["user_id"])})
         if not user_doc or not data.check_password(user_doc.get("password", "")):
             raise HTTPException(401, detail={
                 "password": {
                     "ru": "Неверный пароль.",
                     "en": "Wrong password.",
-                    "pl": "Błędne hasło."
+                    "pl": "Błędne hasło.",
+                    "uk": "Невірний пароль.",
+                    "de": "Falsches Passwort."
                 }
             })
 
         code_2fa = "".join(random.choices("0123456789", k=6))
         TWO_FA_CODES[phone_key] = code_2fa
 
-        # Заглушка — SMS пока не отправляем
         await send_sms(phone_key, f"Ваш код входа: {code_2fa}")
 
         return {
             "message": {
                 "ru": "Код отправлен.",
                 "en": "Code sent.",
-                "pl": "Kod wysłany."
+                "pl": "Kod wysłany.",
+                "uk": "Код відправлено.",
+                "de": "Code gesendet."
             },
-            "debug_code": code_2fa
+            # "debug_code": code_2fa
         }
 
     # ------------------------------------------------------------------
@@ -380,7 +438,9 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "code": {
                     "ru": "Неверный код.",
                     "en": "Invalid code.",
-                    "pl": "Nieprawidłowy kod."
+                    "pl": "Nieprawidłowy kod.",
+                    "uk": "Невірний код.",
+                    "de": "Ungültiger Code."
                 }
             })
 
@@ -390,7 +450,9 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "phone": {
                     "ru": "Пользователь не найден.",
                     "en": "User not found.",
-                    "pl": "Użytkownik nie znaleziony."
+                    "pl": "Użytkownik nie znaleziony.",
+                    "uk": "Користувача не знайдено.",
+                    "de": "Benutzer nicht gefunden."
                 }
             })
 
@@ -398,7 +460,6 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         user_id = str(main_doc["user_id"])
         patient_id = main_doc.get("patient_id")
 
-        # лёгкая синхронизация
         if patient_id:
             try:
                 crm_data = await get_client().get_patient(patient_id)
@@ -411,7 +472,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     }}
                 )
             except CRMError:
-                pass  # игнорируем сбой CRM на логине
+                pass
 
         access_token = Authorize.create_access_token(subject=user_id)
         refresh_token = Authorize.create_refresh_token(subject=user_id)
@@ -423,7 +484,9 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             "message": {
                 "ru": "Вход выполнен.",
                 "en": "Logged in.",
-                "pl": "Zalogowano."
+                "pl": "Zalogowano.",
+                "uk": "Вхід виконано.",
+                "de": "Eingeloggt."
             },
             "access_token": access_token
         }
@@ -433,4 +496,3 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
     # ------------------------------------------------------------------
     router.include_router(generate_base_routes(registry))
     return router
-

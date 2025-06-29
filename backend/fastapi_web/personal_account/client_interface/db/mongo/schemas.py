@@ -1,9 +1,10 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
 from datetime import date, datetime, time
+import re
 from typing import Any, Dict, List, Optional
 
 from passlib.hash import bcrypt
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, ValidationInfo, model_validator
 
 from db.mongo.base.schemas import BaseValidatedModel, Photo
 from integrations.panamedica.client import get_client
@@ -12,6 +13,9 @@ from utils.help_functions import normalize_numbers
 from .enums import (AccountVerificationEnum, ConditionEnum, ConsentEnum,
                     FamilyStatusEnum, GenderEnum, RelationshipEnum,
                     TransactionTypeEnum)
+
+import re
+from pydantic import field_validator
 
 # ==========
 # Регистрация
@@ -24,11 +28,13 @@ class RegistrationSchema(BaseModel):
     """
     phone: str
     email: Optional[EmailStr] = None
-    full_name: str
+    first_name: str
+    last_name: str
     birth_date: Optional[datetime] = None
     gender: Optional[str] = None
     password: str
     password_confirm: str
+    referral_code: Optional[str] = None
     accept_terms: bool = False
 
     def passwords_match(self) -> bool:
@@ -36,6 +42,45 @@ class RegistrationSchema(BaseModel):
         Проверяет совпадение введённого пароля и подтверждения.
         """
         return self.password == self.password_confirm
+    
+    def password_strength_errors(self) -> Optional[dict[str, str]]:
+        """
+        Проверяет силу пароля и возвращает словарь ошибок по языкам, если пароль слабый.
+        """
+        password = self.password
+
+        if len(password) < 8:
+            return {
+                "ru": "Пароль должен быть не менее 8 символов.",
+                "en": "Password must be at least 8 characters long.",
+                "pl": "Hasło musi mieć co najmniej 8 znaków."
+            }
+        if not re.search(r'[A-Z]', password):
+            return {
+                "ru": "Пароль должен содержать хотя бы одну заглавную букву.",
+                "en": "Password must contain at least one uppercase letter.",
+                "pl": "Hasło musi zawierać co najmniej jedną wielką literę."
+            }
+        if not re.search(r'[a-z]', password):
+            return {
+                "ru": "Пароль должен содержать хотя бы одну строчную букву.",
+                "en": "Password must contain at least one lowercase letter.",
+                "pl": "Hasło musi zawierać co najmniej jedną małą literę."
+            }
+        if not re.search(r'\d', password):
+            return {
+                "ru": "Пароль должен содержать хотя бы одну цифру.",
+                "en": "Password must contain at least one digit.",
+                "pl": "Hasło musi zawierać co najmniej jedną cyfrę."
+            }
+        if not re.search(r'[^\w\s]', password):
+            return {
+                "ru": "Пароль должен содержать хотя бы один специальный символ.",
+                "en": "Password must contain at least one special character.",
+                "pl": "Hasło musi zawierać co najmniej jeden znak specjalny."
+            }
+
+        return None
 
     def hashed_password(self) -> str:
         """
@@ -129,7 +174,10 @@ class MainInfoSchema(BaseValidatedModel):
         default="",
         json_schema_extra={"settings": {"readonly": True}}
     )
-
+    referral_id: Optional[str] = Field(
+        default=None,
+        json_schema_extra={"settings": {"readonly": True}}
+    )
 
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
@@ -145,7 +193,88 @@ class MainInfoSchema(BaseValidatedModel):
 # ==========
 
 
-class ContactInfoSchema(BaseValidatedModel):
+# class ContactInfoSchema(BaseValidatedModel):
+#     """
+#     Схема для вкладки 'Контактная информация'.
+#     """
+
+#     email: EmailStr = Field(
+#         ...,
+#         json_schema_extra={
+#             "settings": {
+#                 "type": "email",
+#                 "placeholder": {
+#                     "ru": "Введите e-mail",
+#                     "en": "Enter email",
+#                     "pl": "Wprowadź e-mail"
+#                 }
+#             }
+#         }
+#     )
+
+#     phone: str = Field(
+#         ...,
+#         json_schema_extra={
+#             "settings": {
+#                 "type": "phone",
+#                 "mask": "+99 (999) 999-999"
+#             }
+#         }
+#     )
+
+#     address: Optional[str] = Field(
+#         default=None,
+#         json_schema_extra={
+#             "settings": {
+#                 "type": "textarea",
+#                 "rows": 2,
+#                 "placeholder": {
+#                     "ru": "Введите адрес",
+#                     "en": "Enter address",
+#                     "pl": "Wprowadź adres"
+#                 }
+#             }
+#         }
+#     )
+
+#     pesel: Optional[str] = Field(
+#         default=None,
+#         json_schema_extra={
+#             "settings": {
+#                 "type": "pesel",
+#                 "placeholder": {
+#                     "ru": "Введите идентификатор",
+#                     "en": "Enter identifier",
+#                     "pl": "Wprowadź identyfikator"
+#                 }
+#             }
+#         }
+#     )
+
+#     emergency_contact: Optional[str] = Field(
+#         default=None,
+#         json_schema_extra={
+#             "settings": {
+#                 "type": "phone",
+#                 "mask": "+99 (999) 999-999",
+#                 "allowExtraText": True,
+#                 "placeholder": {
+#                     "ru": "Введите номер экстренного контакта",
+#                     "en": "Enter emergency contact number",
+#                     "pl": "Wprowadź numer kontaktowy awaryjny"
+#                 }
+#             }
+#         }
+#     )
+
+#     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+#     @model_validator(mode="before")
+#     def update_timestamp(cls, data):
+#         data["updated_at"] = datetime.utcnow()
+#         return data
+
+class ContactInfoSchema(BaseModel):
     """
     Схема для вкладки 'Контактная информация'.
     """
@@ -174,21 +303,164 @@ class ContactInfoSchema(BaseValidatedModel):
         }
     )
 
-    address: Optional[str] = Field(
+    # ----------------------- Экстренный контакт -----------------------
+    emergency_contact_name: Optional[str] = Field(
         default=None,
         json_schema_extra={
             "settings": {
-                "type": "textarea",
-                "rows": 2,
+                "type": "text",
                 "placeholder": {
-                    "ru": "Введите адрес",
-                    "en": "Enter address",
-                    "pl": "Wprowadź adres"
+                    "ru": "Имя экстренного контакта",
+                    "en": "Emergency contact name",
+                    "pl": "Imię kontaktu awaryjnego"
                 }
             }
         }
     )
 
+    emergency_contact_phone: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "phone",
+                "mask": "+99 (999) 999-999",
+                "placeholder": {
+                    "ru": "Телефон экстренного контакта",
+                    "en": "Emergency phone number",
+                    "pl": "Telefon kontaktu awaryjnego"
+                }
+            }
+        }
+    )
+
+    emergency_contact_consent: Optional[bool] = Field(
+        default=False,
+        json_schema_extra={
+            "settings": {
+                "label": {
+                    "ru": "Я выражаю согласие на предоставление информации о моем здоровье контакту для экстренной связи.",
+                    "en": "I consent to sharing my health information with the emergency contact.",
+                    "pl": "Wyrażam zgodę na udostępnienie informacji o moim stanie zdrowia kontaktowi w nagłych wypadkach.",
+                    "uk": "Я висловлюю згоду на надання інформації про моє здоров'я контакту для екстреного зв'язку.",
+                    "de": "Ich stimme der Weitergabe meiner Gesundheitsinformationen an den Notfallkontakt zu."
+                }
+            }
+        }
+    )
+
+    # ----------------------- Адрес -----------------------
+    country: Optional[str] = Field(
+        default=None,
+        # json_schema_extra={
+        #     "settings": {
+        #         "type": "select",
+        #         "placeholder": {
+        #             "ru": "Страна",
+        #             "en": "Country",
+        #             "pl": "Kraj"
+        #         }
+        #     }
+        # }
+    )
+
+    region: Optional[str] = Field(
+        default=None,
+        # json_schema_extra={
+        #     "settings": {
+        #         "type": "select",
+        #         "options": [  # можно заменить на динамическое подгрузку
+        #             {"label": "Mazowieckie", "value": "Mazowieckie"},
+        #             {"label": "Małopolskie", "value": "Małopolskie"},
+        #             {"label": "Wielkopolskie", "value": "Wielkopolskie"},
+        #             # ...
+        #         ],
+        #         "placeholder": {
+        #             "ru": "Выберите регион",
+        #             "en": "Select region",
+        #             "pl": "Wybierz województwo"
+        #         }
+        #     }
+        # }
+    )
+
+    city: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "placeholder": {
+                    "ru": "Город",
+                    "en": "City",
+                    "pl": "Miasto"
+                }
+            }
+        }
+    )
+
+    street: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "placeholder": {
+                    "ru": "Улица",
+                    "en": "Street",
+                    "pl": "Ulica"
+                }
+            }
+        }
+    )
+
+    building_number: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "placeholder": {
+                    "ru": "Номер дома",
+                    "en": "Building number",
+                    "pl": "Numer budynku"
+                }
+            }
+        }
+    )
+
+    apartment: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "placeholder": {
+                    "ru": "Номер квартиры (опционально)",
+                    "en": "Apartment number (optional)",
+                    "pl": "Numer mieszkania (opcjonalnie)"
+                }
+            }
+        }
+    )
+
+    zip: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "text",
+                "mask": "XX-XXX",
+                "placeholder": {
+                    "ru": "Почтовый индекс",
+                    "en": "Postal code",
+                    "pl": "Kod pocztowy"
+                }
+            }
+        }
+    )
+
+    # для обратной совместимости (readonly)
+    address: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "readonly": True
+            }
+        }
+    )
+
+    # ----------------------- Идентификаторы -----------------------
     pesel: Optional[str] = Field(
         default=None,
         json_schema_extra={
@@ -203,29 +475,36 @@ class ContactInfoSchema(BaseValidatedModel):
         }
     )
 
-    emergency_contact: Optional[str] = Field(
+    passport: Optional[str] = Field(
         default=None,
         json_schema_extra={
-            "settings": {
-                "type": "phone",
-                "mask": "+99 (999) 999-999",
-                "allowExtraText": True,
-                "placeholder": {
-                    "ru": "Введите номер экстренного контакта",
-                    "en": "Enter emergency contact number",
-                    "pl": "Wprowadź numer kontaktowy awaryjny"
-                }
-            }
         }
     )
 
+    # ----------------------- Метаданные -----------------------
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
     @model_validator(mode="before")
     def update_timestamp(cls, data):
         data["updated_at"] = datetime.utcnow()
         return data
+    
+    @field_validator("zip", mode="before")
+    def validate_zip_format(cls, v, info: ValidationInfo):
+        print('вызвана проврека')
+        if v is None or v == "":
+            return None
 
+        if not re.match(r"^\d{2}-\d{3}$", v):
+            raise ValueError({
+                "ru": "Неверный формат почтового индекса. Используйте формат XX-XXX.",
+                "en": "Invalid postal code format. Expected format: XX-XXX.",
+                "pl": "Nieprawidłowy format kodu pocztowego. Oczekiwany format: XX-XXX.",
+                "uk": "Невірний формат поштового індексу. Очікується формат: XX-XXX.",
+                "de": "Ungültiges Postleitzahl-Format. Erwartetes Format: XX-XXX."
+            })
+
+        return v
 
 # ==========
 # Анкета здоровья
@@ -374,19 +653,31 @@ class FamilyMemberSchema(BaseValidatedModel):
 
     # ▼––– статус оформлен как Enum, но UI получит список «choices»
     status: FamilyStatusEnum = Field(
-        default=FamilyStatusEnum.PENDING,
+        # default=FamilyStatusEnum.PENDING,
+        # json_schema_extra={
+        #     "settings": {
+        #         "type": "select",
+                # "choices": [
+                #     {"value": FamilyStatusEnum.PENDING,   "label": {"ru": "Ожидает",  "en": "Pending",  "pl": "Oczekuje"}},
+                #     {"value": FamilyStatusEnum.CONFIRMED, "label": {"ru": "Принято",  "en": "Confirmed","pl": "Przyjęto"}},
+                #     {"value": FamilyStatusEnum.DECLINED,  "label": {"ru": "Отклонено","en": "Declined", "pl": "Odrzucono"}},
+                # ],
+                # "placeholder": {
+                #     "ru": "Выберите статус",
+                #     "en": "Select status",
+                #     "pl": "Wybierz status"
+                # }
+            # }
+        # }
+
+        ...,
         json_schema_extra={
             "settings": {
                 "type": "select",
-                "choices": [
-                    {"value": FamilyStatusEnum.PENDING,   "label": {"ru": "Ожидает",  "en": "Pending",  "pl": "Oczekuje"}},
-                    {"value": FamilyStatusEnum.CONFIRMED, "label": {"ru": "Принято",  "en": "Confirmed","pl": "Przyjęto"}},
-                    {"value": FamilyStatusEnum.DECLINED,  "label": {"ru": "Отклонено","en": "Declined", "pl": "Odrzucono"}},
-                ],
                 "placeholder": {
-                    "ru": "Выберите статус",
-                    "en": "Select status",
-                    "pl": "Wybierz status"
+                    "ru": "Выберите тип родства",
+                    "en": "Select relationship",
+                    "pl": "Wybierz relację"
                 }
             }
         }

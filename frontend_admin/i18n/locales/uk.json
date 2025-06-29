@@ -115,13 +115,15 @@
     "phonePlaceholder": "Введіть номер телефону",
     "email": "E-mail",
     "emailPlaceholder": "{'mail@example.com'}",
-    "fullName": "Повне ім’я",
-    "fullNamePlaceholder": "Іван Іванов",
+    "firstName": "Ім’я:",
+    "firstNamePlaceholder": "Введіть ім’я",
+    "lastName": "Прізвище:",
+    "lastNamePlaceholder": "Введіть прізвище",
     "password": "Пароль",
-    "passwordPlaceholder": "Щонайменше 10 символів",
+    "passwordPlaceholder": "Щонайменше 8 символів",
     "show": "Показати",
     "hide": "Приховати",
-    "passwordHint": "Щонайменше 10 символів, включаючи великі та малі літери, цифри й символи",
+    "passwordHint": "Щонайменше 8 символів, включаючи великі та малі літери, цифри й символи",
     "passwordConfirm": "Підтвердіть пароль",
     "passwordConfirmPlaceholder": "Повторіть пароль",
     "termsPrefix": "Я згоден з",
@@ -142,7 +144,15 @@
     "birthDate": "Дата народження",
     "birthDatePlaceholder": "Оберіть дату народження",
     "gender": "Стать",
-    "genderPlaceholder": "Оберіть стать"
+    "genderPlaceholder": "Оберіть стать",
+    "numberImportant": "Важливо:",
+    "numberInfo": "Для двофакторної автентифікації та оперативного зв'язку за необхідності.",
+    "birthImportant": "Важливо:",
+    "birthInfo": "Реєстрація доступна лише для повнолітніх пацієнтів.",
+    "IHaveReferralCode": "У мене є реферальний код",
+    "ReferralCode": "Реферальний код",
+    "Information": "Інформація",
+    "ReferralCodeEntered": "Ви ввели реферальний код."
   },
 
   "DynamicForm": {
@@ -208,13 +218,15 @@
     "phone": "Телефон",
     "address": "Адреса",
     "pesel": "PESEL / Ідентифікатор",
+    "passport": "Паспорт",
 
     "emergency": "Контакт у разі надзвичайної ситуації",
     "docId": "ID документа",
     "lastUpdate": "Останнє оновлення",
 
     "invalidDate": "Невірна дата",
-    "dash": "—"
+    "dash": "—",
+    "fillPersonalInfoNotice": "Заповніть сторінку «Контактна інформація» — це допоможе заощадити час на оформлення документів під час першого візиту до клініки. Редагування деяких полів стане доступним після підтвердження вашого акаунта."
   },
 
   "FamilyTable": {
@@ -225,7 +237,8 @@
     "statusUnknown": "Статус не зазначено",
     "bonusSuffix": "бонусних балів",
     "noBonus": "Бонусів немає",
-    "editAria": "Редагувати"
+    "editAria": "Редагувати",
+    "infoText": "Додавайте родичів, і скоро ви зможете отримувати бонусні бали!"
   },
 
   "InfoHeader": {
@@ -281,11 +294,14 @@
     "balanceSubtitle": "Інформація про бонуси",
     "currentBalance": "Поточний баланс:",
     "referralCode": "Реферальний код:",
+    "referralLink": "Реферальне посилання:",
     "lastUpdate": "Останнє оновлення",
 
     "transactionsCard": "Історія транзакцій",
     "transactionsSubtitle": "Останні бонусні операції",
 
+    "toastTitleLink": "Посилання скопійовано",
+    "toastBodyLink": "Реферальне посилання скопійовано в буфер обміну!",
     "toastTitle": "Код скопійовано",
     "toastBody": "Реферальний код скопійовано!",
     "tooltipCopy": "Скопіювати код"

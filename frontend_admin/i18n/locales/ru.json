@@ -116,13 +116,15 @@
     "phonePlaceholder": "Введите номер телефона",
     "email": "E-mail",
     "emailPlaceholder": "{'mail@example.com'}",
-    "fullName": "Полное имя",
-    "fullNamePlaceholder": "Иван Иванов",
+    "firstName": "Имя:",
+    "firstNamePlaceholder": "Введите имя",
+    "lastName": "Фамилия:",
+    "lastNamePlaceholder": "Введите фамилию",
     "password": "Пароль",
-    "passwordPlaceholder": "Минимум 10 символов",
+    "passwordPlaceholder": "Минимум 8 символов",
     "show": "Показать",
     "hide": "Скрыть",
-    "passwordHint": "Минимум 10 символов, включая заглавные и строчные буквы, цифры и символы",
+    "passwordHint": "Минимум 8 символов, включая заглавные и строчные буквы, цифры и символы",
     "passwordConfirm": "Подтвердите пароль",
     "passwordConfirmPlaceholder": "Повторите пароль",
     "termsPrefix": "Я согласен с",
@@ -143,7 +145,15 @@
     "birthDate": "Дата рождения",
     "birthDatePlaceholder": "Выберите дату рождения",
     "gender": "Пол",
-    "genderPlaceholder": "Выберите пол"
+    "genderPlaceholder": "Выберите пол",
+    "numberImportant": "Важно:",
+    "numberInfo": "Для двухфакторной аутентификации и оперативной связи при необходимости.",
+    "birthImportant": "Важно:",
+    "birthInfo": "Регистрация доступна только для совершеннолетних пациентов.",
+    "IHaveReferralCode": "У меня есть реферальный код",
+    "ReferralCode": "Реферальный код",
+    "Information": "Информация",
+    "ReferralCodeEntered": "У вас введен реферальный код."
   },
 
   "DynamicForm": {
@@ -209,13 +219,15 @@
     "phone": "Телефон",
     "address": "Адрес",
     "pesel": "PESEL / Идентификатор",
+    "passport": "Паспорт",
 
     "emergency": "Экстренный контакт",
     "docId": "ID документа",
     "lastUpdate": "Последнее обновление",
 
     "invalidDate": "Неверная дата",
-    "dash": "—"
+    "dash": "—",
+    "fillPersonalInfoNotice": "Заполните страницу «Контактная информация» — это поможет сэкономить время на оформлении документов при первом визите в клинику. Редактирование некоторых полей станет доступно после подтверждения вашей учетной записи."
   },
 
   "FamilyTable": {
@@ -226,7 +238,8 @@
     "statusUnknown": "Статус не указан",
     "bonusSuffix": "бонусных баллов",
     "noBonus": "Нет бонусов",
-    "editAria": "Редактировать"
+    "editAria": "Редактировать",
+    "infoText": "Добавляйте родственников, и скоро вы сможете получать бонусные баллы!"
   },
 
   "InfoHeader": {
@@ -282,11 +295,14 @@
     "balanceSubtitle": "Информация о бонусах",
     "currentBalance": "Текущий баланс:",
     "referralCode": "Реферальный код:",
+    "referralLink": "Реферальная ссылка:",
     "lastUpdate": "Последнее обновление",
 
     "transactionsCard": "История транзакций",
     "transactionsSubtitle": "Последние бонусные операции",
 
+    "toastTitleLink": "Ссылка скопирована",
+    "toastBodyLink": "Реферальная ссылка скопирована в буфер обмена!",
     "toastTitle": "Код скопирован",
     "toastBody": "Реферальный код скопирован!",
     "tooltipCopy": "Скопировать код"

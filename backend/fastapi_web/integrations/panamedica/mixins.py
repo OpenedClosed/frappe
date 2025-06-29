@@ -85,18 +85,40 @@ class CRMIntegrationMixin:
 
     async def patch_contacts_in_crm(self, patient_id: str, patch: dict) -> None:
         """
-        Обновляет телефон и email в CRM.
+        Обновляет телефон, email и адрес (residenceAddress) в CRM.
         Приводит телефон к нужному формату.
-        Пропускает вызов, если поля отсутствуют.
-        Если в ответе есть ошибка — вызывает HTTPException с errors.
+        Пропускает вызов, если нужных полей нет.
+        В случае ошибки CRM — выбрасывает HTTPException с мультиязычным описанием.
         """
-        allowed = {}
+        allowed: dict = {}
+        # patch = { 
+        #     "email": "john.doe@example.com",
+        #     "residenceAddress": {
+        #         "street": "Warszawska",
+        #         "building": "35A",
+        #         "apartment": "20",
+        #         "zip": "05-200",
+        #         "city": "Warszawa",
+        #         "country": "Polska"
+        #     }
+        # }
+        # Телефон
         if phone := patch.get("phone"):
             normalized_numbers = normalize_numbers(phone)
             allowed["phone"] = format_crm_phone(normalized_numbers)
+
+        # Email
         if email := patch.get("email"):
             allowed["email"] = email
 
+        # Адрес
+        # if address := patch.get("residenceAddress"):
+        #     allowed["residenceAddress"] = {}
+        #     for field in ["country", "region", "city", "street", "building", "apartment", "zip"]:
+        #         if field in address:
+        #             allowed["residenceAddress"][field] = address[field]
+
+        # Если нечего отправлять — выходим
         if not allowed:
             return
 
