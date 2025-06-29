@@ -273,8 +273,8 @@ class BaseCrudCore:
 
         valid_data = await self.process_data(data=data, existing_obj=obj, partial=True)
 
-        for field in self.computed_fields:
-            valid_data.pop(field, None)
+        # for field in self.computed_fields:
+        #     valid_data.pop(field, None)
 
         valid_data = self.recursive_model_dump(valid_data)
 
@@ -728,6 +728,8 @@ class BaseCrudCore:
         if self.inlines:
             inline_data = await self.process_inlines(existing_obj, data, partial=partial)
             valid.update(inline_data)
+        print('===== VALID2 =====')
+        print(valid)
         return valid
 
     # --- Поиск во вложенных структурах ---

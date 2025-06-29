@@ -337,7 +337,7 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
                 "uk": gender_key,
                 "de": gender_key,
             })
-        return {"ru": "-", "en": "-", "pl": "-", "uk": "-", "de": "-"}
+        return {"ru": "—", "en": "—", "pl": "—", "uk": "—", "de": "—"}
 
     async def get_crm_link_status(self, obj, current_user=None) -> dict:
         """
@@ -577,6 +577,8 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
         Обновление контактной информации. Телефон менять нельзя.
         """
         updated = await super().update(object_id, data, current_user)
+        print("===== UPDATED =====")
+        print(updated)
         asyncio.create_task(self._patch_crm_contacts(updated, current_user))
         return updated
 
@@ -717,10 +719,8 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
 
         if patient:
             address = patient.get("residenceAddress") or {}
-            return address.get(field)
-        print('===== FALLBACK =====')
-        print(obj)
-        print(fallback)
+            if address:
+                return address.get(field)
         return obj.get(fallback)
 
     async def get_country(self, obj, current_user=None) -> str | None:
