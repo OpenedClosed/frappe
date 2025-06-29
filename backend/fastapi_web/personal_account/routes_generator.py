@@ -188,7 +188,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "uk": "Код надіслано на телефон.",
                 "de": "Code wurde an das Telefon gesendet."
             },
-            "debug_code": code
+            # "debug_code": code
         }
 
     # ------------------------------------------------------------------
@@ -416,7 +416,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "uk": "Код відправлено.",
                 "de": "Code gesendet."
             },
-            "debug_code": code_2fa
+            # "debug_code": code_2fa
         }
 
     # ------------------------------------------------------------------

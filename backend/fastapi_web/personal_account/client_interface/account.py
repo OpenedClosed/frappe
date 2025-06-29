@@ -625,7 +625,7 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
                 "apartment": local_doc.get("apartment"),
                 "city":     local_doc.get("city"),
                 "zip":      local_doc.get("zip"),
-                "country":  local_doc.get("country") or "Polska",
+                "country":  local_doc.get("country"),
             }
 
         if patch:

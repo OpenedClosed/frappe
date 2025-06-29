@@ -350,7 +350,7 @@ class ContactInfoSchema(BaseModel):
 
     # ----------------------- Адрес -----------------------
     country: Optional[str] = Field(
-        default="Polska",
+        default=None,
         # json_schema_extra={
         #     "settings": {
         #         "type": "select",
