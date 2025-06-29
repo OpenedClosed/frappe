@@ -656,11 +656,11 @@ class FamilyMemberSchema(BaseValidatedModel):
         json_schema_extra={
             "settings": {
                 "type": "select",
-                "choices": [
-                    {"value": FamilyStatusEnum.PENDING,   "label": {"ru": "Ожидает",  "en": "Pending",  "pl": "Oczekuje"}},
-                    {"value": FamilyStatusEnum.CONFIRMED, "label": {"ru": "Принято",  "en": "Confirmed","pl": "Przyjęto"}},
-                    {"value": FamilyStatusEnum.DECLINED,  "label": {"ru": "Отклонено","en": "Declined", "pl": "Odrzucono"}},
-                ],
+                # "choices": [
+                #     {"value": FamilyStatusEnum.PENDING,   "label": {"ru": "Ожидает",  "en": "Pending",  "pl": "Oczekuje"}},
+                #     {"value": FamilyStatusEnum.CONFIRMED, "label": {"ru": "Принято",  "en": "Confirmed","pl": "Przyjęto"}},
+                #     {"value": FamilyStatusEnum.DECLINED,  "label": {"ru": "Отклонено","en": "Declined", "pl": "Odrzucono"}},
+                # ],
                 "placeholder": {
                     "ru": "Выберите статус",
                     "en": "Select status",

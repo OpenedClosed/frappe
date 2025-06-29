@@ -1280,19 +1280,23 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         current_patient_id = client.get("patient_id")
 
         if obj.get("user_id") == current_user_id:
+            print(obj)
             member_id = obj.get("member_id")
             if not member_id:
-                return None
+                return obj.get("phone")
             main_doc = await mongo_db.patients_main_info.find_one({"patient_id": member_id})
             if not main_doc:
+                print('2')
                 return None
             contact_doc = await mongo_db.patients_contact_info.find_one({"user_id": main_doc["user_id"]})
+            print('3')
             return contact_doc.get("phone") if contact_doc else None
 
         if obj.get("member_id") == current_patient_id:
             contact_doc = await mongo_db.patients_contact_info.find_one({"user_id": obj.get("user_id")})
+            print('4')
             return contact_doc.get("phone") if contact_doc else None
-
+        print('5')
         return None
 
     async def get_member_id(self, obj: dict, current_user: Optional[dict] = None) -> Optional[str]:
