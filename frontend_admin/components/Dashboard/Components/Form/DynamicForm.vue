@@ -519,7 +519,7 @@
 
             <!-- Field error message -->
             <div v-if="parsedFieldErrors[field.name]" class="text-red-500 dark:text-red-400 text-sm mt-1" :id="`${field.name}-error`">
-              {{ parsedFieldErrors[field.name] }}
+              {{ parsedFieldErrors[field.name].currentLanguage || parsedFieldErrors[field.name].en || "" }}
             </div>
           </div>
         </div>
@@ -682,6 +682,12 @@ watch(
   () => props.fieldErrors,
   (newVal) => {
     console.log("props.fieldErrors", newVal);
+
+    if (typeof newVal === "object"){
+      // If it's an object, we can directly assign it
+      parsedFieldErrors.value = newVal;
+      return;
+    }
 
     if (!newVal || typeof newVal !== "string") {
       console.warn("Skipping parsing, fieldErrors is not a string:", newVal);
