@@ -145,7 +145,11 @@
     "numberImportant": "Important:",
     "numberInfo": "For two-factor authentication and operational communication if necessary.",
     "birthImportant": "Important:",
-    "birthInfo": "Registration is available only for adult patients."
+    "birthInfo": "Registration is available only for adult patients.",
+    "IHaveReferralCode": "I have a referral code",
+    "ReferralCode": "Referral code",
+    "Information": "Information",
+    "ReferralCodeEntered": "You have entered a referral code."
   },
   "DynamicForm": {
     "upload": "Upload",

@@ -1,6 +1,7 @@
 <template>
   <!-- Корневой контейнер -->
   <div class="w-full flex justify-center items-center h-screen overflow-hidden">
+    <Toast />
     <div class="p-4 m-4 bg-gray-100 dark:bg-gray-800 rounded-md shadow-md w-[30rem] h-[80vh] overflow-auto">
       <!-- Заголовок -->
       <div class="w-full flex flex-col justify-center items-center mb-4">
@@ -196,6 +197,29 @@
             </small>
           </div>
 
+          <!-- Checkbox (referralCode) - required -->
+          <div>
+            <div class="flex items-center" @click="onReferralCheckboxClick">
+              <Checkbox  v-model="hasReferralCode" :binary="true" inputId="referralCode"  class="mr-2" :disabled="regForm?.referral_code?.length > 0"  />
+              <label for="referralCode" class="text-[14px] text-black dark:text-white"> {{ t("PersonalMainRegistration.IHaveReferralCode") }} </label>
+            </div>
+          </div>
+          <div v-if="hasReferralCode">
+            <label for="referral_code" class="block mb-1 text-[14px] text-black dark:text-white"> {{ t("PersonalMainRegistration.ReferralCode") }} </label>
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.referral_code }">
+              <InputText
+                size="small"
+                v-model="regForm.referral_code"
+                type="text"
+                :disabled="referralCode"
+                id="referral_code"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              />
+            </div>
+            <small class="text-red-500 mt-1 text-[12px]">
+              {{ regError.referral_code }}
+            </small>
+          </div>
           <!-- Checkbox (Согласие с условиями) - required -->
           <div>
             <div class="flex items-center">
@@ -279,12 +303,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute, navigateTo, reloadNuxtApp } from "#imports";
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 const is_loading = ref(false);
 const loading_text_displayed = ref(false);
+const hasReferralCode = ref(false);
 const isCode = ref(false);
 // Управление видом пароля
 const passwordType = ref("password");
@@ -293,7 +318,7 @@ const { currentLanguage } = useLanguageState();
 
 import { useErrorParser } from "~/composables/useErrorParser.js";
 const { parseAxiosError } = useErrorParser();
-
+const toast = useToast();
 // язык пользователя из состояния
 const fallbackLang = "en";
 
@@ -317,10 +342,11 @@ const regForm = ref({
   phone: "",
   email: "",
   full_name: "",
-  birth_date: null, // 👈 новое поле
-  gender: "", // 👈 новое поле
+  birth_date: null, 
+  gender: "", 
   password: "",
   password_confirm: "",
+  referral_code: "",
   accept_terms: false,
 });
 
@@ -328,11 +354,12 @@ const regError = ref({
   phone: "",
   email: "",
   full_name: "",
-  birth_date: "", // 👈 новое поле
-  gender: "", // 👈 новое поле
+  birth_date: "", 
+  gender: "", 
   password: "",
   password_confirm: "",
   accept_terms: "",
+  referral_code: "",
   code: "",
 });
 /*--- варианты для Dropdown (Enum → value) ---*/
@@ -361,8 +388,8 @@ function goNoCode() {
     phone: "",
     email: "",
     full_name: "",
-    birth_date: null, // 👈
-    gender: "", // 👈
+    birth_date: null, 
+    gender: "", 
     password: "",
     password_confirm: "",
     accept_terms: false,
@@ -373,7 +400,7 @@ function goNoCode() {
 const testCode = ref("");
 const { currentPageName } = usePageState();
 const route = useRoute();
-const is_payment = route.query.is_payment === "true";
+const referralCode = route.query.referralCode || null;
 
 function goLogin() {
   console.log("currentPageName.value", currentPageName.value);
@@ -381,6 +408,18 @@ function goLogin() {
     navigateTo(`/${currentPageName.value}/login?is_payment=true`);
   } else {
     navigateTo(`/${currentPageName.value}/login/`);
+  }
+}
+
+function onReferralCheckboxClick(event) {
+  if (regForm.value?.referral_code?.length > 0) {
+    event.preventDefault();
+    toast.add({
+      severity: "info",
+      summary:  t("PersonalMainRegistration.Information"),
+      detail: t("PersonalMainRegistration.ReferralCodeEntered"),
+      life: 3000,
+    });
   }
 }
 
@@ -398,6 +437,7 @@ function sendReg() {
     gender: "", // 👈
     password: "",
     password_confirm: "",
+    referral_code: "",
     accept_terms: false,
   };
   const { currentPageName } = usePageState();
@@ -451,9 +491,24 @@ function resetForm() {
     regError.value[field] = "";
   });
   isCodeStep.value = false;
+
 }
 
+
+watch(hasReferralCode, (newValue) => {
+  if (newValue) {
+    regForm.value.referral_code = referralCode;
+  } else {
+    regForm.value.referral_code = "";
+  }
+});
 onMounted(() => {
+  if (referralCode) {
+    regForm.value.referral_code = referralCode;
+    hasReferralCode.value = true;
+  } else {
+    hasReferralCode.value = false;
+  }
   if (currentPageName.value != "personal_account") {
     reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
   }

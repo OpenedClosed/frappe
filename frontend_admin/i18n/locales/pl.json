@@ -146,7 +146,11 @@
     "numberImportant": "Ważne:",
     "numberInfo": "Do uwierzytelniania dwuskładnikowego i komunikacji operacyjnej w razie potrzeby.",
     "birthImportant": "Ważne:",
-    "birthInfo": "Rejestracja jest dostępna tylko dla pełnoletnich pacjentów."
+    "birthInfo": "Rejestracja jest dostępna tylko dla pełnoletnich pacjentów.",
+    "IHaveReferralCode": "Mam kod polecający",
+    "ReferralCode": "Kod polecający",
+    "Information": "Informacja",
+    "ReferralCodeEntered": "Wpisałeś kod polecający."
   },
 
   "DynamicForm": {

@@ -150,7 +150,11 @@
     "numberImportant": "Wichtig:",
     "numberInfo": "Für die Zwei-Faktor-Authentifizierung und bei Bedarf für die operative Kommunikation.",
     "birthImportant": "Wichtig:",
-    "birthInfo": "Die Registrierung ist nur für volljährige Patienten möglich."
+    "birthInfo": "Die Registrierung ist nur für volljährige Patienten möglich.",
+    "IHaveReferralCode": "I have a referral code",
+    "ReferralCode": "Referral code",
+    "Information": "Information",
+    "ReferralCodeEntered": "You have entered a referral code."
   },
 
   "DynamicForm": {
