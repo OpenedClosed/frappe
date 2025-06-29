@@ -68,46 +68,44 @@
             />
           </div>
         </div>
-
-      
       </div>
-        <!-- Control Buttons -->
-        <div class="mt-4 flex flex-col md:flex-row gap-2">
-          <!-- Existing item: edit, save and delete -->
-          <template v-if="!isNewItem">
-            <!-- Show edit/save only if update is allowed -->
-            <Button v-if="isReadOnly && allowCrudActions.update" :label="t('MainForm.edit')" icon="pi pi-pencil" @click="toggleEditMode" />
-            <Button v-else-if="!isReadOnly && allowCrudActions.update" :label="t('MainForm.save')" icon="pi pi-save" @click="saveItem" />
-            <!-- Show delete button only if delete is allowed -->
-            <Button
-              v-if="allowCrudActions.delete"
-              :label="t('MainForm.delete')"
-              icon="pi pi-trash"
-              class="p-button-danger"
-              @click="deleteItem"
-            />
-          </template>
-
-          <!-- New record: create -->
-          <Button v-else-if="allowCrudActions.create" :label="t('MainForm.create')" icon="pi pi-check" @click="createItem" />
-
-          <!-- Special button for chat_sessions entity -->
+      <!-- Control Buttons -->
+      <div class="mt-4 flex flex-col md:flex-row gap-2">
+        <!-- Existing item: edit, save and delete -->
+        <template v-if="!isNewItem">
+          <!-- Show edit/save only if update is allowed -->
+          <Button v-if="isReadOnly && allowCrudActions.update" :label="t('MainForm.edit')" icon="pi pi-pencil" @click="toggleEditMode" />
+          <Button v-else-if="!isReadOnly && allowCrudActions.update" :label="t('MainForm.save')" icon="pi pi-save" @click="saveItem" />
+          <!-- Show delete button only if delete is allowed -->
           <Button
-            v-if="currentEntity === 'chat_sessions'"
-            :label="t('MainForm.openChat')"
-            icon="pi pi-comments"
-            @click="openChat(itemData?.chat_id)"
+            v-if="allowCrudActions.delete"
+            :label="t('MainForm.delete')"
+            icon="pi pi-trash"
+            class="p-button-danger"
+            @click="deleteItem"
           />
+        </template>
 
-          <!-- Navigation: go back to list -->
-          <Button
-            v-if="currentPageInstances > 1 || currentPageInstances === null"
-            :label="t('MainForm.backToList')"
-            icon="pi pi-arrow-left"
-            class="p-button-text"
-            @click="goBack"
-          />
-        </div>
+        <!-- New record: create -->
+        <Button v-else-if="allowCrudActions.create" :label="t('MainForm.create')" icon="pi pi-check" @click="createItem" />
+
+        <!-- Special button for chat_sessions entity -->
+        <Button
+          v-if="currentEntity === 'chat_sessions'"
+          :label="t('MainForm.openChat')"
+          icon="pi pi-comments"
+          @click="openChat(itemData?.chat_id)"
+        />
+
+        <!-- Navigation: go back to list -->
+        <Button
+          v-if="currentPageInstances > 1 || currentPageInstances === null"
+          :label="t('MainForm.backToList')"
+          icon="pi pi-arrow-left"
+          class="p-button-text"
+          @click="goBack"
+        />
+      </div>
     </div>
 
     <!-- Chat view -->
@@ -359,6 +357,7 @@ async function saveItem() {
     console.log("Изменения сохранены");
     originalData.value = itemData.value; // Update original data
     isReadOnly.value = true;
+    window.location.reload(); // Reload the page to reflect changes
   } catch (error) {
     console.error("Ошибка при сохранении:", error);
     errorMessage.value = parseError(error);
@@ -385,7 +384,10 @@ async function createItem() {
   try {
     const res = await nuxtApp.$api.post(`api/${currentPageName.value}/${currentEntity.value}/`, dataToSend);
     console.log("Запись создана:", res.data);
-    router.push(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/${res.data.id}`);
+    router.push(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}/${res.data.id}`).then(() => {
+      // Reload the page to reflect changes
+      window.location.reload();
+    });
   } catch (error) {
     console.error("Ошибка при создании:", error);
     errorMessage.value = parseError(error);
@@ -410,7 +412,10 @@ async function deleteItem() {
 
 // ------------------ Navigation ------------------
 function goBack() {
-  router.push(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}`);
+  router.push(`/${currentPageName.value}/${currentGroup.value}/${currentEntity.value}`).then(() => {
+    // Reload the page to reflect changes
+    window.location.reload();
+  });
 }
 
 function setFormState(state) {
@@ -429,7 +434,7 @@ function goToFormView() {
 
 // ------------------ Helpers ------------------
 function parseError(error) {
-  console.log("HERE")
+  console.log("HERE");
   console.log("Parsing error:", error);
   if (error.response && error.response.data) {
     const data = error.response.data;

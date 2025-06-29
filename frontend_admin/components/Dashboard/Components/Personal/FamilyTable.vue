@@ -11,7 +11,7 @@
         class="flex text-[16px] font-semibold text-blue-700 bg-blue-50 border-l-4 border-blue-400 px-4 py-2 rounded shadow-sm justify-between items-center gap-2"
       >
         {{ t("FamilyTable.infoText") }}
-        <Button icon="pi pi-times" class="p-2 ml-2 mt-1" @click="closeInfo" aria-label="Close" />
+        <Button icon="pi pi-times" class="p-2 ml-2 mt-1" @click="closeInfo" size="small" aria-label="Close" />
       </p>
     </div>
     <div
@@ -105,7 +105,7 @@ const currentGroup = computed(() => route.params.group);
 const currentEntity = computed(() => route.params.entity);
 const currentId = computed(() => route.params.id);
 const INFO_KEY = "familyTableInfoClosed";
-const showInfo = ref(true);
+const showInfo = ref(false);
 
 onMounted(() => {
   showInfo.value = localStorage.getItem(INFO_KEY) !== "1";

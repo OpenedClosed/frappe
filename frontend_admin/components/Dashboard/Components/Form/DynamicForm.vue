@@ -519,7 +519,7 @@
 
             <!-- Field error message -->
             <div v-if="parsedFieldErrors[field.name]" class="text-red-500 dark:text-red-400 text-sm mt-1" :id="`${field.name}-error`">
-              {{ parsedFieldErrors[field.name].currentLanguage || parsedFieldErrors[field.name].en || "" }}
+              {{ parsedFieldErrors[field.name][currentLanguage] || parsedFieldErrors[field.name].en || "" }}
             </div>
           </div>
         </div>

@@ -68,24 +68,44 @@
             </small>
           </div>
 
-          <!-- ФИО (required) -->
+          <!-- Имя (required) -->
           <div>
-            <label for="full_name" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.fullName") }} <span class="text-red-500">*</span>
+            <label for="first_name" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.firstName") }} <span class="text-red-500">*</span>
             </label>
-            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.full_name }">
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.first_name }">
               <InputText
                 size="small"
-                v-model="regForm.full_name"
+                v-model="regForm.first_name"
                 type="text"
-                id="full_name"
-                :placeholder="t('PersonalMainRegistration.fullNamePlaceholder')"
+                id="first_name"
+                :placeholder="t('PersonalMainRegistration.firstNamePlaceholder')"
                 required
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
-              {{ regError.full_name }}
+              {{ regError.first_name }}
+            </small>
+          </div>
+          <!-- Фамилия (required) -->
+          <div>
+            <label for="last_name" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.lastName") }} <span class="text-red-500">*</span>
+            </label>
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.last_name }">
+              <InputText
+                size="small"
+                v-model="regForm.last_name"
+                type="text"
+                id="last_name"
+                :placeholder="t('PersonalMainRegistration.lastNamePlaceholder')"
+                required
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              />
+            </div>
+            <small class="text-red-500 mt-1 text-[12px]">
+              {{ regError.last_name }}
             </small>
           </div>
           <div>
@@ -103,6 +123,7 @@
                 size="small"
                 dateFormat="dd.mm.yy"
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+                :maxDate="maxBirthDate"
               />
             </div>
             <div class="flex flex-col">
@@ -200,12 +221,22 @@
           <!-- Checkbox (referralCode) - required -->
           <div>
             <div class="flex items-center" @click="onReferralCheckboxClick">
-              <Checkbox  v-model="hasReferralCode" :binary="true" inputId="referralCode"  class="mr-2" :disabled="regForm?.referral_code?.length > 0"  />
-              <label for="referralCode" class="text-[14px] text-black dark:text-white"> {{ t("PersonalMainRegistration.IHaveReferralCode") }} </label>
+              <Checkbox
+                v-model="hasReferralCode"
+                :binary="true"
+                inputId="referralCode"
+                class="mr-2"
+                :disabled="regForm?.referral_code?.length > 0"
+              />
+              <label for="referralCode" class="text-[14px] text-black dark:text-white">
+                {{ t("PersonalMainRegistration.IHaveReferralCode") }}
+              </label>
             </div>
           </div>
           <div v-if="hasReferralCode">
-            <label for="referral_code" class="block mb-1 text-[14px] text-black dark:text-white"> {{ t("PersonalMainRegistration.ReferralCode") }} </label>
+            <label for="referral_code" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.ReferralCode") }}
+            </label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.referral_code }">
               <InputText
                 size="small"
@@ -260,15 +291,6 @@
         <h2 class="text-center text-[20px] text-black dark:text-white font-semibold mb-4">
           {{ t("PersonalMainRegistration.confirmTitle") }}
         </h2>
-
-        <div>
-          <h3 class="text-[18px] text-center">{{ t("PersonalMainRegistration.debugCode") }}</h3>
-          <div class="flex flex-row items-center gap-1">
-            <InputText v-model="testCode" readonly id="code" class="w-full" />
-            <Button icon="pi pi-copy" @click="onCopy"></Button>
-          </div>
-        </div>
-
         <form @submit.prevent="sendCode" class="flex flex-col gap-4">
           <div>
             <label for="code" class="block mb-1 text-[14px] text-black dark:text-white">
@@ -341,9 +363,10 @@ function pickError(err) {
 const regForm = ref({
   phone: "",
   email: "",
-  full_name: "",
-  birth_date: null, 
-  gender: "", 
+  first_name: "",
+  last_name: "",
+  birth_date: null,
+  gender: "",
   password: "",
   password_confirm: "",
   referral_code: "",
@@ -353,9 +376,10 @@ const regForm = ref({
 const regError = ref({
   phone: "",
   email: "",
-  full_name: "",
-  birth_date: "", 
-  gender: "", 
+  first_name: "",
+  last_name: "",
+  birth_date: "",
+  gender: "",
   password: "",
   password_confirm: "",
   accept_terms: "",
@@ -367,6 +391,11 @@ const genderOptions = [
   { label: t("PersonalMainRegistration.genderMale"), value: "male" },
   { label: t("PersonalMainRegistration.genderFemale"), value: "female" },
 ];
+
+const maxBirthDate = computed(() => {
+  const today = new Date();
+  return new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+});
 
 function onCopy() {
   navigator.clipboard.writeText(testCode.value);
@@ -387,9 +416,10 @@ function goNoCode() {
   regForm.value = {
     phone: "",
     email: "",
-    full_name: "",
-    birth_date: null, 
-    gender: "", 
+    first_name: "",
+    last_name: "",
+    birth_date: null,
+    gender: "",
     password: "",
     password_confirm: "",
     accept_terms: false,
@@ -403,12 +433,7 @@ const route = useRoute();
 const referralCode = route.query.referralCode || null;
 
 function goLogin() {
-  console.log("currentPageName.value", currentPageName.value);
-  if (is_payment) {
-    navigateTo(`/${currentPageName.value}/login?is_payment=true`);
-  } else {
-    navigateTo(`/${currentPageName.value}/login/`);
-  }
+  navigateTo(`/${currentPageName.value}/login/`);
 }
 
 function onReferralCheckboxClick(event) {
@@ -416,7 +441,7 @@ function onReferralCheckboxClick(event) {
     event.preventDefault();
     toast.add({
       severity: "info",
-      summary:  t("PersonalMainRegistration.Information"),
+      summary: t("PersonalMainRegistration.Information"),
       detail: t("PersonalMainRegistration.ReferralCodeEntered"),
       life: 3000,
     });
@@ -432,13 +457,14 @@ function sendReg() {
   regError.value = {
     phone: "",
     email: "",
-    full_name: "",
+    first_name: "",
+    last_name: "",
     birth_date: null, // 👈
     gender: "", // 👈
     password: "",
     password_confirm: "",
     referral_code: "",
-    accept_terms: false,
+    accept_terms: "",
   };
   const { currentPageName } = usePageState();
   is_loading.value = true;
@@ -481,7 +507,8 @@ function resetForm() {
   regForm.value = {
     phone: "",
     email: "",
-    full_name: "",
+    first_name: "",
+    last_name: "",
     password: "",
     password_confirm: "",
     accept_terms: false,
@@ -490,10 +517,8 @@ function resetForm() {
   Object.keys(regError.value).forEach((field) => {
     regError.value[field] = "";
   });
-  isCodeStep.value = false;
-
+  isCode.value = false;
 }
-
 
 watch(hasReferralCode, (newValue) => {
   if (newValue) {
