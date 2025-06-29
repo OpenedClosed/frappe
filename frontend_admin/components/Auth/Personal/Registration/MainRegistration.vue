@@ -29,18 +29,22 @@
                 required
                 mask="+48 999 999 999"
                 placeholder="+48 ___ ___ ___"
+                :minlength="8"
+                :maxlength="30"
                 :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
-            <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
-              <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                >{{ t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
-              >{{ t("PersonalMainRegistration.numberInfo") }}</small
-            >
-            <small class="text-red-500 mt-1 text-[12px]">
-              {{ regError.phone }}
-            </small>
+            <div class="flex flex-col">
+              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
+                  >{{ t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
+                >{{ t("PersonalMainRegistration.numberInfo") }}</small
+              >
+              <small class="text-red-500 mt-1 text-[12px]">
+                {{ regError.phone }}
+              </small>
+            </div>
           </div>
 
           <!-- Email (required) -->
@@ -100,14 +104,16 @@
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
-            <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
-              <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                >{{ t("PersonalMainRegistration.birthImportant") }} &nbsp;</span
-              >{{ t("PersonalMainRegistration.birthInfo") }}</small
-            >
-            <small class="text-red-500 mt-1 text-[12px]">
-              {{ regError.birth_date }}
-            </small>
+            <div class="flex flex-col">
+              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
+                  >{{ t("PersonalMainRegistration.birthImportant") }} &nbsp;</span
+                >{{ t("PersonalMainRegistration.birthInfo") }}</small
+              >
+              <small class="text-red-500 mt-1 text-[12px]">
+                {{ regError.birth_date }}
+              </small>
+            </div>
           </div>
 
           <!-- Пол -->
@@ -154,12 +160,14 @@
                 <span v-else>{{ t("PersonalMainRegistration.hide") }}</span>
               </button>
             </div>
-            <small class="text-gray-500 dark:text-gray-300 block mt-1 text-[12px]">
-              {{ t("PersonalMainRegistration.passwordHint") }}
-            </small>
-            <small class="text-red-500 mt-1 block text-[12px]">
-              {{ regError.password }}
-            </small>
+            <div class="flex flex-col">
+              <small class="text-gray-500 dark:text-gray-300 block mt-1 text-[12px]">
+                {{ t("PersonalMainRegistration.passwordHint") }}
+              </small>
+              <small class="text-red-500 mt-1 block text-[12px]">
+                {{ regError.password }}
+              </small>
+            </div>
           </div>
 
           <!-- Подтверждение пароля (required) -->
@@ -383,15 +391,14 @@ function sendReg() {
   }
 
   regError.value = {
-    email: "",
     phone: "",
-    first_name: "",
-    last_name: "",
-    birth_date: "",
-    city: "",
-    gender: "",
-    code: "",
-    terms: "",
+    email: "",
+    full_name: "",
+    birth_date: null, // 👈
+    gender: "", // 👈
+    password: "",
+    password_confirm: "",
+    accept_terms: false,
   };
   const { currentPageName } = usePageState();
   is_loading.value = true;

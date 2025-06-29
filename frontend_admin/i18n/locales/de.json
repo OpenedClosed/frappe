@@ -216,13 +216,15 @@
     "phone": "Telefon",
     "address": "Adresse",
     "pesel": "PESEL / Kennung",
+    "passport": "Reisepass",
 
     "emergency": "Notfallkontakt",
     "docId": "Dokument-ID",
     "lastUpdate": "Letzte Aktualisierung",
 
     "invalidDate": "Ungültiges Datum",
-    "dash": "—"
+    "dash": "—",
+      "fillPersonalInfoNotice": "Füllen Sie die Seite „Persönliche Informationen“ aus – so sparen Sie bei Ihrem ersten Besuch in der Klinik Zeit bei der Dokumentenerstellung. Die Bearbeitung einiger Felder wird nach der Verifizierung Ihres Kontos verfügbar."
   },
 
   "FamilyTable": {

@@ -212,13 +212,15 @@
     "phone": "Telefon",
     "address": "Adres",
     "pesel": "PESEL / Identyfikator",
+    "passport": "Paszport",
 
     "emergency": "Kontakt awaryjny",
     "docId": "ID dokumentu",
     "lastUpdate": "Ostatnia aktualizacja",
 
     "invalidDate": "Nieprawidłowa data",
-    "dash": "—"
+    "dash": "—",
+    "fillPersonalInfoNotice": "Wypełnij stronę „Informacje osobiste” — to pomoże Ci zaoszczędzić czas podczas pierwszej wizyty w klinice. Edycja niektórych pól będzie dostępna po weryfikacji Twojego konta."
   },
 
   "FamilyTable": {

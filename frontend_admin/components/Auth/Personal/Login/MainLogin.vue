@@ -24,6 +24,8 @@
               required
               mask="+48 999 999 999"
               placeholder="+48 ___ ___ ___"
+              :minlength="8"
+              :maxlength="30"
               :placeholder="t('PersonalMainLogin.phonePlaceholder')"
               class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
             />
