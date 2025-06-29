@@ -14,8 +14,15 @@
         <p class="text-4xl font-bold text-blue-600">{{ balance }}</p>
       </div>
 
-      <div class="flex flex-col items-start w-full gap-4">
+      <div class="flex flex-col items-start w-full gap-4 mb-4">
         <span class="block text-lg font-bold">{{ t("PointsTable.referralCode") }}</span>
+        <div class="flex w-full">
+          <InputText v-model="referralCode" readonly class="text-lg font-medium flex-1" />
+          <Button icon="pi pi-copy" class="ml-2" @click="copyReferralCode" :tooltip="t('PointsTable.tooltipCopy')" />
+        </div>
+      </div>
+      <div class="flex flex-col items-start w-full gap-4">
+        <span class="block text-lg font-bold">{{ t("PointsTable.referralLink") }}</span>
         <div class="flex w-full">
           <InputText v-model="referralCode" readonly class="text-lg font-medium flex-1" />
           <Button icon="pi pi-copy" class="ml-2" @click="copyReferralCode" :tooltip="t('PointsTable.tooltipCopy')" />

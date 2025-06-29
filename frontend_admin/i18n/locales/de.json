@@ -235,7 +235,8 @@
     "statusUnknown": "Status nicht festgelegt",
     "bonusSuffix": "Bonuspunkte",
     "noBonus": "Keine Boni",
-    "editAria": "Bearbeiten"
+    "editAria": "Bearbeiten",
+    "infoText": "Fügen Sie Familienmitglieder hinzu, und Sie werden bald Bonuspunkte sammeln können!"
   },
 
   "InfoHeader": {

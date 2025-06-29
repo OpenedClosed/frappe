@@ -142,11 +142,10 @@
     "birthDatePlaceholder": "Select your birth date",
     "gender": "Gender",
     "genderPlaceholder": "Select your gender",
-    "numberImportant":"Important:",
-    "numberInfo":"For two-factor authentication and operational communication if necessary.",
-    "birthImportant":"Important:",
-    "birthInfo":"Registration is available only for adult patients."
-    
+    "numberImportant": "Important:",
+    "numberInfo": "For two-factor authentication and operational communication if necessary.",
+    "birthImportant": "Important:",
+    "birthInfo": "Registration is available only for adult patients."
   },
   "DynamicForm": {
     "upload": "Upload",
@@ -216,7 +215,6 @@
     "invalidDate": "Invalid date",
     "dash": "—",
     "fillPersonalInfoNotice": "Fill in the 'Personal Information' page — this will help you save time on paperwork during your first visit to the clinic. Editing some fields will become available after your account is verified."
-
   },
   "FamilyTable": {
     "addMember": "Add family member",
@@ -226,7 +224,8 @@
     "statusUnknown": "Status not set",
     "bonusSuffix": "bonus points",
     "noBonus": "No bonuses",
-    "editAria": "Edit"
+    "editAria": "Edit",
+    "infoText": "Add family members, and you'll soon be able to earn bonus points!"
   },
   "InfoHeader": {
     "patientIdPrefix": "Patient ID:",
@@ -277,6 +276,7 @@
     "balanceSubtitle": "User bonus information",
     "currentBalance": "Current balance:",
     "referralCode": "Referral code:",
+    "referralLink": "Referral link:",
     "lastUpdate": "Last update",
 
     "transactionsCard": "Transaction history",
