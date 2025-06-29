@@ -614,6 +614,30 @@ class BaseCrudCore:
             "de": "Dieses Feld ist erforderlich."
         }
 
+        DEFAULT_VALIDATION_MESSAGES = {
+            "value is not a valid email address": {
+                "ru": "Неверный формат e-mail.",
+                "en": "Invalid email format.",
+                "pl": "Nieprawidłowy format e-mail.",
+                "uk": "Невірний формат електронної пошти.",
+                "de": "Ungültiges E-Mail-Format."
+            },
+            "value is not a valid integer": {
+                "ru": "Ожидается целое число.",
+                "en": "A valid integer is required.",
+                "pl": "Wymagana jest liczba całkowita.",
+                "uk": "Потрібне ціле число.",
+                "de": "Es wird eine Ganzzahl erwartet."
+            },
+            "value could not be parsed to a boolean": {
+                "ru": "Ожидается логическое значение (true/false).",
+                "en": "Expected a boolean value (true/false).",
+                "pl": "Oczekiwano wartości logicznej (true/false).",
+                "uk": "Очікувалося логічне значення (true/false).",
+                "de": "Es wird ein boolescher Wert erwartet (true/false)."
+            }
+        }
+
         def try_parse_json(value: Any) -> Any:
             if isinstance(value, str):
                 try:
@@ -650,19 +674,40 @@ class BaseCrudCore:
                 field = loc[0]
 
                 if partial and field not in data:
-                    continue  # ❗ Пропускаем обязательность, если поле не передано
+                    continue  # Пропускаем обязательность, если поле не передано
 
-                # 👇 Обработка сообщений
+                # --- Обработка текста ошибки ---
                 if msg in {"Field required", "Missing required field", "value is required"}:
                     final_msg = FIELD_REQUIRED_MESSAGE
+
                 elif isinstance(msg, dict):
                     final_msg = msg
+
                 elif isinstance(msg, str):
-                    try:
-                        parsed = json.loads(msg)
-                        final_msg = parsed if isinstance(parsed, dict) else msg
-                    except Exception:
-                        final_msg = msg.split(", ", 1)[-1] if ", " in msg else msg
+                    msg_str = msg.strip()
+
+                    # Удаляем префикс "Value error, " если он есть
+                    if msg_str.startswith("Value error,"):
+                        msg_str = msg_str.replace("Value error,", "", 1).strip()
+
+                    # Попытка распарсить словарь (одинарные кавычки -> двойные)
+                    if msg_str.startswith("{") and msg_str.endswith("}"):
+                        try:
+                            parsed = json.loads(msg_str.replace("'", '"'))
+                            final_msg = parsed if isinstance(parsed, dict) else msg_str
+                        except Exception:
+                            final_msg = msg_str
+
+                    elif msg_str in DEFAULT_VALIDATION_MESSAGES:
+                        final_msg = DEFAULT_VALIDATION_MESSAGES[msg_str]
+
+                    elif ":" in msg_str:
+                        base_msg = msg_str.split(":", 1)[0].strip()
+                        final_msg = DEFAULT_VALIDATION_MESSAGES.get(base_msg, msg_str)
+
+                    else:
+                        final_msg = msg_str
+
                 else:
                     final_msg = msg
 
@@ -672,6 +717,7 @@ class BaseCrudCore:
             raise HTTPException(400, detail=errors)
 
         return validated
+
 
     async def process_data(
         self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False

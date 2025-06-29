@@ -491,8 +491,8 @@ class ContactInfoSchema(BaseModel):
     @field_validator("zip", mode="before")
     def validate_zip_format(cls, v, info: ValidationInfo):
         print('вызвана проврека')
-        if v is None:
-            return v
+        if v is None or v == "":
+            return None
 
         if not re.match(r"^\d{2}-\d{3}$", v):
             raise ValueError({
