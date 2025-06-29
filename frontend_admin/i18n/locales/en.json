@@ -282,6 +282,8 @@
     "transactionsCard": "Transaction history",
     "transactionsSubtitle": "Latest bonus operations",
 
+    "toastTitleLink": "Link copied",
+    "toastBodyLink": "Referral link copied to clipboard!",
     "toastTitle": "Code copied",
     "toastBody": "Referral code copied to clipboard!",
     "tooltipCopy": "Copy referral code"
