@@ -424,7 +424,9 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
         "updated_at",
     ]
 
-    computed_fields = ["address", "passport"]
+    computed_fields = ["address", "passport",
+                       "country", "region", "city", "street",
+                       "building_number", "apartment", "zip"]
     read_only_fields = ["phone", "address", "pesel", "updated_at"]
 
     # ------------------------------------------------------------------
@@ -541,14 +543,20 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
         },
         {
             "column": 1,
-            "title": {"en": "Address", "ru": "Адрес", "pl": "Adres", "uk": "Адреса", "de": "Adresse"},
+            "title": {
+                "en": "About Me",
+                "ru": "Обо мне",
+                "pl": "O mnie",
+                "uk": "Про мене",
+                "de": "Über mich"
+            },
             "fields": [
                 "country", "region", "city", "street",
                 "building_number", "apartment", "zip",
                 "address",
                 "pesel", "passport", "updated_at",
             ],
-        },
+        }
     ]
 
     allow_crud_actions = {"create": True, "read": True, "update": True, "delete": False}
@@ -699,7 +707,42 @@ class ContactInfoAccount(BaseAccount, CRMIntegrationMixin):
             } for field in fields_to_lock
         }
 
+    async def _get_residence_address_field(self, obj: dict, field: str, fallback: str) -> str | None:
+        """
+        Универсальный метод для получения поля из residenceAddress или fallback из obj.
+        """
+        main = await mongo_db["patients_main_info"].find_one({"user_id": obj["user_id"]})
+        patient_id = main.get("patient_id") if main else None
+        patient = await self.get_patient_cached(patient_id)
 
+        if patient:
+            address = patient.get("residenceAddress") or {}
+            return address.get(field)
+        print('===== FALLBACK =====')
+        print(obj)
+        print(fallback)
+        return obj.get(fallback)
+
+    async def get_country(self, obj, current_user=None) -> str | None:
+        return await self._get_residence_address_field(obj, "country", "country")
+
+    async def get_city(self, obj, current_user=None) -> str | None:
+        return await self._get_residence_address_field(obj, "city", "city")
+
+    async def get_region(self, obj, current_user=None) -> str | None:
+        return await self._get_residence_address_field(obj, "region", "region")
+
+    async def get_street(self, obj, current_user=None) -> str | None:
+        return await self._get_residence_address_field(obj, "street", "street")
+
+    async def get_building_number(self, obj, current_user=None) -> str | None:
+        return await self._get_residence_address_field(obj, "building", "building_number")
+
+    async def get_apartment(self, obj, current_user=None) -> str | None:
+        return await self._get_residence_address_field(obj, "apartment", "apartment")
+
+    async def get_zip(self, obj, current_user=None) -> str | None:
+        return await self._get_residence_address_field(obj, "zip", "zip")
 
 
 # ==========

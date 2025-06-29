@@ -603,15 +603,20 @@ class BaseCrudCore:
 
     #     return validated
 
-    async def validate_data(self, data: dict, partial: bool = False) -> dict:
-        """Валидирует данные модели (с поддержкой partial и мультиязычных ошибок)."""
+    async def validate_data(self, data: dict, *, partial: bool = False) -> dict:
+        """
+        Валидирует данные модели.
+        partial=False → полное создание;
+        partial=True  → частичное обновление (валидируются только переданные поля).
+        """
 
+        # --- Шаблоны сообщений ---
         FIELD_REQUIRED_MESSAGE = {
             "ru": "Поле обязательно для заполнения.",
             "en": "This field is required.",
             "pl": "To pole jest wymagane.",
             "uk": "Це поле є обовʼязковим.",
-            "de": "Dieses Feld ist erforderlich."
+            "de": "Dieses Feld ist erforderlich.",
         }
 
         DEFAULT_VALIDATION_MESSAGES = {
@@ -620,103 +625,97 @@ class BaseCrudCore:
                 "en": "Invalid email format.",
                 "pl": "Nieprawidłowy format e-mail.",
                 "uk": "Невірний формат електронної пошти.",
-                "de": "Ungültiges E-Mail-Format."
+                "de": "Ungültiges E-Mail-Format.",
             },
             "value is not a valid integer": {
                 "ru": "Ожидается целое число.",
                 "en": "A valid integer is required.",
                 "pl": "Wymagana jest liczba całkowita.",
                 "uk": "Потрібне ціле число.",
-                "de": "Es wird eine Ganzzahl erwartet."
+                "de": "Es wird eine Ganzzahl erwartet.",
             },
             "value could not be parsed to a boolean": {
                 "ru": "Ожидается логическое значение (true/false).",
                 "en": "Expected a boolean value (true/false).",
                 "pl": "Oczekiwano wartości logicznej (true/false).",
                 "uk": "Очікувалося логічне значення (true/false).",
-                "de": "Es wird ein boolescher Wert erwartet (true/false)."
-            }
+                "de": "Es wird ein boolescher Wert erwartet (true/false).",
+            },
         }
 
-        def try_parse_json(value: Any) -> Any:
-            if isinstance(value, str):
+        def try_parse_json(v: Any) -> Any:
+            if isinstance(v, str):
                 try:
-                    parsed = json.loads(value)
+                    parsed = json.loads(v)
                     if isinstance(parsed, dict):
                         return parsed
                 except json.JSONDecodeError:
                     pass
-            return value
+            return v
 
-        errors: Dict[str, Any] = {}
-        validated: Dict[str, Any] = {}
+        # --- 1. Подготовка входа ---
+        incoming = {k: try_parse_json(v) for k, v in data.items() if k not in self.inlines}
 
+        # --- 2. Валидируем ---
         try:
-            filtered = {
-                k: try_parse_json(v)
-                for k, v in data.items()
-                if k not in self.inlines
-            }
-            obj = self.model(**filtered)
+            obj = self.model(**incoming)
+        except ValidationError as exc:
+            errors: dict[str, Any] = {}
 
-            validated = {
-                k: self.serialize_value(v)
-                for k, v in obj.model_dump().items()
-            }
+            for err in exc.errors():
+                field = err["loc"][0]
+                msg   = err["msg"]
 
-        except ValidationError as e:
-            for err in e.errors():
-                loc = err["loc"]
-                msg = err["msg"]
-
-                if not loc:
+                # При partial пропускаем "Field required" для непереданных полей
+                if (
+                    partial
+                    and field not in incoming
+                    and msg in {"Field required", "Missing required field", "value is required"}
+                ):
                     continue
-                field = loc[0]
 
-                if partial and field not in data:
-                    continue  # Пропускаем обязательность, если поле не передано
-
-                # --- Обработка текста ошибки ---
+                # --- нормализация сообщения ---
                 if msg in {"Field required", "Missing required field", "value is required"}:
                     final_msg = FIELD_REQUIRED_MESSAGE
-
                 elif isinstance(msg, dict):
                     final_msg = msg
-
                 elif isinstance(msg, str):
-                    msg_str = msg.strip()
+                    m = msg.strip()
+                    if m.startswith("Value error,"):
+                        m = m.replace("Value error,", "", 1).strip()
 
-                    # Удаляем префикс "Value error, " если он есть
-                    if msg_str.startswith("Value error,"):
-                        msg_str = msg_str.replace("Value error,", "", 1).strip()
-
-                    # Попытка распарсить словарь (одинарные кавычки -> двойные)
-                    if msg_str.startswith("{") and msg_str.endswith("}"):
+                    if m.startswith("{") and m.endswith("}"):
                         try:
-                            parsed = json.loads(msg_str.replace("'", '"'))
-                            final_msg = parsed if isinstance(parsed, dict) else msg_str
+                            final_msg = json.loads(m.replace("'", '"'))
                         except Exception:
-                            final_msg = msg_str
-
-                    elif msg_str in DEFAULT_VALIDATION_MESSAGES:
-                        final_msg = DEFAULT_VALIDATION_MESSAGES[msg_str]
-
-                    elif ":" in msg_str:
-                        base_msg = msg_str.split(":", 1)[0].strip()
-                        final_msg = DEFAULT_VALIDATION_MESSAGES.get(base_msg, msg_str)
-
+                            final_msg = m
+                    elif m in DEFAULT_VALIDATION_MESSAGES:
+                        final_msg = DEFAULT_VALIDATION_MESSAGES[m]
+                    elif ":" in m:
+                        base = m.split(":", 1)[0].strip()
+                        final_msg = DEFAULT_VALIDATION_MESSAGES.get(base, m)
                     else:
-                        final_msg = msg_str
-
+                        final_msg = m
                 else:
                     final_msg = msg
 
                 errors[field] = final_msg
 
-        if errors:
-            raise HTTPException(400, detail=errors)
+            if errors:
+                # Были реальные ошибки — отдаём 400
+                raise HTTPException(400, detail=errors)
 
-        return validated
+            # Ошибок нет (значит остались только "Field required", которые мы пропустили).
+            # Создаём объект БЕЗ повторной валидации — для сериализации нужных полей.
+            obj = self.model.model_construct(**incoming)
+
+        # --- 3. Формируем результат ---
+        if partial:
+            # Отдаём только переданные поля
+            return {k: self.serialize_value(getattr(obj, k)) for k in incoming}
+
+        # Полное создание — отдаём весь dump
+        return {k: self.serialize_value(v) for k, v in obj.model_dump().items()}
 
 
     async def process_data(
@@ -724,6 +723,8 @@ class BaseCrudCore:
     ) -> dict:
         """Валидирует данные и мерджит инлайны."""
         valid = await self.validate_data(data, partial=partial)
+        print('===== VALID =====')
+        print(valid)
         if self.inlines:
             inline_data = await self.process_inlines(existing_obj, data, partial=partial)
             valid.update(inline_data)

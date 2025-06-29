@@ -91,17 +91,17 @@ class CRMIntegrationMixin:
         В случае ошибки CRM — выбрасывает HTTPException с мультиязычным описанием.
         """
         allowed: dict = {}
-        patch = { 
-            "email": "john.doe@example.com",
-            "residenceAddress": {
-                "street": "Warszawska",
-                "building": "35A",
-                "apartment": "20",
-                "zip": "05-200",
-                "city": "Warszawa",
-                "country": "Polska"
-            }
-        }
+        # patch = { 
+        #     "email": "john.doe@example.com",
+        #     "residenceAddress": {
+        #         "street": "Warszawska",
+        #         "building": "35A",
+        #         "apartment": "20",
+        #         "zip": "05-200",
+        #         "city": "Warszawa",
+        #         "country": "Polska"
+        #     }
+        # }
         # Телефон
         if phone := patch.get("phone"):
             normalized_numbers = normalize_numbers(phone)
@@ -112,11 +112,11 @@ class CRMIntegrationMixin:
             allowed["email"] = email
 
         # Адрес
-        if address := patch.get("residenceAddress"):
-            allowed["residenceAddress"] = {}
-            for field in ["country", "region", "city", "street", "building", "apartment", "zip"]:
-                if field in address:
-                    allowed["residenceAddress"][field] = address[field]
+        # if address := patch.get("residenceAddress"):
+        #     allowed["residenceAddress"] = {}
+        #     for field in ["country", "region", "city", "street", "building", "apartment", "zip"]:
+        #         if field in address:
+        #             allowed["residenceAddress"][field] = address[field]
 
         # Если нечего отправлять — выходим
         if not allowed:

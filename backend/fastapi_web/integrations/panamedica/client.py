@@ -279,6 +279,8 @@ class CRMClient:
         return data
 
     async def patch_patient(self, patient_id: str, patch: dict) -> dict:
+        print('===== PATCH =====')
+        print(patch)
         return await self.call("PATCH", f"/patients/{patient_id}", json=patch)
 
     async def find_or_create_patient(
