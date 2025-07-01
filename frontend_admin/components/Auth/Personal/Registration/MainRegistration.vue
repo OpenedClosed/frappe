@@ -257,7 +257,7 @@
               <Checkbox v-model="regForm.accept_terms" :binary="true" inputId="agreeTerms" required class="mr-2" />
               <label for="agreeTerms" class="text-[14px] text-black dark:text-white">
                 {{ t("PersonalMainRegistration.termsPrefix") }}
-                <a href="https://www.pa-na.pl/pl/dokumenty1/polityka-prywatnosci" class="underline" target="_blank">
+                <a href="https://www.pa-na.pl/pl/dokumenty1/polityka-prywatnosci" class="underline" target="_blank" rel="noreferrer noopener">
                   {{ t("PersonalMainRegistration.privacyLink") }}
                 </a>
               </label>
