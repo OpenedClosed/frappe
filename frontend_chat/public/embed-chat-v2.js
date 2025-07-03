@@ -60,9 +60,7 @@
   }
 
   // Handle dynamic resizing
-  window.addEventListener('resize', () => {
-    applyStyles();
-  });
+  applyStyles();
 
   // Handle messages from iframe
   window.addEventListener('message', (event) => {
