@@ -1068,7 +1068,6 @@ async def start_brief(
     """
     Инициализирует бриф.
     """
-    return
     welcome_flag_key = f"chat:welcome:{chat_session.chat_id}"
 
     if len(chat_session.messages) > 0 or not await redis_db.set(welcome_flag_key, "1", ex=60, nx=True):
