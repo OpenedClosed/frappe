@@ -24,6 +24,7 @@ import { defineProps, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 const { currentLanguage } = useLanguageState();
+const { currentPageName, currentPageInstances, crmBannerText } = usePageState();
 
 const props = defineProps({
   itemData: {

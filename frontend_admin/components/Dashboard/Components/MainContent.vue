@@ -15,7 +15,10 @@
       <InfoHeader v-if="currentPageName === 'personal_account'" />
       <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
 
-      <div v-if="(isLoading || isLoadingData) && currentPageName === 'personal_account'" class="flex justify-center items-center w-full h-full p-8">
+      <div
+        v-if="(isLoading || isLoadingData) && currentPageName === 'personal_account'"
+        class="flex justify-center items-center w-full h-full p-8"
+      >
         <Loader style="width: 50px; height: 50px" />
       </div>
       <div v-else class="flex flex-col flex-1 min-w-0 max-w-full">
@@ -53,6 +56,9 @@
           v-else-if="currentEntity === 'patients_consents' && !currentId"
           class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
         >
+        <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
+           {{ crmBannerText }}
+      </InfoBanner>
           <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
         </div>
         <div
@@ -99,7 +105,7 @@
         </div>
         <div
           v-else-if="currentEntity === 'chat_sessions' && !currentId"
-          class="flex  flex-col min-w-0 max-w-full justify-start items-center m-4"
+          class="flex flex-col min-w-0 max-w-full justify-start items-center m-4"
         >
           <EmbeddedChat
             class="w-full"
@@ -186,13 +192,14 @@ import FamilyTable from "~/components/Dashboard/Components/Personal/FamilyTable.
 import CRMTable from "~/components/Dashboard/Components/Personal/CRMTable.vue";
 import SupportPage from "~/components/Dashboard/Components/Personal/SupportPage.vue";
 import EmbeddedChat from "~/components/AdminChat/EmbeddedChat.vue";
+import InfoBanner from "./Personal/InfoBanner.vue";
 // ------------------ State & Refs ------------------
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 const showFilter = ref(false);
 const searchQuery = ref("");
 const dateRange = ref({ start: null, end: null });
-const { currentPageName, currentPageInstances } = usePageState();
+const { currentPageName, currentPageInstances, crmBannerText } = usePageState();
 
 const selectedField = ref(null);
 const fieldOptions = ref([
@@ -446,9 +453,22 @@ const currentPage = ref(1);
 const pageSize = ref(12);
 const totalRecords = ref(0);
 
+function checkBannerEntity() {
+  if (
+    currentEntity.value === "crm_appointments" ||
+    currentEntity.value === "patients_consents" ||
+    currentEntity.value === "patients_contact_info"
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function parseError(error) {
+  console.log("currentEntity.value =", currentEntity.value);
   console.log("HERE");
   console.log("Parsing error:", error);
+
   if (error.response && error.response.data) {
     const data = error.response.data;
     console.log("Error data:", data);
@@ -468,35 +488,47 @@ function parseError(error) {
           toastMessage = Object.values(data.detail).flat().join(", ");
         }
       }
+      if (checkBannerEntity()) {
+        toast.add({
+          severity: "error",
+          summary: t("toastMessages.errorTitle"),
+          detail: toastMessage,
+          life: 5000,
+        });
+      } else {
+        console.log("Setting crmBannerText to:", toastMessage);
+        crmBannerText.value = toastMessage;
+      }
 
+      return toastMessage;
+    }
+
+    toastMessage = data.message || error.message;
+
+    if (checkBannerEntity()) {
       toast.add({
         severity: "error",
         summary: t("toastMessages.errorTitle"),
         detail: toastMessage,
         life: 5000,
       });
-
-      return toastMessage;
+    } else {
+      console.log("Setting crmBannerText to:", toastMessage);
+      crmBannerText.value = toastMessage;
     }
-
-    toastMessage = data.message || error.message;
-    toast.add({
-      severity: "error",
-      summary: t("toastMessages.errorTitle"),
-      detail: toastMessage,
-      life: 5000,
-    });
 
     return toastMessage;
   }
 
   const fallbackMessage = error.message || t("toastMessages.unknown");
-  toast.add({
-    severity: "error",
-    summary: t("toastMessages.errorTitle"),
-    detail: fallbackMessage,
-    life: 5000,
-  });
+  if (checkBannerEntity()) {
+    toast.add({
+      severity: "error",
+      summary: t("toastMessages.errorTitle"),
+      detail: fallbackMessage,
+      life: 5000,
+    });
+  }
 
   return fallbackMessage;
 }

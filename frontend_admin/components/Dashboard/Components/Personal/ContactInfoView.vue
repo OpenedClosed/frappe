@@ -6,6 +6,9 @@
       <InfoBanner v-if="!allFieldsPresent" infoKey="contactInfoClosed">
            {{ t("ContactInfoView.fillPersonalInfoNotice") }}
       </InfoBanner>
+         <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
+           {{ crmBannerText }}
+      </InfoBanner>
     </div>
     <!-- Контейнер, разбивающий на 2 колонки -->
     <div class="flex flex-row gap-8">
@@ -38,25 +41,6 @@
           </label>
           <span class="text-[15px] font-bold">
             {{ itemData.address || "—" }}
-          </span>
-        </div>
-
-        <!-- PESEL -->
-        <div>
-          <label class="block text-[13px] font-normal">
-            {{ t("ContactInfoView.pesel") }}
-          </label>
-          <span class="text-[15px] font-bold">
-            {{ itemData.pesel || "—" }}
-          </span>
-        </div>
-        <!-- Passport -->
-        <div>
-          <label class="block text-[13px] font-normal">
-            {{ t("ContactInfoView.passport") }}
-          </label>
-          <span class="text-[15px] font-bold">
-            {{ itemData.passport || "—" }}
           </span>
         </div>
       </div>
@@ -100,6 +84,7 @@
 import _ from "lodash";
 import { useI18n } from "vue-i18n";
 import InfoBanner from "./InfoBanner.vue";
+const { crmBannerText } = usePageState();
 const { t } = useI18n();
 /**
  * Props for receiving data from the parent component

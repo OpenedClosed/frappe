@@ -33,6 +33,7 @@
         <PatientsHealthSurveyView v-if="itemData && Object.keys(itemData).length > 0" :itemData="itemData" />
       </div>
       <div v-else-if="currentEntity === 'patients_consents' && !isNewItem && isReadOnly">
+        {{  }}
         <AgreesPanel v-if="itemData && Object.keys(itemData).length > 0" :filteredFields="filteredFields" :itemData="itemData" />
       </div>
       <div v-else-if="currentEntity === 'patients_bonus_program' && !isNewItem && isReadOnly">
@@ -134,6 +135,7 @@ import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 import { useToast } from "primevue/usetoast";
 const toast = useToast();
+
 
 // ------------------ State & Refs ------------------
 const route = useRoute();

@@ -23,7 +23,7 @@ export const useLanguageState = () => {
 export function useChatState() {
   const isAutoMode = useState("isAutoMode", () => true);
   const messagesLoaded = useState("messagesLoaded", () => false);
-  const currentChatId = useState("currentChatId", () => '');
+  const currentChatId = useState("currentChatId", () => "");
   const chatMessages = useState("chatMessages", () => []);
 
   return {
@@ -39,12 +39,23 @@ export const useHeaderState = () => {
   const rooms = useState("rooms", () => []);
   return { botHeaderData, rooms };
 };
+
 export function usePageState() {
+  const initialBannerText = typeof window !== "undefined" ? localStorage.getItem("crmBannerText") || "" : "";
   const currentPageName = useState("currentPageName", () => "admin");
   const currentPageInstances = useState("currentPageInstances", () => 0);
+  const crmBannerText = useState("crmBannerText", () => initialBannerText);
+
+  // Watch for changes and save to localStorage
+  if (typeof window !== "undefined") {
+    watch(crmBannerText, (val) => {
+      localStorage.setItem("crmBannerText", val || "");
+    });
+  }
 
   return {
     currentPageName,
     currentPageInstances,
+    crmBannerText,
   };
 }
