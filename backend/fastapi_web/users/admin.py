@@ -1,5 +1,5 @@
 """Админ-панель приложения Пользователи."""
-from typing import Optional
+from typing import List, Optional
 
 from admin_core.base_admin import BaseAdmin
 from bson import ObjectId
@@ -12,86 +12,72 @@ from .db.mongo.schemas import User
 
 
 class UserAdmin(BaseAdmin):
-    """Админка для управления пользователями."""
+    """Админка для управления пользователями (добавлено поле is_active)."""
 
     model = User
     collection_name = "users"
-
     permission_class = SuperAdminOnlyPermission()
 
     verbose_name = {
-        "en": "User",
-        "ru": "Пользователь",
-        "pl": "Użytkownik",
-        "uk": "Користувач",
-        "ka": "მომხმარებელი"
+        "en": "User",  "ru": "Пользователь",  "pl": "Użytkownik",
+        "uk": "Користувач",  "ka": "მომხმარებელი",
     }
     plural_name = {
-        "en": "Users",
-        "ru": "Пользователи",
-        "pl": "Użytkownicy",
-        "uk": "Користувачі",
-        "ka": "მომხმარებლები"
+        "en": "Users",  "ru": "Пользователи",  "pl": "Użytkownicy",
+        "uk": "Користувачі",  "ka": "მომხმარებლები",
     }
-
     icon = "pi pi-user"
-
     description = {
         "en": "Manage users in the system",
         "ru": "Управление пользователями в системе",
         "pl": "Zarządzanie użytkownikami w systemie",
         "uk": "Керування користувачами в системі",
-        "ka": "მომხმარებლების მართვა სისტემაში"
+        "ka": "მომხმარებლების მართვა სისტემაში",
     }
 
-    list_display = ["username", "full_name", "role", "created_at"]
-    detail_fields = ["username", "password", "full_name", "avatar", "role", "created_at"]
+    list_display   = ["username", "full_name", "role", "is_active", "created_at"]   # ← +is_active
+    detail_fields  = ["username", "password", "full_name", "avatar",
+                      "role", "is_active", "created_at"]                           # ← +is_active
     read_only_fields = ["created_at"]
 
     field_titles = {
-        "username": {
-            "en": "Username",
-            "ru": "Имя пользователя",
-            "pl": "Nazwa użytkownika",
-            "uk": "Ім’я користувача",
-            "ka": "მომხმარებლის სახელი"
-        },
-        "password": {
-            "en": "Password (hashed)",
-            "ru": "Хешированный пароль",
-            "pl": "Hasło (zhashowane)",
-            "uk": "Пароль (хешований)",
-            "ka": "პაროლი (დაშიფრული)"
-        },
-        "role": {
-            "en": "Role",
-            "ru": "Роль",
-            "pl": "Rola",
-            "uk": "Роль",
-            "ka": "როლი"
-        },
-        "full_name": {
-            "en": "Full name",
-            "ru": "Полное имя",
-            "pl": "Pełne imię",
-            "uk": "Повне ім’я",
-            "ka": "სრული სახელი"
-        },
-        "avatar": {
-            "en": "Avatar",
-            "ru": "Аватар",
-            "pl": "Awatar",
-            "uk": "Аватар",
-            "ka": "ავატარი"
-        },
-        "created_at": {
-            "en": "Created at",
-            "ru": "Дата создания",
-            "pl": "Data utworzenia",
-            "uk": "Дата створення",
-            "ka": "შექმნის თარიღი"
-        }
+        "username":    {"en": "Username",   "ru": "Имя пользователя",  "pl": "Nazwa użytkownika", "uk": "Ім’я користувача", "ka": "მომხმარებლის სახელი"},
+        "password":    {"en": "Password (hashed)", "ru": "Хешированный пароль", "pl": "Hasło (zhashowane)", "uk": "Пароль (хешований)", "ka": "პაროლი (დაშიფრული)"},
+        "role":        {"en": "Role",       "ru": "Роль",  "pl": "Rola",  "uk": "Роль",  "ka": "როლი"},
+        "full_name":   {"en": "Full name",  "ru": "Полное имя",  "pl": "Pełne imię", "uk": "Повне ім’я", "ka": "სრული სახელი"},
+        "avatar":      {"en": "Avatar",     "ru": "Аватар",  "pl": "Awatar", "uk": "Аватар", "ka": "ავატარი"},
+        "created_at":  {"en": "Created at", "ru": "Дата создания", "pl": "Data utworzenia", "uk": "Дата створення", "ka": "შექმნის თარიღი"},
+        "is_active":   {"en": "Is active",  "ru": "Активен",          "pl": "Aktywny",          "uk": "Активний",      "ka": "აქტიური"},  # ← НОВОЕ
     }
+
+    async def get_queryset(
+        self,
+        filters: Optional[dict] = None,
+        sort_by: Optional[str] = None,
+        order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        current_user: Optional[dict] = None,
+        format: bool = True,
+    ) -> List[dict]:
+        """
+        • При первом же чтении админ-списка проверяем всех юзеров.  
+        • Тем, у кого поле `is_active` отсутствует, выставляем True.
+        """
+        # 1. Добавим поле во всей коллекции одним запросом — это быстро.
+        await self.db.update_many(
+            {"is_active": {"$exists": False}},
+            {"$set": {"is_active": True}}
+        )
+
+        # 2. Получаем обычный queryset
+        docs = await super().get_queryset(
+            filters, sort_by, order, page, page_size, current_user, format=False
+        )
+
+        # 3. При необходимости форматируем
+        return [await self.format_document(d, current_user) if format else d for d in docs]
+
 
     async def hash_password_if_needed(self, data: dict) -> None:
         """

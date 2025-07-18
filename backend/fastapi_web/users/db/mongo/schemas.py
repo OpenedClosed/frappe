@@ -26,6 +26,7 @@ class User(BaseValidatedModel):
     username: Optional[str] = Field(None)
     password: str = Field("", min_length=5)
     role: RoleEnum = RoleEnum.CLIENT
+    is_active: bool = Field(default=True) 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     full_name: Optional[str] = Field(None)
     avatar: Optional[Photo] = None

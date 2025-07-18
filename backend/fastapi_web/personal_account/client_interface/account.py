@@ -557,17 +557,13 @@ class HealthSurveyAccount(BaseAccount):
     verbose_name = {
         "en": "Health Survey",
         "ru": "Анкета здоровья",
-        "pl": "Ankieta zdrowotna"
+        "pl": "Ankieta zdrowotna",
+        "be": "Апытальнік здароўя",
     }
-    plural_name = {
-        "en": "Health Survey",
-        "ru": "Анкета здоровья",
-        "pl": "Ankieta zdrowotna"
-    }
+    plural_name = verbose_name
 
     icon: str = "pi pi-heart"
     max_instances_per_user = 1
-
     list_display = []
 
     detail_fields = [
@@ -576,7 +572,7 @@ class HealthSurveyAccount(BaseAccount):
         "smoking_status",
         "current_medications",
         "form_status",
-        "last_updated"
+        "last_updated",
     ]
 
     computed_fields = ["form_status"]
@@ -586,66 +582,78 @@ class HealthSurveyAccount(BaseAccount):
         "allergies": {
             "en": "Allergies",
             "ru": "Аллергии",
-            "pl": "Alergie"
+            "pl": "Alergie",
+            "be": "Алергіі",
         },
         "chronic_conditions": {
             "en": "Chronic Conditions",
             "ru": "Хронические заболевания",
-            "pl": "Choroby przewlekłe"
+            "pl": "Choroby przewlekłe",
+            "be": "Хранічныя захворванні",
         },
         "smoking_status": {
             "en": "Smoking Status",
             "ru": "Статус курения",
-            "pl": "Status palenia"
+            "pl": "Status palenia",
+            "be": "Статус курэння",
         },
         "current_medications": {
             "en": "Current Medications",
             "ru": "Текущие медикаменты",
-            "pl": "Przyjmowane leki"
+            "pl": "Przyjmowane leki",
+            "be": "Бягучыя медыкаменты",
         },
         "form_status": {
             "en": "Form Status",
             "ru": "Статус анкеты",
-            "pl": "Status formularza"
+            "pl": "Status formularza",
+            "be": "Статус апытальніка",
         },
         "last_updated": {
             "en": "Last Updated",
             "ru": "Последнее обновление",
-            "pl": "Ostatnia aktualizacja"
-        }
+            "pl": "Ostatnia aktualizacja",
+            "be": "Апошняе абнаўленне",
+        },
     }
 
     help_texts = {
         "allergies": {
             "en": "List of known allergies, including food, drugs, etc.",
             "ru": "Список известных аллергий: пища, лекарства и т.д.",
-            "pl": "Lista znanych alergii, np. pokarmowych, leków itd."
+            "pl": "Lista znanych alergii, np. pokarmowych, leków itd.",
+            "be": "Спіс вядомых алергій, уключаючы ежу, лекі і г.д.",
         },
         "chronic_conditions": {
             "en": "Select one or more chronic health conditions.",
             "ru": "Выберите одно или несколько хронических заболеваний.",
-            "pl": "Wybierz jedną lub więcej chorób przewlekłych."
+            "pl": "Wybierz jedną lub więcej chorób przewlekłych.",
+            "be": "Выберыце адно або некалькі хранічных захворванняў.",
         },
         "smoking_status": {
             "en": "Current or past smoking habits.",
             "ru": "Текущие или прошлые привычки курения.",
-            "pl": "Obecne lub przeszłe nawyki palenia."
+            "pl": "Obecne lub przeszłe nawyki palenia.",
+            "be": "Бягучыя або мінулыя звычкі курэння.",
         },
         "current_medications": {
             "en": "Drugs taken regularly, including dosage and schedule.",
             "ru": "Регулярно принимаемые лекарства, дозировка и режим.",
-            "pl": "Leki przyjmowane regularnie, dawki i harmonogram."
+            "pl": "Leki przyjmowane regularnie, dawki i harmonogram.",
+            "be": "Прэпараты, якія прымаюцца рэгулярна, дозы і графік.",
         },
         "form_status": {
             "en": "Automatically calculated status of this survey.",
             "ru": "Автоматически вычисляемый статус анкеты.",
-            "pl": "Automatycznie obliczany status formularza."
+            "pl": "Automatycznie obliczany status formularza.",
+            "be": "Аўтаматычна вылічаны статус гэтага апытальніка.",
         },
         "last_updated": {
             "en": "Timestamp when the form was last edited.",
             "ru": "Дата и время последнего редактирования анкеты.",
-            "pl": "Data i godzina ostatniej edycji formularza."
-        }
+            "pl": "Data i godzina ostatniej edycji formularza.",
+            "be": "Час апошняга рэдагавання формы.",
+        },
     }
 
     field_groups = [
@@ -653,100 +661,55 @@ class HealthSurveyAccount(BaseAccount):
             "title": {
                 "en": "Medical Information",
                 "ru": "Медицинская информация",
-                "pl": "Informacje medyczne"
+                "pl": "Informacje medyczne",
+                "be": "Медыцынская інфармацыя",
             },
             "fields": [
                 "allergies",
                 "chronic_conditions",
                 "smoking_status",
-                "current_medications"
-            ]
+                "current_medications",
+            ],
         },
         {
             "title": {
                 "en": "Survey Status",
                 "ru": "Статус анкеты",
-                "pl": "Status ankiety"
+                "pl": "Status ankiety",
+                "be": "Статус апытальніка",
             },
-            "fields": ["form_status", "last_updated"]
-        }
+            "fields": ["form_status", "last_updated"],
+        },
     ]
 
     field_styles = {
         "allergies": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#6B6B7B"},
+            "value_styles": {"font_size": "15px", "font_weight": "normal", "text_color": "#1F1F29"},
         },
         "chronic_conditions": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "bold",
-                "text_color": "#4C4C64"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "13px", "font_weight": "bold", "text_color": "#4C4C64"},
+            "value_styles": {"font_size": "15px", "font_weight": "normal", "text_color": "#1F1F29"},
         },
         "smoking_status": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#6B6B7B"},
+            "value_styles": {"font_size": "15px", "font_weight": "normal", "text_color": "#1F1F29"},
         },
         "current_medications": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#6B6B7B"},
+            "value_styles": {"font_size": "15px", "font_weight": "normal", "text_color": "#1F1F29"},
         },
         "last_updated": {
-            "label_styles": {
-                "font_size": "12px",
-                "font_weight": "normal",
-                "text_color": "#8B8B99"
-            },
-            "value_styles": {
-                "font_size": "14px",
-                "font_weight": "normal",
-                "text_color": "#4F4F59"
-            }
-        }
-        # form_status — НЕ задаём стили
+            "label_styles": {"font_size": "12px", "font_weight": "normal", "text_color": "#8B8B99"},
+            "value_styles": {"font_size": "14px", "font_weight": "normal", "text_color": "#4F4F59"},
+        },
     }
 
-    allow_crud_actions = {
-        "create": True,
-        "read": True,
-        "update": True,
-        "delete": False
-    }
+    allow_crud_actions = {"create": True, "read": True, "update": True, "delete": False}
 
     async def get_form_status(self, obj: dict, current_user=None) -> str:
         """
         Вычисляет статус анкеты (заглушка).
-        В будущем — логика на основе заполненности/врачебной оценки.
         """
         return HealthFormStatus.APPROVED.value
 
@@ -754,6 +717,7 @@ class HealthSurveyAccount(BaseAccount):
 # ==========
 # Семья
 # ==========
+
 
 class FamilyAccount(BaseAccount, CRMIntegrationMixin):
     """
@@ -769,7 +733,8 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
         "en": "Family",
         "pl": "Rodzina",
         "uk": "Сімʼя",
-        "de": "Familie"
+        "de": "Familie",
+        "be": "Сямʼя",
     }
     plural_name = verbose_name
 
@@ -778,171 +743,119 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
 
     list_display = [
         "member_name", "member_id", "status",
-        "relationship", "bonus_balance", "request_type"
+        "relationship", "bonus_balance", "request_type",
     ]
     detail_fields = ["phone", "relationship", "status"]
     computed_fields = [
-        "member_name", "member_id", "bonus_balance", "request_type", "phone"
+        "member_name", "member_id",
+        "bonus_balance", "request_type", "phone",
     ]
     read_only_fields = ["member_name", "member_id", "bonus_balance"]
 
+    # ----------------------- Заголовки полей -----------------------
     field_titles = {
         "phone": {
-            "en": "Phone",
-            "ru": "Телефон",
-            "pl": "Telefon",
-            "uk": "Телефон",
-            "de": "Telefon"
+            "en": "Phone",   "ru": "Телефон",        "pl": "Telefon",
+            "uk": "Телефон", "de": "Telefon",        "be": "Тэлефон",
         },
         "relationship": {
-            "en": "Relationship",
-            "ru": "Родство",
-            "pl": "Relacja",
-            "uk": "Ступінь родинних звʼязків",
-            "de": "Verwandtschaft"
+            "en": "Relationship", "ru": "Родство",       "pl": "Relacja",
+            "uk": "Ступінь родз.", "de": "Verwandtschaft", "be": "Сваяцтва",
         },
         "status": {
-            "en": "Status",
-            "ru": "Статус",
-            "pl": "Status",
-            "uk": "Статус",
-            "de": "Status"
+            "en": "Status", "ru": "Статус", "pl": "Status",
+            "uk": "Статус", "de": "Status", "be": "Статус",
         },
         "get_member_name": {
-            "en": "Full Name",
-            "ru": "Полное имя",
-            "pl": "Imię i nazwisko",
-            "uk": "Повне імʼя",
-            "de": "Vollständiger Name"
+            "en": "Full Name",   "ru": "Полное имя",   "pl": "Imię i nazwisko",
+            "uk": "Поўнае імя",  "de": "Vollständiger Name", "be": "Поўнае імя",
         },
         "get_member_id": {
-            "en": "Patient ID",
-            "ru": "ID пациента",
-            "pl": "ID pacjenta",
-            "uk": "ID пацієнта",
-            "de": "Patienten-ID"
+            "en": "Patient ID",  "ru": "ID пациента",  "pl": "ID pacjenta",
+            "uk": "ID пацыента", "de": "Patienten-ID", "be": "ID пацыента",
         },
         "get_bonus_balance": {
-            "en": "Bonuses",
-            "ru": "Бонусы",
-            "pl": "Bonusy",
-            "uk": "Бонуси",
-            "de": "Bonuspunkte"
+            "en": "Bonuses", "ru": "Бонусы", "pl": "Bonusy",
+            "uk": "Бонусы",  "de": "Bonuspunkte", "be": "Бонусы",
         },
         "request_type": {
-            "en": "Request type",
-            "ru": "Тип заявки",
-            "pl": "Typ zgłoszenia",
-            "uk": "Тип запиту",
-            "de": "Anfragetyp"
+            "en": "Request type", "ru": "Тип заявки", "pl": "Typ zgłoszenia",
+            "uk": "Тып запыту",   "de": "Anfragetyp", "be": "Тып запыту",
         },
     }
 
+    # ----------------------- Подсказки -----------------------
     help_texts = {
         "phone": {
             "en": "Phone number to invite a family member",
             "ru": "Номер телефона для добавления члена семьи",
             "pl": "Numer telefonu do dodania członka rodziny",
-            "uk": "Номер телефону для запрошення члена сімʼї",
-            "de": "Telefonnummer zum Einladen eines Familienmitglieds"
+            "uk": "Нумар тэлефона для запрашэння члена сямʼі",
+            "de": "Telefonnummer zum Einladen eines Familienmitglieds",
+            "be": "Нумар тэлефона для запрашэння члена сямʼі",
         },
         "status": {
             "en": "Request status",
             "ru": "Статус заявки",
             "pl": "Status zgłoszenia",
-            "uk": "Статус запиту",
-            "de": "Anfragestatus"
+            "uk": "Статус запыту",
+            "de": "Anfragestatus",
+            "be": "Статус запыту",
         },
         "relationship": {
             "en": "Who is this person to you?",
             "ru": "Кто этот человек для вас?",
             "pl": "Kim jest ta osoba dla Ciebie?",
-            "uk": "Хто ця людина для вас?",
-            "de": "Wer ist diese Person für Sie?"
-        }
+            "uk": "Хто гэтая асоба для вас?",
+            "de": "Wer ist diese Person für Sie?",
+            "be": "Хто гэтая асоба для вас?",
+        },
     }
 
+    # ----------------------- Группы полей -----------------------
     field_groups = [
         {
             "title": {
                 "en": "Family info",
                 "ru": "Информация о семье",
                 "pl": "Informacje o rodzinie",
-                "uk": "Інформація про сімʼю",
-                "de": "Familieninformationen"
+                "uk": "Інфармацыя пра сямʼю",
+                "de": "Familieninformationen",
+                "be": "Інфармацыя пра сямʼю",
             },
-            "fields": ["phone", "relationship", "status"]
+            "fields": ["phone", "relationship", "status"],
         }
     ]
 
+    # ----------------------- Стили -----------------------
     field_styles = {
         "phone": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#6B6B7B"},
+            "value_styles": {"font_size": "15px", "font_weight": "normal", "text_color": "#1F1F29"},
         },
         "relationship": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#6B6B7B"},
+            "value_styles": {"font_size": "15px", "font_weight": "normal", "text_color": "#1F1F29"},
         },
         "status": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#6B6B7B"
-            },
-            "value_styles": {
-                "font_size": "14px",
-                "font_weight": "medium",
-                "text_color": "#4F4F59"
-            }
+            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#6B6B7B"},
+            "value_styles": {"font_size": "14px", "font_weight": "medium", "text_color": "#4F4F59"},
         },
         "member_name": {
-            "label_styles": {
-                "font_size": "14px",
-                "font_weight": "normal",
-                "text_color": "#8B8B99"
-            },
-            "value_styles": {
-                "font_size": "16px",
-                "font_weight": "bold",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "14px", "font_weight": "normal", "text_color": "#8B8B99"},
+            "value_styles": {"font_size": "16px", "font_weight": "bold", "text_color": "#1F1F29"},
         },
         "member_id": {
-            "label_styles": {
-                "font_size": "13px",
-                "font_weight": "normal",
-                "text_color": "#8B8B99"
-            },
-            "value_styles": {
-                "font_size": "14px",
-                "font_weight": "normal",
-                "text_color": "#4F4F59"
-            }
-        }
+            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#8B8B99"},
+            "value_styles": {"font_size": "14px", "font_weight": "normal", "text_color": "#4F4F59"},
+        },
     }
 
     allow_crud_actions = {
         "create": True,
         "read": True,
         "update": True,
-        "delete": True
+        "delete": True,
     }
 
     async def get_queryset(
@@ -1218,6 +1131,10 @@ class FamilyAccount(BaseAccount, CRMIntegrationMixin):
 # ==========
 
 
+# ==========
+# Inline-Account: BonusTransactionInlineAccount
+# ==========
+
 class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
     """
     Инлайн-модель для транзакций бонусной программы.
@@ -1233,37 +1150,63 @@ class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
         "pl": "Transakcja bonusowa",
         "uk": "Бонусна транзакція",
         "de": "Bonustransaktion",
+        "be": "Бонусная транзакцыя",
     }
     plural_name = {
         "en": "Transactions",
         "ru": "Транзакции",
         "pl": "Transakcje",
-        "uk": "Транзакції",
+        "uk": "Транзакцыі",
         "de": "Transaktionen",
+        "be": "Транзакцыі",
     }
 
     list_display = ["title", "amount", "transaction_type", "date_time"]
     detail_fields = ["title", "amount", "transaction_type", "date_time"]
 
     field_titles = {
-        "title":         {"en": "Title",  "ru": "Название",  "pl": "Tytuł",  "uk": "Назва",  "de": "Titel"},
-        "date_time":     {"en": "Date",   "ru": "Дата",      "pl": "Data",   "uk": "Дата",   "de": "Datum"},
-        "transaction_type": {"en": "Type",   "ru": "Тип",       "pl": "Typ",    "uk": "Тип",    "de": "Typ"},
-        "amount":        {"en": "Amount", "ru": "Сумма",     "pl": "Kwota",  "uk": "Сума",   "de": "Betrag"},
+        "title": {
+            "en": "Title",  "ru": "Название",  "pl": "Tytuł",
+            "uk": "Назва",  "de": "Titel",     "be": "Назва",
+        },
+        "date_time": {
+            "en": "Date",   "ru": "Дата",      "pl": "Data",
+            "uk": "Дата",   "de": "Datum",     "be": "Дата",
+        },
+        "transaction_type": {
+            "en": "Type",   "ru": "Тип",       "pl": "Typ",
+            "uk": "Тып",    "de": "Typ",       "be": "Тып",
+        },
+        "amount": {
+            "en": "Amount", "ru": "Сумма",     "pl": "Kwota",
+            "uk": "Сума",   "de": "Betrag",    "be": "Сума",
+        },
     }
 
-    field_styles = {  # без изменений
+    field_styles = {
         "transaction_type": {
             "label_styles": {"display": "none"},
-            "value_styles": {"font_size": "12px", "font_weight": "medium", "text_color": "#FFFFFF"},
+            "value_styles": {
+                "font_size": "12px",
+                "font_weight": "medium",
+                "text_color": "#FFFFFF",
+            },
         },
         "title": {
             "label_styles": {"display": "none"},
-            "value_styles": {"font_size": "15px", "font_weight": "bold", "text_color": "#1F1F29"},
+            "value_styles": {
+                "font_size": "15px",
+                "font_weight": "bold",
+                "text_color": "#1F1F29",
+            },
         },
         "date_time": {
             "label_styles": {"display": "none"},
-            "value_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#8B8B99"},
+            "value_styles": {
+                "font_size": "13px",
+                "font_weight": "normal",
+                "text_color": "#8B8B99",
+            },
         },
         "amount": {
             "label_styles": {"display": "none"},
@@ -1276,6 +1219,9 @@ class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
         },
     }
 
+    allow_crud_actions = {"create": False, "read": True, "update": False, "delete": False}
+
+    # ---------- CRM-интеграция и queryset (без изменений) ----------
     async def get_queryset(
         self,
         filters: dict | None = None,
@@ -1286,9 +1232,6 @@ class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
         current_user=None,
         format: bool = True,
     ) -> list[dict]:
-        """
-        Тянет историю транзакций из CRM и отдаёт как инлайн-список.
-        """
         parent = getattr(self, "parent_document", {}) or {}
         patient_id = parent.get("patient_id")
 
@@ -1308,7 +1251,11 @@ class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
             )
             return BonusTransactionSchema(
                 title=r.get("title")
-                or ("Bonus accrued" if tx_type is TransactionTypeEnum.ACCRUED else "Bonus spent"),
+                or (
+                    "Bonus accrued"
+                    if tx_type is TransactionTypeEnum.ACCRUED
+                    else "Bonus spent"
+                ),
                 description="",
                 amount=r.get("amount", 0),
                 transaction_type=tx_type,
@@ -1320,11 +1267,15 @@ class BonusTransactionInlineAccount(InlineAccount, CRMIntegrationMixin):
         items.sort(key=lambda x: x["date_time"], reverse=True)
 
         return (
-            [await self.format_document(i, current_user) for i in items] if format else items
+            [await self.format_document(i, current_user) for i in items]
+            if format
+            else items
         )
 
-    allow_crud_actions = {"create": False, "read": True, "update": False, "delete": False}
 
+# ==========
+# Вкладка: BonusProgramAccount
+# ==========
 
 class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
     """
@@ -1340,6 +1291,7 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
         "pl": "Program premiowy",
         "uk": "Бонусна програма",
         "de": "Bonusprogramm",
+        "be": "Бонусная праграма",
     }
     plural_name = {
         "en": "Bonus Programs",
@@ -1347,6 +1299,7 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
         "pl": "Programy premiowe",
         "uk": "Бонусні програми",
         "de": "Bonusprogramme",
+        "be": "Бонусныя праграмы",
     }
 
     icon = "pi pi-star"
@@ -1359,10 +1312,22 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
     read_only_fields = ["balance", "referral_code", "last_updated"]
 
     field_titles = {
-        "balance":            {"en": "Balance",          "ru": "Текущий баланс",          "pl": "Saldo",             "uk": "Баланс",                 "de": "Saldo"},
-        "referral_code":      {"en": "Referral Code",    "ru": "Реферальный код",         "pl": "Kod polecający",    "uk": "Реферальний код",        "de": "Empfehlungscode"},
-        "last_updated":       {"en": "Last Updated",     "ru": "Последнее обновление",    "pl": "Ostatnia aktualizacja", "uk": "Останнє оновлення", "de": "Letzte Aktualisierung"},
-        "transaction_history":{"en": "Transaction History","ru": "История транзакций",   "pl": "Historia transakcji","uk": "Історія транзакцій",     "de": "Transaktionsverlauf"},
+        "balance": {
+            "en": "Balance",          "ru": "Текущий баланс",   "pl": "Saldo",
+            "uk": "Баланс",           "de": "Saldo",            "be": "Баланс",
+        },
+        "referral_code": {
+            "en": "Referral Code",    "ru": "Реферальный код",  "pl": "Kod polecający",
+            "uk": "Реферальний код",  "de": "Empfehlungscode",  "be": "Рэферальны код",
+        },
+        "last_updated": {
+            "en": "Last Updated",     "ru": "Последнее обновление", "pl": "Ostatnia aktualizacja",
+            "uk": "Апошняе абнаўленне","de": "Letzte Aktualisierung","be": "Апошняе абнаўленне",
+        },
+        "transaction_history": {
+            "en": "Transaction History", "ru": "История транзакций", "pl": "Historia transakcji",
+            "uk": "Історыя транзакцый",  "de": "Transaktionsverlauf", "be": "Гісторыя транзакцый",
+        },
     }
 
     help_texts = {
@@ -1370,50 +1335,80 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
             "en": "Use this code to invite friends",
             "ru": "Используйте этот код для приглашения друзей",
             "pl": "Użyj tego kodu, aby zaprosić znajomych",
-            "uk": "Використовуйте цей код для запрошення друзів",
+            "uk": "Выкарыстоўвайце гэты код, каб запрасіць сяброў",
             "de": "Verwenden Sie diesen Code, um Freunde einzuladen",
+            "be": "Выкарыстоўвайце гэты код, каб запрасіць сяброў",
         },
         "transaction_history": {
             "en": "List of bonus point transactions",
             "ru": "Список операций с бонусами",
             "pl": "Lista operacji punktów bonusowych",
-            "uk": "Список операцій з бонусами",
+            "uk": "Спіс аперацый з бонусамі",
             "de": "Liste der Bonuspunktransaktionen",
+            "be": "Спіс аперацый з бонусамі",
         },
     }
 
     field_groups = [
         {
-            "title": {"en": "Bonus Info", "ru": "Информация о бонусах", "pl": "Informacje o bonusach", "uk": "Інформація про бонуси", "de": "Bonusinformationen"},
+            "title": {
+                "en": "Bonus Info",
+                "ru": "Информация о бонусах",
+                "pl": "Informacje o bonusach",
+                "uk": "Інфармацыя пра бонусы",
+                "de": "Bonusinformationen",
+                "be": "Інфармацыя пра бонусы",
+            },
             "description": {
                 "en": "Main information about user's bonus account",
                 "ru": "Основная информация о бонусном счёте пользователя",
                 "pl": "Główne informacje o koncie bonusowym użytkownika",
-                "uk": "Основна інформація про бонусний рахунок користувача",
+                "uk": "Асноўная інфармацыя аб бонусным рахунку карыстальніка",
                 "de": "Hauptinformationen zum Bonuskonto des Benutzers",
+                "be": "Асноўная інфармацыя аб бонусным рахунку карыстальніка",
             },
             "fields": ["balance", "referral_code", "last_updated"],
         },
         {
-            "title": {"en": "Transaction History", "ru": "История транзакций", "pl": "Historia transakcji", "uk": "Історія транзакцій", "de": "Transaktionsverlauf"},
+            "title": {
+                "en": "Transaction History",
+                "ru": "История транзакций",
+                "pl": "Historia transakcji",
+                "uk": "Історыя транзакцый",
+                "de": "Transaktionsverlauf",
+                "be": "Гісторыя транзакцый",
+            },
             "description": {
                 "en": "Recent bonus point transactions",
                 "ru": "Последние операции с бонусами",
                 "pl": "Ostatnie operacje bonusowe",
-                "uk": "Останні операції з бонусами",
+                "uk": "Апошнія аперацыі з бонусамі",
                 "de": "Neueste Bonusvorgänge",
+                "be": "Апошнія аперацыі з бонусамі",
             },
             "fields": ["transaction_history"],
         },
     ]
 
-    field_styles = {  # без изменений
+    field_styles = {
         "balance": {
-            "label_styles": {"font_size": "14px", "font_weight": "bold", "text_color": "#1F1F29"},
-            "value_styles": {"font_size": "28px", "font_weight": "bold", "text_color": "#0057FF"},
+            "label_styles": {
+                "font_size": "14px",
+                "font_weight": "bold",
+                "text_color": "#1F1F29",
+            },
+            "value_styles": {
+                "font_size": "28px",
+                "font_weight": "bold",
+                "text_color": "#0057FF",
+            },
         },
         "referral_code": {
-            "label_styles": {"font_size": "13px", "font_weight": "normal", "text_color": "#6B6B7B"},
+            "label_styles": {
+                "font_size": "13px",
+                "font_weight": "normal",
+                "text_color": "#6B6B7B",
+            },
             "value_styles": {
                 "font_size": "14px",
                 "font_weight": "medium",
@@ -1425,17 +1420,24 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
             },
         },
         "last_updated": {
-            "label_styles": {"font_size": "12px", "font_weight": "normal", "text_color": "#8B8B99"},
-            "value_styles": {"font_size": "14px", "font_weight": "normal", "text_color": "#4F4F59"},
+            "label_styles": {
+                "font_size": "12px",
+                "font_weight": "normal",
+                "text_color": "#8B8B99",
+            },
+            "value_styles": {
+                "font_size": "14px",
+                "font_weight": "normal",
+                "text_color": "#4F4F59",
+            },
         },
     }
 
     inlines = {"transaction_history": BonusTransactionInlineAccount}
-
     allow_crud_actions = {"create": False, "read": True, "update": False, "delete": False}
 
+    # ---------- CRM-интеграция, локальный doc, баланс, queryset ----------
     async def ensure_local_document(self, current_user) -> dict | None:
-        """Возвращает готовый локальный doc, обновлённый из CRM."""
         client = await self.get_master_client_by_user(current_user)
         patient_id = client.get("patient_id") if client else None
         if not patient_id:
@@ -1470,7 +1472,11 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
             )
             return BonusTransactionSchema(
                 title=r.get("title")
-                or ("Bonus accrued" if tx_type is TransactionTypeEnum.ACCRUED else "Bonus spent"),
+                or (
+                    "Bonus accrued"
+                    if tx_type is TransactionTypeEnum.ACCRUED
+                    else "Bonus spent"
+                ),
                 description="",
                 amount=r.get("amount", 0),
                 transaction_type=tx_type,
@@ -1482,7 +1488,12 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
         if new_history != doc.get("transaction_history", []):
             await self.db.update_one(
                 {"_id": doc["_id"]},
-                {"$set": {"transaction_history": new_history, "last_updated": datetime.utcnow()}},
+                {
+                    "$set": {
+                        "transaction_history": new_history,
+                        "last_updated": datetime.utcnow(),
+                    }
+                },
             )
             doc["transaction_history"] = new_history
         return doc
@@ -1503,7 +1514,6 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
         return [await self.format_document(doc, current_user) if format else doc]
 
     async def get_balance(self, obj: dict, current_user=None) -> int:
-        """Возвращает текущий баланс бонусов."""
         patient_id = obj.get("patient_id")
         if patient_id:
             crm_data = await self.get_patient_cached(patient_id)
@@ -1515,13 +1525,14 @@ class BonusProgramAccount(BaseAccount, CRMIntegrationMixin):
         return obj.get("referral_code") or "Error"
 
 
+
 # ==========
 # Согласия
 # ==========
 
 class ConsentAccount(BaseAccount, CRMIntegrationMixin):
     """
-    Админка для вкладки 'Согласия'.
+    Админка для вкладки «Согласия».
     """
 
     model = ConsentSchema
@@ -1532,34 +1543,39 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         "ru": "Мои согласия",
         "pl": "Moje zgody",
         "uk": "Мої згоди",
-        "de": "Meine Einwilligungen"
+        "de": "Meine Einwilligungen",
+        "be": "Мае згоды",
     }
     plural_name = verbose_name
 
     icon = "pi pi-check-circle"
     max_instances_per_user = 1
 
-    list_display = ["consents", "last_updated"]
-    detail_fields = ["consents", "last_updated"]
-    read_only_fields = ["last_updated"]
+    list_display      = ["consents", "last_updated"]
+    detail_fields     = ["consents", "last_updated"]
+    read_only_fields  = ["last_updated"]
 
+    # ------------------------------------------------------------------
+    # Заголовки, подсказки, группы, стили
+    # ------------------------------------------------------------------
     field_titles = {
         "consents": {
             "en": "User Consents",
             "ru": "Согласия пользователя",
             "pl": "Zgody użytkownika",
             "uk": "Згоди користувача",
-            "de": "Einwilligungen des Nutzers"
+            "de": "Einwilligungen des Nutzers",
+            "be": "Згоды карыстальніка",
         },
         "last_updated": {
             "en": "Last Updated",
             "ru": "Дата последнего обновления",
             "pl": "Ostatnia aktualizacja",
             "uk": "Останнє оновлення",
-            "de": "Letzte Aktualisierung"
-        }
+            "de": "Letzte Aktualisierung",
+            "be": "Апошняе абнаўленне",
+        },
     }
-
     help_texts = field_titles
 
     field_groups = [
@@ -1569,49 +1585,32 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
                 "ru": "Информация о согласиях пользователя",
                 "pl": "Informacje o zgodach użytkownika",
                 "uk": "Інформація про згоди користувача",
-                "de": "Einwilligungsinformationen des Nutzers"
+                "de": "Einwilligungsinformationen des Nutzера",
+                "be": "Інфармацыя пра згоды карыстальніка",
             },
-            "fields": ["consents", "last_updated"]
+            "fields": ["consents", "last_updated"],
         }
     ]
 
     field_styles = {
         "consents": {
-            "label_styles": {
-                "font_size": "14px",
-                "font_weight": "bold",
-                "text_color": "#1F1F29"
-            },
-            "value_styles": {
-                "font_size": "15px",
-                "font_weight": "normal",
-                "text_color": "#1F1F29"
-            }
+            "label_styles": {"font_size": "14px", "font_weight": "bold", "text_color": "#1F1F29"},
+            "value_styles": {"font_size": "15px", "font_weight": "normal", "text_color": "#1F1F29"},
         },
         "last_updated": {
-            "label_styles": {
-                "font_size": "12px",
-                "font_weight": "normal",
-                "text_color": "#8B8B99"
-            },
-            "value_styles": {
-                "font_size": "14px",
-                "font_weight": "normal",
-                "text_color": "#4F4F59"
-            }
-        }
+            "label_styles": {"font_size": "12px", "font_weight": "normal", "text_color": "#8B8B99"},
+            "value_styles": {"font_size": "14px", "font_weight": "normal", "text_color": "#4F4F59"},
+        },
     }
 
-    allow_crud_actions = {
-        "create": False,
-        "read": True,
-        "update": True,
-        "delete": False
-    }
+    allow_crud_actions = {"create": False, "read": True, "update": True, "delete": False}
 
+    # ------------------------------------------------------------------
+    # CRM-синхронизация
+    # ------------------------------------------------------------------
     async def sync_consents(self, doc: dict) -> dict:
         """
-        Сравнивает локальные и CRM-согласия, при расхождении синхронизирует Mongo с CRM.
+        Выравнивает локальные и CRM-согласия; при расхождении правит Mongo.
         """
         patient_id = doc.get("patient_id")
         if not patient_id:
@@ -1621,37 +1620,31 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         if e:
             raise HTTPException(
                 400,
-                detail = {
+                detail={
                     "ru": "Согласия становятся доступны только после подтверждения аккаунта.",
                     "en": "Consents are only available after account verification.",
                     "pl": "Zgody są dostępne dopiero po weryfikacji konta.",
                     "uk": "Згоди доступні лише після підтвердження облікового запису.",
-                    "de": "Einwilligungen sind erst nach der Konto­bestätigung verfügbar."
-                }
+                    "de": "Einwilligungen sind erst nach Bestätigung des Kontos verfügbar.",
+                    "be": "Згоды даступныя толькі пасля пацверджання акаўнта.",
+                },
             )
 
-        crm_set = {(c["id"], c.get("accepted", False)) for c in crm_raw}
-        crm_items = [ConsentItem(id=i, accepted=a) for i, a in crm_set]
-
-        local_set = {(c["id"], c["accepted"]) for c in doc.get("consents", [])}
+        crm_set  = {(c["id"], bool(c.get("accepted"))) for c in crm_raw}
+        local_set = {(c["id"], bool(c.get("accepted"))) for c in doc.get("consents", [])}
 
         if crm_set != local_set:
-            doc["consents"] = crm_items
+            doc["consents"]     = [ConsentItem(id=i, accepted=a).model_dump() for i, a in crm_set]
             doc["last_updated"] = datetime.utcnow()
             await self.db.update_one(
                 {"_id": doc["_id"]},
-                {
-                    "$set": {
-                        "consents": [c.model_dump() for c in crm_items],
-                        "last_updated": doc["last_updated"],
-                    }
-                },
+                {"$set": {"consents": doc["consents"], "last_updated": doc["last_updated"]}},
             )
         return doc
 
     async def get_or_create_if_missing(self, patient_id: str, current_user) -> dict:
         """
-        Получает запись из Mongo, если есть. Иначе — создаёт по CRM-согласиям.
+        Возвращает запись из Mongo или создаёт новую на основе CRM-согласий.
         """
         doc = await self.db.find_one({"patient_id": patient_id})
         if doc:
@@ -1666,23 +1659,26 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
                     "en": "Consents are available after confirmation in the PaNa system",
                     "pl": "Zgody są dostępne po potwierdzeniu w systemie PaNa",
                     "uk": "Згоди доступні після підтвердження в системі PaNa",
-                    "de": "Einwilligungen sind nach Bestätigung im PaNa-System verfügbar"
-                }
+                    "de": "Einwilligungen sind nach Bestätigung im PaNa-System verfügbar",
+                    "be": "Згоды даступныя пасля пацверджання ў сістэме PaNa",
+                },
             )
 
-        consents = [ConsentItem(id=c["id"], accepted=c.get("accepted", False)) for c in crm_raw]
-
+        consents = [ConsentItem(id=c["id"], accepted=bool(c.get("accepted"))).model_dump() for c in crm_raw]
         now = datetime.utcnow()
         data = {
-            "patient_id": patient_id,
-            "consents": [c.model_dump() for c in consents],
+            "patient_id":   patient_id,
+            "consents":     consents,
             "last_updated": now,
             "current_user": current_user.data.get("user_id") if current_user else None,
         }
-        result = await self.db.insert_one(data)
-        data["_id"] = result.inserted_id
+        res = await self.db.insert_one(data)
+        data["_id"] = res.inserted_id
         return data
 
+    # ------------------------------------------------------------------
+    # CRUD overrides
+    # ------------------------------------------------------------------
     async def get_queryset(
         self,
         filters: dict | None = None,
@@ -1696,21 +1692,21 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         patient_id = await self.get_patient_id_for_user(current_user)
         if not patient_id:
             return []
-
         raw = await self.get_or_create_if_missing(patient_id, current_user)
         return [await self.format_document(raw, current_user) if format else raw]
 
     async def update(self, object_id: str, data: dict, current_user=None):
         """
-        Обновляет согласия в CRM и локальной базе.
+        Отправляет изменения в CRM и обновляет Mongo.
         """
+        # — текущий doc
         doc = await self.get(object_id, current_user)
         patient_id = await self.get_patient_id_for_user(current_user)
         if not patient_id:
             raise HTTPException(400, "Patient ID missing")
 
+        # — нормализуем вход
         raw_consents = data.get("consents", [])
-
         if isinstance(raw_consents, str):
             try:
                 raw_consents = json.loads(raw_consents)
@@ -1719,14 +1715,11 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
         if not isinstance(raw_consents, list):
             raise HTTPException(400, "Invalid consents format: must be list")
 
+        # — мапим title → id
         consents, _ = await self.get_consents_cached(patient_id)
-        consents_by_title = {
-            c["title"]: c["id"]
-            for c in consents
-            if isinstance(c, dict) and "title" in c and "id" in c
-        }
+        title_to_id = {c["title"]: c["id"] for c in consents if "title" in c and "id" in c}
 
-        input_titles = set()
+        input_titles: set[str] = set()
         for item in raw_consents:
             if isinstance(item, str):
                 input_titles.add(item)
@@ -1735,65 +1728,53 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
             else:
                 raise HTTPException(400, f"Invalid consent format: {item}")
 
-        new_items = {cid: title in input_titles for title, cid in consents_by_title.items()}
+        new_items = {cid: (title in input_titles) for title, cid in title_to_id.items()}
+        old_items = {c["id"]: c["accepted"] for c in doc.get("consents", [])}
 
-        old_items = {
-            item["id"]: item["accepted"]
-            for item in doc.get("consents", [])
-            if isinstance(item, dict) and "id" in item and "accepted" in item
-        }
-
+        # — пушим изменения в CRM
         crm = get_client()
-        for cid, acc in new_items.items():
-            if old_items.get(cid) != acc:
-                asyncio.create_task(crm.update_consent(patient_id, cid, acc))
+        for cid, accepted in new_items.items():
+            if old_items.get(cid) != accepted:
+                asyncio.create_task(crm.update_consent(patient_id, cid, accepted))
 
-        data["consents"] = [{"id": cid, "accepted": acc} for cid, acc in new_items.items()]
-        data["last_updated"] = datetime.utcnow()
-
+        # — апдейтим Mongo
+        data["consents"]      = [{"id": cid, "accepted": acc} for cid, acc in new_items.items()]
+        data["last_updated"]  = datetime.utcnow()
         return await super().update(object_id, data, current_user)
 
-    async def get_field_overrides(
-        self, obj: Optional[dict] = None, current_user: Optional[Any] = None
-    ) -> dict:
-        patient_id = None
-        if obj:
-            patient_id = obj.get("patient_id")
-        elif current_user:
+    # ------------------------------------------------------------------
+    # UI overrides
+    # ------------------------------------------------------------------
+    async def get_field_overrides(self, obj=None, current_user=None) -> dict:
+        """
+        Заполняет choices для multiselect «consents».
+        """
+        patient_id = obj.get("patient_id") if obj else None
+        if not patient_id and current_user:
             client = await self.get_master_client_by_user(current_user)
             patient_id = client.get("patient_id") if client else None
-
         if not patient_id:
             return {}
 
         try:
-            consents, _ = await self.get_consents_cached(patient_id)
+            crm_consents, _ = await self.get_consents_cached(patient_id)
         except Exception:
             return {}
 
-        return {
-            "consents": {
-                "choices": [{"value": c["title"], "label": c["title"]} for c in consents if "title" in c]
-            }
-        }
+        choices = [{"value": c["title"], "label": c["title"]} for c in crm_consents if "title" in c]
+        return {"consents": {"choices": choices}}
 
-    async def format_document(self, doc: dict, current_user: Optional[dict] = None) -> dict:
-        """
-        Форматирует согласия как список строк (title) для multiselect.
-        """
+    async def format_document(self, doc: dict, current_user=None) -> dict:
         formatted = await super().format_document(doc, current_user)
-
         patient_id = doc.get("patient_id")
         if not patient_id:
             return formatted
 
         try:
             crm_consents, _ = await self.get_consents_cached(patient_id)
-            accepted_titles = [c["title"] for c in crm_consents if c.get("accepted") and "title" in c]
-            formatted["consents"] = accepted_titles
+            formatted["consents"] = [c["title"] for c in crm_consents if c.get("accepted")]
         except Exception:
             pass
-
         return formatted
 
 
@@ -1801,13 +1782,12 @@ class ConsentAccount(BaseAccount, CRMIntegrationMixin):
 # Встречи
 # ==========
 
-
 class AppointmentAccount(BaseAccount, CRMIntegrationMixin):
     """
-    Только для чтения: встречи пользователя, полученные из CRM.
+    Только для чтения: встречи пользователя из CRM.
     """
 
-    model = AppointmentSchema  # фиктивная схема, не используется
+    model = AppointmentSchema
     collection_name = "crm_appointments"
 
     verbose_name = {
@@ -1815,69 +1795,50 @@ class AppointmentAccount(BaseAccount, CRMIntegrationMixin):
         "ru": "Визиты",
         "pl": "Wizyty",
         "uk": "Візити",
-        "de": "Termine"
+        "de": "Termine",
+        "be": "Візіты",
     }
     plural_name = verbose_name
 
     icon = "pi pi-calendar"
     max_instances_per_user = None
+    allow_crud_actions = {"create": False, "read": True, "update": False, "delete": False}
 
-    allow_crud_actions = {
-        "create": False,
-        "read": True,
-        "update": False,
-        "delete": False
-    }
-
-    list_display = ["visit_date", "start", "end", "doctor"]
-    detail_fields = ["visit_date", "start", "end", "doctor"]
+    list_display    = ["visit_date", "start", "end", "doctor"]
+    detail_fields   = ["visit_date", "start", "end", "doctor"]
     read_only_fields = ["visit_date", "start", "end", "doctor"]
 
     field_titles = {
-        "visit_date": {
-            "en": "Date",
-            "ru": "Дата",
-            "pl": "Data",
-            "uk": "Дата",
-            "de": "Datum"
-        },
+        "visit_date": {"en": "Date", "ru": "Дата", "pl": "Data", "uk": "Дата", "de": "Datum", "be": "Дата"},
         "start": {
             "en": "Start Time",
             "ru": "Начало",
             "pl": "Godzina rozpoczęcia",
-            "uk": "Час початку",
-            "de": "Beginn"
+            "uk": "Час пачатку",
+            "de": "Beginn",
+            "be": "Час пачатку",
         },
         "end": {
             "en": "End Time",
             "ru": "Конец",
             "pl": "Godzina zakończenia",
-            "uk": "Час закінчення",
-            "de": "Ende"
+            "uk": "Час заканчэння",
+            "de": "Ende",
+            "be": "Час заканчэння",
         },
-        "doctor": {
-            "en": "Doctor",
-            "ru": "Врач",
-            "pl": "Lekarz",
-            "uk": "Лікар",
-            "de": "Arzt"
-        },
+        "doctor": {"en": "Doctor", "ru": "Врач", "pl": "Lekarz", "uk": "Лікар", "de": "Arzt", "be": "Доктар"},
     }
 
-    async def get_queryset(  # noqa: D401
+    async def get_queryset(
         self,
-        filters: Optional[dict] = None,
-        sort_by: Optional[str] = None,
+        filters: dict | None = None,
+        sort_by: str | None = None,
         order: int = 1,
-        page: Optional[int] = None,
-        page_size: Optional[int] = None,
-        current_user: Optional[Any] = None,
+        page: int | None = None,
+        page_size: int | None = None,
+        current_user=None,
         format: bool = True,
     ) -> List[Dict[str, Any]]:
-        """
-        Возвращает список визитов из CRM.
-        Параметры пагинации игнорируются – отдаем все, как пришло.
-        """
         self.check_crud_enabled("read")
 
         patient_id = await self.get_patient_id_for_user(current_user)
@@ -1892,28 +1853,28 @@ class AppointmentAccount(BaseAccount, CRMIntegrationMixin):
                     "ru": "Расписание встреч доступно после подтверждения в системе PaNa",
                     "en": "Appointment schedule is available after confirmation in the PaNa system",
                     "pl": "Harmonogram wizyt jest dostępny po potwierdzeniu w systemie PaNa",
-                    "uk": "Розклад візитів доступний після підтвердження в системі PaNa",
-                    "de": "Der Terminplan ist nach Bestätigung im PaNa-System verfügbar"
-                }
+                    "uk": "Расклад візітаў даступны пасля пацверджання ў сістэме PaNa",
+                    "de": "Der Terminplan ist nach Bestätigung im PaNa-System verfügbar",
+                    "be": "Расклад візітаў даступны пасля пацверджання ў сістэме PaNa",
+                },
             )
 
         rows = crm_raw.get("data") if isinstance(crm_raw, dict) and "data" in crm_raw else crm_raw
-
         formatted: List[Dict[str, Any]] = []
         for item in rows or []:
             formatted.append(
                 {
-                    "id": str(item.get("id", "")),
+                    "id":         str(item.get("id", "")),
                     "visit_date": item.get("date"),
-                    "start": item.get("start"),
-                    "end": item.get("end"),
-                    "doctor": (item.get("doctor") or {}).get("name"),
-                    "status": item.get("status"),  # на будущее
+                    "start":      item.get("start"),
+                    "end":        item.get("end"),
+                    "doctor":     (item.get("doctor") or {}).get("name"),
+                    "status":     item.get("status"),
                 }
             )
-
         formatted.sort(key=lambda x: (x["visit_date"], x["start"]))
         return formatted
+
 
 
 account_registry.register("patients_main_info", MainInfoAccount(mongo_db))

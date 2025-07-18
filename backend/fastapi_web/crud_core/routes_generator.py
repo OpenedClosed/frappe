@@ -69,6 +69,9 @@ def generate_base_routes(registry: BaseRegistry):
         if not user_doc:
             raise HTTPException(status_code=401, detail="Invalid credentials.")
 
+        if not user_doc.get("is_active", True):
+            raise HTTPException(403, "User is blocked.")
+
         user = User(**user_doc)
         if not user.check_password(login_data.password):
             raise HTTPException(status_code=401, detail="Invalid credentials.")
