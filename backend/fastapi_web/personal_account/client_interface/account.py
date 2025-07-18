@@ -233,20 +233,21 @@ class MainInfoAccount(BaseAccount, CRMIntegrationMixin):
         )
 
     async def get_gender(self, obj: dict, current_user=None) -> dict:
-        GENDER_TRANSLATIONS = {
-            "male": {
-                "ru": "Мужской", "en": "Male", "pl": "Mężczyzna",
-                "uk": "Чоловіча", "de": "Männlich", "be": "Мужчына",
-            },
-            "female": {
-                "ru": "Женский", "en": "Female", "pl": "Kobieta",
-                "uk": "Жіноча", "de": "Weiblich", "be": "Жаночая",
-            },
-        }
+        # GENDER_TRANSLATIONS = {
+        #     "male": {
+        #         "ru": "Мужской", "en": "Male", "pl": "Mężczyzna",
+        #         "uk": "Чоловіча", "de": "Männlich", "be": "Мужчына",
+        #     },
+        #     "female": {
+        #         "ru": "Женский", "en": "Female", "pl": "Kobieta",
+        #         "uk": "Жіноча", "de": "Weiblich", "be": "Жаночая",
+        #     },
+        # }
         gender_key = await self.crm_or_local(obj, "gender", "gender")
-        if isinstance(gender_key, str):
-            return GENDER_TRANSLATIONS.get(gender_key.lower(), {l: gender_key for l in GENDER_TRANSLATIONS["male"]})
-        return {l: "—" for l in GENDER_TRANSLATIONS["male"]}
+        # if isinstance(gender_key, str):
+        #     return GENDER_TRANSLATIONS.get(gender_key.lower(), {l: gender_key for l in GENDER_TRANSLATIONS["male"]})
+        # return {l: "—" for l in GENDER_TRANSLATIONS["male"]}
+        return gender_key
 
     async def get_crm_link_status(self, obj, current_user=None) -> dict:
         if not obj.get("patient_id"):
