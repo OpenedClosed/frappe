@@ -1,647 +1,647 @@
 {
   "textMessages": {
-    "ROOMS_EMPTY": "No conversations",
-    "ROOM_EMPTY": "No conversation selected",
-    "NEW_MESSAGES": "New messages",
-    "MESSAGE_DELETED": "This message was deleted",
-    "MESSAGES_EMPTY": "No messages",
-    "CONVERSATION_STARTED": "The conversation started on:",
-    "TYPE_MESSAGE": "Type your message",
-    "SEARCH": "Search",
-    "IS_ONLINE": "is online",
-    "LAST_SEEN": "last seen ",
-    "IS_TYPING": "is typing...",
-    "CANCEL_SELECT_MESSAGE": "Cancel Selection"
+    "ROOMS_EMPTY": "Няма размоў",
+    "ROOM_EMPTY": "Размова не выбрана",
+    "NEW_MESSAGES": "Новыя паведамленні",
+    "MESSAGE_DELETED": "Гэта паведамленне было выдалена",
+    "MESSAGES_EMPTY": "Няма паведамленняў",
+    "CONVERSATION_STARTED": "Размова пачалася:",
+    "TYPE_MESSAGE": "Увядзіце сваё паведамленне",
+    "SEARCH": "Пошук",
+    "IS_ONLINE": "у сетцы",
+    "LAST_SEEN": "апошні раз быў(ла) ",
+    "IS_TYPING": "друкуе...",
+    "CANCEL_SELECT_MESSAGE": "Скасаваць выбар"
   },
 
   "EmbeddedChat": {
-    "allLabel": "All",
-    "unreadLabel": "Unread",
-    "exportButton": "Export chats to Excel",
-    "exportCSV": "Export chats to CSV",
-    "csvSuccess": "CSV created",
-    "csvFailed": "CSV export failed",
-    "messageDialogHeader": "Message",
+    "allLabel": "Усё",
+    "unreadLabel": "Непрачытаныя",
+    "exportButton": "Экспарт гутарок у Excel",
+    "exportCSV": "Экспарт гутарок у CSV",
+    "csvSuccess": "CSV створаны",
+    "csvFailed": "Не ўдалося экспартаваць CSV",
+    "messageDialogHeader": "Паведамленне",
     "messageDialogId": "ID",
-    "messageDialogText": "Text",
-    "noSources": "Message has no sources from knowledge base",
-    "sourceLabel": "Source",
-    "userIdLabel": "User",
-    "closeButton": "Close",
+    "messageDialogText": "Тэкст",
+    "noSources": "Паведамленне не мае крыніц з базы ведаў",
+    "sourceLabel": "Крыніца",
+    "userIdLabel": "Карыстальнік",
+    "closeButton": "Закрыць",
 
-    "seeSources": "See sources",
-    "excelSuccess": "Excel created",
-    "excelFailed": "Excel export failed",
-    "noDate": "No date provided",
-    "inFuture": "In the future",
-    "startedAgo": "Started {diffDays} days, {diffHours} hours, {diffMinutes} minutes ago",
-    "consultant": "Consultant",
-    "client": "Client",
-    "chatFallback": "Chat {index}"
+    "seeSources": "Паказаць крыніцы",
+    "excelSuccess": "Excel створаны",
+    "excelFailed": "Не ўдалося экспартаваць Excel",
+    "noDate": "Дата не пазначана",
+    "inFuture": "У будучыні",
+    "startedAgo": "Пачалося {diffDays} дзён, {diffHours} гадзін, {diffMinutes} хвілін таму",
+    "consultant": "Кансультант",
+    "client": "Кліент",
+    "chatFallback": "Чат {index}"
   },
   "UseChatLogic": {
-    "client": "👤 Client",
-    "aiAssistant": "🤖 AI Assistant",
-    "consultant": "👀 Consultant",
-    "unknown": "❓ Unknown"
+    "client": "👤 Кліент",
+    "aiAssistant": "🤖 AI-памочнік",
+    "consultant": "👀 Кансультант",
+    "unknown": "❓ Невядома"
   },
   "MainLogin": {
-    "title": "Login to your account",
-    "loginLabel": "Login",
-    "loginPlaceholder": "Enter your login",
-    "passwordLabel": "Password",
-    "passwordPlaceholder": "Enter your password",
-    "loginButton": "Log in",
-    "noAccount": "Don't have an account?",
-    "registerLink": "Register"
+    "title": "Уваход у асабісты кабінет",
+    "loginLabel": "Лагін",
+    "loginPlaceholder": "Увядзіце свой лагін",
+    "passwordLabel": "Пароль",
+    "passwordPlaceholder": "Увядзіце свой пароль",
+    "loginButton": "Увайсці",
+    "noAccount": "Няма акаўнта?",
+    "registerLink": "Зарэгістравацца"
   },
   "MainRegistration": {
-    "titleRegister": "Registration",
+    "titleRegister": "Рэгістрацыя",
     "email": "E-mail:",
-    "emailPlaceholder": "Enter your e-mail",
-    "phone": "Phone:",
-    "phonePlaceholder": "Enter your phone number",
-    "firstName": "First Name:",
-    "firstNamePlaceholder": "Enter your first name",
-    "lastName": "Last Name:",
-    "lastNamePlaceholder": "Enter your last name",
-    "birthDate": "Birth Date:",
-    "birthDatePlaceholder": "Enter your birth date",
-    "city": "City:",
-    "cityPlaceholder": "Enter your city",
-    "gender": "Gender:",
-    "genderPlaceholder": "Enter your gender",
-    "termsLabel": "I agree to the",
-    "termsAnd": "and",
-    "termsLink": "Terms of Use",
-    "privacyLink": "Privacy Policy",
-    "registerButton": "Register",
-    "alreadyHaveAccount": "Already have an account?",
-    "goToLogin": "Go to login",
+    "emailPlaceholder": "Увядзіце свой e-mail",
+    "phone": "Тэлефон:",
+    "phonePlaceholder": "Увядзіце свой нумар тэлефона",
+    "firstName": "Імя:",
+    "firstNamePlaceholder": "Увядзіце сваё імя",
+    "lastName": "Прозвішча:",
+    "lastNamePlaceholder": "Увядзіце сваё прозвішча",
+    "birthDate": "Дата нараджэння:",
+    "birthDatePlaceholder": "Увядзіце вашу дату нараджэння",
+    "city": "Горад:",
+    "cityPlaceholder": "Увядзіце ваш горад",
+    "gender": "Пол:",
+    "genderPlaceholder": "Увядзіце ваш пол",
+    "termsLabel": "Я згодны з",
+    "termsAnd": "і",
+    "termsLink": "Правіламі карыстання",
+    "privacyLink": "Палітыкай прыватнасці",
+    "registerButton": "Зарэгістравацца",
+    "alreadyHaveAccount": "Ужо ёсць акаўнт?",
+    "goToLogin": "Перайсці да ўваходу",
 
-    "codeTitle": "Test Code (Will be sent by email later)",
-    "codeConfirmTitle": "Code Confirmation",
-    "enterCodePrompt": "Enter the six-digit code from your email",
-    "codeConfirmButton": "Confirm",
-    "codeResendHelp1": "If you did not receive the code —",
-    "codeResendHelp2": "check spam or",
-    "resendLink": "resend it",
+    "codeTitle": "Тэставы код (будзе дасланы пазней па e-mail)",
+    "codeConfirmTitle": "Пацверджанне кода",
+    "enterCodePrompt": "Увядзіце шасцізначны код з вашага e-mail",
+    "codeConfirmButton": "Пацвердзіць",
+    "codeResendHelp1": "Калі вы не атрымалі код —",
+    "codeResendHelp2": "праверце спам або",
+    "resendLink": "адправіць паўторна",
 
     "error": {
-      "terms": "You must agree to the Terms of Service."
+      "terms": "Вы павінны прыняць Правілы карыстання."
     }
   },
   "PersonalMainLogin": {
-    "titleLogin": "Login to Account",
-    "phone": "Phone",
-    "phonePlaceholder": "Enter your phone number",
-    "password": "Password",
-    "passwordPlaceholder": "Enter your password",
-    "loginButton": "Login",
-    "noAccount": "Don’t have an account?",
-    "registerLink": "Register",
-    "title2FA": "Login Confirmation",
-    "testCode": "Test code:",
-    "twofaLabel": "Code from SMS / email",
-    "twofaPlaceholder": "Enter the code",
-    "confirmButton": "Confirm",
-    "cancelButton": "Cancel"
+    "titleLogin": "Уваход у акаўнт",
+    "phone": "Тэлефон",
+    "phonePlaceholder": "Увядзіце свой нумар тэлефона",
+    "password": "Пароль",
+    "passwordPlaceholder": "Увядзіце свой пароль",
+    "loginButton": "Увайсці",
+    "noAccount": "Няма акаўнта?",
+    "registerLink": "Рэгістрацыя",
+    "title2FA": "Пацверджанне ўваходу",
+    "testCode": "Тэставы код:",
+    "twofaLabel": "Код з SMS / e-mail",
+    "twofaPlaceholder": "Увядзіце код",
+    "confirmButton": "Пацвердзіць",
+    "cancelButton": "Адмяніць"
   },
   "PersonalMainRegistration": {
-    "title": "Registration",
-    "subtitle": "Create a new account",
-    "phone": "Phone number",
-    "phonePlaceholder": "Enter your phone number",
+    "title": "Рэгістрацыя",
+    "subtitle": "Стварыць новы акаўнт",
+    "phone": "Нумар тэлефона",
+    "phonePlaceholder": "Увядзіце свой нумар тэлефона",
     "email": "Email",
     "emailPlaceholder": "{'mail@example.com'}",
-    "firstName": "First Name:",
-    "firstNamePlaceholder": "Enter your first name",
-    "lastName": "Last Name:",
-    "lastNamePlaceholder": "Enter your last name",
-    "password": "Password",
-    "passwordPlaceholder": "Minimum 8 characters",
-    "show": "Show",
-    "hide": "Hide",
-    "passwordHint": "Minimum of 8 characters, including uppercase, lowercase, numbers and symbols",
-    "passwordConfirm": "Confirm password",
-    "passwordConfirmPlaceholder": "Repeat the password",
-    "termsPrefix": "I agree to the",
-    "termsLink": "Terms of Use",
-    "privacyAnd": "and",
-    "privacyLink": "Privacy Policy",
-    "registerButton": "Register",
-    "alreadyHave": "Already have an account?",
-    "loginLink": "Login",
-    "confirmTitle": "Confirm registration",
-    "debugCode": "Test code (will come from email later)",
-    "smsCodeLabel": "Code from SMS",
-    "smsCodePlaceholder": "Enter the SMS code",
-    "confirmButton": "Confirm",
-    "cancelButton": "Cancel",
-    "genderMale": "Male",
-    "genderFemale": "Female",
-    "birthDate": "Date of Birth",
-    "birthDatePlaceholder": "Select your birth date",
-    "gender": "Gender",
-    "genderPlaceholder": "Select your gender",
-    "numberImportant": "Important:",
-    "numberInfo": "For two-factor authentication and operational communication if necessary.",
-    "birthImportant": "Important:",
-    "birthInfo": "Registration is available only for adult patients.",
-    "IHaveReferralCode": "I have a referral code",
-    "ReferralCode": "Referral code",
-    "Information": "Information",
-    "ReferralCodeEntered": "You have entered a referral code."
+    "firstName": "Імя:",
+    "firstNamePlaceholder": "Увядзіце сваё імя",
+    "lastName": "Прозвішча:",
+    "lastNamePlaceholder": "Увядзіце сваё прозвішча",
+    "password": "Пароль",
+    "passwordPlaceholder": "Не менш за 8 сімвалаў",
+    "show": "Паказаць",
+    "hide": "Схаваць",
+    "passwordHint": "Не менш за 8 сімвалаў, уключаючы вялікія і малыя літары, лічбы і сімвалы",
+    "passwordConfirm": "Пацвердзіце пароль",
+    "passwordConfirmPlaceholder": "Паўтарыце пароль",
+    "termsPrefix": "Я згодны з",
+    "termsLink": "Правіламі карыстання",
+    "privacyAnd": "і",
+    "privacyLink": "Палітыкай прыватнасці",
+    "registerButton": "Зарэгістравацца",
+    "alreadyHave": "Ужо ёсць акаўнт?",
+    "loginLink": "Увайсці",
+    "confirmTitle": "Пацвердзіць рэгістрацыю",
+    "debugCode": "Тэставы код (будзе дасланы пазней па e-mail)",
+    "smsCodeLabel": "Код з SMS",
+    "smsCodePlaceholder": "Увядзіце код з SMS",
+    "confirmButton": "Пацвердзіць",
+    "cancelButton": "Адмяніць",
+    "genderMale": "Мужчына",
+    "genderFemale": "Жанчына",
+    "birthDate": "Дата нараджэння",
+    "birthDatePlaceholder": "Выберыце дату нараджэння",
+    "gender": "Пол",
+    "genderPlaceholder": "Выберыце пол",
+    "numberImportant": "Важна:",
+    "numberInfo": "Для двухфактарнай аўтэнтыфікацыі і аператыўнай сувязі пры неабходнасці.",
+    "birthImportant": "Важна:",
+    "birthInfo": "Рэгістрацыя даступная толькі для паўналетніх пацыентаў.",
+    "IHaveReferralCode": "У мяне ёсць рэфerralны код",
+    "ReferralCode": "Рэферальны код",
+    "Information": "Інфармацыя",
+    "ReferralCodeEntered": "Вы ўвялі рэферальны код."
   },
   "DynamicForm": {
-    "upload": "Upload",
-    "addFiles": "Add files",
-    "addImages": "Add images",
-    "downloadFile": "Download file",
-    "delete": "Delete",
-    "enterTags": "Enter tags...",
-    "enterCountry": "Enter a country..."
+    "upload": "Загрузіць",
+    "addFiles": "Дадаць файлы",
+    "addImages": "Дадаць выявы",
+    "downloadFile": "Спампаваць файл",
+    "delete": "Выдаліць",
+    "enterTags": "Увядзіце тэгі...",
+    "enterCountry": "Увядзіце краіну..."
   },
   "InlineList": {
-    "addNewHeader": "Add New",
-    "saveBtn": "Save",
-    "deleteBtn": "Delete",
-    "createBtn": "Create",
+    "addNewHeader": "Дадаць новы",
+    "saveBtn": "Захаваць",
+    "deleteBtn": "Выдаліць",
+    "createBtn": "Стварыць",
 
-    "confirmDelete": "Are you sure you want to delete this item?",
-    "noChanges": "No changes detected.",
-    "updated": "Inline item updated!",
-    "updateError": "Error updating inline item.",
-    "deleted": "Inline item deleted!",
-    "deleteError": "Error deleting inline item.",
-    "onlyOne": "Only one item is allowed.",
-    "created": "Inline item created!",
-    "createError": "Error creating inline item."
+    "confirmDelete": "Вы ўпэўнены, што жадаеце выдаліць гэты элемент?",
+    "noChanges": "Змен не выяўлена.",
+    "updated": "Элемент абноўлены!",
+    "updateError": "Памылка пры абнаўленні элемента.",
+    "deleted": "Элемент выдалены!",
+    "deleteError": "Памылка пры выдаленні элемента.",
+    "onlyOne": "Дазволены толькі адзін элемент.",
+    "created": "Элемент створаны!",
+    "createError": "Памылка пры стварэнні элемента."
   },
   "MainForm": {
-    "createPrefix": "Creating new record",
-    "detailPrefix": "Record details",
-    "loading": "Loading data…",
+    "createPrefix": "Стварэнне новай запісі",
+    "detailPrefix": "Падрабязнасці запісі",
+    "loading": "Загрузка даных…",
 
-    "edit": "Edit",
-    "save": "Save",
-    "delete": "Delete",
-    "create": "Create record",
-    "openChat": "Open chat",
-    "backToList": "Back to list",
-    "backToRecord": "Back to record",
+    "edit": "Рэдагаваць",
+    "save": "Захаваць",
+    "delete": "Выдаліць",
+    "create": "Стварыць запіс",
+    "openChat": "Адкрыць чат",
+    "backToList": "Назад да спісу",
+    "backToRecord": "Назад да запісу",
 
-    "confirmDelete": "Are you sure you want to delete this record?",
+    "confirmDelete": "Вы ўпэўнены, што жадаеце выдаліць гэтую запіс?",
 
-    "noChanges": "There are no changes to save.",
-    "created": "Record created",
-    "deleted": "Record deleted",
-    "updateError": "Error saving changes.",
-    "createError": "Error creating record.",
-    "deleteError": "Error deleting record.",
-    "unknownError": "Unknown error"
+    "noChanges": "Няма змен для захавання.",
+    "created": "Запіс створана",
+    "deleted": "Запіс выдалена",
+    "updateError": "Памылка захавання змен.",
+    "createError": "Памылка стварэння запісу.",
+    "deleteError": "Памылка выдалення запісу.",
+    "unknownError": "Невядомая памылка"
   },
   "AgreesPanel": {
-    "title": "User consents",
-    "subtitle": "Information about user consents"
+    "title": "Згоды карыстальніка",
+    "subtitle": "Інфармацыя аб згоды карыстальніка"
   },
   "ContactInfoView": {
-    "title": "Contact information",
+    "title": "Кантактная інфармацыя",
 
     "email": "Email",
-    "phone": "Phone",
-    "address": "Address",
-    "pesel": "PESEL / Identifier",
-    "passport": "Passport",
+    "phone": "Тэлефон",
+    "address": "Адрас",
+    "pesel": "PESEL / Ідэнтыфікатар",
+    "passport": "Пашпарт",
 
-    "emergency": "Trusted contact",
-    "docId": "Document ID",
-    "lastUpdate": "Last update",
+    "emergency": "Надзейны кантакт",
+    "docId": "ID дакумента",
+    "lastUpdate": "Апошняе абнаўленне",
 
-    "invalidDate": "Invalid date",
+    "invalidDate": "Няправільная дата",
     "dash": "—",
-    "fillPersonalInfoNotice": "Fill in the 'Contact information' page — this will help you save time on paperwork during your first visit to the clinic. Editing some fields will become available after your account is verified."
+    "fillPersonalInfoNotice": "Запоўніце старонку «Кантактная інфармацыя» — гэта дапаможа зэканоміць час на папяровай працы падчас вашага першага візіту ў клініку. Рэдагаванне некаторых палёў стане даступным пасля пацверджання вашага акаўнта."
   },
   "FamilyTable": {
-    "addMember": "Add family member",
-    "idPrefix": "Phone:",
-    "nameUnknown": "Name not set",
-    "relationshipUnknown": "Relationship not set",
-    "statusUnknown": "Status not set",
-    "bonusSuffix": "bonus points",
-    "noBonus": "No bonuses",
-    "editAria": "Edit",
-    "infoText": "Add family members, and you'll soon be able to earn bonus points!"
+    "addMember": "Дадаць члена сям'і",
+    "idPrefix": "Тэлефон:",
+    "nameUnknown": "Імя не зададзена",
+    "relationshipUnknown": "Статус адносін не зададзены",
+    "statusUnknown": "Статус не зададзены",
+    "bonusSuffix": "бонусных балаў",
+    "noBonus": "Няма бонусаў",
+    "editAria": "Рэдагаваць",
+    "infoText": "Дадайце членаў сям'і, і вы хутка зможаце зарабляць бонусныя балы!"
   },
   "InfoHeader": {
-    "patientIdPrefix": "Patient ID:",
-    "bonusPrefix": "Bonuses:",
-    "actions": "Actions",
-    "logout": "Logout",
-    "adminPanel": "Admin panel",
-    "changeTheme": "Change theme"
+    "patientIdPrefix": "ID пацыента:",
+    "bonusPrefix": "Бонусы:",
+    "actions": "Дзеянні",
+    "logout": "Выйсці",
+    "adminPanel": "Адмін-панэль",
+    "changeTheme": "Змяніць тэму"
   },
   "NavigationSidebarTabs": {
-    "support": "Support"
+    "support": "Падтрымка"
   },
   "PatientsHealthSurveyView": {
-    "title": "Health survey",
-    "subtitle": "User medical information",
+    "title": "Апытанне аб здароўі",
+    "subtitle": "Медыцынская інфармацыя карыстальніка",
 
-    "allergies": "Allergies:",
-    "chronic": "Chronic conditions:",
-    "smoking": "Smoking status:",
-    "medications": "Current medications:",
-    "lastUpdate": "Last update:",
-    "noData": "No data",
+    "allergies": "Алергіі:",
+    "chronic": "Хранічныя захворванні:",
+    "smoking": "Статус курэння:",
+    "medications": "Цяперашнія лекі:",
+    "lastUpdate": "Апошняе абнаўленне:",
+    "noData": "Няма даных",
     "dash": "—"
   },
   "PatientsMainInfoView": {
-    "sectionTitle": "Basic information",
+    "sectionTitle": "Асноўная інфармацыя",
 
-    "blockPersonal": "Personal data",
-    "lastName": "Last name:",
-    "firstName": "First name:",
-    "patronymic": "Middle name:",
-    "birthDate": "Birth date:",
-    "gender": "Gender:",
+    "blockPersonal": "Асабістыя даныя",
+    "lastName": "Прозвішча:",
+    "firstName": "Імя:",
+    "patronymic": "Імя па бацьку:",
+    "birthDate": "Дата нараджэння:",
+    "gender": "Пол:",
 
-    "blockCompany": "Company information",
-    "companyName": "Company name:",
+    "blockCompany": "Інфармацыя аб кампаніі",
+    "companyName": "Назва кампаніі:",
 
-    "blockSystem": "System information",
-    "patientId": "Patient ID:",
-    "createdAt": "Created at:",
-    "updatedAt": "Last update:",
+    "blockSystem": "Сістэмная інфармацыя",
+    "patientId": "ID пацыента:",
+    "createdAt": "Створана:",
+    "updatedAt": "Апошняе абнаўленне:",
 
-    "invalidDate": "Invalid date",
+    "invalidDate": "Няправільная дата",
     "dash": "—"
   },
   "PointsTable": {
-    "balanceCard": "Bonus account",
-    "balanceSubtitle": "User bonus information",
-    "currentBalance": "Current balance:",
-    "referralCode": "Referral code:",
-    "referralLink": "Referral link:",
-    "lastUpdate": "Last update",
+    "balanceCard": "Бонусны рахунак",
+    "balanceSubtitle": "Інфармацыя аб бонусах карыстальніка",
+    "currentBalance": "Бягучы баланс:",
+    "referralCode": "Рэферальны код:",
+    "referralLink": "Рэферальная спасылка:",
+    "lastUpdate": "Апошняе абнаўленне",
 
-    "transactionsCard": "Transaction history",
-    "transactionsSubtitle": "Latest bonus operations",
+    "transactionsCard": "Гісторыя транзакцый",
+    "transactionsSubtitle": "Апошнія бонусныя аперацыі",
 
-    "toastTitleLink": "Link copied",
-    "toastBodyLink": "Referral link copied to clipboard!",
-    "toastTitle": "Code copied",
-    "toastBody": "Referral code copied to clipboard!",
-    "tooltipCopy": "Copy referral code"
+    "toastTitleLink": "Спасылка скапіявана",
+    "toastBodyLink": "Рэферальная спасылка скапіявана ў буфер абмену!",
+    "toastTitle": "Код скапіяваны",
+    "toastBody": "Рэферальны код скапіяваны ў буфер абмену!",
+    "tooltipCopy": "Скапіраваць рэферальны код"
   },
   "SupportPage": {
-    "title": "Support chat"
+    "title": "Чат падтрымкі"
   },
   "DateRangeFilter": {
-    "heading": "Date range filter:",
-    "placeholder": "Select dates",
-    "clear": "Clear date range"
+    "heading": "Фільтр дыяпазону дат:",
+    "placeholder": "Выберыце даты",
+    "clear": "Ачысціць дыяпазон дат"
   },
 
   "DynamicDataTable": {
-    "exportExcel": "Export to Excel",
-    "create": "Create",
-    "add": "Add",
-    "editAria": "Edit"
+    "exportExcel": "Экспартаваць у Excel",
+    "create": "Стварыць",
+    "add": "Дадаць",
+    "editAria": "Рэдагаваць"
   },
   "KnowledgeBase": {
-    "contextSources": "Context sources",
-    "contextInfoTip": "Context sources are the files, links, or text that the bot uses to answer questions. You can add, remove, or edit them as needed. The bot will use the most relevant sources to provide accurate answers.",
+    "contextSources": "Крыніцы кантэксту",
+    "contextInfoTip": "Кантэкстныя крыніцы — гэта файлы, спасылкі або тэкст, якія бот выкарыстоўвае для адказаў на пытанні. Вы можаце дадаваць, выдаляць або рэдагаваць іх па меры патрэбы. Бот будзе выкарыстоўваць найбольш актуальныя крыніцы для дакладных адказаў.",
 
-    "searchPlaceholder": "Search sources…",
-    "searchTip": "Search by source name.  Enter part of a file, web page or text title to filter the list.",
-    "addContext": "Add context",
-    "addContextTip": "Import a new data source: file, web page or text.",
+    "searchPlaceholder": "Пошук крыніц…",
+    "searchTip": "Пошук па назве крыніцы. Увядзіце частку назвы файла, вэб-старонкі або тэксту, каб адфільтраваць спіс.",
+    "addContext": "Дадаць кантэкст",
+    "addContextTip": "Імпартаваць новую крыніцу даных: файл, вэб-старонку або тэкст.",
 
-    "addContextHeader": "Add context",
+    "addContextHeader": "Дадаць кантэкст",
 
-    "titlePlaceholder": "Title",
-    "pasteTextPlaceholder": "Paste the text here…",
+    "titlePlaceholder": "Загаловак",
+    "pasteTextPlaceholder": "Уставіце тэкст тут…",
 
-    "uploadHeader": "Upload sources",
-    "uploadSub": "Select a file or drag it here.",
-    "uploadTypes": "Supported types: PDF, TXT, Images, DOCX, XLSX, images",
+    "uploadHeader": "Загрузіць крыніцы",
+    "uploadSub": "Выберыце файл або перацягніце яго сюды.",
+    "uploadTypes": "Падтрымліваюцца тыпы: PDF, TXT, выявы, DOCX, XLSX",
 
-    "dialogCancel": "Cancel",
-    "dialogAdd": "Add",
+    "dialogCancel": "Адмяніць",
+    "dialogAdd": "Дадаць",
 
-    "totalSources": "Total sources",
-    "selectedSources": "Selected",
+    "totalSources": "Усяго крыніц",
+    "selectedSources": "Абрана",
 
-    "queryField": "Query field",
-    "queryFieldTip": "Enter your question or request. The AI will use the context sources to provide a relevant answer.",
+    "queryField": "Поле запыту",
+    "queryFieldTip": "Увядзіце сваё пытанне або запыт. Штучны інтэлект выкарыстае кантэкстныя крыніцы для адпаведнага адказу.",
 
-    "aiModelPlaceholder": "Select AI Model",
+    "aiModelPlaceholder": "Выберыце мадэль AI",
 
-    "requestHistory": "Request history",
-    "clearHistory": "Clear history",
-    "noHistory": "No previous requests found.",
-    "reuseTip": "Reuse this request",
+    "requestHistory": "Гісторыя запытаў",
+    "clearHistory": "Ачысціць гісторыю",
+    "noHistory": "Папярэдніх запытаў не знойдзена.",
+    "reuseTip": "Паўтарыць гэты запыт",
 
-    "typeHere": "Type here…",
-    "typeHereTip": "Describe what the AI assistant should do with your data…",
+    "typeHere": "Пішыце тут…",
+    "typeHereTip": "Апішыце, што AI-памочнік павінен зрабіць з вашымі данымі…",
 
-    "uploadSourcesTitle": "Upload sources",
-    "uploadSourcesSubtitle": "Select a file or drag it here.",
-    "uploadSourcesTypes": "Supported types: PDF, TXT, images, DOCX, XLSX",
+    "uploadSourcesTitle": "Загрузіць крыніцы",
+    "uploadSourcesSubtitle": "Выберыце файл або перацягніце яго сюды.",
+    "uploadSourcesTypes": "Падтрымліваюцца тыпы: PDF, TXT, выявы, DOCX, XLSX",
 
-    "files": "Files",
-    "site": "Site",
-    "text": "Text",
+    "files": "Файлы",
+    "site": "Сайт",
+    "text": "Тэкст",
 
-    "dontUse": "Don't use",
-    "botKnowledge": "Bot knowledge",
-    "contextOnly": "Context only",
-    "knowledgeAndContext": "Knowledge & context",
+    "dontUse": "Не выкарыстоўваць",
+    "botKnowledge": "Веданне бота",
+    "contextOnly": "Толькі кантэкст",
+    "knowledgeAndContext": "Веданне і кантэкст",
 
-    "querySmartChange": "Generate smart change",
+    "querySmartChange": "Стварыць разумнае змяненне",
 
-    "playgroundHeader": "Playground",
+    "playgroundHeader": "Пясочніца",
 
-    "addTopic": "Add topic",
-    "addTopicDesc": "Topic – the main theme that combines related subtopics. Subtopic – a subsection of the main topic with a specific focus. Question – a typical user question within a subtopic. Answer – a detailed response to a specific question.",
-    "addSubtopic": "Add subtopic",
-    "addQuestion": "Add question",
-    "addLink": "Add link",
+    "addTopic": "Дадаць тэму",
+    "addTopicDesc": "Тэма – асноўная тэма, якая аб'ядноўвае звязаныя падтэмы. Падтэма – падраздзел асноўнай тэмы з пэўным акцэнтам. Пытанне – тыповае карыстальніцкае пытанне ўнутры падтэмы. Адказ – падрабязны адказ на канкрэтнае пытанне.",
+    "addSubtopic": "Дадаць падтэму",
+    "addQuestion": "Дадаць пытанне",
+    "addLink": "Дадаць спасылку",
 
-    "questionLabel": "Question:",
-    "answerTextLabel": "Answer text:",
-    "linksFilesLabel": "Photos (Links):",
-    "selectedFilesLabel": "Selected files:",
+    "questionLabel": "Пытанне:",
+    "answerTextLabel": "Тэкст адказу:",
+    "linksFilesLabel": "Фота (спасылкі):",
+    "selectedFilesLabel": "Абраныя файлы:",
 
-    "topicTooltip": "The main topic containing related subsections and questions.",
-    "subtopicTooltip": "A section of a topic that groups related questions and answers.",
-    "questionTooltip": "A question in the knowledge base that the bot will look for answers to.",
-    "answerTooltip": "An answer to a question that the bot will use when formulating responses.",
+    "topicTooltip": "Асноўная тэма, якая змяшчае звязаныя падраздзелы і пытанні.",
+    "subtopicTooltip": "Раздзел тэмы, які групуе звязаныя пытанні і адказы.",
+    "questionTooltip": "Пытанне ў базе ведаў, на якое бот будзе шукаць адказы.",
+    "answerTooltip": "Адказ на пытанне, які бот будзе выкарыстоўваць пры фармуляванні адказаў.",
 
-    "playgroundEmpty": "Playground is empty",
-    "playgroundEmptyBody": "Import content from the left panel or create a new block.",
-    "createBlock": "Create block",
+    "playgroundEmpty": "Пясочніца пустая",
+    "playgroundEmptyBody": "Імпартуйце кантэнт з левай панэлі або стварыце новы блок.",
+    "createBlock": "Стварыць блок",
 
-    "reject": "Reject",
-    "save": "Save",
-    "saveDesc": "Saves the current knowledge structure as a draft. You can return to it later. The draft is not used by the bot to answer questions until you publish it.",
-    "publish": "Publish",
-    "publishDesc": " 'Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions.  Changes take effect immediately.  Make sure the structure is completely ready.'",
+    "reject": "Адхіліць",
+    "save": "Захаваць",
+    "saveDesc": "Захоўвае бягучую структуру ведаў як чарнавік. Вы можаце вярнуцца да яго пазней. Чарнавік не выкарыстоўваецца ботам для адказаў, пакуль вы не апублікуеце яго.",
+    "publish": "Апублікаваць",
+    "publishDesc": "Апублікоўвае структуру ведаў у асноўную базу ведаў, якую бот будзе выкарыстоўваць для адказу на пытанні карыстальнікаў. Змены ўступаюць у сілу неадкладна. Пераканайцеся, што структура цалкам гатовая.",
 
-    "knowledgeBase": "Knowledge base",
-    "knowledgeBaseDesc": " Knowledge base is the main source of information for the bot. It contains all the topics, subtopics, and questions that the bot can answer. You can view and search through it, but you cannot edit it directly here.",
-    "searchKbPlaceholder": "Search knowledge base…",
-    "export": "Export",
-    "exportDialogTitle": "Export knowledge base",
+    "knowledgeBase": "База ведаў",
+    "knowledgeBaseDesc": "База ведаў — галоўная крыніца інфармацыі для бота. Яна ўтрымлівае ўсе тэмы, падтэмы і пытанні, на якія бот можа адказаць. Вы можаце праглядаць і шукаць па ёй, але не можаце рэдагаваць яе непасрэдна тут.",
+    "searchKbPlaceholder": "Пошук па базе ведаў…",
+    "export": "Экспарт",
+    "exportDialogTitle": "Экспарт базы ведаў",
     "exportJson": "JSON",
-    "exportJsonDesc": "Full structured data (recommended)",
+    "exportJsonDesc": "Поўныя структураваныя даныя (рэкамендуецца)",
     "exportCsv": "CSV",
-    "exportCsvDesc": "Spreadsheet-compatible format",
-    "exportTxt": "Plain text",
-    "exportTxtDesc": "Plain text",
-    "exportCancel": "Cancel",
+    "exportCsvDesc": "Фармат сумяшчальны з табліцамі",
+    "exportTxt": "Тэкст",
+    "exportTxtDesc": "Просты тэкст",
+    "exportCancel": "Адмяніць",
 
-    "removeTopic": "Delete topic «{topicName}»?",
-    "removeSubtopic": "Delete subtopic «{subtopicName}» in «{topicName}»?",
-    "removeQuestion": "Delete question «{questionKey}»?",
+    "removeTopic": "Выдаліць тэму «{topicName}»?",
+    "removeSubtopic": "Выдаліць падтэму «{subtopicName}» у «{topicName}»?",
+    "removeQuestion": "Выдаліць пытанне «{questionKey}»?",
 
-    "newTopic": "New Topic",
-    "newSubtopic": "New Subtopic",
-    "newQuestion": "New Question",
+    "newTopic": "Новая тэма",
+    "newSubtopic": "Новая падтэма",
+    "newQuestion": "Новае пытанне",
 
-    "toastAdded": "{what} added successfully",
-    "toastRemoved": "{what} removed successfully",
-    "toastUpdated": "{what} updated successfully",
-    "toastNotAdded": "{what} not added",
-    "toastNotRemoved": "{what} not removed",
-    "toastNotUpdated": "{what} not updated",
+    "toastAdded": "{what} паспяхова дададзена",
+    "toastRemoved": "{what} паспяхова выдалена",
+    "toastUpdated": "{what} паспяхова абноўлена",
+    "toastNotAdded": "{what} не дададзена",
+    "toastNotRemoved": "{what} не выдалена",
+    "toastNotUpdated": "{what} не абноўлена",
 
-    "ctxRenamePrompt": "Rename context",
-    "ctxRenamed": "Context name updated",
-    "ctxNotRenamed": "Context name not changed",
+    "ctxRenamePrompt": "Перайменаваць кантэкст",
+    "ctxRenamed": "Назва кантэксту абноўлена",
+    "ctxNotRenamed": "Назва кантэксту не зменена",
 
-    "ctxPurposeUpdated": "Purpose updated",
-    "ctxPurposeNotUpdated": "Purpose not updated",
+    "ctxPurposeUpdated": "Мэта абноўлена",
+    "ctxPurposeNotUpdated": "Мэта не абноўлена",
 
-    "ctxLoadErr": "Cannot load context",
-    "ctxAddMax": "Maximum of {max} sources reached",
-    "ctxAdded": "Context added",
-    "ctxNotAdded": "Context not added",
-    "ctxDeleted": "Context deleted",
-    "ctxNotDeleted": "Context not deleted",
+    "ctxLoadErr": "Не ўдалося загрузіць кантэкст",
+    "ctxAddMax": "Дастігнуты максімум крыніц: {max}",
+    "ctxAdded": "Кантэкст дададзены",
+    "ctxNotAdded": "Кантэкст не дададзены",
+    "ctxDeleted": "Кантэкст выдалены",
+    "ctxNotDeleted": "Кантэкст не выдалены",
 
-    "menuRename": "Rename",
-    "menuDownload": "Download",
-    "menuDelete": "Delete",
+    "menuRename": "Перайменаваць",
+    "menuDownload": "Спампаваць",
+    "menuDelete": "Выдаліць",
 
-    "typeText": "Text",
-    "typeFile": "File / Photo",
-    "typeLink": "Link",
+    "typeText": "Тэкст",
+    "typeFile": "Файл / Фота",
+    "typeLink": "Спасылка",
 
-    "purposeNone": "Don't use",
-    "purposeBot": "Bot knowledge",
-    "purposeKb": "Context only",
-    "purposeBoth": "Knowledge & context",
+    "purposeNone": "Не выкарыстоўваць",
+    "purposeBot": "Веданне бота",
+    "purposeKb": "Толькі кантэкст",
+    "purposeBoth": "Веданне і кантэкст",
 
-    "purposeNoneDesc": "The source is ignored when generating answers.",
-    "purposeBotDesc": "Information is added to the knowledge base and influences general answers.",
-    "purposeKbDesc": "The source is used only to answer the specific question.",
-    "purposeBothDesc": "The source is used for both general knowledge and specific query answers.",
+    "purposeNoneDesc": "Крыніца ігнаруецца пры генераванні адказаў.",
+    "purposeBotDesc": "Інфармацыя дадаецца ў базу ведаў і ўплывае на агульныя адказы.",
+    "purposeKbDesc": "Крыніца выкарыстоўваецца толькі для адказу на пэўнае пытанне.",
+    "purposeBothDesc": "Крыніца выкарыстоўваецца і для агульных ведаў, і для канкрэтных адказаў.",
 
-    "topicAdded": "Topic added successfully",
-    "topicRemoved": "Topic removed successfully",
-    "topicNotRemoved": "Topic not removed",
+    "topicAdded": "Тэма паспяхова дададзена",
+    "topicRemoved": "Тэма паспяхова выдалена",
+    "topicNotRemoved": "Тэма не выдалена",
 
-    "subtopicAdded": "Subtopic added successfully",
-    "subtopicRemoved": "Subtopic removed successfully",
-    "subtopicNotRemoved": "Subtopic not removed",
+    "subtopicAdded": "Падтэма паспяхова дададзена",
+    "subtopicRemoved": "Падтэма паспяхова выдалена",
+    "subtopicNotRemoved": "Падтэма не выдалена",
 
-    "questionAdded": "Question added successfully",
-    "questionRemoved": "Question removed successfully",
-    "questionNotRemoved": "Question not removed",
-    "questionExists": "This question already exists!",
+    "questionAdded": "Пытанне паспяхова дададзена",
+    "questionRemoved": "Пытанне паспяхова выдалена",
+    "questionNotRemoved": "Пытанне не выдалена",
+    "questionExists": "Такое пытанне ўжо існуе!",
 
-    "fileAdded": "Link / file added",
-    "fileRemoved": "Link / file removed",
+    "fileAdded": "Спасылка / файл дададзены",
+    "fileRemoved": "Спасылка / файл выдалены",
 
-    "playgroundCleared": "Playground cleared successfully",
-    "playgroundUpdated": "Playground updated successfully",
-    "playgroundNotUpdated": "Playground not updated",
-    "playgroundRejected": "Playground rejected successfully",
+    "playgroundCleared": "Пясочніца паспяхова ачышчана",
+    "playgroundUpdated": "Пясочніца паспяхова абноўлена",
+    "playgroundNotUpdated": "Пясочніца не абноўлена",
+    "playgroundRejected": "Пясочніца паспяхова адхілена",
 
-    "kbSaved": "Knowledge base saved successfully",
-    "kbNotSaved": "Knowledge base not saved",
+    "kbSaved": "База ведаў паспяхова захавана",
+    "kbNotSaved": "База ведаў не захавана",
 
-    "patchGenerated": "Patch generated successfully",
-    "patchNotGenerated": "Patch not generated",
+    "patchGenerated": "Заплатка паспяхова створана",
+    "patchNotGenerated": "Не ўдалося стварыць заплатку",
 
-    "noChanges": "No changes to save.",
-    "msgPlaygroundUpdated": "Playground updated successfully",
-    "msgPlaygroundUpdateErr": "Playground update failed",
-    "msgDbSaved": "Knowledge base saved",
-    "msgDbSaveErr": "Failed to save knowledge base",
-    "confirmClear": "Clear playground?\n\nAll draft changes will be lost. This will NOT touch the real knowledge base.",
-    "msgPlaygroundCleared": "Playground cleared",
-    "confirmReject": "Reject playground?\n\nDraft changes will be lost. The real knowledge base stays intact.",
-    "msgPlaygroundRejected": "Playground rejected",
-    "unsavedChanges": "You have unsaved changes in the playground!",
-    "msgPatchGenerated": "Patch generated successfully",
-    "msgPatchErr": "Patch generation failed",
-    "redactTopic": "Redact this topic",
-    "redactSubtopic": "Redact this subtopic",
-    "redactQuestion": "Redact this question",
-    "tabFiles": "Files",
-    "tabSite": "Site",
-    "tabText": "Text",
-    "download": "Download",
-    "delete": "Delete",
-    "uploadJson": "Upload JSON"
+    "noChanges": "Няма змен для захавання.",
+    "msgPlaygroundUpdated": "Пясочніца паспяхова абноўлена",
+    "msgPlaygroundUpdateErr": "Не ўдалося абнавіць пясочніцу",
+    "msgDbSaved": "База ведаў захавана",
+    "msgDbSaveErr": "Не ўдалося захаваць базу ведаў",
+    "confirmClear": "Ачысціць пясочніцу?\n\nУсе чарнавікі будуць страчаны. Гэта НЕ закране сапраўдную базу ведаў.",
+    "msgPlaygroundCleared": "Пясочніца ачышчана",
+    "confirmReject": "Адхіліць пясочніцу?\n\nЧарнавікі будуць страчаны. Сапраўдная база ведаў застанецца некранутай.",
+    "msgPlaygroundRejected": "Пясочніца адхілена",
+    "unsavedChanges": "У вас ёсць незахаваныя змены ў пясочніцы!",
+    "msgPatchGenerated": "Заплатка паспяхова створана",
+    "msgPatchErr": "Не ўдалося стварыць заплатку",
+    "redactTopic": "Рэдагаваць гэтую тэму",
+    "redactSubtopic": "Рэдагаваць гэтую падтэму",
+    "redactQuestion": "Рэдагаваць гэта пытанне",
+    "tabFiles": "Файлы",
+    "tabSite": "Сайт",
+    "tabText": "Тэкст",
+    "download": "Спампаваць",
+    "delete": "Выдаліць",
+    "uploadJson": "Загрузіць JSON"
   },
   "MainContent": {
     "dialog": {
-      "filterOptions": "Filter Options"
+      "filterOptions": "Налады фільтра"
     },
     "buttons": {
-      "fillHealthSurvey": "Fill in Health Survey",
-      "fillMainInfo": "Fill in Main Information",
-      "fillContactInfo": "Fill in Contact Information",
-      "fillConsents": "Fill in Consents"
+      "fillHealthSurvey": "Запоўніць апытанне аб здароўі",
+      "fillMainInfo": "Запоўніць асноўную інфармацыю",
+      "fillContactInfo": "Запоўніць кантактную інфармацыю",
+      "fillConsents": "Запоўніць згоды"
     },
     "toast": {
-      "exportSuccessSummary": "Export Successful",
-      "exportSuccessDetail": "Data exported to Excel successfully",
-      "exportFailSummary": "Export Failed",
-      "exportFailDetail": "Failed to export data.",
-      "invalidGroupSummary": "Invalid Group",
-      "invalidEntitySummary": "Invalid Entity",
-      "errorSummary": "Error",
-      "noDataDetail": "No available data.",
-      "loadFailDetail": "Failed to load table data. ({status})",
-      "redirectDetail": "Redirecting to: {route}"
+      "exportSuccessSummary": "Экспарт паспяховы",
+      "exportSuccessDetail": "Даныя паспяхова экспартаваны ў Excel",
+      "exportFailSummary": "Экспарт не ўдалося",
+      "exportFailDetail": "Не ўдалося экспартаваць даныя.",
+      "invalidGroupSummary": "Несапраўдная група",
+      "invalidEntitySummary": "Несапраўдная сутнасць",
+      "errorSummary": "Памылка",
+      "noDataDetail": "Няма даступных даных.",
+      "loadFailDetail": "Не ўдалося загрузіць даныя табліцы. ({status})",
+      "redirectDetail": "Перанакіраванне да: {route}"
     },
 
     "playground": {
-      "saveDraft": "Saves the current knowledge structure as a draft. You will be able to continue working with it later. The draft is not used by the bot to answer questions until you publish it.",
-      "publish": "Publishes the knowledge structure to the main knowledge base, which the bot will use to answer user questions. After publication, changes take effect immediately, and the bot will start responding using the new data. Make sure the structure is completely ready.",
-      "statusReady": "Ready for publication",
-      "blockType": "Topic – the main theme that combines related subtopics.\\nSubtopic – a subsection of the main topic with a specific focus.\\nQuestion – a typical user question within a subtopic.\\nAnswer – a detailed response to a specific question.",
-      "parentBlock": "Select the block to which the created element will relate.\\nFollow the correct hierarchy:\\n• Subtopics are created within Topics\\n• Questions are created within Subtopics\\n• Answers are created for specific Questions"
+      "saveDraft": "Захоўвае бягучую структуру ведаў як чарнавік. Вы зможаце працягнуць працу пазней. Чарнавік не выкарыстоўваецца ботам, пакуль вы не апублікуеце яго.",
+      "publish": "Апублікоўвае структуру ведаў у асноўную базу, якую бот будзе выкарыстоўваць для адказаў. Пасля публікацыі змены ўступаюць у сілу адразу, і бот пачне выкарыстоўваць новыя даныя. Пераканайцеся, што структура цалкам гатовая.",
+      "statusReady": "Гатова да публікацыі",
+      "blockType": "Тэма – асноўная тэма, якая аб’ядноўвае звязаныя падтэмы.\\nПадтэма – падраздзел асноўнай тэмы з пэўным акцэнтам.\\nПытанне – тыповае пытанне карыстальніка ўнутры падтэмы.\\nАдказ – падрабязны адказ на канкрэтнае пытанне.",
+      "parentBlock": "Абярыце блок, да якога будзе адносіцца створаны элемент.\\nПрытрымлівайцеся правільнай іерархіі:\\n• Падтэмы ствараюцца ўнутры тэм\\n• Пытанні ствараюцца ўнутры падтэм\\n• Адказы ствараюцца для канкрэтных пытанняў"
     },
 
     "import": {
-      "sourceSearch": "Search by source name. Enter part of the file name, web page, or text document to filter the list.",
-      "importNew": "Import a new data source: file, web page, or text.",
-      "aiInput": "Write here what the AI assistant should do with your data. Example: \"Highlight the main services from my website and create questions and answers for them\". Press Enter or the send button to convert selected sources into a structured knowledge base.",
-      "generator": "Write to the AI assistant specific tasks for structuring your data. Examples:\\n• \"Create Q&A pairs from a product document\"\\n• \"Divide text into subtopics\"\\n• \"Form a menu of services from my price list\"\\n• \"Extract key benefits\""
+      "sourceSearch": "Пошук па назве крыніцы. Увядзіце частку назвы файла, вэб-старонкі або тэкставага дакумента, каб адфільтраваць спіс.",
+      "importNew": "Імпартаваць новую крыніцу даных: файл, вэб-старонку або тэкст.",
+      "aiInput": "Напішыце тут, што AI-памочнік павінен зрабіць з вашымі данымі. Прыклад: \"Выдзялі асноўныя паслугі з майго сайта і ствары для іх пытанні і адказы\". Націсніце Enter або кнопку адпраўкі, каб пераўтварыць абраныя крыніцы ў структураваную базу ведаў.",
+      "generator": "Пішыце AI-памочніку канкрэтныя задачы для структуравання даных. Прыклады:\\n• \"Ствары пары Пытанне‑Адказ з дакумента прадукцыі\"\\n• \"Падзялі тэкст на падтэмы\"\\n• \"Сфарміруй меню паслуг з майго прайс‑ліста\"\\n• \"Выцягні асноўныя перавагі\""
     },
 
     "kbBlock": {
-      "topic": "The main topic containing related subsections and questions.",
-      "subtopic": "A section of a topic that groups related questions and answers.",
-      "question": "A question in the knowledge base that the bot will look for answers to.",
-      "answer": "An answer to a question that the bot will use when formulating responses."
+      "topic": "Асноўная тэма, якая змяшчае звязаныя падраздзелы і пытанні.",
+      "subtopic": "Раздзел тэмы, які групуе звязаныя пытанні і адказы.",
+      "question": "Пытанне ў базе ведаў, на якое бот будзе шукаць адказы.",
+      "answer": "Адказ на пытанне, які бот будзе выкарыстоўваць пры фармуляванні адказаў."
     },
-    "crmNotification": "Your personal account is awaiting registration confirmation. Please visit the reception desk at the clinic to activate your account."
+    "crmNotification": "Ваш асабісты акаўнт чакае пацверджання рэгістрацыі. Калі ласка, наведайце стойку рэгістратуры клінікі, каб актываваць акаўнт."
   },
   "NavigationSidebar": {
     "tooltip": {
-      "expand": "Expand",
-      "collapse": "Collapse"
+      "expand": "Разгарнуць",
+      "collapse": "Згарнуць"
     },
     "headers": {
-      "settings": "Settings",
-      "sidebar": "Sidebar"
+      "settings": "Налады",
+      "sidebar": "Бакавое меню"
     },
     "links": {
-      "knowledgeBase": "Knowledge Base",
-      "botSettings": "Bot Settings"
+      "knowledgeBase": "База ведаў",
+      "botSettings": "Налады бота"
     }
   },
   "ReadonlyKB": {
     "summary": {
-      "knowledgeBase": "Knowledge base"
+      "knowledgeBase": "База ведаў"
     },
     "buttons": {
-      "goToSource": "Go to source"
+      "goToSource": "Перайсці да крыніцы"
     }
   },
   "SaveChangesDialog": {
     "header": {
-      "preview": "Preview of detected changes.",
-      "savePlayground": "Do you want to save changes to playground?",
-      "saveKnowledgeBase": "Do you want to save changes to knowledge base?"
+      "preview": "Папярэдні прагляд выяўленых змен.",
+      "savePlayground": "Захаваць змены ў пясочніцу?",
+      "saveKnowledgeBase": "Захаваць змены ў базу ведаў?"
     },
     "info": {
-      "noChanges": "There are no changes to apply to knowledge base.",
-      "editModeNote": "It will change the playground, but WILL NOT update the knowledge base.",
-      "applyKb": "It will CHANGE the knowledge base."
+      "noChanges": "Няма змен для ўнясення ў базу ведаў.",
+      "editModeNote": "Гэта зменіць пясочніцу, але НЕ абновіць базу ведаў.",
+      "applyKb": "Гэта ЗМЯНІЦЬ базу ведаў."
     },
     "labels": {
-      "added": "Added:",
-      "changed": "Changed:",
-      "deleted": "Deleted:",
-      "addedItems": "Added Items",
-      "changedItems": "Changed Items",
-      "deletedItems": "Deleted Items"
+      "added": "Дададзена:",
+      "changed": "Зменена:",
+      "deleted": "Выдалена:",
+      "addedItems": "Дададзеныя элементы",
+      "changedItems": "Змененыя элементы",
+      "deletedItems": "Выдаленыя элементы"
     },
     "buttons": {
-      "close": "Close",
-      "cancel": "Cancel",
-      "confirm": "Confirm"
+      "close": "Закрыць",
+      "cancel": "Адмяніць",
+      "confirm": "Пацвердзіць"
     }
   },
   "Topbar": {
     "aria": {
-      "menu": "Menu"
+      "menu": "Меню"
     },
     "titles": {
-      "personalAccount": "Personal Account"
+      "personalAccount": "Асабісты кабінет"
     },
     "menu": {
-      "toPersonal": "To Personal Account",
-      "toAdmin": "To Admin Panel",
-      "changeTheme": "Change Theme",
-      "logout": "Logout"
+      "toPersonal": "Да асабістага кабінета",
+      "toAdmin": "Да адміністратарскай панэлі",
+      "changeTheme": "Змяніць тэму",
+      "logout": "Выйсці"
     },
     "alt": {
-      "logo": "Logo"
+      "logo": "Лагатып"
     },
     "user": {
-      "defaultName": "Administrator"
+      "defaultName": "Адміністратар"
     }
   },
   "AdminChat": {
     "buttons": {
-      "trainBot": "Train AI bot",
-      "closeChat": "Close chat",
-      "openTestChat": "Open test chat"
+      "trainBot": "Навучыць AI бота",
+      "closeChat": "Закрыць чат",
+      "openTestChat": "Адкрыць тэставы чат"
     }
   },
   "LoaderOverlay": {
-    "loadingCompleted": "Loading completed!"
+    "loadingCompleted": "Загрузка завершана!"
   },
   "toastMessages": {
-    "errorTitle": "Error",
-    "unknown": "Unknown error occurred"
+    "errorTitle": "Памылка",
+    "unknown": "Адбылася невядомая памылка"
   },
   "CRMtable": {
-    "empty": "No data available"
+    "empty": "Даныя адсутнічаюць"
   },
   "Legend": {
-    "NewSession": "💬🆕 New Session — new session",
-    "WaitingForAI": "🤖⏳ Waiting for AI — awaiting bot response",
-    "AIWaitingForClient": "🤖✅ Waiting for Client (AI) — bot responded, waiting for client",
-    "WaitingForConsultant": "👨‍⚕️❗ Waiting for Consultant — waiting for consultant",
-    "ReadByConsultant": "👨‍⚕️⚠️ Read by Consultant — message read by consultant",
-    "ConsultantWaitingForClient": "👨‍⚕️✅ Waiting for Client — consultant responded, waiting for client",
-    "ClosedNoMessages": "📪🚫 Closed – No Messages — closed without messages",
-    "ClosedByTimeout": "📪⌛️ Closed by Timeout — closed by timeout",
-    "ClosedByOperator": "📪🔒 Closed by Operator — manually closed",
-    "BriefInProgress": "📋🛠️ Brief In Progress — brief in progress",
-    "BriefCompleted": "📋✅ Brief Completed — brief completed"
+    "NewSession": "💬🆕 Новая сесія — новая сесія",
+    "WaitingForAI": "🤖⏳ Чаканне AI — чаканне адказу бота",
+    "AIWaitingForClient": "🤖✅ Чаканне кліента (AI) — бот адказаў, чаканне кліента",
+    "WaitingForConsultant": "👨‍⚕️❗ Чаканне кансультанта — чаканне кансультанта",
+    "ReadByConsultant": "👨‍⚕️⚠️ Прачытана кансультантам — паведамленне прачытана кансультантам",
+    "ConsultantWaitingForClient": "👨‍⚕️✅ Чаканне кліента — кансультант адказаў, чаканне кліента",
+    "ClosedNoMessages": "📪🚫 Закрыта – без паведамленняў — закрыта без паведамленняў",
+    "ClosedByTimeout": "📪⌛️ Закрыта па тайм-аўце — закрыта па тайм-аўце",
+    "ClosedByOperator": "📪🔒 Закрыта аператарам — закрыта ўручную",
+    "BriefInProgress": "📋🛠️ Брыф у працэсе — брыф у працэсе",
+    "BriefCompleted": "📋✅ Брыф завершаны — брыф завершаны"
   },
   "test": {
-    "test": "Test"
+    "test": "Тэст"
   }
 }
