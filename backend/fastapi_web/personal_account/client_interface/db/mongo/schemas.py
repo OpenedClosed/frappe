@@ -158,7 +158,23 @@ class MainInfoSchema(BaseValidatedModel):
                     "ru": "Выберите пол",
                     "en": "Select gender",
                     "pl": "Wybierz płeć"
-                }
+                },
+                "choices": [
+                    {
+                        "value": "male",
+                        "label": {
+                            "ru": "Мужской", "en": "Male", "pl": "Mężczyzna",
+                            "uk": "Чоловіча", "de": "Männlich", "be": "Мужчына"
+                        }
+                    },
+                    {
+                        "value": "female",
+                        "label": {
+                            "ru": "Женский", "en": "Female", "pl": "Kobieta",
+                            "uk": "Жіноча", "de": "Weiblich", "be": "Жаночая"
+                        }
+                    }
+                ]
             }
         }
     )
