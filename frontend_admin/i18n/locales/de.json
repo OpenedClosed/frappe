@@ -562,7 +562,8 @@
       "subtopic": "Ein Abschnitt eines Themas, der verwandte Fragen und Antworten gruppiert.",
       "question": "Eine Frage in der Wissensdatenbank, auf die der Bot Antworten sucht.",
       "answer": "Eine Antwort auf eine Frage, die der Bot bei der Formulierung von Antworten verwendet."
-    }
+    },
+    "crmNotification": "Ihr persönliches Konto wartet auf die Bestätigung der Registrierung. Bitte wenden Sie sich bei Ihrem Besuch in der Klinik an die Rezeption, um Ihr Konto zu aktivieren."
   },
 
   "NavigationSidebar": {

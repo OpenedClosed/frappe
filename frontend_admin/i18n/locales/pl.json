@@ -557,7 +557,8 @@
       "subtopic": "Część tematu grupująca powiązane pytania i odpowiedzi.",
       "question": "Pytanie w bazie wiedzy, którego odpowiedzi szuka bot.",
       "answer": "Szczegółowa odpowiedź na pytanie, której bot użyje."
-    }
+    },
+    "crmNotification": "Twoje konto osobiste oczekuje na potwierdzenie rejestracji. Prosimy zgłosić się do recepcji podczas wizyty w klinice w celu aktywacji konta."
   },
 
   "NavigationSidebar": {

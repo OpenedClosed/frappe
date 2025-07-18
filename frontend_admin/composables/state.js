@@ -41,15 +41,21 @@ export const useHeaderState = () => {
 };
 
 export function usePageState() {
+  const initialIsAccountUnverified = typeof window !== "undefined" ? localStorage.getItem("initialIsAccountUnverified") || "" : "";
   const initialBannerText = typeof window !== "undefined" ? localStorage.getItem("crmBannerText") || "" : "";
+  
   const currentPageName = useState("currentPageName", () => "admin");
   const currentPageInstances = useState("currentPageInstances", () => 0);
   const crmBannerText = useState("crmBannerText", () => initialBannerText);
+  const isAccountUnverified = useState("isAccountUnverified", () => initialIsAccountUnverified);
 
   // Watch for changes and save to localStorage
   if (typeof window !== "undefined") {
     watch(crmBannerText, (val) => {
       localStorage.setItem("crmBannerText", val || "");
+    });
+    watch(isAccountUnverified, (val) => {
+      localStorage.setItem("initialIsAccountUnverified", val || false);
     });
   }
 
@@ -57,5 +63,6 @@ export function usePageState() {
     currentPageName,
     currentPageInstances,
     crmBannerText,
+    isAccountUnverified,
   };
 }

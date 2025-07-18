@@ -132,6 +132,7 @@ export default defineNuxtConfig({
       { code: "de", name: "Deutsch", file: "de.json" },
       { code: "pl", name: "Polski", file: "pl.json" }, // Polish
       { code: "ru", name: "Русский", file: "ru.json" }, // Russian
+      { code: "be", name: "Беларуская", file: "be.json" }, // Belarusian
       { code: "uk", name: "Українська", file: "uk.json" }, // Ukrainian
       { code: "ka", name: "ქართული", file: "ka.json" }, // Georgian
     ],

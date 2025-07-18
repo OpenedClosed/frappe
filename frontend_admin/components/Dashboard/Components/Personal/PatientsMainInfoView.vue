@@ -25,6 +25,7 @@ import _ from "lodash";
 import { computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 const { currentFrontendUrl, currentUrl } = useURLState();
+const { isAccountUnverified } = usePageState();
 /* ------------------------------------------------------------------ */
 /*  props & i18n                                                      */
 /* ------------------------------------------------------------------ */
@@ -112,21 +113,25 @@ const normalizedGroups = computed(() => {
 /*  util: date → dd.mm.yyyy hh:mm                                     */
 /* ------------------------------------------------------------------ */
 // util: date → dd.mm.yyyy  (no time)
-function formatDate (date) {
-  if (!date) return '—'
-  const d = new Date(date)
-  if (isNaN(d)) return t('PatientsMainInfoView.invalidDate')
+function formatDate(date) {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d)) return t("PatientsMainInfoView.invalidDate");
 
-  return `${_.padStart(d.getDate(), 2, '0')}.` +
-         `${_.padStart(d.getMonth() + 1, 2, '0')}.` +
-         `${d.getFullYear()}`
+  return `${_.padStart(d.getDate(), 2, "0")}.` + `${_.padStart(d.getMonth() + 1, 2, "0")}.` + `${d.getFullYear()}`;
 }
-
 
 /* ------------------------------------------------------------------ */
 /*  debug                                                             */
 /* ------------------------------------------------------------------ */
-watch(props, (p) => console.log("Props changed:", p), { immediate: true });
+watch(
+  props,
+  (p) => {
+    console.log("Props changed:", p);
+    isAccountUnverified.value = props?.itemData?.account_status?.en === "unverified";
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

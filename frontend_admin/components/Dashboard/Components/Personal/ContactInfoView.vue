@@ -4,10 +4,10 @@
     <div class="mb-6 space-y-2">
       <h1 class="text-xl font-bold">{{ t("ContactInfoView.title") }}</h1>
       <InfoBanner v-if="!allFieldsPresent" infoKey="contactInfoClosed">
-           {{ t("ContactInfoView.fillPersonalInfoNotice") }}
+        {{ t("ContactInfoView.fillPersonalInfoNotice") }}
       </InfoBanner>
-         <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
-           {{ crmBannerText }}
+      <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
+        {{ crmBannerText }}
       </InfoBanner>
     </div>
     <!-- Контейнер, разбивающий на 2 колонки -->

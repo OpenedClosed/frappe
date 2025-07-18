@@ -13,7 +13,12 @@
       <NavigationSidebar class="flex justify-start" v-if="currentPageName === 'admin'" :navItems="navItems" />
 
       <InfoHeader v-if="currentPageName === 'personal_account'" />
-      <NavigationSidebarTabs v-if="currentPageName === 'personal_account'" :navItems="navItems" />
+      <div v-if="currentPageName === 'personal_account'">
+        <NavigationSidebarTabs :navItems="navItems" />
+        <InfoBanner v-if="isAccountUnverified" class="mx-5" infoKey="isAccountUnverifiedClosed">
+          {{ t("MainContent.crmNotification") }}
+        </InfoBanner>
+      </div>
 
       <div
         v-if="(isLoading || isLoadingData) && currentPageName === 'personal_account'"
@@ -56,9 +61,9 @@
           v-else-if="currentEntity === 'patients_consents' && !currentId"
           class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
         >
-        <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
-           {{ crmBannerText }}
-      </InfoBanner>
+          <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
+            {{ crmBannerText }}
+          </InfoBanner>
           <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
         </div>
         <div
@@ -199,7 +204,7 @@ const { t } = useI18n();
 const showFilter = ref(false);
 const searchQuery = ref("");
 const dateRange = ref({ start: null, end: null });
-const { currentPageName, currentPageInstances, crmBannerText } = usePageState();
+const { currentPageName, currentPageInstances, crmBannerText, isAccountUnverified } = usePageState();
 
 const selectedField = ref(null);
 const fieldOptions = ref([
