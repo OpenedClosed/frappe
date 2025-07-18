@@ -200,8 +200,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         REG_CODES[phone_key] = {"code": code, "referral_id": referral_id}
 
         try:
-            print(code)  # DEBUG
-            # await send_sms(phone_key, f"Twój kod potwierdzający to: {code}")
+            # print(code)  # DEBUG
+            await send_sms(phone_key, f"Twój kod potwierdzający to: {code}")
         except HTTPException:
             errors["phone"] = {
                 "ru": "Ошибка при отправке SMS. Проверьте номер телефона.",
@@ -455,8 +455,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         TWO_FA_CODES[phone_key] = code_2fa
 
         try:
-            print(code_2fa)  # DEBUG
-            # await send_sms(phone_key, f"Twój kod 2FA to: {code_2fa}")
+            # print(code_2fa)  # DEBUG
+            await send_sms(phone_key, f"Twój kod 2FA to: {code_2fa}")
         except HTTPException:
             return JSONResponse(status_code=400, content={"errors": {
                 "phone": {
