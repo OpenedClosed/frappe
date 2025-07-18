@@ -39,6 +39,7 @@
               <!-- 1) Select -->
               <Dropdown
                 v-if="field.type === 'select'"
+                filter
                 :id="field.name"
                 v-model="internalValue[field.name]"
                 :options="transformChoices(field.choices)"
@@ -76,9 +77,11 @@
               />
 
               <!-- 2) MultiSelect -->
+               
               <MultiSelect
                 v-else-if="field.type === 'multiselect'"
                 :id="field.name"
+                filter
                 v-model="internalValue[field.name]"
                 :options="transformChoices(field.choices)"
                 optionValue="value"

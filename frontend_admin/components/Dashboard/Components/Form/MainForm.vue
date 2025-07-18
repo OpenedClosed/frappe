@@ -454,7 +454,16 @@ function parseError(error) {
         if (isLangKeyed) {
           toastMessage = data.detail[currentLanguage.value] || Object.values(data.detail)[0];
         } else {
-          toastMessage = Object.values(data.detail).flat().join(", ");
+          // Handle field errors with language keys
+          toastMessage = Object.entries(data.detail)
+            .map(([field, val]) => {
+              if (typeof val === "object") {
+                // Try to get error in current language, fallback to first value
+                return val[currentLanguage.value] || Object.values(val)[0];
+              }
+              return val;
+            })
+            .join(", ");
         }
       }
 

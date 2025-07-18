@@ -3,12 +3,9 @@
     <!-- Заголовок страницы -->
     <div class="mb-6 space-y-2">
       <h1 class="text-xl font-bold">{{ t("ContactInfoView.title") }}</h1>
-      <p
-        v-if="!allFieldsPresent"
-        class="text-[16px] font-semibold text-blue-700 bg-blue-50 border-l-4 border-blue-400 px-4 py-2 rounded mb-2 shadow-sm"
-      >
-        {{ t("ContactInfoView.fillPersonalInfoNotice") }}
-      </p>
+      <InfoBanner v-if="!allFieldsPresent" infoKey="contactInfoClosed">
+           {{ t("ContactInfoView.fillPersonalInfoNotice") }}
+      </InfoBanner>
     </div>
     <!-- Контейнер, разбивающий на 2 колонки -->
     <div class="flex flex-row gap-8">
@@ -102,6 +99,7 @@
 <script setup>
 import _ from "lodash";
 import { useI18n } from "vue-i18n";
+import InfoBanner from "./InfoBanner.vue";
 const { t } = useI18n();
 /**
  * Props for receiving data from the parent component
@@ -112,6 +110,7 @@ const props = defineProps({
     default: () => ({}),
   },
 });
+
 
 /**
  * Helper function to format dates with time
