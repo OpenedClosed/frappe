@@ -6,7 +6,7 @@
       <InfoBanner v-if="!allFieldsPresent" infoKey="contactInfoClosed">
         {{ t("ContactInfoView.fillPersonalInfoNotice") }}
       </InfoBanner>
-      <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
+      <InfoBanner v-if="crmBannerText" infoKey="crmBannerTextClosed">
         {{ crmBannerText }}
       </InfoBanner>
     </div>
