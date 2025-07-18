@@ -560,8 +560,6 @@ def build_field_schema(instance, field, schema_props, model_annotations,
 
     if "type" in field_settings:
         field_type = field_settings["type"]
-
-    print('+'*100)
     
     placeholder = field_settings.pop("placeholder", None)
 
@@ -582,7 +580,6 @@ def build_field_schema(instance, field, schema_props, model_annotations,
         not has_explicit_default and not has_factory and (
             is_empty_dict or has_only_settings)
     )
-    print(field, read_only)
     # if read_only:
     #     required_flag = False
 

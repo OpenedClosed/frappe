@@ -583,8 +583,6 @@ class BaseCrudCore:
     #             filtered = {
     #                 k: try_parse_json(v) for k,
     #                 v in data.items() if k not in self.inlines}
-    #             print('=====')
-    #             print(filtered)
     #             obj = self.model(**filtered)
     #             validated = {
     #                 k: self.serialize_value(v) for k,
@@ -723,13 +721,9 @@ class BaseCrudCore:
     ) -> dict:
         """Валидирует данные и мерджит инлайны."""
         valid = await self.validate_data(data, partial=partial)
-        print('===== VALID =====')
-        print(valid)
         if self.inlines:
             inline_data = await self.process_inlines(existing_obj, data, partial=partial)
             valid.update(inline_data)
-        print('===== VALID2 =====')
-        print(valid)
         return valid
 
     # --- Поиск во вложенных структурах ---

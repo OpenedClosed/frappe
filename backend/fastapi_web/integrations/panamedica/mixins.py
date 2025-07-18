@@ -9,7 +9,7 @@ from db.redis.db_init import redis_db
 from .utils.help_functions import format_crm_phone
 from personal_account.client_interface.db.mongo.enums import AccountVerificationEnum
 from db.mongo.db_init import mongo_db
-from .client import CRMError, get_client
+from .client import CRMError, get_client, raise_http_from_crm
 
 class CRMIntegrationMixin:
     """
@@ -112,11 +112,13 @@ class CRMIntegrationMixin:
             allowed["email"] = email
 
         # Адрес
-        # if address := patch.get("residenceAddress"):
-        #     allowed["residenceAddress"] = {}
-        #     for field in ["country", "region", "city", "street", "building", "apartment", "zip"]:
-        #         if field in address:
-        #             allowed["residenceAddress"][field] = address[field]
+        print("patch", patch)
+
+        if address := patch.get("residenceAddress"):
+            allowed["residenceAddress"] = {}
+            for field in ["country", "region", "city", "street", "building", "apartment", "zip"]:
+                if field in address:
+                    allowed["residenceAddress"][field] = address[field]
 
         # Если нечего отправлять — выходим
         if not allowed:
@@ -124,6 +126,8 @@ class CRMIntegrationMixin:
 
         try:
             response = await get_client().patch_patient(patient_id, allowed)
+            print("меняем", allowed)
+            print("ответ", response)
 
             if isinstance(response, dict) and "errors" in response:
                 raise HTTPException(status_code=502, detail={
@@ -134,12 +138,7 @@ class CRMIntegrationMixin:
                 })
 
         except CRMError as e:
-            raise HTTPException(status_code=400, detail={
-                "__all__": {
-                    "ru": f"Ошибка CRM: {str(e)}",
-                    "en": f"CRM error: {str(e)}"
-                }
-            })
+            raise_http_from_crm(e)
 
 
 

@@ -166,6 +166,26 @@ class MainInfoSchema(BaseValidatedModel):
     company_name: Optional[str] = None
     avatar: Optional[Photo] = None
 
+    pesel: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "settings": {
+                "type": "pesel",
+                "placeholder": {
+                    "ru": "Введите идентификатор",
+                    "en": "Enter identifier",
+                    "pl": "Wprowadź identyfikator"
+                }
+            }
+        }
+    )
+
+    passport: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+        }
+    )
+
     account_status: AccountVerificationEnum = Field(
         default=AccountVerificationEnum.UNVERIFIED,
         json_schema_extra={"settings": {"readonly": True}}
@@ -193,86 +213,31 @@ class MainInfoSchema(BaseValidatedModel):
 # ==========
 
 
-# class ContactInfoSchema(BaseValidatedModel):
-#     """
-#     Схема для вкладки 'Контактная информация'.
-#     """
+import csv
+from pathlib import Path
 
-#     email: EmailStr = Field(
-#         ...,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "email",
-#                 "placeholder": {
-#                     "ru": "Введите e-mail",
-#                     "en": "Enter email",
-#                     "pl": "Wprowadź e-mail"
-#                 }
-#             }
-#         }
-#     )
+# COUNTRIES_FILE = Path(__file__).resolve().parent.parent / "integrations/panamedica/data/countries.csv"
+COUNTRIES_FILE = "integrations/panamedica/data/countries.csv"
 
-#     phone: str = Field(
-#         ...,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "phone",
-#                 "mask": "+99 (999) 999-999"
-#             }
-#         }
-#     )
+def load_country_choices() -> list[dict]:
+    choices = []
 
-#     address: Optional[str] = Field(
-#         default=None,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "textarea",
-#                 "rows": 2,
-#                 "placeholder": {
-#                     "ru": "Введите адрес",
-#                     "en": "Enter address",
-#                     "pl": "Wprowadź adres"
-#                 }
-#             }
-#         }
-#     )
+    with open(COUNTRIES_FILE, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            choices.append({
+                "value": row["code"],
+                "label": {
+                    "en": row["name_en"],
+                    "ru": row["name_ru"],
+                    "pl": row["name_pl"]
+                }
+            })
 
-#     pesel: Optional[str] = Field(
-#         default=None,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "pesel",
-#                 "placeholder": {
-#                     "ru": "Введите идентификатор",
-#                     "en": "Enter identifier",
-#                     "pl": "Wprowadź identyfikator"
-#                 }
-#             }
-#         }
-#     )
+    return choices
 
-#     emergency_contact: Optional[str] = Field(
-#         default=None,
-#         json_schema_extra={
-#             "settings": {
-#                 "type": "phone",
-#                 "mask": "+99 (999) 999-999",
-#                 "allowExtraText": True,
-#                 "placeholder": {
-#                     "ru": "Введите номер экстренного контакта",
-#                     "en": "Enter emergency contact number",
-#                     "pl": "Wprowadź numer kontaktowy awaryjny"
-#                 }
-#             }
-#         }
-#     )
+COUNTRY_CHOICES = load_country_choices()
 
-#     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-
-#     @model_validator(mode="before")
-#     def update_timestamp(cls, data):
-#         data["updated_at"] = datetime.utcnow()
-#         return data
 
 class ContactInfoSchema(BaseModel):
     """
@@ -304,7 +269,7 @@ class ContactInfoSchema(BaseModel):
     )
 
     # ----------------------- Экстренный контакт -----------------------
-    emergency_contact_name: Optional[str] = Field(
+    trusted_contact_name: Optional[str] = Field(
         default=None,
         json_schema_extra={
             "settings": {
@@ -318,7 +283,7 @@ class ContactInfoSchema(BaseModel):
         }
     )
 
-    emergency_contact_phone: Optional[str] = Field(
+    trusted_contact_phone: Optional[str] = Field(
         default=None,
         json_schema_extra={
             "settings": {
@@ -333,7 +298,7 @@ class ContactInfoSchema(BaseModel):
         }
     )
 
-    emergency_contact_consent: Optional[bool] = Field(
+    trusted_contact_consent: Optional[bool] = Field(
         default=False,
         json_schema_extra={
             "settings": {
@@ -349,18 +314,33 @@ class ContactInfoSchema(BaseModel):
     )
 
     # ----------------------- Адрес -----------------------
+    # country: Optional[str] = Field(
+    #     default=None,
+    #     # json_schema_extra={
+    #     #     "settings": {
+    #     #         "type": "select",
+    #     #         "placeholder": {
+    #     #             "ru": "Страна",
+    #     #             "en": "Country",
+    #     #             "pl": "Kraj"
+    #     #         }
+    #     #     }
+    #     # }
+    # )
+
     country: Optional[str] = Field(
         default=None,
-        # json_schema_extra={
-        #     "settings": {
-        #         "type": "select",
-        #         "placeholder": {
-        #             "ru": "Страна",
-        #             "en": "Country",
-        #             "pl": "Kraj"
-        #         }
-        #     }
-        # }
+        json_schema_extra={
+            "settings": {
+                "type": "select",
+                "placeholder": {
+                    "ru": "Страна",
+                    "en": "Country",
+                    "pl": "Kraj"
+                },
+                "choices": COUNTRY_CHOICES
+            }
+        }
     )
 
     region: Optional[str] = Field(
@@ -461,25 +441,7 @@ class ContactInfoSchema(BaseModel):
     )
 
     # ----------------------- Идентификаторы -----------------------
-    pesel: Optional[str] = Field(
-        default=None,
-        json_schema_extra={
-            "settings": {
-                "type": "pesel",
-                "placeholder": {
-                    "ru": "Введите идентификатор",
-                    "en": "Enter identifier",
-                    "pl": "Wprowadź identyfikator"
-                }
-            }
-        }
-    )
 
-    passport: Optional[str] = Field(
-        default=None,
-        json_schema_extra={
-        }
-    )
 
     # ----------------------- Метаданные -----------------------
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
@@ -491,7 +453,6 @@ class ContactInfoSchema(BaseModel):
     
     @field_validator("zip", mode="before")
     def validate_zip_format(cls, v, info: ValidationInfo):
-        print('вызвана проврека')
         if v is None or v == "":
             return None
 

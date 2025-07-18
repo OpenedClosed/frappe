@@ -17,9 +17,46 @@ from infra import settings
 from utils.help_functions import normalize_numbers
 from .utils.help_functions import format_crm_phone
 
-class CRMError(HTTPException):
-    """Ошибка при взаимодействии с CRM."""
-    pass
+# class CRMError(HTTPException):
+#     """Ошибка при взаимодействии с CRM."""
+#     pass
+
+class CRMError(Exception):
+    def __init__(self, status_code: int, detail: str | dict):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(str(detail))
+
+    def __str__(self):
+        if isinstance(self.detail, dict):
+            return self.detail.get("message") or str(self.detail)
+        return str(self.detail)
+
+from fastapi import HTTPException
+
+def raise_http_from_crm(e: CRMError):
+    detail = e.detail
+    if isinstance(detail, dict):
+        if "errors" in detail:
+            raise HTTPException(
+                status_code=e.status_code,
+                detail={"errors": detail["errors"]}
+            )
+        elif "message" in detail:
+            raise HTTPException(
+                status_code=e.status_code,
+                detail={"__all__": {
+                    "ru": f"Ошибка CRM: {detail['message']}",
+                    "en": f"CRM error: {detail['message']}",
+                }}
+            )
+    raise HTTPException(
+        status_code=e.status_code,
+        detail={"__all__": {
+            "ru": f"Ошибка CRM: {str(detail)}",
+            "en": f"CRM error: {str(detail)}"
+        }}
+    )
 
 class CRMClient:
     """
@@ -151,6 +188,7 @@ class CRMClient:
         async with self.lock:
             if self.token_data and asyncio.get_event_loop().time() < self.token_expiration:
                 return self.token_data
+            
             return await self.refresh_token()
 
     # ==============================================================
@@ -165,13 +203,17 @@ class CRMClient:
         params: dict | None = None,
         json: dict | None = None,
     ) -> dict:
+        print(json)
 
         headers = {
             "Authorization": f"Bearer {await self.get_token()}",
             "X-API-Client-Id": "PATIENT-PORTAL",
+            "Accept": "application/json",
         }
 
         json = self.normalize_payload(json) if json else None
+        if json:
+            headers["Content-Type"] = "application/json"
         params = self.normalize_payload(params) if params else None
 
         async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
@@ -183,21 +225,18 @@ class CRMClient:
                 json=json,
             )
 
-        if resp.status_code == 302:
-            raise CRMError(status.HTTP_302_FOUND, "CRM returned redirect")
-        if resp.status_code == 404:
-            raise CRMError(status.HTTP_404_NOT_FOUND, "Not found")
-        if resp.status_code == 403:
-            raise CRMError(status.HTTP_403_FORBIDDEN, "Forbidden")
-        if resp.status_code >= 400:
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, f"CRM error {resp.status_code}")
         if not resp.content:
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, "Empty response from CRM")
+            raise CRMError(502, {"message": "Empty response from CRM"})
 
         try:
-            return resp.json()
+            data = resp.json()
         except Exception:
-            raise CRMError(status.HTTP_502_BAD_GATEWAY, "Invalid JSON from CRM")
+            raise CRMError(502, {"message": "Invalid JSON from CRM"})
+
+        if resp.status_code >= 400:
+            raise CRMError(resp.status_code, data)
+
+        return data
 
     # ==============================================================
     # БЛОК: Пациенты
@@ -279,8 +318,6 @@ class CRMClient:
         return data
 
     async def patch_patient(self, patient_id: str, patch: dict) -> dict:
-        print('===== PATCH =====')
-        print(patch)
         return await self.call("PATCH", f"/patients/{patient_id}", json=patch)
 
     async def find_or_create_patient(

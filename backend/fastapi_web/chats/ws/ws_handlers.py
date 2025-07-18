@@ -1681,10 +1681,6 @@ async def build_ai_response(
         manager=manager,
         chat_session=chat_session
     )
-    print("===== Смотрим 101 — текст до =====")
-    print(message_before_postprocessing)
-    print("===== Смотрим 102 — финальный текст =====")
-    print(final_text)
     
 
     ai_msg = ChatMessage(

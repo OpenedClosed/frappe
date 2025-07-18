@@ -463,6 +463,10 @@ components:
           type: string
           description: "Patient's PESEL number which consists of 11 digits."
           example: "12345678901"
+        referralId:
+          type: string
+          description: "Patient's referral external identifier"
+          example: "yuj-123-sdzx-123-asd"
     UpdatePatientRequest:
       type: object
       description: 'Patient information for update'

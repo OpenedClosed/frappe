@@ -180,7 +180,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
 
 
         try:
-            await send_sms(phone_key, f"Your confirmation code is: {code}")
+            print(code)
+            # await send_sms(phone_key, f"Your confirmation code is: {code}")
         except HTTPException:
             errors["phone"] = {
                 "ru": "Ошибка при отправке SMS. Пожалуйста, проверьте номер телефона.",
@@ -420,7 +421,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         errors = {}
 
         try:
-            await send_sms(phone_key, f"Your 2FA code is: {code_2fa}")
+            print(code_2fa)
+            # await send_sms(phone_key, f"Your 2FA code is: {code_2fa}")
         except HTTPException:
             errors["phone"] = {
                 "ru": "Ошибка при отправке SMS. Пожалуйста, проверьте номер телефона.",
