@@ -9,6 +9,11 @@ from utils.encoders import DateTimeEncoder
 from db.mongo.db_init import mongo_db
 from users.db.mongo.schemas import UserWithData
 from db.redis.db_init import redis_db
+from typing import Iterable, Sequence
+from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+
 
 
 async def get_current_user(
@@ -76,3 +81,38 @@ async def get_user_by_id(user_id: str, data: Optional[dict] = {}) -> UserWithDat
     # Добавляем дополнительное поле
     data["user_id"] = user_id
     return UserWithData(**user_doc, data=data)
+
+
+
+RELATED_COLLECTIONS: Sequence[str] = (
+    "patients_main_info",
+    "patients_contact_info",
+    "patients_health_survey",
+    "patients_family",
+    "patients_bonus_program",
+    "patients_consents",
+    "patients_appointments",
+)
+
+async def cascade_delete_user(user_id: str | ObjectId) -> list[str]:
+    """
+    Пытается удалить пользователя и все документы, в которых есть `user_id`.
+    Возвращает список ошибок вида  ["coll: message", …]  (если что‑то не получилось).
+    """
+    uid = str(user_id)
+    errors: list[str] = []
+
+    # 1. сначала поддокументы — чтобы не оставлять «висящих» ссылок
+    for coll in RELATED_COLLECTIONS:
+        try:
+            await mongo_db[coll].delete_many({"user_id": uid})
+        except Exception as exc:
+            errors.append(f"{coll}: {exc}")
+
+    # 2. сам пользователь
+    try:
+        await mongo_db["users"].delete_one({"_id": ObjectId(uid)})
+    except Exception as exc:
+        errors.append(f"users: {exc}")
+
+    return errors

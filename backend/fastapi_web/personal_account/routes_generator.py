@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
 
+from users.utils.help_functions import cascade_delete_user
 from personal_account.client_interface.db.mongo.enums import AccountVerificationEnum, GenderEnum
 from integrations.panamedica.utils.help_functions import format_crm_phone
 from integrations.panamedica.client import CRMError, get_client
@@ -99,16 +100,27 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "be": "Тэлефон абавязковы.",
             }
         else:
-            exists = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
-            if exists:
-                errors["phone"] = {
-                    "ru": "Пользователь с таким телефоном уже существует.",
-                    "en": "User with this phone already exists.",
-                    "pl": "Użytkownik z tym numerem już istnieje.",
-                    "uk": "Користувач з таким телефоном вже існує.",
-                    "de": "Ein Benutzer mit dieser Telefonnummer existiert bereits.",
-                    "be": "Карыстальнік з такім тэлефонам ужо існуе.",
-                }
+            contact_doc = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
+
+            if contact_doc:
+                user_doc = await mongo_db["users"].find_one(
+                    {"_id": ObjectId(contact_doc["user_id"])}
+                )
+
+                if user_doc:
+                    # реальный дубликат
+                    errors["phone"] = {
+                        "ru": "Пользователь с таким телефоном уже существует.",
+                        "en": "User with this phone already exists.",
+                        "pl": "Użytkownik z tym numerem już istnieje.",
+                        "uk": "Користувач з таким телефоном вже існує.",
+                        "de": "Ein Benutzer mit dieser Telefonnummer existiert bereits.",
+                        "be": "Карыстальнік з такім тэлефонам ужо існуе.",
+                    }
+                else:
+                    # «висящие» данные → подчистим
+                    await cascade_delete_user(contact_doc["user_id"])
+
 
         # ——— возраст
         today = datetime.utcnow().date()
@@ -411,6 +423,11 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         """
         phone_key = normalize_numbers(data.phone)
         contact = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
+
+        if contact and not await mongo_db["users"].find_one({"_id": ObjectId(contact["user_id"])}):
+            # чистим мусор, чтобы пользователь мог залогиниться / зарегистрироваться заново
+            await cascade_delete_user(contact["user_id"])
+            contact = None   # ведём себя так, будто ничего не найдено
         if not contact:
             raise HTTPException(404, detail={
                 "phone": {

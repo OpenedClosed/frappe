@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from admin_core.base_admin import BaseAdmin
 from bson import ObjectId
+from users.utils.help_functions import cascade_delete_user
 from crud_core.permissions import SuperAdminOnlyPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
@@ -140,8 +141,36 @@ class UserAdmin(BaseAdmin):
         result = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": validated_data})
         if result.matched_count == 0:
             raise HTTPException(404, "Object not found for update.")
+            
 
         return await self.get_or_raise(object_id, "Failed to retrieve updated object.", current_user=current_user)
+    
+    # ──────────────────────────────────────────────────────────────
+    #  КАСКАДНОЕ УДАЛЕНИЕ
+    # ──────────────────────────────────────────────────────────────
+    async def delete(
+        self,
+        object_id: str,
+        current_user: Optional[dict] = None
+    ) -> dict:
+        """
+        1) Проверяем права и существование пользователя.
+        2) Собираем пользовательский ID (user_id) из embedded‑поля data.
+        3) Проходим по связанным коллекциям и пытаемся удалить записи.
+        4) Удаляем самого пользователя.
+        5) Возвращаем список неудачных попыток, если такие были.
+        """
+        # 1. ACL + объект
+        self.check_permission("delete", user=current_user)
+        errors = await cascade_delete_user(object_id)
+
+        if errors:
+            return {
+                "status": "partial_success",
+                "message": "User deleted, but some related documents could not be removed.",
+                "errors": errors,
+            }
+        return {"status": "success"}
 
     async def get_or_raise(self, object_id: str, error_message: str,
                            current_user: Optional[dict] = None) -> dict:
