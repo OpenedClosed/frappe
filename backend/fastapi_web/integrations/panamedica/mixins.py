@@ -24,7 +24,7 @@ class CRMIntegrationMixin:
         return main
 
     async def get_patient_id_for_user(self, user) -> str | None:
-        client = await self.get_master_client_by_user(user)
+        client = await self.get_master_client_by_user(user) if user else None
         return client.get("patient_id") if client else None
 
     async def get_patient_cached(self, patient_id: str) -> dict | None:
