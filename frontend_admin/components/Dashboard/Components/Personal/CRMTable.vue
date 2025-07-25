@@ -7,7 +7,7 @@
         {{ typeof title === "object" ? title[currentLanguage] || title.en : title }}
       </h2>
     </div>
-    <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
+    <InfoBanner v-if="!allFieldsPresent && crmBannerText" infoKey="crmBannerTextClosed">
       {{ crmBannerText }}
     </InfoBanner>
 
