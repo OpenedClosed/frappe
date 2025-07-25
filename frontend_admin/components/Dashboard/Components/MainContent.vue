@@ -61,7 +61,7 @@
           v-else-if="currentEntity === 'patients_consents' && !currentId"
           class="flex flex-col flex-1 min-w-0 justify-start items-center p-4"
         >
-          <InfoBanner v-if="!allFieldsPresent" infoKey="crmBannerTextClosed">
+          <InfoBanner v-if="!allFieldsPresent && crmBannerText" infoKey="crmBannerTextClosed">
             {{ crmBannerText }}
           </InfoBanner>
           <Button @click="onClickCreate" icon="pi pi-plus" class="max-w-[350px]" :label="t('MainContent.buttons.fillConsents')"></Button>
@@ -486,7 +486,7 @@ function parseError(error) {
       } else if (Array.isArray(data.detail)) {
         toastMessage = data.detail.map((e) => e.msg || e).join(", ");
       } else if (typeof data.detail === "object") {
-        const isLangKeyed = Object.keys(data.detail).every((key) => ["en", "ru", "pl", "uk", "ka", "de"].includes(key));
+        const isLangKeyed = Object.keys(data.detail).some((key) => ["en", "ru", "pl", "uk", "ka", "de"].includes(key));
         if (isLangKeyed) {
           toastMessage = data.detail[currentLanguage.value] || Object.values(data.detail)[0];
         } else {
@@ -502,7 +502,7 @@ function parseError(error) {
         });
       } else {
         console.log("Setting crmBannerText to:", toastMessage);
-        crmBannerText.value = toastMessage[currentLanguage.value] || toastMessage.en || "Error occurred";
+        crmBannerText.value = toastMessage;
       }
 
       return toastMessage;
@@ -519,7 +519,7 @@ function parseError(error) {
       });
     } else {
       console.log("Setting crmBannerText to:", toastMessage);
-      crmBannerText.value = toastMessage[currentLanguage.value] || toastMessage.en || "Error occurred";
+      crmBannerText.value = toastMessage;
     }
 
     return toastMessage;
