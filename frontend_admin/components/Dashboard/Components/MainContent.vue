@@ -502,7 +502,7 @@ function parseError(error) {
         });
       } else {
         console.log("Setting crmBannerText to:", toastMessage);
-        crmBannerText.value = toastMessage[currentLanguage.value] || toastMessage.en || "Error occurred";
+        crmBannerText.value = toastMessage;
       }
 
       return toastMessage;
@@ -519,7 +519,7 @@ function parseError(error) {
       });
     } else {
       console.log("Setting crmBannerText to:", toastMessage);
-      crmBannerText.value = toastMessage[currentLanguage.value] || toastMessage.en || "Error occurred";
+      crmBannerText.value = toastMessage;
     }
 
     return toastMessage;
