@@ -94,6 +94,8 @@
   "PersonalMainLogin": {
     "titleLogin": "Вхід до акаунту",
     "phone": "Телефон",
+    "email": "E-mail:",
+    "emailPlaceholder": "Введіть e-mail",
     "phonePlaceholder": "Введіть номер телефону",
     "password": "Пароль",
     "passwordPlaceholder": "Введіть пароль",

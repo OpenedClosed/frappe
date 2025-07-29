@@ -11,26 +11,24 @@
           </p>
         </div>
 
-        <!-- Логин (например, телефон) -->
-        <div class="w-full flex flex-col justify-start">
-          <label for="phone" class="w-full text-[14px] mb-2 text-black dark:text-white">
-            {{ t("PersonalMainLogin.phone") }} <span class="text-red-500">*</span>
+        <!-- Email (required) -->
+         <div class="w-full flex flex-col justify-start">
+          <label for="email" class="w-full block mb-1 text-[14px] text-black dark:text-white">
+            {{ t("PersonalMainLogin.email") }}
           </label>
-          <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': Boolean(loginError.phone) }">
-            <InputMask
-              v-model="loginForm.phone"
-              id="phone"
-              type="tel"
-              required
-              mask="+48 999 999 999"
-              placeholder="+48 ___ ___ ___"
-              :minlength="8"
-              :maxlength="30"
-              :placeholder="t('PersonalMainLogin.phonePlaceholder')"
-              class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none"
+          <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!loginError.email }">
+            <InputText
+              size="small"
+              v-model="loginForm.email"
+              type="email"
+              id="email"
+              :placeholder="t('PersonalMainLogin.emailPlaceholder')"
+              class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
             />
           </div>
-          <small v-if="loginError.phone" class="text-red-500 mt-1">{{ loginError.phone }}</small>
+          <small class="text-red-500 mt-1 text-[12px]">
+            {{ loginError.email }}
+          </small>
         </div>
 
         <!-- Пароль -->
@@ -79,7 +77,6 @@
             {{ t("PersonalMainLogin.title2FA") }}
           </p>
         </div>
-      
 
         <!-- Код 2FA -->
         <div class="w-full flex flex-col justify-start">
@@ -145,7 +142,7 @@ const is2FA = ref(false);
  * Данные формы (шаг 1)
  */
 let loginForm = ref({
-  phone: "",
+  email: "",
   password: "",
 });
 
@@ -153,7 +150,7 @@ let loginForm = ref({
  * Ошибка (шаг 1)
  */
 let loginError = ref({
-  phone: "",
+  email: "",
   password: "",
 });
 
@@ -211,7 +208,7 @@ function pickError(err) {
  */
 function sendLogin() {
   // Очищаем ошибки
-  loginError.value.phone = "";
+  loginError.value.email = "";
   loginError.value.password = "";
   debugCode.value = "";
 
@@ -244,9 +241,9 @@ function sendLogin() {
 function send2FA() {
   twoFAError.value.message = "";
   let formData = {
-    // Важно: сервер, как правило, требует тот же phone/phone,
+    // Важно: сервер, как правило, требует тот же email/email,
     // чтобы понять, для кого подтверждаем код
-    phone: loginForm.value.phone.trim(),
+    email: loginForm.value.email.trim(),
     code: twoFAForm.value.code.trim(),
   };
   console.log("Шаг 2 (2FA) formData:", formData);
@@ -274,7 +271,7 @@ function cancel2FA() {
   twoFAError.value.message = "";
 
   // Можно очистить и шаг 1, если нужно
-  // loginForm.value.phone = ''
+  // loginForm.value.email = ''
   // loginForm.value.password = ''
   // loginError.value.message = ''
 

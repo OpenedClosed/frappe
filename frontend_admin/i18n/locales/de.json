@@ -99,6 +99,8 @@
     "titleLogin": "Anmeldung",
     "phone": "Telefon",
     "phonePlaceholder": "Telefonnummer eingeben",
+    "email": "E-Mail:",
+    "emailPlaceholder": "E-Mail eingeben",
     "password": "Passwort",
     "passwordPlaceholder": "Passwort eingeben",
     "loginButton": "Anmelden",

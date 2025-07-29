@@ -96,6 +96,8 @@
     "titleLogin": "Вход в аккаунт",
     "phone": "Телефон",
     "phonePlaceholder": "Введите номер телефона",
+    "email": "E-mail:",
+    "emailPlaceholder": "Введите e-mail",
     "password": "Пароль",
     "passwordPlaceholder": "Введите пароль",
     "loginButton": "Войти",

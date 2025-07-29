@@ -95,6 +95,8 @@
     "titleLogin": "Logowanie do konta",
     "phone": "Telefon",
     "phonePlaceholder": "Wprowadź numer telefonu",
+    "email": "E-mail:",
+    "emailPlaceholder": "Wprowadź e-mail",
     "password": "Hasło",
     "passwordPlaceholder": "Wprowadź hasło",
     "loginButton": "Zaloguj się",

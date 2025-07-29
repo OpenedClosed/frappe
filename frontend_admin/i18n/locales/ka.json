@@ -96,6 +96,8 @@
     "titleLogin": "ანგარიშში შესვლა",
     "phone": "ტელეფონი",
     "phonePlaceholder": "შეიყვანეთ ტელეფონის ნომერი",
+    "email": "ელ-ფოსტა:",
+    "emailPlaceholder": "შეიყვანეთ ელ-ფოსტა",
     "password": "პაროლი",
     "passwordPlaceholder": "შეიყვანეთ პაროლი",
     "loginButton": "შესვლა",

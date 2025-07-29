@@ -95,6 +95,8 @@
     "titleLogin": "Login to Account",
     "phone": "Phone",
     "phonePlaceholder": "Enter your phone number",
+    "email": "Email",
+    "emailPlaceholder": "{'mail@example.com'}",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
     "loginButton": "Login",

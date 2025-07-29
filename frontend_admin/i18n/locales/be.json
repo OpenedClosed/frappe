@@ -95,6 +95,8 @@
     "titleLogin": "Уваход у акаўнт",
     "phone": "Тэлефон",
     "phonePlaceholder": "Увядзіце свой нумар тэлефона",
+    "email": "E-mail:",
+    "emailPlaceholder": "Увядзіце свой e-mail",
     "password": "Пароль",
     "passwordPlaceholder": "Увядзіце свой пароль",
     "loginButton": "Увайсці",
