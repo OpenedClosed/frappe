@@ -120,6 +120,14 @@ SMS_API_URL = os.getenv("SMS_API_URL", "change_me")
 SMS_API_KEY = os.getenv("SMS_API_KEY", "change_me")
 SMS_API_SENDER = os.getenv("SMS_API_SENDER", "change_me")
 
+SMTP_HOST = "smtp.emaillabs.net.pl" # EmailLabs
+SMTP_PORT = 587
+SMTP_USERNAME = os.getenv("SMTP_USER")
+SMTP_PASSWORD = os.getenv("SMTP_PASS")
+SMTP_FROM = "[email protected]"
+SMTP_USE_TLS = True
+SMTP_TIMEOUT = 10.0
+
 # PaNa Medica CRM
 CRM_API_URL = os.getenv("CRM_API_URL", "change_me")
 CRM_CLIENT_ID = os.getenv("CRM_CLIENT_ID", "change_me")

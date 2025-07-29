@@ -4,6 +4,8 @@ import logging
 import sys
 from pathlib import Path
 
+from telegram_bot.infra.states import MainMenu
+
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from aiohttp import web
@@ -12,22 +14,30 @@ from aiogram.types import MenuButtonWebApp, WebAppInfo, Message
 from aiogram.filters import Command, CommandObject
 from aiogram.enums import ParseMode
 
-from utils.translations import BOT_TRANSLATIONS
-from utils.decorators import check_private_chat
-from chats.routers import send_message
-from chats.handlers import relay_router
-from bot_conf.create_bot import bot, dp
-from fastapi_web.infra import settings
-from utils.help_functions import generate_secure_webapp_url, set_menu_webapp_for_user
+from telegram_bot.utils.translations import BOT_TRANSLATIONS
+from telegram_bot.utils.decorators import check_private_chat
+from telegram_bot.apps.chats.routers import send_message
+from telegram_bot.apps.chats.handlers import relay_router
+from telegram_bot.infra.create_bot import bot, dp
+from fastapi_web.infra import settings as backend_settings
+from telegram_bot.apps.main_menu.dialogs import main_menu_dialog
+from telegram_bot.apps.personal_account.dialogs import personal_account_dialog
+from telegram_bot.utils.help_functions import generate_secure_webapp_url, set_menu_webapp_for_user
 import logging
+from aiogram_dialog import DialogManager, StartMode, setup_dialogs
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
+# Роутеры и диалоги
 dp.include_router(relay_router)
 
+dp.include_router(main_menu_dialog)
+dp.include_router(personal_account_dialog)
+
+setup_dialogs(dp)
 
 @dp.startup()
 async def on_startup(*args, **kwargs):
@@ -41,17 +51,18 @@ async def on_shutdown(*args, **kwargs):
 
 @dp.message(Command("start"))
 @check_private_chat
-async def start(message: Message, command: CommandObject):
+async def start(message: Message, command: CommandObject, dialog_manager: DialogManager):
     """
     Обработчик команды '/start'.
     """
     user_lang = message.from_user.language_code
-    start_text = BOT_TRANSLATIONS["start_info_text"].get(
-        user_lang, BOT_TRANSLATIONS["start_info_text"]["en"]
-    )
+    # start_text = BOT_TRANSLATIONS["start_info_text"].get(
+    #     user_lang, BOT_TRANSLATIONS["start_info_text"]["en"]
+    # )
     url = await generate_secure_webapp_url(message.from_user, message.bot)
-    await message.answer(start_text, parse_mode=ParseMode.HTML)
+    # await message.answer(start_text, parse_mode=ParseMode.HTML)
     await set_menu_webapp_for_user(message.from_user, message.bot)
+    await dialog_manager.start(MainMenu.START, mode=StartMode.RESET_STACK)
 
 
 

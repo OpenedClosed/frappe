@@ -10,8 +10,9 @@ from datetime import datetime
 from urllib.parse import urlencode
 
 from aiogram.types import MenuButtonWebApp, WebAppInfo
-from bot_conf.create_bot import bot
-from infra import settings as bot_settings
+from telegram_bot.utils.translations import BOT_TRANSLATIONS
+from telegram_bot.infra.create_bot import bot
+from telegram_bot.infra import settings as bot_settings
 from fastapi_web.infra import settings
 
 
@@ -31,7 +32,8 @@ async def generate_secure_webapp_url(user: User, bot: Bot) -> str:
     """
     Генерирует WebApp URL с подписью и дополнительной информацией о пользователе.
     """
-    base_url = f"{settings.HOST_URL}/chats/telegram-chat"
+    host = settings.HOST_URL if "localhost" not in settings.HOST_URL else "https://panamed-aihubworks.com"
+    base_url = f"{host}/chats/telegram-chat"
     timestamp = int(datetime.utcnow().timestamp())
     user_id = user.id
 
@@ -78,3 +80,11 @@ async def get_avatar_url(bot: Bot, user_id: int) -> str | None:
     file_id = photos.photos[0][-1].file_id 
     f = await bot.get_file(file_id)
     return f"https://api.telegram.org/file/bot{bot.token}/{f.file_path}"
+
+
+def tr(block: str, lang: str, key: str | None = None, fall: str = "en") -> str:
+    """Достаёт перевод из BOT_TRANSLATIONS, с поддержкой вложенных ключей."""
+    data = BOT_TRANSLATIONS[block].get(lang, BOT_TRANSLATIONS[block][fall])
+    if key is None:
+        return data  # это уже строка
+    return data[key]  # это словарь

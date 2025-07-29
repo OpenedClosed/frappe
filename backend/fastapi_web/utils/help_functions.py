@@ -6,6 +6,8 @@ import re
 import string
 from datetime import datetime
 from typing import Any, Dict, Union
+from email.message import EmailMessage
+import aiosmtplib
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -98,6 +100,36 @@ async def send_sms(phone: str, text: str) -> dict:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal SMS error"
             ) from exc
+
+async def send_email(to_email: str, subject: str, body: str, html_body: str | None = None) -> dict:
+    """Отправляет письмо через EmailLabs SMTP асинхронно, с поддержкой HTML."""
+    message = EmailMessage()
+    message["From"] = settings.SMTP_FROM
+    message["To"] = to_email
+    message["Subject"] = subject
+
+    message.set_content(body)
+
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
+
+    try:
+        await aiosmtplib.send(
+            message,
+            hostname=settings.SMTP_HOST,
+            port=settings.SMTP_PORT,
+            username=settings.SMTP_USERNAME,
+            password=settings.SMTP_PASSWORD,
+            start_tls=settings.SMTP_USE_TLS,
+            timeout=settings.SMTP_TIMEOUT,
+        )
+        return {"success": True}
+    except aiosmtplib.SMTPException as exc:
+        logging.exception("SMTP error")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="SMTP provider is unavailable",
+        ) from exc
 
 
 def split_prompt_parts(full_prompt: str) -> tuple[str, str]:

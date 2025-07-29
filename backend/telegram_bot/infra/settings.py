@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 # Загрузка переменных окружения из файла .env
-load_dotenv(dotenv_path="../infra/.env")
+load_dotenv(dotenv_path="infra/.env")
 
 # Основные настройки бота
 CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "good_service")

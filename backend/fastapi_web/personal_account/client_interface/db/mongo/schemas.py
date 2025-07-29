@@ -27,7 +27,7 @@ class RegistrationSchema(BaseModel):
     Шаг 1: Данные для регистрации (телефон обязателен).
     """
     phone: str
-    email: Optional[EmailStr] = None
+    email: EmailStr
     first_name: str
     last_name: str
     birth_date: Optional[datetime] = None
@@ -105,7 +105,8 @@ class LoginSchema(BaseModel):
     """
     Шаг 1 входа: телефон + пароль.
     """
-    phone: str
+    # phone: str
+    email: EmailStr
     password: str
 
     def check_password(self, hashed: str) -> bool:
@@ -119,7 +120,8 @@ class TwoFASchema(BaseModel):
     """
     Шаг 2 входа: одноразовый код, высланный на телефон.
     """
-    phone: str
+    # phone: str
+    email: EmailStr
     code: str
 
 

@@ -2,8 +2,8 @@
 from aiohttp import web
 from fastapi import APIRouter, HTTPException
 
-from bot_conf.create_bot import bot
-from infra import settings as bot_settings
+from telegram_bot.infra.create_bot import bot
+from telegram_bot.infra import settings as bot_settings
 
 router = APIRouter()
 

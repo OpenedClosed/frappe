@@ -7,8 +7,8 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import DefaultKeyBuilder, RedisStorage
 from fastapi import FastAPI
 
-from db.redis.init_db import redis
-from infra import settings as bot_settings
+from telegram_bot.db.redis.init_db import redis
+from telegram_bot.infra import settings as bot_settings
 
 # Настройка хранилища Redis для FSM
 redis_storage = RedisStorage(

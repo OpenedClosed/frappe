@@ -3,11 +3,11 @@ import time
 import aiohttp
 from aiogram import Router
 from aiogram.types import Message
-from bot_conf.create_bot import bot, dp
+from telegram_bot.infra.create_bot import bot, dp
 from fastapi_web.infra import settings
-from infra import settings as bot_settings
-from utils.decorators import check_private_chat
-from utils.help_functions import generate_telegram_hash, get_avatar_url
+from telegram_bot.infra import settings as bot_settings
+from telegram_bot.utils.decorators import check_private_chat
+from telegram_bot.utils.help_functions import generate_telegram_hash, get_avatar_url
 
 relay_router = Router()
 
