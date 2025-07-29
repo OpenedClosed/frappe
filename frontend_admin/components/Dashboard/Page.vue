@@ -17,7 +17,7 @@ import Sidebar from "~/components/Dashboard/Components/Topbar.vue";
 const { currentPageName } = usePageState();
 
 onMounted(() => {
-  if (window.Telegram && isTelegram && currentPageName === 'personal_account') {
+  if (window.Telegram && currentPageName === 'personal_account') {
     let tg = window.Telegram.WebApp;
     tg.expand();
     tg.isVerticalSwipesEnabled = false;
