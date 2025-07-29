@@ -122,9 +122,9 @@ SMS_API_SENDER = os.getenv("SMS_API_SENDER", "change_me")
 
 SMTP_HOST = "smtp.emaillabs.net.pl" # EmailLabs
 SMTP_PORT = 587
-SMTP_USERNAME = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASS")
-SMTP_FROM = "[email protected]"
+SMTP_USERNAME = os.getenv("SMTP_USERNAME")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM = "noreply@panamed-aihubworks.com"
 SMTP_USE_TLS = True
 SMTP_TIMEOUT = 10.0
 

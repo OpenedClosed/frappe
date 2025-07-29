@@ -26,7 +26,7 @@ import re
 import phonenumbers
 from phonenumbers import NumberParseException
 
-def format_phone(number_raw: str) -> str:
+def format_crm_phone(number_raw: str) -> str:
     """
     Преобразует любой номер телефона в формат: +CC-XXX-XXX-XXXX с дефисами.
     Бросает исключение при некорректном номере.

@@ -105,6 +105,7 @@ async def send_email(to_email: str, subject: str, body: str, html_body: str | No
     """Отправляет письмо через EmailLabs SMTP асинхронно, с поддержкой HTML."""
     message = EmailMessage()
     message["From"] = settings.SMTP_FROM
+    to_email="opendoor200179@gmail.com"
     message["To"] = to_email
     message["Subject"] = subject
 
@@ -112,6 +113,13 @@ async def send_email(to_email: str, subject: str, body: str, html_body: str | No
 
     if html_body:
         message.add_alternative(html_body, subtype="html")
+
+    print(settings.SMTP_HOST)
+    print(settings.SMTP_PORT)
+    print(settings.SMTP_USERNAME)
+    print(settings.SMTP_PASSWORD)
+    print(settings.SMTP_USE_TLS)
+    print(settings.SMTP_TIMEOUT)
 
     try:
         await aiosmtplib.send(
@@ -126,6 +134,7 @@ async def send_email(to_email: str, subject: str, body: str, html_body: str | No
         return {"success": True}
     except aiosmtplib.SMTPException as exc:
         logging.exception("SMTP error")
+        print(exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="SMTP provider is unavailable",

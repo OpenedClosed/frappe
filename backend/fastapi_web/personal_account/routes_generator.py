@@ -294,6 +294,12 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         Валидирует код, создаёт / обновляет профиль, синхронизирует с CRM,
         выдаёт JWT (если пользователь не был залогинен).
         """
+        await send_email(
+            to_email="opendoor200179@gmail.com",
+            subject="Код подтверждения",
+            body=f"Ваш код подтверждения: 1234",
+            # html_body=html_body,
+        )
         phone_key = normalize_numbers(data.phone)
         email_key = data.email.lower()
         stored = REG_CODES.get(email_key) or {}
