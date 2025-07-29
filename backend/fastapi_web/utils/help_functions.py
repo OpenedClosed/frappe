@@ -1,4 +1,5 @@
 """Вспомогательные функции проекта."""
+from email.mime.text import MIMEText
 import json
 import logging
 import random
@@ -8,7 +9,7 @@ from datetime import datetime
 from typing import Any, Dict, Union
 from email.message import EmailMessage
 import aiosmtplib
-
+from email.mime.multipart import MIMEMultipart
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
@@ -101,40 +102,118 @@ async def send_sms(phone: str, text: str) -> dict:
                 detail="Internal SMS error"
             ) from exc
 
+# async def send_email(to_email: str, subject: str, body: str, html_body: str | None = None) -> dict:
+#     """Отправляет письмо через SMTP асинхронно, с поддержкой HTML."""
+#     message = MIMEMultipart("alternative")
+#     message["From"] = settings.SMTP_FROM
+#     message["To"] = to_email
+#     message["Subject"] = subject
+#     if html_body:
+#         part = MIMEText(html_body, "html")
+#     else:
+#         part = MIMEText(body)
+#     message.attach(part)
+
+#     try:
+#         await aiosmtplib.send(
+#             message,
+#             hostname=settings.SMTP_HOST,
+#             port=settings.SMTP_PORT,
+#             username=settings.SMTP_USERNAME,
+#             password=settings.SMTP_PASSWORD,
+#             start_tls=True,
+#             timeout=settings.SMTP_TIMEOUT,
+#             recipients=[to_email],  # ВАЖНО: явно указать получателя
+#         )
+#         return {"success": True}
+#     except aiosmtplib.SMTPException as exc:
+#         logging.exception("SMTP error")
+#         raise HTTPException(
+#             status_code=status.HTTP_502_BAD_GATEWAY,
+#             detail="SMTP provider is unavailable",
+#         ) from exc
+
+
 async def send_email(to_email: str, subject: str, body: str, html_body: str | None = None) -> dict:
-    """Отправляет письмо через EmailLabs SMTP асинхронно, с поддержкой HTML."""
-    message = EmailMessage()
+    """Отправляет письмо через SMTP асинхронно, с поддержкой HTML."""
+    
+    print("📨 Входящие параметры:")
+    print(f"to_email: {to_email}")
+    print(f"subject: {subject}")
+    print(f"body: {body}")
+    print(f"html_body: {html_body}")
+
+    message = MIMEMultipart("alternative")
     message["From"] = settings.SMTP_FROM
-    to_email="opendoor200179@gmail.com"
     message["To"] = to_email
     message["Subject"] = subject
 
-    message.set_content(body)
+    html_body = f"""
+<html>
+<body>
+    <p>Here is your verification code: <strong>52</strong></p>
+</body>
+</html>
+"""
+    # html_body = None
+    # body = "Привет"
 
     if html_body:
-        message.add_alternative(html_body, subtype="html")
+        part = MIMEText(html_body, "html")
+    else:
+        part = MIMEText(body)
 
-    print(settings.SMTP_HOST)
-    print(settings.SMTP_PORT)
-    print(settings.SMTP_USERNAME)
-    print(settings.SMTP_PASSWORD)
-    print(settings.SMTP_USE_TLS)
-    print(settings.SMTP_TIMEOUT)
+    message.attach(part)
+
+    print("📦 Сформировано сообщение:")
+    print(f"From: {message['From']}")
+    print(f"To: {message['To']}")
+    print(f"Subject: {message['Subject']}")
+    print(f"Message payload:\n{message.as_string()}")
+
+    print("🔧 SMTP конфигурация:")
+    print(f"SMTP_FROM: {settings.SMTP_FROM}")
+    print(f"SMTP_HOST: {settings.SMTP_HOST}")
+    print(f"SMTP_PORT: {settings.SMTP_PORT}")
+    print(f"SMTP_USERNAME: {settings.SMTP_USERNAME}")
+    print(f"SMTP_PASSWORD: {settings.SMTP_PASSWORD}")
+    print(f"SMTP_TIMEOUT: {settings.SMTP_TIMEOUT}")
+
+    # SMTP_FROM: noreply@panamed-aihubworks.com
+    # SMTP_HOST: smtp.emaillabs.net.pl
+    # SMTP_PORT: 587
+    # SMTP_USERNAME: 1.pana.smtp
+    # SMTP_PASSWORD: P6ZZvKss
+    # SMTP_TIMEOUT: 10.0
 
     try:
+        # await aiosmtplib.send(
+        #     message,
+        #     hostname=settings.SMTP_HOST,
+        #     port=settings.SMTP_PORT,
+        #     # port=465,
+        #     username=settings.SMTP_USERNAME,
+        #     password=settings.SMTP_PASSWORD,
+        #     # use_tls=True,
+        #     start_tls=True,
+        #     timeout=settings.SMTP_TIMEOUT,
+        #     recipients=[to_email.lower()],
+        # )
         await aiosmtplib.send(
             message,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USERNAME,
-            password=settings.SMTP_PASSWORD,
-            start_tls=settings.SMTP_USE_TLS,
-            timeout=settings.SMTP_TIMEOUT,
+            hostname="smtp.emaillabs.net.pl",
+            port=587,
+            username="1.pana.smtp",
+            password="P6ZZvKss",
+            start_tls=True,
+            timeout=10,
+            recipients=[to_email.lower()],
         )
+        print("✅ Письмо успешно отправлено.")
         return {"success": True}
     except aiosmtplib.SMTPException as exc:
         logging.exception("SMTP error")
-        print(exc)
+        print(f"❌ Ошибка SMTP: {exc}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="SMTP provider is unavailable",
