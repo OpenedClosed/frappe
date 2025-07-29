@@ -28,8 +28,8 @@
                 size="small"
                 type="tel"
                 required
-                mask="+48 999 999 999"
-                placeholder="+48 ___ ___ ___"
+                mask="+9?99999999999"
+                placeholder="+____________"
                 :minlength="8"
                 :maxlength="30"
                 :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
