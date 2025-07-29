@@ -9,7 +9,7 @@
           <li v-for="item in group.items" :key="item.name">
             <RouterLink
               :to="item.route"
-              class="inline-flex items-center px-3 py-2 text-sm text-black dark:text-white hover:text-primaryDark dark:hover:text-primaryLight hover:bg-neutral dark:hover:bg-neutralDark mx-1 rounded transition-colors duration-150"
+              class="inline-flex gap-1 items-center px-3 py-2 text-sm text-black dark:text-white hover:text-primaryDark dark:hover:text-primaryLight hover:bg-neutral dark:hover:bg-neutralDark mx-1 rounded transition-colors duration-150"
               :class="{
                 'border-2 border-primary text-primary dark:text-primaryLight font-semibold bg-white dark:bg-neutral rounded-lg active':
                   isActiveRoute(item.route),

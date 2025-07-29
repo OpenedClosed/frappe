@@ -309,7 +309,9 @@
   },
 
   "SupportPage": {
-    "title": "საპორტ ჩატი"
+    "title": "საპორტ ჩატი",
+    "openSupportChat": "გახსენი საპორტ ჩატი",
+    "chatHeader": "საპორტ ჩატი"
   },
 
   "DateRangeFilter": {

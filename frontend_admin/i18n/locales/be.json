@@ -295,7 +295,9 @@
     "tooltipCopy": "Скапіраваць рэферальны код"
   },
   "SupportPage": {
-    "title": "Чат падтрымкі"
+    "title": "Чат падтрымкі",
+    "openSupportChat": "Адкрыць чат падтрымкі",
+    "chatHeader": "Чат падтрымкі"
   },
   "DateRangeFilter": {
     "heading": "Фільтр дыяпазону дат:",

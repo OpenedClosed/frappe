@@ -308,7 +308,9 @@
   },
 
   "SupportPage": {
-    "title": "Чат підтримки"
+    "title": "Чат підтримки",
+    "openSupportChat": "Відкрити чат підтримки",
+    "chatHeader": "Чат підтримки"
   },
 
   "DateRangeFilter": {

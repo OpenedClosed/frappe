@@ -295,7 +295,9 @@
     "tooltipCopy": "Copy referral code"
   },
   "SupportPage": {
-    "title": "Support chat"
+    "title": "Support chat",
+    "openSupportChat": "Open support chat",
+    "chatHeader": "Support chat"
   },
   "DateRangeFilter": {
     "heading": "Date range filter:",

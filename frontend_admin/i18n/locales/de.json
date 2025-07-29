@@ -312,7 +312,9 @@
   },
 
   "SupportPage": {
-    "title": "Support-Chat"
+    "title": "Support-Chat",
+    "openSupportChat": "Support-Chat öffnen",
+    "chatHeader": "Support-Chat"
   },
 
   "DateRangeFilter": {

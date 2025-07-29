@@ -308,7 +308,9 @@
   },
 
   "SupportPage": {
-    "title": "Czat wsparcia"
+    "title": "Czat wsparcia",
+    "openSupportChat": "Otwórz czat wsparcia",
+    "chatHeader": "Czat wsparcia"
   },
 
   "DateRangeFilter": {
