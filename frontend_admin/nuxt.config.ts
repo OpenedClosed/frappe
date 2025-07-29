@@ -70,7 +70,7 @@ export default defineNuxtConfig({
         { "http-equiv": "Content-Security-Policy", content: "upgrade-insecure-requests" },
         { "http-equiv": "X-UA-Compatible", content: "IE=edge" },
       ],
-      script: [],
+      script: [{ src: "https://telegram.org/js/telegram-web-app.js" }],
       link: [
         {
           rel: "preconnect",
