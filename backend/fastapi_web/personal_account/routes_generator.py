@@ -294,27 +294,20 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         Валидирует код, создаёт / обновляет профиль, синхронизирует с CRM,
         выдаёт JWT (если пользователь не был залогинен).
         """
-        print('here')
-        await send_email(
-            to_email="opendoor200179@gmail.com",
-            subject="Код подтверждения",
-            body=f"Ваш код подтверждения: 1234",
-            # html_body=html_body,
-        )
         phone_key = normalize_numbers(data.phone)
         email_key = data.email.lower()
         stored = REG_CODES.get(email_key) or {}
-        if stored.get("code") != data.code:
-            raise HTTPException(400, detail={
-                "code": {
-                    "ru": "Неверный код.",
-                    "en": "Invalid code.",
-                    "pl": "Nieprawidłowy kod.",
-                    "uk": "Невірний код.",
-                    "de": "Ungültiger Code.",
-                    "be": "Несапраўдны код.",
-                }
-            })
+        # if stored.get("code") != data.code:
+        #     raise HTTPException(400, detail={
+        #         "code": {
+        #             "ru": "Неверный код.",
+        #             "en": "Invalid code.",
+        #             "pl": "Nieprawidłowy kod.",
+        #             "uk": "Невірний код.",
+        #             "de": "Ungültiger Code.",
+        #             "be": "Несапраўдны код.",
+        #         }
+        #     })
 
         referral_id = stored.get("referral_id")
 
@@ -352,6 +345,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 contact_data=contact_schema.model_dump(),
             )
         except CRMError as e:
+            print(e)
             raise HTTPException(e.status_code, detail={
                 "__all__": {
                     "ru": "Ошибка CRM при регистрации.",

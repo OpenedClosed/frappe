@@ -31,6 +31,9 @@ def format_crm_phone(number_raw: str) -> str:
     Преобразует любой номер телефона в формат: +CC-XXX-XXX-XXXX с дефисами.
     Бросает исключение при некорректном номере.
     """
+    print(number_raw)
+    if number_raw.isdigit() and not number_raw.startswith("+"):
+        number_raw = "+" + number_raw
     try:
         parsed = phonenumbers.parse(number_raw, None)
         if not phonenumbers.is_possible_number(parsed):
@@ -38,7 +41,7 @@ def format_crm_phone(number_raw: str) -> str:
 
         international = phonenumbers.format_number(
             parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL
-        )  # например: +48 123 456 789
+        )
 
         digits_only = international.replace("+", "").replace("(", "").replace(")", "")
         parts = digits_only.split()
@@ -46,7 +49,6 @@ def format_crm_phone(number_raw: str) -> str:
         if len(parts) < 2:
             raise ValueError("Невозможно отформатировать номер.")
 
-        # Пример: ['48', '123', '456', '789']
         return "+" + "-".join(parts)
 
     except NumberParseException:
