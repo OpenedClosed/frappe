@@ -297,17 +297,17 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         phone_key = normalize_numbers(data.phone)
         email_key = data.email.lower()
         stored = REG_CODES.get(email_key) or {}
-        # if stored.get("code") != data.code:
-        #     raise HTTPException(400, detail={
-        #         "code": {
-        #             "ru": "Неверный код.",
-        #             "en": "Invalid code.",
-        #             "pl": "Nieprawidłowy kod.",
-        #             "uk": "Невірний код.",
-        #             "de": "Ungültiger Code.",
-        #             "be": "Несапраўдны код.",
-        #         }
-        #     })
+        if stored.get("code") != data.code:
+            raise HTTPException(400, detail={
+                "code": {
+                    "ru": "Неверный код.",
+                    "en": "Invalid code.",
+                    "pl": "Nieprawidłowy kod.",
+                    "uk": "Невірний код.",
+                    "de": "Ungültiger Code.",
+                    "be": "Несапраўдны код.",
+                }
+            })
 
         referral_id = stored.get("referral_id")
 
