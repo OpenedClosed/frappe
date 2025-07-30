@@ -148,7 +148,8 @@ async def send_email(to_email: str, subject: str, body: str, html_body: str | No
     print(f"html_body: {html_body}")
 
     message = MIMEMultipart("alternative")
-    message["From"] = settings.SMTP_FROM
+    # message["From"] = settings.SMTP_FROM
+    message["From"] = "noreply@panamed-aihubworks.com"
     message["To"] = to_email
     message["Subject"] = subject
     if html_body:
@@ -173,16 +174,27 @@ async def send_email(to_email: str, subject: str, body: str, html_body: str | No
     print(f"SMTP_TIMEOUT: {settings.SMTP_TIMEOUT}")
 
     try:
+        # await aiosmtplib.send(
+        #     message,
+        #     hostname=settings.SMTP_HOST,
+        #     port=settings.SMTP_PORT,
+        #     # port=465,
+        #     username=settings.SMTP_USERNAME,
+        #     password=settings.SMTP_PASSWORD,
+        #     # use_tls=True,
+        #     start_tls=True,
+        #     timeout=settings.SMTP_TIMEOUT,
+        #     recipients=[to_email.lower()],
+        # )
         await aiosmtplib.send(
             message,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            # port=465,
-            username=settings.SMTP_USERNAME,
-            password=settings.SMTP_PASSWORD,
+            hostname="smtp.emaillabs.net.pl",
+            port=587,
+            username="1.pana.smtp",
+            password="P6ZZvKss",
             # use_tls=True,
             start_tls=True,
-            timeout=settings.SMTP_TIMEOUT,
+            timeout=10,
             recipients=[to_email.lower()],
         )
         print("✅ Письмо успешно отправлено.")
