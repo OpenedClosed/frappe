@@ -16,58 +16,6 @@
       <!-- Шаг 1: Форма регистрации -->
       <div v-if="!isCode">
         <form @submit.prevent="sendReg" class="flex flex-col gap-4">
-          <!-- Номер телефона (required) -->
-          <div>
-            <label for="phone" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.phone") }} <span class="text-red-500">*</span>
-            </label>
-            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.phone }">
-              <InputMask
-                v-model="regForm.phone"
-                id="phone"
-                size="small"
-                type="tel"
-                required
-                mask="+9?99999999999"
-                placeholder="+____________"
-                :minlength="8"
-                :maxlength="30"
-                :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
-                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
-              />
-            </div>
-            <div class="flex flex-col">
-              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
-                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                  >{{ t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
-                >{{ t("PersonalMainRegistration.numberInfo") }}</small
-              >
-              <small class="text-red-500 mt-1 text-[12px]">
-                {{ regError.phone }}
-              </small>
-            </div>
-          </div>
-
-          <!-- Email (required) -->
-          <div>
-            <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.email") }}
-            </label>
-            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.email }">
-              <InputText
-                size="small"
-                v-model="regForm.email"
-                type="email"
-                id="email"
-                :placeholder="t('PersonalMainRegistration.emailPlaceholder')"
-                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
-              />
-            </div>
-            <small class="text-red-500 mt-1 text-[12px]">
-              {{ regError.email }}
-            </small>
-          </div>
-
           <!-- Имя (required) -->
           <div>
             <label for="first_name" class="block mb-1 text-[14px] text-black dark:text-white">
@@ -161,6 +109,60 @@
             </small>
           </div>
 
+          <Divider />
+
+          <!-- Номер телефона (required) -->
+          <div>
+            <label for="phone" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.phone") }} <span class="text-red-500">*</span>
+            </label>
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.phone }">
+              <InputMask
+                v-model="regForm.phone"
+                id="phone"
+                size="small"
+                type="tel"
+                required
+                mask="+9?99999999999"
+                placeholder="+____________"
+                :minlength="8"
+                :maxlength="30"
+                :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              />
+            </div>
+            <div class="flex flex-col">
+              <small class="text-red-500 mt-1 text-[12px]">
+                {{ regError.phone }}
+              </small>
+            </div>
+          </div>
+
+          <!-- Email (required) -->
+          <div>
+            <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.email") }}
+            </label>
+            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.email }">
+              <InputText
+                size="small"
+                v-model="regForm.email"
+                type="email"
+                id="email"
+                :placeholder="t('PersonalMainRegistration.emailPlaceholder')"
+                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              />
+            </div>
+            <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+              <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
+                >{{ t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
+              >{{ t("PersonalMainRegistration.numberInfo") }}</small
+            >
+            <small class="text-red-500 mt-1 text-[12px]">
+              {{ regError.email }}
+            </small>
+          </div>
+          <Divider />
           <!-- Пароль (required) -->
           <div>
             <label for="password" class="block mb-1 text-[14px] text-black dark:text-white">
@@ -257,8 +259,12 @@
               <Checkbox v-model="regForm.accept_terms" :binary="true" inputId="agreeTerms" required class="mr-2" />
               <label for="agreeTerms" class="text-[14px] text-black dark:text-white">
                 {{ t("PersonalMainRegistration.termsPrefix") }}
-                <a href="https://www.pa-na.pl/pl/dokumenty1/polityka-prywatnosci" class="underline" target="_blank" rel="noreferrer noopener">
-
+                <a
+                  href="https://www.pa-na.pl/pl/dokumenty1/polityka-prywatnosci"
+                  class="underline"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
                   {{ t("PersonalMainRegistration.privacyLink") }}
                 </a>
               </label>
@@ -536,3 +542,11 @@ onMounted(() => {
   }
 });
 </script>
+<style scoped>
+.p-divider.p-divider-horizontal:before {
+  border-top: 1px solid #c7c7c7 !important; /* Light mode color */
+}
+.dark .p-divider.p-divider-horizontal:before {
+  border-top: 1px solid #fff !important; /* Dark mode color */
+}
+</style>
