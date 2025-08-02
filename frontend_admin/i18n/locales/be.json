@@ -52,6 +52,7 @@
     "passwordLabel": "Пароль",
     "passwordPlaceholder": "Увядзіце свой пароль",
     "loginButton": "Увайсці",
+    "usePhoneLogin": "Выкарыстоўваць тэлефон (SMS) для ўваходу",
     "noAccount": "Няма акаўнта?",
     "registerLink": "Зарэгістравацца"
   },
@@ -136,8 +137,8 @@
     "loginLink": "Увайсці",
     "confirmTitle": "Пацвердзіць рэгістрацыю",
     "debugCode": "Тэставы код (будзе дасланы пазней па e-mail)",
-    "smsCodeLabel": "Код з e-mail",
-    "smsCodePlaceholder": "Увядзіце код з e-mail",
+    "smsCodeLabel": "Код з e-mail / SMS",
+    "smsCodePlaceholder": "Увядзіце код з e-mail / SMS",
     "confirmButton": "Пацвердзіць",
     "cancelButton": "Адмяніць",
     "genderMale": "Мужчына",
@@ -153,7 +154,9 @@
     "IHaveReferralCode": "У мяне ёсць рэфerralны код",
     "ReferralCode": "Рэферальны код",
     "Information": "Інфармацыя",
-    "ReferralCodeEntered": "Вы ўвялі рэферальны код."
+    "ReferralCodeEntered": "Вы ўвялі рэферальны код.",
+    "usePhone2FA": "Выкарыстоўваць тэлефон (SMS) для двухфактарнай аўтэнтыфікацыі",
+    "phoneMustBePolish": "Нумар тэлефона павінен пачынацца з +48 для актывацыі SMS."
   },
   "DynamicForm": {
     "upload": "Загрузіць",

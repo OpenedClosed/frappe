@@ -101,6 +101,7 @@
     "password": "Пароль",
     "passwordPlaceholder": "Введите пароль",
     "loginButton": "Войти",
+    "usePhoneLogin": "Использовать телефон (SMS) для входа",
     "noAccount": "Нет аккаунта?",
     "registerLink": "Регистрация",
     "title2FA": "Подтверждение входа",
@@ -138,8 +139,8 @@
     "loginLink": "Войти",
     "confirmTitle": "Подтвердите регистрацию",
     "debugCode": "Тестовый код (придёт позже на e-mail)",
-    "smsCodeLabel": "Код из e-mail",
-    "smsCodePlaceholder": "Введите код из e-mail",
+    "smsCodeLabel": "Код из e-mail / SMS",
+    "smsCodePlaceholder": "Введите код из e-mail / SMS",
     "confirmButton": "Подтвердить",
     "cancelButton": "Отмена",
     "genderMale": "Мужской",
@@ -155,7 +156,9 @@
     "IHaveReferralCode": "У меня есть реферальный код",
     "ReferralCode": "Реферальный код",
     "Information": "Информация",
-    "ReferralCodeEntered": "У вас введен реферальный код."
+    "ReferralCodeEntered": "У вас введен реферальный код.",
+    "usePhone2FA": "Использовать телефон (SMS) для двухфакторной аутентификации",
+    "phoneMustBePolish": "Номер телефона должен начинаться с +48 для активации SMS."
   },
 
   "DynamicForm": {

@@ -23,6 +23,7 @@ from db.mongo.db_init import mongo_db
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User
 from utils.help_functions import normalize_numbers, send_email, send_sms
+import json
 
 from .client_interface.db.mongo.schemas import (ConfirmationSchema, ContactInfoSchema,
                                                 LoginSchema, MainInfoSchema,
@@ -212,7 +213,12 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 status_code=429,
                 content={
                     "errors": {
-                        "__all__": {
+                        "email": {
+                            "ru": "Код уже был отправлен, попробуйте через минуту.",
+                            "en": "Code already sent, please wait a minute.",
+                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+                        },
+                        "phone": {
                             "ru": "Код уже был отправлен, попробуйте через минуту.",
                             "en": "Code already sent, please wait a minute.",
                             "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
@@ -372,7 +378,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             raise HTTPException(
                 e.status_code,
                 detail={
-                    "__all__": {
+                    "code": {
                         "ru": "Ошибка CRM при регистрации.",
                         "en": "CRM error during registration.",
                         "pl": "Błąd CRM podczas rejestracji.",
@@ -537,11 +543,18 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         if user_doc and user_doc.get("is_active", True) is False:
             raise HTTPException(
                 403,
-                detail={"__all__": {
-                    "ru": "Пользователь заблокирован.",
-                    "en": "User is blocked.",
-                    "pl": "Użytkownik jest zablokowany.",
-                }},
+                detail={
+                    "email": {
+                        "ru": "Пользователь заблокирован.",
+                        "en": "User is blocked.",
+                        "pl": "Użytkownik jest zablokowany.",
+                    },
+                    "phone": {
+                        "ru": "Пользователь заблокирован.",
+                        "en": "User is blocked.",
+                        "pl": "Użytkownik jest zablokowany.",
+                    }
+                },
             )
 
         # ------------------------------------------------------------------
@@ -564,11 +577,19 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         if await redis_db.exists(send_key):
             raise HTTPException(
                 429,
-                detail={"__all__": {
-                    "ru": "Код уже был отправлен, попробуйте через минуту.",
-                    "en": "Code already sent, please wait a minute.",
-                    "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
-                }},
+                detail={ 
+                        "email": {
+                            "ru": "Код уже был отправлен, попробуйте через минуту.",
+                            "en": "Code already sent, please wait a minute.",
+                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+                        },
+                        "phone": {
+                            "ru": "Код уже был отправлен, попробуйте через минуту.",
+                            "en": "Code already sent, please wait a minute.",
+                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+                        }
+                },
+                
             )
 
         # ------------------------------------------------------------------
@@ -669,7 +690,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         if user_doc and user_doc.get("is_active", True) is False:
             raise HTTPException(
                 403,
-                detail={"__all__": {
+                detail={"code": {
                     "ru": "Пользователь заблокирован.",
                     "en": "User is blocked.",
                     "pl": "Użytkownik jest zablokowany.",

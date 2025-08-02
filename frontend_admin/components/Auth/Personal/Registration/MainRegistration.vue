@@ -123,8 +123,8 @@
                 size="small"
                 type="tel"
                 required
-                mask="+9?99999999999"
-                placeholder="+____________"
+                mask="+48 999 999 999"
+                placeholder="+48 ___ ___ ___"
                 :minlength="8"
                 :maxlength="30"
                 :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
@@ -137,6 +137,16 @@
               </small>
             </div>
           </div>
+          <!-- 2FA Method Toggle -->
+          <div class="flex items-center justify-between mt-2">
+            <label class="text-[14px] text-black dark:text-white">
+              {{ t("PersonalMainRegistration.usePhone2FA") }}
+            </label>
+            <InputSwitch v-model="usePhone2FA" :disabled="!isPolishPhone" />
+          </div>
+          <small v-if="!isPolishPhone" class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+            {{ t("PersonalMainRegistration.phoneMustBePolish") }}
+          </small>
 
           <!-- Email (required) -->
           <div>
@@ -336,6 +346,10 @@ const is_loading = ref(false);
 const loading_text_displayed = ref(false);
 const hasReferralCode = ref(false);
 const isCode = ref(false);
+const usePhone2FA = ref(false); // toggle state
+
+// Computed helper to check if phone starts with +48 (Polish number)
+const isPolishPhone = computed(() => regForm.value.phone.startsWith("+48"));
 // Управление видом пароля
 const passwordType = ref("password");
 const passwordTypeConfirm = ref("password");
@@ -374,6 +388,8 @@ const regForm = ref({
   password_confirm: "",
   referral_code: "",
   accept_terms: false,
+  via: "email", // 'email' | 'phone'
+  code: "",
 });
 
 const regError = ref({
@@ -426,7 +442,10 @@ function goNoCode() {
     password: "",
     password_confirm: "",
     accept_terms: false,
+    via: "email",
+    code: "",
   };
+  usePhone2FA.value = false;
   isCode.value = false;
 }
 
@@ -468,6 +487,7 @@ function sendReg() {
     password_confirm: "",
     referral_code: "",
     accept_terms: "",
+    code: "",
   };
   const { currentPageName } = usePageState();
   is_loading.value = true;
@@ -515,7 +535,10 @@ function resetForm() {
     password: "",
     password_confirm: "",
     accept_terms: false,
+    via: "email",
+    code: "",
   };
+  usePhone2FA.value = false;
   code.value = "";
   Object.keys(regError.value).forEach((field) => {
     regError.value[field] = "";
@@ -530,6 +553,22 @@ watch(hasReferralCode, (newValue) => {
     regForm.value.referral_code = "";
   }
 });
+/* -------------------- 2FA helpers -------------------- */
+// Keep regForm.via in sync with toggle
+watch(usePhone2FA, (newVal) => {
+  regForm.value.via = newVal ? "phone" : "email";
+});
+
+// Disable phone-based 2FA if phone is not Polish
+watch(
+  () => regForm.value.phone,
+  (newPhone) => {
+    if (!newPhone.startsWith("+48")) {
+      usePhone2FA.value = false;
+      regForm.value.via = "email";
+    }
+  }
+);
 onMounted(() => {
   if (referralCode) {
     regForm.value.referral_code = referralCode;

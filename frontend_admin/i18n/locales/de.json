@@ -54,7 +54,8 @@
     "passwordLabel": "Passwort",
     "passwordPlaceholder": "Passwort eingeben",
     "loginButton": "Einloggen",
-    "noAccount": "Sie haben noch kein Konto?",
+    "usePhoneLogin": "Telefon (SMS) zum Anmelden verwenden",
+    "noAccount": "Sie haben kein Konto?",
     "registerLink": "Registrieren"
   },
 
@@ -141,8 +142,8 @@
     "loginLink": "Anmelden",
     "confirmTitle": "Registrierung bestätigen",
     "debugCode": "Testcode (kommt später per E-Mail)",
-    "smsCodeLabel": "Email-Code",
-    "smsCodePlaceholder": "Email-Code eingeben",
+    "smsCodeLabel": "Code aus E-Mail / SMS",
+    "smsCodePlaceholder": "E-Mail-/SMS-Code eingeben",
     "confirmButton": "Bestätigen",
     "cancelButton": "Abbrechen",
     "genderMale": "Männlich",
@@ -158,7 +159,9 @@
     "IHaveReferralCode": "I have a referral code",
     "ReferralCode": "Referral code",
     "Information": "Information",
-    "ReferralCodeEntered": "You have entered a referral code."
+    "ReferralCodeEntered": "You have entered a referral code.",
+    "usePhone2FA": "Telefon (SMS) für Zwei-Faktor-Authentifizierung verwenden",
+    "phoneMustBePolish": "Telefonnummer muss mit +48 beginnen, um SMS zu aktivieren."
   },
 
   "DynamicForm": {

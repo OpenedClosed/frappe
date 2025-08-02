@@ -100,6 +100,7 @@
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
     "loginButton": "Login",
+    "usePhoneLogin": "Use phone (SMS) to login",
     "noAccount": "Don’t have an account?",
     "registerLink": "Register",
     "title2FA": "Login Confirmation",
@@ -136,8 +137,8 @@
     "loginLink": "Login",
     "confirmTitle": "Confirm registration",
     "debugCode": "Test code (will come from email later)",
-    "smsCodeLabel": "Code from email",
-    "smsCodePlaceholder": "Enter the email code",
+    "smsCodeLabel": "Code from email/SMS",
+    "smsCodePlaceholder": "Enter the email/SMS code",
     "confirmButton": "Confirm",
     "cancelButton": "Cancel",
     "genderMale": "Male",
@@ -153,7 +154,9 @@
     "IHaveReferralCode": "I have a referral code",
     "ReferralCode": "Referral code",
     "Information": "Information",
-    "ReferralCodeEntered": "You have entered a referral code."
+    "ReferralCodeEntered": "You have entered a referral code.",
+    "usePhone2FA": "Use phone (SMS) for two-factor authentication",
+    "phoneMustBePolish": "Phone number must start with +48 to enable SMS codes."
   },
   "DynamicForm": {
     "upload": "Upload",

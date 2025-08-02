@@ -11,14 +11,23 @@
           </p>
         </div>
 
+        <!-- Login method toggle -->
+        <div class="flex items-center justify-between w-full mb-3">
+          <label class="text-[14px] text-black dark:text-white">
+            {{ t("PersonalMainLogin.usePhoneLogin") }}
+          </label>
+          <InputSwitch v-model="usePhoneLogin" />
+        </div>
+
         <!-- Email (required) -->
-         <div class="w-full flex flex-col justify-start">
+         <div class="w-full flex flex-col justify-start" v-if="!usePhoneLogin">
           <label for="email" class="w-full block mb-1 text-[14px] text-black dark:text-white">
-            {{ t("PersonalMainLogin.email") }}
+            {{ t("PersonalMainLogin.email") }} <span class="text-red-500">*</span>
           </label>
           <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!loginError.email }">
             <InputText
               size="small"
+              required
               v-model="loginForm.email"
               type="email"
               id="email"
@@ -28,6 +37,31 @@
           </div>
           <small class="text-red-500 mt-1 text-[12px]">
             {{ loginError.email }}
+          </small>
+        </div>
+
+        <!-- Phone (required) -->
+        <div class="w-full flex flex-col justify-start" v-else>
+          <label for="phone" class="w-full block mb-1 text-[14px] text-black dark:text-white">
+            {{ t("PersonalMainLogin.phone") }} <span class="text-red-500">*</span>
+          </label>
+          <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!loginError.phone }">
+            <InputMask
+              v-model="loginForm.phone"
+              required
+              id="phone"
+              size="small"
+              type="tel"
+              mask="+48 999 999 999"
+              placeholder="+48 ___ ___ ___"
+              :minlength="8"
+              :maxlength="30"
+              :placeholder="t('PersonalMainLogin.phonePlaceholder')"
+              class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+            />
+          </div>
+          <small class="text-red-500 mt-1 text-[12px]">
+            {{ loginError.phone }}
           </small>
         </div>
 
@@ -113,9 +147,11 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
+import InputMask from "primevue/inputmask";
+import InputSwitch from "primevue/inputswitch";
 import { useNuxtApp, useAuthState, usePageState, navigateTo, reloadNuxtApp } from "#imports";
 
 import { useI18n } from "vue-i18n";
@@ -131,6 +167,14 @@ const { parseAxiosError } = useErrorParser();
  */
 const showPassword = ref(false);
 
+// Toggle between email and phone login
+const usePhoneLogin = ref(false);
+
+// Keep loginForm.via in sync with toggle
+watch(usePhoneLogin, (newVal) => {
+  loginForm.value.via = newVal ? "phone" : "email";
+});
+
 /**
  * Для отслеживания текущего шага
  * is2FA = false → форма логина/пароля
@@ -143,7 +187,9 @@ const is2FA = ref(false);
  */
 let loginForm = ref({
   email: "",
+  phone: "",
   password: "",
+  via: "email",
 });
 
 /**
@@ -151,6 +197,7 @@ let loginForm = ref({
  */
 let loginError = ref({
   email: "",
+  phone: "",
   password: "",
 });
 
@@ -209,10 +256,16 @@ function pickError(err) {
 function sendLogin() {
   // Очищаем ошибки
   loginError.value.email = "";
+  loginError.value.phone = "";
   loginError.value.password = "";
   debugCode.value = "";
 
-  let formData = loginForm.value;
+  let formData = {
+    via: loginForm.value.via,
+    email: loginForm.value.via === "email" ? loginForm.value.email.trim() : undefined,
+    phone: loginForm.value.via === "phone" ? loginForm.value.phone.trim() : undefined,
+    password: loginForm.value.password,
+  };
   console.log("Шаг 1 (login) formData:", formData);
 
   useNuxtApp()
@@ -241,9 +294,9 @@ function sendLogin() {
 function send2FA() {
   twoFAError.value.message = "";
   let formData = {
-    // Важно: сервер, как правило, требует тот же email/email,
-    // чтобы понять, для кого подтверждаем код
-    email: loginForm.value.email.trim(),
+    via: loginForm.value.via,
+    email: loginForm.value.via === "email" ? loginForm.value.email.trim() : undefined,
+    phone: loginForm.value.via === "phone" ? loginForm.value.phone.trim() : undefined,
     code: twoFAForm.value.code.trim(),
   };
   console.log("Шаг 2 (2FA) formData:", formData);
