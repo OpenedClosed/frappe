@@ -186,11 +186,6 @@ async def send_email(to_email: str, subject: str, body: str, html_body: str | No
         #     timeout=settings.SMTP_TIMEOUT,
         #     recipients=[to_email.lower()],
         # )
-        logging.error(message)
-        logging.error("smtp.emaillabs.net.pl")
-        logging.error("1.pana.smtp")
-        logging.error("P6ZZvKss")
-        logging.error(to_email.lower())
         await aiosmtplib.send(
             message,
             hostname="smtp.emaillabs.net.pl",

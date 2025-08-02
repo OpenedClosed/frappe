@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
 from fastapi import BackgroundTasks
-
+from db.redis.db_init import redis_db
 from users.utils.help_functions import cascade_delete_user
 from personal_account.client_interface.db.mongo.enums import AccountVerificationEnum, GenderEnum
 from integrations.panamedica.utils.help_functions import format_crm_phone
@@ -30,34 +30,39 @@ from .client_interface.db.mongo.schemas import (ConfirmationSchema, ContactInfoS
                                                 TwoFASchema)
 
 
-REG_CODES: Dict[str, dict] = {}
-TWO_FA_CODES: Dict[str, str] = {}
+REG_CODE_TTL  = 300   # 5 минут
+REG_SEND_TTL  = 60    # анти-флуд, 1 минута
+TWO_FA_CODE_TTL: int = 300   # 5 минут живёт код
+TWO_FA_SEND_TTL: int = 60    # анти-флуд: 1 минута между отправками
 
-
+# ──────────────────────────────────────────────────────────────────────
+#  Маршруты регистрации
+# ──────────────────────────────────────────────────────────────────────
 def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
     """
     Генерирует маршруты:
 
-    1.  /register           → выдача 6-значного кода по SMS  
-    2.  /register_confirm   → CRM + Mongo + JWT (опц.)  
-    3.  /login              → пароль + 2-FA код  
-    4.  /login_confirm      → 2-FA + CRM-синхрон + JWT  
+    1.  /register          → выдача 6-значного кода (email / SMS)
+    2.  /register_confirm  → CRM + Mongo + JWT  
+    3.  /login             → пароль + 2-FA код  
+    4.  /login_confirm     → 2-FA + CRM-синхрон + JWT  
     5.  CRUD для всех админ-моделей из `registry`
-
-    Все сообщения и ошибки возвращаются как словари вида  
-    `{"ru": "...", "en": "...", "pl": "...", "uk": "...", "de": "...", "be": "..."}`.
     """
     router = APIRouter()
 
-    # ------------------------------------------------------------------
-    # Шаг 1 Регистрации → SMS-код
-    # ------------------------------------------------------------------
+    # ────────────────────────────────────────────────────────────────
+    #  Шаг 1 Регистрации → код (email / телефон)
+    # ────────────────────────────────────────────────────────────────
     @router.post("/register")
     async def register(data: RegistrationSchema, background_tasks: BackgroundTasks):
         """
-        Проверяет ввод и отправляет 6-значный код подтверждения на email.
+        Проверяет ввод и отправляет 6-значный код подтверждения
+        по каналу, указанному в поле `via` («email» | «phone»).
         """
         errors: dict[str, dict] = {}
+
+        # ——— канал
+        via: str = data.via if data.via in {"email", "phone"} else "email"
 
         # ——— приём условий
         if not data.accept_terms:
@@ -85,9 +90,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ——— сила пароля
         pwd_error = data.password_strength_errors()
         if pwd_error:
-            errors["password"] = pwd_error | {
-                "be": pwd_error.get("ru", "")
-            }
+            errors["password"] = pwd_error | {"be": pwd_error.get("ru", "")}
 
         # ——— телефон
         phone_key = normalize_numbers(data.phone)
@@ -102,12 +105,10 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             }
         else:
             contact_doc = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
-
             if contact_doc:
                 user_doc = await mongo_db["users"].find_one(
                     {"_id": ObjectId(contact_doc["user_id"])}
                 )
-
                 if user_doc:
                     errors["phone"] = {
                         "ru": "Пользователь с таким телефоном уже существует.",
@@ -174,7 +175,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "be": "Пол абавязковы.",
             }
 
-        # ——— реферальный код
+        # ——— реферальный код (проверка не менялась)
         referral_id: Optional[str] = None
         if data.referral_code:
             m = re.fullmatch(r"([A-Za-z0-9]{2,10})_([A-Za-z0-9\-]{3,36})", data.referral_code)
@@ -183,9 +184,6 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     "ru": "Некорректный формат реферального кода.",
                     "en": "Invalid referral-code format.",
                     "pl": "Nieprawidłowy format kodu polecającego.",
-                    "uk": "Некоректний формат реферального коду.",
-                    "de": "Ungültiges Format des Empfehlungscodes.",
-                    "be": "Некарэктны фармат рэферальнага кода.",
                 }
             else:
                 patient_key = m.group(2)
@@ -196,9 +194,6 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                             "ru": "Такой реферальный код не найден.",
                             "en": "Referral code not found.",
                             "pl": "Nie znaleziono takiego kodu polecającego.",
-                            "uk": "Такий реферальний код не знайдено.",
-                            "de": "Empfehlungscode nicht gefunden.",
-                            "be": "Такі рэферальны код не знойдзены.",
                         }
                     else:
                         referral_id = ref_patient["externalId"]
@@ -207,82 +202,104 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                         "ru": "Ошибка CRM при проверке кода.",
                         "en": "CRM error while validating code.",
                         "pl": "Błąd CRM podczas weryfikacji kodu.",
-                        "uk": "Помилка CRM під час перевірки коду.",
-                        "de": "CRM-Fehler bei der Codeüberprüfung.",
-                        "be": "Памылка CRM пры праверцы кода.",
                     }
+
+        # ——— анти-флуд
+        identifier = data.email.lower() if via == "email" else phone_key
+        sent_key = f"reg:sent:{via}:{identifier}"
+        if await redis_db.exists(sent_key):
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "errors": {
+                        "__all__": {
+                            "ru": "Код уже был отправлен, попробуйте через минуту.",
+                            "en": "Code already sent, please wait a minute.",
+                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+                        }
+                    }
+                },
+            )
 
         if errors:
             return JSONResponse(status_code=400, content={"errors": errors})
 
         # ——— генерируем 6-значный код
-        code = "".join(random.choices("0123456789", k=6))
+        code: str = "".join(random.choices("0123456789", k=6))
 
-        # ——— сохраняем по email
-        email_key = data.email.lower()
-        REG_CODES[email_key] = {"code": code, "referral_id": referral_id}
+        # ——— сохраняем в Redis
+        await redis_db.set(
+            f"reg:code:{identifier}",
+            json.dumps({"code": code, "referral_id": referral_id}),
+            ex=REG_CODE_TTL,
+        )
+        await redis_db.set(sent_key, "1", ex=REG_SEND_TTL)
 
-        # ——— HTML-шаблон
-        html_body = f"""
-        <div style="font-family: sans-serif; padding: 24px; background: #f2f2f2;">
-            <div style="max-width: 500px; margin: auto; background: white; padding: 32px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <h2 style="color: #333;">Код подтверждения</h2>
-                <p style="font-size: 16px;">Ваш код:</p>
-                <p style="font-size: 28px; font-weight: bold; color: #007bff; letter-spacing: 6px;">{code}</p>
-                <p style="font-size: 14px; color: #777;">Он действителен в течение 5 минут</p>
+        # ——— отправка
+        if via == "email":
+            html_body = f"""
+            <div style="font-family: sans-serif; padding: 24px; background: #f2f2f2;">
+                <div style="max-width: 500px; margin: auto; background: white; padding: 32px;
+                            border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h2 style="color: #333;">Kod weryfikacyjny</h2>
+                    <p style="font-size: 16px;">Twój kod:</p>
+                    <p style="font-size: 28px; font-weight: bold; color: #007bff;
+                            letter-spacing: 6px;">{code}</p>
+                    <p style="font-size: 14px; color: #777;">Kod jest ważny przez 5 minut</p>
+                </div>
             </div>
-        </div>
-        """
+            """
+            try:
+                background_tasks.add_task(
+                    send_email,
+                    to_email=identifier,
+                    subject="Kod weryfikacyjny",
+                    body=f"Twój kod weryfikacyjny: {code}",
+                    html_body=html_body,
+                )
 
-        # ——— отправка по email
-        try:
-            background_tasks.add_task(
-                send_email,
-                to_email=email_key,
-                subject="Код подтверждения",
-                body=f"Ваш код подтверждения: {code}",
-                html_body=html_body,
-            )
-        except HTTPException:
-            errors["email"] = {
-                "ru": "Ошибка при отправке письма. Проверьте email.",
-                "en": "Failed to send email. Please check the address.",
-                "pl": "Nie udało się wysłać wiadomości email. Sprawdź adres.",
-                "uk": "Не вдалося надіслати email. Перевірте адресу.",
-                "de": "E-Mail konnte nicht gesendet werden. Bitte überprüfen Sie die Adresse.",
-                "be": "Не атрымалася адправіць email. Праверце адрас.",
-            }
-            return JSONResponse(status_code=400, content={"errors": errors})
-
-        # ——— отправка по SMS (временно отключена)
-        # try:
-        #     await send_sms(phone_key, f"Twój kod potwierdzający to: {code}")
-        # except HTTPException:
-        #     errors["phone"] = {
-        #         "ru": "Ошибка при отправке SMS. Проверьте номер телефона.",
-        #         "en": "Failed to send SMS. Please check your phone number.",
-        #         "pl": "Nie udało się wysłać SMS-a. Sprawdź numer telefonu.",
-        #         "uk": "Не вдалося надіслати SMS. Перевірте номер телефону.",
-        #         "de": "SMS konnte nicht gesendet werden. Bitte überprüfen Sie die Telefonnummer.",
-        #         "be": "Не атрымалася адправіць SMS. Праверце нумар тэлефона.",
-        #     }
-        #     return JSONResponse(status_code=400, content={"errors": errors})
+            except HTTPException:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "errors": {
+                            "email": {
+                                "ru": "Ошибка при отправке письма. Проверьте email.",
+                                "en": "Failed to send email. Please check the address.",
+                                "pl": "Nie udało się wysłać wiadomości email. Sprawdź adres.",
+                            }
+                        }
+                    },
+                )
+        else:
+            try:
+                await send_sms(identifier, f"Twój kod potwierdzający to: {code}")
+            except HTTPException:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "errors": {
+                            "phone": {
+                                "ru": "Ошибка при отправке SMS. Проверьте номер телефона.",
+                                "en": "Failed to send SMS. Please check your phone number.",
+                                "pl": "Nie udało się wysłać SMS-a. Sprawdź numer telefonu.",
+                            }
+                        }
+                    },
+                )
 
         return {
             "message": {
-                "ru": "Код отправлен на email.",
-                "en": "Code sent to email.",
-                "pl": "Kod został wysłany na adres email.",
-                "uk": "Код надіслано на email.",
-                "de": "Code wurde an die E-Mail gesendet.",
-                "be": "Код адпраўлены на email.",
+                "ru": "Код отправлен." if via == "phone" else "Код отправлен на email.",
+                "en": "Code sent." if via == "phone" else "Code sent to e-mail.",
+                "pl": "Kod wysłany." if via == "phone" else "Kod wysłany na e-mail.",
             }
         }
 
 
-    # ------------------------------------------------------------------
-    # Шаг 2 Регистрации → CRM + Mongo + JWT
-    # ------------------------------------------------------------------
+    # ────────────────────────────────────────────────────────────────
+    #  Шаг 2 Регистрации → CRM + Mongo + JWT
+    # ────────────────────────────────────────────────────────────────
     @router.post("/register_confirm")
     async def register_confirm(
         data: ConfirmationSchema,
@@ -291,26 +308,33 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         Authorize: AuthJWT = Depends(),
     ):
         """
-        Валидирует код, создаёт / обновляет профиль, синхронизирует с CRM,
-        выдаёт JWT (если пользователь не был залогинен).
+        Валидирует код (по каналу `via`), создаёт/обновляет профиль,
+        синхронизирует с CRM и выдаёт JWT.
         """
-        phone_key = normalize_numbers(data.phone)
-        email_key = data.email.lower()
-        stored = REG_CODES.get(email_key) or {}
+        import json
+
+        via: str = data.via if data.via in {"email", "phone"} else "email"
+        identifier = data.email.lower() if via == "email" else normalize_numbers(data.phone)
+
+        stored_raw = await redis_db.get(f"reg:code:{identifier}")
+        stored: dict = json.loads(stored_raw) if stored_raw else {}
         if stored.get("code") != data.code:
-            raise HTTPException(400, detail={
-                "code": {
-                    "ru": "Неверный код.",
-                    "en": "Invalid code.",
-                    "pl": "Nieprawidłowy kod.",
-                    "uk": "Невірний код.",
-                    "de": "Ungültiger Code.",
-                    "be": "Несапраўдны код.",
-                }
-            })
+            raise HTTPException(
+                400,
+                detail={
+                    "code": {
+                        "ru": "Неверный код.",
+                        "en": "Invalid code.",
+                        "pl": "Nieprawidłowy kod.",
+                    }
+                },
+            )
 
         referral_id = stored.get("referral_id")
+        phone_key   = normalize_numbers(data.phone)
+        email_key   = data.email.lower()
 
+        # ——— сбор схем
         main_schema = MainInfoSchema(
             last_name=data.last_name.strip(),
             first_name=data.first_name.strip(),
@@ -322,7 +346,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         )
         contact_schema = ContactInfoSchema(
             phone=phone_key,
-            email=data.email or ""
+            email=email_key,
         )
 
         # ——— если пользователь уже авторизован
@@ -340,22 +364,21 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ——— CRM
         crm = get_client()
         try:
-            crm_data, created_now = await crm.find_or_create_patient(
+            crm_data, _created_now = await crm.find_or_create_patient(
                 local_data=main_schema.model_dump(),
                 contact_data=contact_schema.model_dump(),
             )
         except CRMError as e:
-            print(e)
-            raise HTTPException(e.status_code, detail={
-                "__all__": {
-                    "ru": "Ошибка CRM при регистрации.",
-                    "en": "CRM error during registration.",
-                    "pl": "Błąd CRM podczas rejestracji.",
-                    "uk": "Помилка CRM під час реєстрації.",
-                    "de": "CRM-Fehler während der Registrierung.",
-                    "be": "Памылка CRM падчас рэгістрацыі.",
-                }
-            }) from e
+            raise HTTPException(
+                e.status_code,
+                detail={
+                    "__all__": {
+                        "ru": "Ошибка CRM при регистрации.",
+                        "en": "CRM error during registration.",
+                        "pl": "Błąd CRM podczas rejestracji.",
+                    }
+                },
+            ) from e
 
         patient_id = crm_data["externalId"]
 
@@ -395,7 +418,6 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     {"$set": {
                         "email": crm_data.get("email"),
                         "phone": normalize_numbers(crm_data.get("phone")),
-                        "phone": None,
                         "updated_at": datetime.utcnow(),
                     }},
                 )
@@ -412,9 +434,6 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     "ru": "Профиль успешно обновлён.",
                     "en": "Profile updated successfully.",
                     "pl": "Profil został pomyślnie zaktualizowany.",
-                    "uk": "Профіль успішно оновлено.",
-                    "de": "Profil erfolgreich aktualisiert.",
-                    "be": "Профіль паспяхова абноўлены.",
                 }
             }
 
@@ -456,42 +475,40 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "ru": "Регистрация завершена.",
                 "en": "Registration completed.",
                 "pl": "Rejestracja zakończona.",
-                "uk": "Реєстрацію завершено.",
-                "de": "Registrierung abgeschlossen.",
-                "be": "Рэгістрацыя завершана.",
             },
             "access_token": access_token,
         }
 
-    # ------------------------------------------------------------------
-    # Шаг 1 Логина → 2‑FA код
-    # ------------------------------------------------------------------
+    # ────────────────────────────────────────────────────────────────
+    #  Шаг 1 Логина → 2-FA код
+    # ────────────────────────────────────────────────────────────────
     @router.post("/login")
     async def login(data: LoginSchema, background_tasks: BackgroundTasks):
         """
-        Проверяет пароль и отправляет 6‑значный 2‑FA код на e‑mail.
+        Проверяет пароль и отправляет 6-значный 2-FA код на e-mail или по SMS
+        в зависимости от поля `via`.
         """
-
-        email_key: str = data.email.lower()
-
-        # ------------------------------------------------------------------
-        # Поиск контакта по e‑mail
-        # ------------------------------------------------------------------
-        contact = await mongo_db["patients_contact_info"].find_one({"email": email_key})
+        via: str = data.via if data.via in {"email", "phone"} else "email"
+        identifier: str
 
         # ------------------------------------------------------------------
-        # Поиск по телефону (оставлено закомментированным)
+        # Поиск контакта
         # ------------------------------------------------------------------
-        # phone_key: str = normalize_numbers(data.phone)
-        # contact = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
+        if via == "email":
+            if not data.email:
+                raise HTTPException(400, detail={"email": {"ru": "Email обязателен."}})
+            identifier = data.email.lower()
+            contact = await mongo_db["patients_contact_info"].find_one({"email": identifier})
+        else:
+            if not data.phone:
+                raise HTTPException(400, detail={"phone": {"ru": "Телефон обязателен."}})
+            identifier = normalize_numbers(data.phone)
+            contact = await mongo_db["patients_contact_info"].find_one({"phone": identifier})
 
         # ------------------------------------------------------------------
         # Зачистка «висящего» пользователя
         # ------------------------------------------------------------------
-        if (
-            contact is not None
-            and await mongo_db["users"].find_one({"_id": ObjectId(contact["user_id"])}) is None
-        ):
+        if contact and await mongo_db["users"].find_one({"_id": ObjectId(contact["user_id"])}) is None:
             await cascade_delete_user(contact["user_id"])
             contact = None
 
@@ -499,26 +516,14 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # Если пользователь не найден
         # ------------------------------------------------------------------
         if contact is None:
+            field = "email" if via == "email" else "phone"
             raise HTTPException(
-                status_code=404,
-                detail={
-                    "email": {
-                        "ru": "Пользователь не найден.",
-                        "en": "User not found.",
-                        "pl": "Użytkownik nie znaleziony.",
-                        "uk": "Користувача не знайдено.",
-                        "de": "Benutzer nicht gefunden.",
-                        "be": "Карыстальнік не знойдзены.",
-                    },
-                    # "phone": {
-                    #     "ru": "Пользователь не найден.",
-                    #     "en": "User not found.",
-                    #     "pl": "Użytkownik nie znaleziony.",
-                    #     "uk": "Користувача не знайдено.",
-                    #     "de": "Benutzer nicht gefunden.",
-                    #     "be": "Карыстальнік не знойдзены.",
-                    # },
-                },
+                404,
+                detail={field: {
+                    "ru": "Пользователь не найден.",
+                    "en": "User not found.",
+                    "pl": "Użytkownik nie znaleziony.",
+                }},
             )
 
         # ------------------------------------------------------------------
@@ -529,19 +534,14 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ------------------------------------------------------------------
         # Проверка блокировки
         # ------------------------------------------------------------------
-        if user_doc is not None and user_doc.get("is_active", True) is False:
+        if user_doc and user_doc.get("is_active", True) is False:
             raise HTTPException(
-                status_code=403,
-                detail={
-                    "__all__": {
-                        "ru": "Пользователь заблокирован.",
-                        "en": "User is blocked.",
-                        "pl": "Użytkownik jest zablokowany.",
-                        "uk": "Користувача заблоковано.",
-                        "de": "Benutzer ist blockiert.",
-                        "be": "Карыстальнік заблакаваны.",
-                    }
-                },
+                403,
+                detail={"__all__": {
+                    "ru": "Пользователь заблокирован.",
+                    "en": "User is blocked.",
+                    "pl": "Użytkownik jest zablokowany.",
+                }},
             )
 
         # ------------------------------------------------------------------
@@ -549,95 +549,75 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ------------------------------------------------------------------
         if user_doc is None or data.check_password(user_doc.get("password", "")) is False:
             raise HTTPException(
-                status_code=401,
-                detail={
-                    "password": {
-                        "ru": "Неверный пароль.",
-                        "en": "Wrong password.",
-                        "pl": "Błędne hasło.",
-                        "uk": "Невірний пароль.",
-                        "de": "Falsches Passwort.",
-                        "be": "Няправільны пароль.",
-                    }
-                },
+                401,
+                detail={"password": {
+                    "ru": "Неверный пароль.",
+                    "en": "Wrong password.",
+                    "pl": "Błędne hasło.",
+                }},
             )
 
         # ------------------------------------------------------------------
-        # Генерация и сохранение 2‑FA кода
+        # Анти-флуд
+        # ------------------------------------------------------------------
+        send_key = f"login:sent:{via}:{identifier}"
+        if await redis_db.exists(send_key):
+            raise HTTPException(
+                429,
+                detail={"__all__": {
+                    "ru": "Код уже был отправлен, попробуйте через минуту.",
+                    "en": "Code already sent, please wait a minute.",
+                    "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+                }},
+            )
+
+        # ------------------------------------------------------------------
+        # Генерация и сохранение 2-FA кода
         # ------------------------------------------------------------------
         code_2fa: str = "".join(random.choices("0123456789", k=6))
-        TWO_FA_CODES[email_key] = code_2fa
-        # TWO_FA_CODES[phone_key] = code_2fa  # для телефона
+        await redis_db.set(f"login:code:{identifier}", code_2fa, ex=TWO_FA_CODE_TTL)
+        await redis_db.set(send_key, "1", ex=TWO_FA_SEND_TTL)
 
         # ------------------------------------------------------------------
-        # Красивый HTML‑шаблон письма
+        # Отправка
         # ------------------------------------------------------------------
-        html_body: str = f"""
-        <div style="font-family: sans-serif; padding: 24px; background: #f2f2f2;">
-            <div style="max-width: 500px; margin: auto; background: white; padding: 32px;
-                        border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <h2 style="color: #333;">Код 2‑FA</h2>
-                <p style="font-size: 16px;">Ваш код:</p>
-                <p style="font-size: 28px; font-weight: bold; color: #007bff;
-                        letter-spacing: 6px;">{code_2fa}</p>
-                <p style="font-size: 14px; color: #777;">Он действителен в течение 5&nbsp;минут</p>
+        if via == "email":
+            html_body = f"""
+            <div style="font-family: sans-serif; padding: 24px; background: #f2f2f2;">
+                <div style="max-width: 500px; margin: auto; background: white; padding: 32px;
+                            border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h2 style="color: #333;">Kod 2FA</h2>
+                    <p style="font-size: 16px;">Twój kod:</p>
+                    <p style="font-size: 28px; font-weight: bold; color: #007bff;
+                            letter-spacing: 6px;">{code_2fa}</p>
+                    <p style="font-size: 14px; color: #777;">Kod jest ważny przez 5&nbsp;minut</p>
+                </div>
             </div>
-        </div>
-        """
-
-        # ------------------------------------------------------------------
-        # Отправка e‑mail (SMS оставлен закомментированным)
-        # ------------------------------------------------------------------
-        try:
+            """
             background_tasks.add_task(
                 send_email,
-                to_email=email_key,
-                subject="Код 2‑FA",
-                body=f"Ваш код 2‑FA: {code_2fa}",
+                to_email=identifier,
+                subject="Kod 2FA",
+                body=f"Twój kod 2FA: {code_2fa}",
                 html_body=html_body,
             )
 
-            # await send_sms(phone_key, f"Twój kod 2FA to: {code_2fa}")  # SMS‑вариант
-        except Exception:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "errors": {
-                        "email": {
-                            "ru": "Ошибка при отправке e‑mail. Проверьте адрес.",
-                            "en": "Failed to send e‑mail. Please check the address.",
-                            "pl": "Nie udało się wysłać e‑maila. Sprawdź adres.",
-                            "uk": "Не вдалося надіслати e‑mail. Перевірте адресу.",
-                            "de": "E‑Mail konnte nicht gesendet werden. Bitte überprüfen Sie die Adresse.",
-                            "be": "Не атрымалася адправіць e‑mail. Праверце адрас.",
-                        },
-                        # "phone": {
-                        #     "ru": "Ошибка при отправке SMS. Проверьте номер телефона.",
-                        #     "en": "Failed to send SMS. Please check your phone number.",
-                        #     "pl": "Nie udało się wysłać SMS-a. Sprawdź numer telefonu.",
-                        #     "uk": "Не вдалося надіслати SMS. Перевірте номер телефону.",
-                        #     "de": "SMS konnte nicht gesendet werden. Bitte überprüfen Sie die Telefonnummer.",
-                        #     "be": "Не атрымалася адправіць SMS. Праверце нумар тэлефона.",
-                        # },
-                    }
-                },
-            )
+        else:
+            await send_sms(identifier, f"Twój kod 2FA to: {code_2fa}")
 
         return {
             "message": {
-                "ru": "Код отправлен на e‑mail.",
-                "en": "Code sent to e‑mail.",
-                "pl": "Kod wysłany na e‑mail.",
-                "uk": "Код надіслано на e‑mail.",
-                "de": "Code an die E‑Mail gesendet.",
-                "be": "Код адпраўлены на e‑mail.",
+                "ru": "Код отправлен." if via == "phone" else "Код отправлен на e-mail.",
+                "en": "Code sent." if via == "phone" else "Code sent to e-mail.",
+                "pl": "Kod wysłany." if via == "phone" else "Kod wysłany na e-mail.",
             }
         }
 
 
-    # ------------------------------------------------------------------
-    # Шаг 2 Логина → JWT
-    # ------------------------------------------------------------------
+
+    # ────────────────────────────────────────────────────────────────
+    #  Шаг 2 Логина → JWT
+    # ────────────────────────────────────────────────────────────────
     @router.post("/login_confirm")
     async def login_confirm(
         data: TwoFASchema,
@@ -645,79 +625,55 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         Authorize: AuthJWT = Depends(),
     ):
         """
-        Проверяет 2‑FA код и выдаёт JWT. Одновременно подтягивает свежие
-        данные из CRM.
+        Проверяет 2-FA код и выдаёт JWT.
+        Одновременно подтягивает свежие данные из CRM.
         """
-
-        email_key: str = data.email.lower()
-        # phone_key: str = normalize_numbers(data.phone)
+        via: str = data.via if data.via in {"email", "phone"} else "email"
+        identifier: str = (
+            data.email.lower() if via == "email" else normalize_numbers(data.phone)
+        )
 
         # ------------------------------------------------------------------
-        # Проверка 2‑FA кода
+        # Проверка 2-FA кода
         # ------------------------------------------------------------------
-        if TWO_FA_CODES.get(email_key) != data.code:
-            # if TWO_FA_CODES.get(phone_key) != data.code:  # телефон
+        stored_code = await redis_db.get(f"login:code:{identifier}")
+        if stored_code is None or stored_code.decode() != data.code:
             raise HTTPException(
-                status_code=400,
-                detail={
-                    "code": {
-                        "ru": "Неверный код.",
-                        "en": "Invalid code.",
-                        "pl": "Nieprawidłowy kod.",
-                        "uk": "Невірний код.",
-                        "de": "Ungültiger Code.",
-                        "be": "Несапраўдны код.",
-                    }
-                },
+                400,
+                detail={"code": {
+                    "ru": "Неверный код.",
+                    "en": "Invalid code.",
+                    "pl": "Nieprawidłowy kod.",
+                }},
             )
 
         # ------------------------------------------------------------------
-        # Поиск контакта по e‑mail
+        # Поиск контакта
         # ------------------------------------------------------------------
-        contact = await mongo_db["patients_contact_info"].find_one({"email": email_key})
-
-        # contact = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})  # телефон
-
+        field = "email" if via == "email" else "phone"
+        contact = await mongo_db["patients_contact_info"].find_one({field: identifier})
         if contact is None:
             raise HTTPException(
-                status_code=404,
-                detail={
-                    "email": {
-                        "ru": "Пользователь не найден.",
-                        "en": "User not found.",
-                        "pl": "Użytkownik nie znaleziony.",
-                        "uk": "Користувача не знайдено.",
-                        "de": "Benutzer nicht gefunden.",
-                        "be": "Карыстальнік не знойдзены.",
-                    },
-                    # "phone": {
-                    #     "ru": "Пользователь не найден.",
-                    #     "en": "User not found.",
-                    #     "pl": "Użytkownik nie znaleziony.",
-                    #     "uk": "Користувача не знайдено.",
-                    #     "de": "Benutzer nicht gefunden.",
-                    #     "be": "Карыстальнік не знойдзены.",
-                    # },
-                },
+                404,
+                detail={field: {
+                    "ru": "Пользователь не найден.",
+                    "en": "User not found.",
+                    "pl": "Użytkownik nie znaleziony.",
+                }},
             )
 
         # ------------------------------------------------------------------
         # Проверка активности
         # ------------------------------------------------------------------
         user_doc = await mongo_db["users"].find_one({"_id": ObjectId(contact["user_id"])})
-        if user_doc is not None and user_doc.get("is_active", True) is False:
+        if user_doc and user_doc.get("is_active", True) is False:
             raise HTTPException(
-                status_code=403,
-                detail={
-                    "__all__": {
-                        "ru": "Пользователь заблокирован.",
-                        "en": "User is blocked.",
-                        "pl": "Użytkownik jest zablokowany.",
-                        "uk": "Користувача заблоковано.",
-                        "de": "Benutzer ist blockiert.",
-                        "be": "Карыстальнік заблакаваны.",
-                    }
-                },
+                403,
+                detail={"__all__": {
+                    "ru": "Пользователь заблокирован.",
+                    "en": "User is blocked.",
+                    "pl": "Użytkownik jest zablokowany.",
+                }},
             )
 
         # ------------------------------------------------------------------
@@ -728,20 +684,18 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         patient_id: Optional[str] = main_doc.get("patient_id")
 
         # ------------------------------------------------------------------
-        # Мягкая CRM‑синхронизация
+        # Мягкая CRM-синхронизация
         # ------------------------------------------------------------------
-        if patient_id is not None:
+        if patient_id:
             try:
                 crm_data = await get_client().get_patient(patient_id)
                 await mongo_db["patients_main_info"].update_one(
                     {"_id": main_doc["_id"]},
-                    {
-                        "$set": {
-                            "first_name": crm_data.get("firstname"),
-                            "last_name": crm_data.get("lastname"),
-                            "crm_last_sync": datetime.utcnow(),
-                        }
-                    },
+                    {"$set": {
+                        "first_name": crm_data.get("firstname"),
+                        "last_name":  crm_data.get("lastname"),
+                        "crm_last_sync": datetime.utcnow(),
+                    }},
                 )
             except CRMError:
                 pass
@@ -752,33 +706,17 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         access_token: str = Authorize.create_access_token(subject=user_id)
         refresh_token: str = Authorize.create_refresh_token(subject=user_id)
 
-        response.set_cookie(
-            "access_token",
-            access_token,
-            httponly=False,
-            secure=True,
-            samesite="None",
-        )
-        response.set_cookie(
-            "refresh_token",
-            refresh_token,
-            httponly=False,
-            secure=True,
-            samesite="None",
-        )
+        response.set_cookie("access_token", access_token, httponly=False, secure=True, samesite="None")
+        response.set_cookie("refresh_token", refresh_token, httponly=False, secure=True, samesite="None")
 
         return {
             "message": {
                 "ru": "Вход выполнен.",
                 "en": "Logged in.",
                 "pl": "Zalogowano.",
-                "uk": "Вхід виконано.",
-                "de": "Eingeloggt.",
-                "be": "Уваход выкананы.",
             },
             "access_token": access_token,
         }
-
 
     # ------------------------------------------------------------------
     # CRUD-маршруты всех моделей

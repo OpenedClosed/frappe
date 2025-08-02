@@ -1,7 +1,7 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
 from datetime import date, datetime, time
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr, Field, ValidationInfo, model_validator
@@ -26,6 +26,7 @@ class RegistrationSchema(BaseModel):
     """
     Шаг 1: Данные для регистрации (телефон обязателен).
     """
+    via: Literal["email", "phone"] = "email"
     phone: str
     email: EmailStr
     first_name: str
@@ -101,27 +102,27 @@ class ConfirmationSchema(RegistrationSchema):
 # Вход и двухфакторная аутентификация
 # ==========
 
+
 class LoginSchema(BaseModel):
     """
-    Шаг 1 входа: телефон + пароль.
+    Шаг 1 входа: e-mail/телефон + пароль + канал `via`.
     """
-    # phone: str
-    email: EmailStr
+    via: Literal["email", "phone"] = "email"
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     password: str
 
     def check_password(self, hashed: str) -> bool:
-        """
-        Сравнивает self.password с уже сохранённым хэшом (hashed).
-        """
         return bcrypt.verify(self.password, hashed)
 
 
 class TwoFASchema(BaseModel):
     """
-    Шаг 2 входа: одноразовый код, высланный на телефон.
+    Шаг 2 входа: одноразовый код + канал `via`.
     """
-    # phone: str
-    email: EmailStr
+    via: Literal["email", "phone"] = "email"
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     code: str
 
 
