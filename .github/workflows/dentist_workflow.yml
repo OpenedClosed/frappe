@@ -52,6 +52,9 @@ env:
   CRM_API_URL: ${{ secrets.CRM_API_URL }}
   CRM_CLIENT_ID: ${{ secrets.CRM_CLIENT_ID }}
   CRM_CLIENT_SECRET: ${{ secrets.CRM_CLIENT_SECRET }}
+  DEV_CRM_API_URL: ${{ secrets.DEV_CRM_API_URL }}
+  DEV_CRM_CLIENT_ID: ${{ secrets.DEV_CRM_CLIENT_ID }}
+  DEV_CRM_CLIENT_SECRET: ${{ secrets.DEV_CRM_CLIENT_SECRET }}
 
   SMS_API_URL: ${{ secrets.SMS_API_URL }}
   SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
@@ -165,6 +168,19 @@ jobs:
             echo "HOST=${{ env.PROD_HOST }}" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "HOST=${{ env.DEV_HOST }}" >> $GITHUB_ENV
+          fi
+
+      - name: Determine CRM credentials
+        id: set-crm
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "CRM_API_URL=${{ secrets.CRM_API_URL }}" >> $GITHUB_ENV
+            echo "CRM_CLIENT_ID=${{ secrets.CRM_CLIENT_ID }}" >> $GITHUB_ENV
+            echo "CRM_CLIENT_SECRET=${{ secrets.CRM_CLIENT_SECRET }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "CRM_API_URL=${{ secrets.DEV_CRM_API_URL }}" >> $GITHUB_ENV
+            echo "CRM_CLIENT_ID=${{ secrets.DEV_CRM_CLIENT_ID }}" >> $GITHUB_ENV
+            echo "CRM_CLIENT_SECRET=${{ secrets.DEV_CRM_CLIENT_SECRET }}" >> $GITHUB_ENV
           fi
 
       - name: Set environment dynamically
