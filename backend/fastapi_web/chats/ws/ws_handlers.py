@@ -24,6 +24,7 @@ from knowledge.utils.help_functions import (build_messages_for_model,
                                             merge_external_structures)
 from pydantic import ValidationError
 from users.db.mongo.enums import RoleEnum
+from utils.encoders import DateTimeEncoder
 from utils.help_functions import try_parse_json
 
 from ..db.mongo.enums import ChatSource, ChatStatus, SenderRole
@@ -42,9 +43,8 @@ from ..utils.help_functions import (build_sender_data_map, chat_generate_any,
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPTS
 from ..utils.translations import TRANSLATIONS
-from .ws_helpers import (ConnectionManager, TypingManager,
-                         custom_json_dumps, gpt_task_manager)
-from utils.encoders import DateTimeEncoder
+from .ws_helpers import (ConnectionManager, TypingManager, custom_json_dumps,
+                         gpt_task_manager)
 
 logger = logging.getLogger(__name__)
 
@@ -737,8 +737,8 @@ async def handle_new_message(
     if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
         return
 
-    if not msg_text.strip():
-        return
+    if not msg_text or msg_text.strip():
+        msg_text = "<Content>"
 
     try:
         new_msg = ChatMessage(

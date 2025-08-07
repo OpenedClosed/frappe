@@ -2,16 +2,15 @@
 import asyncio
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from fastapi import HTTPException, Request, Response
-
-from chats.integrations.basic.handlers import route_incoming_message
 from chats.db.mongo.enums import ChatSource, SenderRole
 from chats.db.mongo.schemas import ChatSession
+from chats.integrations.basic.handlers import route_incoming_message
 from chats.utils.help_functions import handle_chat_creation
 from chats.ws.ws_handlers import handle_message
 from chats.ws.ws_helpers import (get_typing_manager, get_ws_manager,
                                  gpt_task_manager)
 from db.mongo.db_init import mongo_db
+from fastapi import HTTPException, Request, Response
 from infra import settings
 from utils.help_functions import get_language_from_locale
 
@@ -80,7 +79,7 @@ async def handle_incoming_meta_messages(
         # --- Если текст пустой, подставим заглушку для вложений ---
         raw_text = raw.get("message_text") or ""
         if not raw_text.strip():
-            raw_text = "<Вложение>"  # или "<Контент не распознан>", если хочешь мягче
+            raw_text = "<Content>"  # или "<Контент не распознан>", если хочешь мягче
         # ----------------------------------------------------------
 
         await route_incoming_message(
