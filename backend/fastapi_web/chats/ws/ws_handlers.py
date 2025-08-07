@@ -1066,30 +1066,36 @@ async def start_brief(
     user_language: str,
 ) -> None:
     """
-    Инициализирует бриф.
+    Инициализирует бриф:
+    • Отправляет приветственное сообщение (Auto Response)
+    • Задаёт первый вопрос брифа, если он есть.
     """
     welcome_flag_key = f"chat:welcome:{chat_session.chat_id}"
 
-    if len(chat_session.messages) > 0 or not await redis_db.set(welcome_flag_key, "1", ex=60, nx=True):
+    if chat_session.messages or not await redis_db.set(
+        welcome_flag_key, "1", ex=60, nx=True
+    ):
         return
 
     app_name = await get_app_name_by_user_data(user_data)
-    bot_context = await get_bot_context(app_name)
+    hello_text = (
+        await get_bot_context(app_name)
+    ).get("welcome_message", {}).get(user_language)
 
-    hello_text = bot_context.get(
-        "welcome_message",
-        {}).get(
-        user_language,
-        None)
+    if hello_text:
+        msg = ChatMessage(
+            message=hello_text,
+            sender_role=SenderRole.AI,
+            metadata={"auto_response": True},  # ← ключевой флаг
+        )
+        await save_and_broadcast_new_message(
+            manager, chat_session, msg, redis_key_session
+        )
 
-    if isinstance(hello_text, str):
-        msg = ChatMessage(message=hello_text, sender_role=SenderRole.AI)
-        await save_and_broadcast_new_message(manager, chat_session, msg, redis_key_session)
-
-    question = chat_session.get_current_question(BRIEF_QUESTIONS)
-    if question:
-        await ask_brief_question(manager, chat_session, question, redis_key_session, user_language)
-
+    if q := chat_session.get_current_question(BRIEF_QUESTIONS):
+        await ask_brief_question(
+            manager, chat_session, q, redis_key_session, user_language
+        )
 
 async def process_brief_question(
     client_id: str,

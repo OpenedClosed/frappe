@@ -6,6 +6,7 @@ from db.mongo.db_init import mongo_db
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import User
 
+# python -m users.utils.cli_commands create-admin
 
 @aclick.group()
 def cli():

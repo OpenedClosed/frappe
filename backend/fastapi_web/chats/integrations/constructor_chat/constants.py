@@ -11,3 +11,19 @@ mutation createMessages($chatId: ID!, $messages: [MessageInput!]!) {
   createMessages(chatId: $chatId, messages: $messages)
 }
 """
+
+IMPORT_CHAT_MESSAGES = """
+mutation CreateChatMessages(
+  $assistantId: String!,
+  $chatTitle: String,
+  $externalChatId: String!,
+  $messages: [MessageInput!]!
+) {
+  createChatMessages(
+    assistantId: $assistantId,
+    chatTitle: $chatTitle,
+    externalChatId: $externalChatId,
+    messages: $messages
+  ) { id createdAt name type }
+}
+"""
