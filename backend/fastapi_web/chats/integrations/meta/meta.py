@@ -31,111 +31,37 @@ async def verify_meta_webhook(
     raise HTTPException(status_code=403, detail="Verification failed")
 
 
+
+
 # async def handle_incoming_meta_messages(
 #     messages_info: List[Dict[str, Any]],
 #     request: Request,
 #     settings_bot_id: str,
 #     chat_source: ChatSource,
-#     process_fn,
+#     process_fn: Callable[..., Awaitable[None]],
+#     profile_fetcher: Optional[Callable[[str], Awaitable[Optional[dict]]]] = None,
 # ):
-#     """Проходит по сообщениям Meta и отправляет их в обработку."""
+#     """Конвертирует Meta-webhook → route_incoming_message."""
 #     token_key = f"{chat_source.name.upper()}_ACCESS_TOKEN"
 #     access_token = getattr(settings, token_key, None)
 
-#     for msg in messages_info:
-#         sender_id = msg["sender_id"]
-#         recipient_id = msg["recipient_id"]
-#         message_text = msg["message_text"]
-#         message_id = msg["message_id"]
-#         timestamp = msg["timestamp"]
-#         meta = msg.get("metadata") or {}
-
-#         meta.setdefault("is_echo", msg.get("is_echo", True))
-#         meta.setdefault("message_id", message_id)
-#         meta.setdefault("raw_metadata", None)
-
-#         is_echo = meta.get("is_echo")
-#         raw_metadata = meta.get("raw_metadata")
-#         is_broadcast = raw_metadata == "broadcast"
-
-#         if message_id:
-#             duplicate = await mongo_db.chats.find_one(
-#                 {"messages.external_id": message_id},
-#                 {"_id": 1}
-#             )
-#             if duplicate:
-#                 continue
-#         else:
-#             pass
-
-#         if is_echo and is_broadcast:
-#             continue
-
-#         if chat_source == ChatSource.INSTAGRAM:
-#             if is_echo:
-#                 sender_role = SenderRole.CONSULTANT
-#                 bot_id = sender_id
-#                 client_id = recipient_id
-#             else:
-#                 sender_role = SenderRole.CLIENT
-#                 bot_id = settings_bot_id
-#                 client_id = sender_id
-#         else:
-#             if sender_id == settings_bot_id:
-#                 sender_role = SenderRole.AI
-#                 bot_id = sender_id
-#                 client_id = recipient_id
-#             else:
-#                 sender_role = SenderRole.CLIENT
-#                 bot_id = settings_bot_id
-#                 client_id = sender_id
-
-#         locale = None
-#         if access_token and sender_role == SenderRole.CLIENT:
-#             # Потом включу не удаляй!
-#             # locale = await get_meta_locale(sender_id, access_token)
-#             locale = "en_EN"
-#         user_language = get_language_from_locale(locale) if locale else "en"
-
-#         name = None
-#         avatar_url = None
-#         if chat_source == ChatSource.INSTAGRAM and sender_role == SenderRole.CLIENT:
-#             # Потом включу не удаляй!
-#             # profile = await get_instagram_user_profile(sender_id)
-#             profile = None
-#             if profile:
-#                 name = profile.get("name")
-#                 avatar_url = profile.get("profile_pic")
-
-#         if avatar_url is not None and not isinstance(avatar_url, str):
-#             avatar_url = None
-
-#         metadata_dict = {
-#             "sender_id": sender_id,
-#             "bot_id": bot_id,
-#             "client_id": client_id,
-#             "timestamp": timestamp,
-#             "message_id": message_id,
-#             "name": name,
-#             "avatar_url": avatar_url,
-#             "raw_metadata": raw_metadata,
-#             "is_echo": is_echo
-#         }
-#         metadata_dict.update({k: v for k, v in meta.items() if v is not None})
-#         metadata_dict = {
-#             k: v for k,
-#             v in metadata_dict.items() if v is not None}
-
-#         await process_fn(
-#             sender_id=sender_id,
-#             message_text=message_text,
-#             bot_id=bot_id,
-#             client_external_id=client_id,
-#             metadata=metadata_dict,
-#             sender_role=sender_role,
-#             external_id=message_id,
-#             user_language=user_language
+#     for raw in messages_info:
+#         await route_incoming_message(
+#             sender_id=str(raw["sender_id"]),
+#             recipient_id=str(raw["recipient_id"]),
+#             message_text=raw["message_text"],
+#             message_id=str(raw["message_id"]),
+#             timestamp=int(raw["timestamp"]),
+#             metadata=raw.get("metadata", {}),
+#             chat_source=chat_source,
+#             settings_bot_id=settings_bot_id,
+#             access_token=access_token,
+#             profile_fetcher=profile_fetcher,
+#             process_fn=process_fn,
+#             skip_locale=False,
 #         )
+
+
 
 async def handle_incoming_meta_messages(
     messages_info: List[Dict[str, Any]],
@@ -146,14 +72,21 @@ async def handle_incoming_meta_messages(
     profile_fetcher: Optional[Callable[[str], Awaitable[Optional[dict]]]] = None,
 ):
     """Конвертирует Meta-webhook → route_incoming_message."""
+
     token_key = f"{chat_source.name.upper()}_ACCESS_TOKEN"
     access_token = getattr(settings, token_key, None)
 
     for raw in messages_info:
+        # --- Если текст пустой, подставим заглушку для вложений ---
+        raw_text = raw.get("message_text") or ""
+        if not raw_text.strip():
+            raw_text = "<Вложение>"  # или "<Контент не распознан>", если хочешь мягче
+        # ----------------------------------------------------------
+
         await route_incoming_message(
             sender_id=str(raw["sender_id"]),
             recipient_id=str(raw["recipient_id"]),
-            message_text=raw["message_text"],
+            message_text=raw_text,
             message_id=str(raw["message_id"]),
             timestamp=int(raw["timestamp"]),
             metadata=raw.get("metadata", {}),
@@ -164,7 +97,6 @@ async def handle_incoming_meta_messages(
             process_fn=process_fn,
             skip_locale=False,
         )
-
 
 
 

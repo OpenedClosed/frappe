@@ -100,6 +100,7 @@ class ChatSession(BaseValidatedModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_activity: datetime = Field(default_factory=datetime.utcnow)
     manual_mode: bool = False
+    consultant_requested: bool = False 
     messages: Optional[List[ChatMessage]] = []
     brief_answers: List[BriefAnswer] = []
     closed_by_request: Optional[bool] = False
@@ -127,33 +128,106 @@ class ChatSession(BaseValidatedModel):
             "manual" if self.manual_mode else "automatic"
         )
 
+    # def compute_status(
+    #     self,
+    #     ttl_value: int,
+    #     staff_ids: set[str] | None = None,
+    #     brief_questions: list[BriefQuestion] | None = None
+    # ) -> ChatStatus:
+    #     if self.closed_by_request:
+    #         return ChatStatus.CLOSED_BY_OPERATOR
+
+    #     if ttl_value <= 0:
+    #         return (
+    #             ChatStatus.CLOSED_NO_MESSAGES
+    #             if not self.messages else ChatStatus.CLOSED_BY_TIMEOUT
+    #         )
+
+    #     # Новый чат, ещё никто не писал
+    #     if not self.messages:
+    #         return ChatStatus.NEW_SESSION
+
+    #     # Если бриф есть и не заполнен
+    #     if self.calculate_mode(brief_questions or []) == "brief":
+    #         return ChatStatus.BRIEF_IN_PROGRESS
+
+    #     # Если бриф завершён, но нет ни одного сообщения
+    #     if not self.messages:
+    #         return ChatStatus.BRIEF_COMPLETED
+
+    #     last = self.messages[-1]
+    #     role_en = (
+    #         json.loads(last.sender_role)["en"]
+    #         if isinstance(last.sender_role, str)
+    #         else last.sender_role.en_value
+    #     )
+
+    #     if self.manual_mode:
+    #         if role_en == SenderRole.CLIENT.en_value:
+    #             return (
+    #                 ChatStatus.MANUAL_READ_BY_CONSULTANT
+    #                 if self.is_read_by_any_staff(staff_ids or set())
+    #                 else ChatStatus.MANUAL_WAITING_CONSULTANT
+    #             )
+    #         return ChatStatus.MANUAL_WAITING_CLIENT
+
+    #     # Автоматический режим
+    #     if role_en == SenderRole.CLIENT.en_value:
+    #         return ChatStatus.AUTO_WAITING_AI
+    #     return ChatStatus.AUTO_WAITING_CLIENT
+
+
+    # =====================================================================
+    #  models/chat_session.py  (целиком переписан compute_status)
+    # =====================================================================
+
     def compute_status(
         self,
         ttl_value: int,
         staff_ids: set[str] | None = None,
         brief_questions: list[BriefQuestion] | None = None
     ) -> ChatStatus:
+        """
+        Возвращает текущий статус чата.
+
+        • manual_mode  – консультант уже отвечает;
+        • consultant_requested – эскалация, ждём первого ответа консультанта.
+        """
+
+        # 1) закрыт по запросу
         if self.closed_by_request:
             return ChatStatus.CLOSED_BY_OPERATOR
 
+        # 2) TTL истёк
         if ttl_value <= 0:
             return (
                 ChatStatus.CLOSED_NO_MESSAGES
                 if not self.messages else ChatStatus.CLOSED_BY_TIMEOUT
             )
 
-        # Новый чат, ещё никто не писал
+        # 3) ещё ни одного сообщения
         if not self.messages:
+            # ── новый блок ───────────────────────────────────────────────
+            if self.consultant_requested:
+                return ChatStatus.MANUAL_WAITING_CONSULTANT
+            # ─────────────────────────────────────────────────────────────
             return ChatStatus.NEW_SESSION
 
-        # Если бриф есть и не заполнен
+        # 4) бриф заполняется
         if self.calculate_mode(brief_questions or []) == "brief":
             return ChatStatus.BRIEF_IN_PROGRESS
 
-        # Если бриф завершён, но нет ни одного сообщения
+        # 5) бриф закончен, но сообщений нет (теоретически)
         if not self.messages:
             return ChatStatus.BRIEF_COMPLETED
 
+        # 6) эскалация, но консультант ещё не ответил
+        if self.consultant_requested and not self.manual_mode:
+            return ChatStatus.MANUAL_WAITING_CONSULTANT
+
+        # ----------------------------------------------------------------
+        #  ниже гарантировано есть хотя бы одно сообщение
+        # ----------------------------------------------------------------
         last = self.messages[-1]
         role_en = (
             json.loads(last.sender_role)["en"]
@@ -161,6 +235,7 @@ class ChatSession(BaseValidatedModel):
             else last.sender_role.en_value
         )
 
+        # 7) ручной режим
         if self.manual_mode:
             if role_en == SenderRole.CLIENT.en_value:
                 return (
@@ -170,10 +245,11 @@ class ChatSession(BaseValidatedModel):
                 )
             return ChatStatus.MANUAL_WAITING_CLIENT
 
-        # Автоматический режим
+        # 8) автоматический режим
         if role_en == SenderRole.CLIENT.en_value:
             return ChatStatus.AUTO_WAITING_AI
         return ChatStatus.AUTO_WAITING_CLIENT
+
 
 
     def get_current_question(

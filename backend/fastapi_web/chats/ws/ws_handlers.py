@@ -1299,6 +1299,18 @@ async def handle_superuser_message(
         
     )
 
+    # new_msg = ChatMessage(
+    #     message=msg_text,
+    #     sender_role=SenderRole.CONSULTANT,
+    #     sender_id=client_id,
+    #     reply_to=reply_to,
+    #     metadata=metadata,
+    # )
+
+    # chat_session.manual_mode = True
+    # await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session)
+    # await mongo_db.chats.update_one({"chat_id": chat_id}, {"$set": {"manual_mode": True}})
+
     new_msg = ChatMessage(
         message=msg_text,
         sender_role=SenderRole.CONSULTANT,
@@ -1307,9 +1319,23 @@ async def handle_superuser_message(
         metadata=metadata,
     )
 
+    # <-- консультант действительно ответил →
     chat_session.manual_mode = True
+    chat_session.consultant_requested = False        # сбрасываем флаг ожидания
+
     await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session)
-    await mongo_db.chats.update_one({"chat_id": chat_id}, {"$set": {"manual_mode": True}})
+
+    await mongo_db.chats.update_one(
+        {"chat_id": chat_id},
+        {
+            "$set": {
+                "manual_mode": True,
+                "consultant_requested": False,
+            }
+        },
+    )
+
+
 
 # ==============================
 # БЛОК: AI-логика (GPT)
@@ -1610,42 +1636,152 @@ def build_kb_structure_outline(knowledge_base: dict[str, Any]) -> dict[str, Any]
 # БЛОК: Обработка ответа ИИ
 # ==============================
 
+# async def build_ai_response(
+#     manager: Any,
+#     chat_session: ChatSession,
+#     user_msg: ChatMessage,
+#     user_data: dict,
+#     chat_history: List[ChatMessage],
+#     redis_key_session: str,
+#     user_language: str,
+#     typing_manager: TypingManager,
+#     chat_id: str
+# ) -> Optional[ChatMessage]:
+#     """Формирует финальный ответ бота с учётом confidence и snippets."""
+
+#     confidence = user_msg.gpt_evaluation.confidence
+
+#     if (
+#         user_msg.gpt_evaluation.out_of_scope
+#         or user_msg.gpt_evaluation.consultant_call
+#         or confidence < 0.2
+#     ):
+#         chat_session.manual_mode = True
+#         await mongo_db.chats.update_one(
+#             {"chat_id": chat_session.chat_id},
+#             {"$set": {"manual_mode": True}}
+#         )
+
+#         app_name = await get_app_name_by_user_data(user_data)
+
+#         bot_context = await get_bot_context(app_name)
+#         redirect_msg = bot_context.get("redirect_message", {}).get(
+#             user_language, "Please wait for a consultant."
+#         )
+
+#         session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
+#         if session_doc:
+#             await send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump(mode="python"))
+
+#         return ChatMessage(
+#             message=redirect_msg,
+#             sender_role=SenderRole.AI,
+#             choice_options=[
+#                 (get_translation("choices", "get_auto_mode", user_language), "/auto")
+#             ],
+#             choice_strict=False
+#         )
+
+#     snippets_by_source = await extract_knowledge_with_sources(
+#         user_msg.gpt_evaluation.topics,
+#         user_data,
+#         user_msg.message
+#     )
+
+
+#     files: list[str] = []
+#     for topic_dict in snippets_by_source.values():
+#         for topic in topic_dict.values():
+#             for sub in topic.subtopics.values():
+#                 for answer in sub.questions.values():
+#                     files.extend(answer.files or [])
+#     files = list(set(files))
+
+#     merged_snippet_tree: Dict[str, Topic] = {}
+#     for topic_dict in snippets_by_source.values():
+#         for name, topic in topic_dict.items():
+#             merged_snippet_tree.setdefault(name, topic).subtopics.update(topic.subtopics)
+
+#     message_before_postprocessing, final_text = await generate_ai_answer(
+#         user_message=user_msg.message,
+#         snippets=merged_snippet_tree,
+#         user_info=user_data,
+#         chat_history=chat_history,
+#         style="",
+#         user_language=user_language,
+#         typing_manager=typing_manager,
+#         manager=manager,
+#         chat_session=chat_session
+#     )
+    
+
+#     ai_msg = ChatMessage(
+#         message=final_text if final_text else message_before_postprocessing,
+#         message_before_postprocessing=message_before_postprocessing,
+#         sender_role=SenderRole.AI,
+#         files=files,
+#         snippets_by_source=snippets_by_source
+#     )
+
+#     if 0.3 <= confidence < 0.7:
+#         ai_msg.choice_options = [
+#             get_translation("choices", "consultant", user_language)
+#         ]
+#         ai_msg.choice_strict = False
+
+#     return ai_msg
+
+
 async def build_ai_response(
     manager: Any,
     chat_session: ChatSession,
     user_msg: ChatMessage,
     user_data: dict,
-    chat_history: List[ChatMessage],
+    chat_history: list[ChatMessage],
     redis_key_session: str,
     user_language: str,
     typing_manager: TypingManager,
-    chat_id: str
+    chat_id: str,
 ) -> Optional[ChatMessage]:
-    """Формирует финальный ответ бота с учётом confidence и snippets."""
+    """
+    Формирует ответ бота.
+
+    ⚠️ 2025-08-08: бот НЕ уходит в manual_mode при эскалации.
+    Вместо этого ставим flag `consultant_requested=True`.
+    manual_mode=True выставляется ТОЛЬКО, когда реально ответил консультант.
+    """
 
     confidence = user_msg.gpt_evaluation.confidence
 
-    if (
+    need_consultant = (
         user_msg.gpt_evaluation.out_of_scope
         or user_msg.gpt_evaluation.consultant_call
         or confidence < 0.2
-    ):
-        chat_session.manual_mode = True
+    )
+
+    if need_consultant:
+        # 1) помечаем, что консультант запрошен
+        chat_session.consultant_requested = True
         await mongo_db.chats.update_one(
             {"chat_id": chat_session.chat_id},
-            {"$set": {"manual_mode": True}}
+            {"$set": {"consultant_requested": True}},
         )
 
+        # 2) отдаём redirect-сообщение, но не выключаем бота
         app_name = await get_app_name_by_user_data(user_data)
+        redirect_msg = (await get_bot_context(app_name)).get(
+            "redirect_message", {}
+        ).get(user_language, "Please wait for a consultant.")
 
-        bot_context = await get_bot_context(app_name)
-        redirect_msg = bot_context.get("redirect_message", {}).get(
-            user_language, "Please wait for a consultant."
-        )
-
-        session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
-        if session_doc:
-            await send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump(mode="python"))
+        # уведомляем, если надо
+        try:
+            session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
+            if session_doc:
+                await send_message_to_bot(
+                    str(session_doc["_id"]), chat_session.model_dump(mode="python")
+                )
+        except Exception:
+            pass
 
         return ChatMessage(
             message=redirect_msg,
@@ -1653,15 +1789,15 @@ async def build_ai_response(
             choice_options=[
                 (get_translation("choices", "get_auto_mode", user_language), "/auto")
             ],
-            choice_strict=False
+            choice_strict=False,
         )
 
+    # ------- ниже неизменённая часть генерации нормального AI-ответа -------
     snippets_by_source = await extract_knowledge_with_sources(
         user_msg.gpt_evaluation.topics,
         user_data,
-        user_msg.message
+        user_msg.message,
     )
-
 
     files: list[str] = []
     for topic_dict in snippets_by_source.values():
@@ -1685,26 +1821,22 @@ async def build_ai_response(
         user_language=user_language,
         typing_manager=typing_manager,
         manager=manager,
-        chat_session=chat_session
+        chat_session=chat_session,
     )
-    
 
     ai_msg = ChatMessage(
-        message=final_text if final_text else message_before_postprocessing,
+        message=final_text or message_before_postprocessing,
         message_before_postprocessing=message_before_postprocessing,
         sender_role=SenderRole.AI,
         files=files,
-        snippets_by_source=snippets_by_source
+        snippets_by_source=snippets_by_source,
     )
 
     if 0.3 <= confidence < 0.7:
-        ai_msg.choice_options = [
-            get_translation("choices", "consultant", user_language)
-        ]
+        ai_msg.choice_options = [get_translation("choices", "consultant", user_language)]
         ai_msg.choice_strict = False
 
     return ai_msg
-
 
 
 def remove_files_from_snippets(data: Any, files: List[str]) -> None:
