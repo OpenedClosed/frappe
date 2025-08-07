@@ -97,7 +97,7 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/mongo:latest
 
       # Redis
-      - name: Build and push Mongo
+      - name: Build and push Redis
         if: contains( steps.changes.outputs.all_modified_files, 'redis/')
         uses: docker/build-push-action@v3
         with:
@@ -226,7 +226,7 @@ jobs:
 
             # Замок деплоя
             sudo mkdir -p /var/lock
-            LOCK_FILE="/var/lock/dentist_deploy.lock"
+            LOCK_FILE="/var/lock/driving_school_deploy.lock"
             sudo touch "$LOCK_FILE"
 
             # Снимаем замок при любых завершениях
