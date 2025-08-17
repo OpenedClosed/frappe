@@ -34,7 +34,9 @@ def execute():
 
 
 def get_modified_docs(doctype):
+	# Переопределил
 	return frappe.get_all(doctype, filters={"owner": "Administrator", "modified_by": ["!=", "Administrator"]})
+	# return frappe.get_all(doctype)
 
 
 def rename_modified_doc(docname, doctype):

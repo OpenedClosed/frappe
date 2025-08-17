@@ -12,7 +12,7 @@
  "is_hidden": 0,
  "label": "Welcome Workspace",
  "links": [],
- "modified": "2023-07-28 20:15:32.222029",
+ "modified": "2025-08-04 19:37:02.128394",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "Welcome Workspace",
@@ -21,7 +21,17 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "TG Admin"
+  },
+  {
+   "role": "TG Developer"
+  },
+  {
+   "role": "TG Client"
+  }
+ ],
  "sequence_id": 22.0,
  "shortcuts": [],
  "title": "Welcome Workspace"

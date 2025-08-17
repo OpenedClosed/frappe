@@ -54,14 +54,24 @@ frappe.ui.ThemeSwitcher = class ThemeSwitcher {
 	fetch_themes() {
 		return new Promise((resolve) => {
 			this.themes = [
+				// {
+				// 	name: "light",
+				// 	label: __("Frappe Light"),
+				// 	info: __("Light Theme"),
+				// },
+				// {
+				// 	name: "dark",
+				// 	label: __("Timeless Night"),
+				// 	info: __("Dark Theme"),
+				// },
 				{
 					name: "light",
-					label: __("Frappe Light"),
+					label: __("TGTask Light"),
 					info: __("Light Theme"),
 				},
 				{
 					name: "dark",
-					label: __("Timeless Night"),
+					label: __("TGTask Night"),
 					info: __("Dark Theme"),
 				},
 				{

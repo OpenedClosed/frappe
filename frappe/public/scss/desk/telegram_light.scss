@@ -1,0 +1,257 @@
+$check-icon-light: url("data:image/svg+xml, <svg viewBox='0 0 8 7' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M1 4L2.667 5.8 7 1.2' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
+
+[data-theme="light"] {
+	--neutral: var(--neutral-white);
+	--invert-neutral: var(--neutral-black);
+	// TODO: Update Pallete for light mode.
+	--gray-700: #b6c1cb;
+	--gray-800: #e9eff4;
+
+	// Type Colors
+	--text-neutral: var(--gray-900);
+	--text-dark: var(--gray-900);
+	--text-muted: #6d7984;        /* обновлено */
+	--text-light: var(--gray-600);
+	--text-color: #20242a;        /* обновлено */
+	--heading-color: #0d0d0d;     /* обновлено */
+
+	// SVG Colors
+	--icon-fill: transparent;
+	--icon-stroke: var(--gray-500);
+
+	// Error colors
+	--error-bg: var(--red-50);
+	--error-border: var(--red-400);
+
+	// Layout Colors
+	--bg-color: #ffffff;          /* обновлено */
+	--fg-color: #ffffff;          /* обновлено */
+	--subtle-accent: #f1f3f5;     /* обновлено */
+	--subtle-fg: #f1f3f5;         /* обновлено */
+	--navbar-bg: #ffffff;         /* обновлено */
+	--fg-hover-color: #ecf2f7;    /* обновлено */
+	--card-bg: #ffffff;           /* обновлено */
+	--disabled-text-color: #9ba4ad;
+	--disabled-control-bg: #f3f5f7; /* обновлено */
+	--control-bg: #f5f7f9;         /* обновлено */
+	--control-bg-on-gray: #f5f7f9;
+	--awesomebar-focus-bg: var(--control-bg);
+	--awesomplete-hover-bg: var(--control-bg);
+	--modal-bg: #ffffff;           /* обновлено */
+	--toast-bg: var(--modal-bg);
+	--popover-bg: var(--bg-color);
+
+	// Button Colors
+	--btn-default-bg: #f3f5f7;     /* обновлено */
+	--btn-default-hover-bg: #ecf2f7; /* обновлено */
+	--btn-primary: #0088cc;        /* фирменный */
+
+	// Border Colors
+	--border-primary: #dde2e6;     /* обновлено */
+
+	// Background Text Color Pairs
+	--bg-blue: var(--blue-500);
+	--bg-light-blue: var(--blue-100);
+	--bg-dark-blue: var(--blue-700);
+	--bg-green: var(--green-500);
+	--bg-yellow: var(--yellow-400);
+	--bg-orange: var(--orange-400);
+	--bg-red: var(--red-500);
+	--bg-gray: var(--gray-500);
+	--bg-grey: var(--gray-500);
+	--bg-darkgrey: var(--gray-600);
+	--bg-dark-gray: var(--gray-600);
+	--bg-light-gray: var(--gray-100);
+	--bg-purple: var(--purple-400);
+	--bg-pink: var(--pink-400);
+	--bg-cyan: var(--cyan-400);
+
+	--text-on-blue: var(--blue-50);
+	--text-on-light-blue: var(--blue-700);
+	--text-on-dark-blue: var(--blue-50);
+	--text-on-green: var(--green-50);
+	--text-on-yellow: var(--yellow-700);
+	--text-on-orange: var(--orange-900);
+	--text-on-red: var(--red-50);
+	--text-on-gray: var(--gray-900);
+	--text-on-grey: var(--gray-900);
+	--text-on-darkgrey: var(--gray-50);
+	--text-on-dark-gray: var(--gray-50);
+	--text-on-light-gray: var(--gray-900);
+	--text-on-purple: var(--purple-50);
+	--text-on-pink: var(--pink-50);
+	--text-on-cyan: var(--cyan-50);
+
+	// alert colors
+	--alert-text-danger: var(--red-700);
+	--alert-text-warning: var(--yellow-700);
+	--alert-text-info: var(--blue-700);
+	--alert-text-success: var(--green-700);
+	--alert-bg-danger: var(--red-50);
+	--alert-bg-warning: var(--yellow-50);
+	--alert-bg-info: var(--blue-50);
+	--alert-bg-success: var(--green-50);
+
+	--sidebar-select-color: var(--gray-100);
+
+	--scrollbar-thumb-color: var(--gray-300);
+	--scrollbar-track-color: var(--gray-200);
+
+	--timeline-badge-color: var(--gray-400);
+	--timeline-badge-bg: var(--gray-50);
+
+	--shadow-inset: var(--fg-color);
+	--border-color: var(--gray-200);
+	--dark-border-color: var(--gray-300);
+	--table-border-color: var(--border-color);
+	--highlight-color: var(--gray-100);
+	--yellow-highlight-color: var(--yellow-100);
+
+	--btn-group-border-color: var(--gray-200);
+
+	--placeholder-color: var(--gray-400);
+
+	--highlight-shadow: 1px 1px 10px var(--blue-100), 0px 0px 4px var(--blue-300);
+
+	--shadow-base: 0px 4px 8px rgba(114, 176, 233, 0.10), 0px 0px 4px rgba(112, 172, 228, 0.16);
+
+	// "diff" colors
+	--diff-added: var(--green-100);
+	--diff-removed: var(--red-100);
+
+	// sidebar toggle
+	.page-title .sidebar-toggle-btn {
+		--icon-stroke: var(--gray-500);
+	}
+
+	// input
+	--input-disabled-bg: none;
+
+	// checkbox
+	--checkbox-color: var(--primary);
+	--checkbox-gradient: linear-gradient(
+		180deg,
+		#ffffff -124.51%,
+		#ffffff 100%
+	);
+	--checkbox-disabled-gradient: linear-gradient(
+		180deg,
+		var(--gray-200) -124.51%,
+		var(--gray-200) 100%
+	);
+	--checkbox-focus-shadow: var(--focus-default);
+
+	input[type="checkbox"] {
+		&:checked {
+			background-image: $check_icon_light, var(--checkbox-gradient);
+		}
+		&.disabled-selected,
+		&:disabled:checked {
+			background-image: $check_icon_light, var(--checkbox-disabled-gradient);
+		}
+		&.disabled-deselected {
+			border: none;
+			background-color: var(--gray-200);
+		}
+	}
+
+	// switch
+	--switch-bg: var(--gray-300);
+
+	// date-picker
+	--date-active-text: var(--gray-900);
+	--date-active-bg: var(--gray-100);
+	--date-range-bg: var(--subtle-fg);
+
+	// grid
+	.grid-body .editable-row {
+		--control-bg: var(--gray-50);
+		--input-disabled-bg: var(--gray-100);
+	}
+	color-scheme: light;
+
+	.frappe-card {
+		.btn-default {
+			background-color: var(--control-bg);
+
+			&:hover {
+				background-color: var(--fg-hover-color);
+			}
+		}
+	}
+
+	.modal,
+	.form-in-grid {
+		--control-bg: var(--gray-50);
+		--border-color: var(--gray-200);
+	}
+
+	.print-format {
+		--text-color: var(--gray-900);
+		--border-color: var(--gray-300);
+	}
+
+	.ql-editor {
+		color: var(--text-on-gray);
+		&.read-mode {
+			span:not(.mention),
+			p,
+			u,
+			strong {
+				background-color: inherit !important;
+				color: inherit !important;
+			}
+		}
+	}
+	.comment-input-wrapper .ql-editor.ql-blank::before {
+		color: var(--text-color);
+	}
+
+	// Frappe Charts Colors
+	.chart-container {
+		--charts-label-color: var(--gray-500);
+		--charts-axis-line-color: var(--subtle-fg);
+		--charts-stroke-width: 5px;
+		--charts-dataset-circle-stroke: #ffffff;
+		--charts-dataset-circle-stroke-width: var(--charts-stroke-width);
+		--charts-tooltip-title: var(--charts-label-color);
+		--charts-tooltip-label: var(--charts-label-color);
+		--charts-tooltip-value: #000;
+		--charts-tooltip-bg: #ffffff;
+		--charts-legend-label: var(--charts-label-color);
+	}
+
+	.heatmap-chart {
+		g > rect[fill="#ebedf0"] {
+			fill: var(--gray-100);
+		}
+	}
+
+	.rating {
+		--star-fill: var(--gray-400);
+		.star-hover {
+			--star-fill: var(--gray-500);
+		}
+	}
+
+	--skeleton-bg: var(--gray-100);
+
+	--right-arrow-svg: url("data:image/svg+xml;utf8,<svg width='6' height='8' viewBox='0 0 6 8' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M1.25 7.5L4.75 4L1.25 0.5' stroke='black' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+
+	--left-arrow-svg: url("data:image/svg+xml;utf8,<svg width='6' height='8' viewBox='0 0 6 8' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M7.5 9.5L4 6l3.5-3.5' stroke='black' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+
+	::selection {
+		color: var(--text-color);
+		background: var(--gray-200);
+	}
+
+	$indicator-colors: green, cyan, blue, orange, yellow, gray, grey, red, pink, darkgrey, purple,
+		light-blue;
+	@each $color in $indicator_colors {
+		.indicator {
+			--indicator-dot-#{"" + $color}: var(--bg-#{$color});
+		}
+	}
+}

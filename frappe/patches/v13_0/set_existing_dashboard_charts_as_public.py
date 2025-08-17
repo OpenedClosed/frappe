@@ -16,6 +16,8 @@ def execute():
 
 	users = [item.parent for item in users_with_permission]
 	charts = frappe.get_all("Dashboard Chart", filters={"owner": ["in", users]})
+    # Переопределил
+	# charts = frappe.get_all("Dashboard Chart")
 
 	for chart in charts:
 		frappe.db.set_value("Dashboard Chart", chart.name, "is_public", 1)
