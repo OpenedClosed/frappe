@@ -9,10 +9,7 @@ services:
       - mongo_data:/data/db
     env_file:
       - ./.env
-    # healthcheck:
-    #   test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongosh) -eq 1
-    #   interval: 100m
-    #   start_period: 30s
+
 
   redis:
     image: 89639339335/redis:latest
