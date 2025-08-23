@@ -737,7 +737,7 @@ async def handle_new_message(
     if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
         return
 
-    if not msg_text or msg_text.strip():
+    if not msg_text or not msg_text.strip():
         msg_text = "<Content>"
 
     try:
