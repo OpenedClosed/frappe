@@ -32,7 +32,7 @@ async def generate_secure_webapp_url(user: User, bot: Bot) -> str:
     """
     Генерирует WebApp URL с подписью и дополнительной информацией о пользователе.
     """
-    host = settings.HOST_URL if "localhost" not in settings.HOST_URL else "https://panamed-aihubworks.com"
+    host = settings.HOST_URL if "localhost" not in settings.HOST_URL else "https://portal.pa-na.pl"
     base_url = f"{host}/chats/telegram-chat"
     timestamp = int(datetime.utcnow().timestamp())
     user_id = user.id

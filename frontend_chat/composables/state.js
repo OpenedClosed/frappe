@@ -57,7 +57,7 @@ export const useProjectState = () => {
 
     if (!host) return 'unknown'
 
-    if (host.includes('panamed-aihubworks.com')) return 'dantist'
+    if (host.includes('portal.pa-na.pl')) return 'dantist'
     if (host.includes('nika.aihubworks.com'))    return 'hotel'
     if (host.includes('chat.aihubworks.com'))    return 'aihub'
     if (host.includes('denisdrive-aihub.com'))   return 'denisdrive'

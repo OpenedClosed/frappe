@@ -7,7 +7,7 @@ from telegram_bot.utils.messages import InfoMessage, ButtonMessage
 from aiogram_dialog.widgets.text import Const, Format
 from fastapi_web.infra import settings as backend_settings
 
-MINI_APP_HOST = backend_settings.HOST if backend_settings.HOST not in ["localhost", "127.0.0.1"] else "panamed-aihubworks.com"
+MINI_APP_HOST = backend_settings.HOST if backend_settings.HOST not in ["localhost", "127.0.0.1"] else "portal.pa-na.pl"
 
 personal_account_dialog = Dialog(
     Window(
