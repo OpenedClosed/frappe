@@ -128,7 +128,7 @@ async def route_incoming_message(
             bot_id = settings_bot_id
             client_id = sender_id
     else:
-        if sender_id == settings_bot_id:
+        if str(sender_id) == str(settings_bot_id):
             sender_role = SenderRole.AI
         else:
             sender_role = SenderRole.CLIENT
