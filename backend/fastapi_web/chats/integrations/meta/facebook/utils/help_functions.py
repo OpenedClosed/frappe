@@ -9,9 +9,12 @@ from chats.integrations.basic.handlers import process_integration_message
 from chats.db.mongo.enums import ChatSource, SenderRole
 from infra import settings
 
+logger = logging.getLogger(__name__)
+
 def parse_facebook_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Разбирает JSON, приходящий от Facebook Messenger Webhook."""
     results: List[Dict[str, Any]] = []
+    logger.warning(f"НАГРУЗКА {payload}")
 
     for entry in payload.get("entry", []):
         for ev in entry.get("messaging", []):
@@ -54,6 +57,8 @@ def parse_facebook_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "metadata": meta,
                 }
             )
+
+    logger.warning(f"РЕЗУЛЬТАТ {results}")
 
     return results
 
