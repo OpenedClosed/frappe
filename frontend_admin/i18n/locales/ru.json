@@ -158,7 +158,13 @@
     "Information": "Информация",
     "ReferralCodeEntered": "У вас введен реферальный код.",
     "usePhone2FA": "Использовать телефон (SMS) для двухфакторной аутентификации",
-    "phoneMustBePolish": "Номер телефона должен начинаться с +48 для активации SMS."
+    "phoneMustBePolish": "Номер телефона должен начинаться с +48 для активации SMS.",
+    "phoneImportant": "Важно:",
+    "phoneOptional": "Необязательно:",
+    "phoneImportantInfo": "Обязательно для SMS двухфакторной аутентификации и оперативной связи.",
+    "phoneOptionalInfo": "Для оперативной связи при необходимости.",
+    "emailOptional": "Необязательно:",
+    "emailOptionalInfo": "Для оперативной связи при необходимости."
   },
 
   "DynamicForm": {

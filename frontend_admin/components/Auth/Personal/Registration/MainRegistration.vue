@@ -111,10 +111,10 @@
 
           <Divider />
 
-          <!-- Номер телефона (required) -->
+          <!-- Номер телефона (conditionally required) -->
           <div>
             <label for="phone" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.phone") }} <span class="text-red-500">*</span>
+              {{ t("PersonalMainRegistration.phone") }} <span v-if="usePhone2FA" class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.phone }">
               <InputMask
@@ -122,7 +122,7 @@
                 id="phone"
                 size="small"
                 type="tel"
-                required
+                :required="usePhone2FA"
                 mask="+48 999 999 999"
                 placeholder="+48 ___ ___ ___"
                 :minlength="8"
@@ -132,6 +132,11 @@
               />
             </div>
             <div class="flex flex-col">
+              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
+                  >{{ usePhone2FA ? t("PersonalMainRegistration.phoneImportant") : t("PersonalMainRegistration.phoneOptional") }} &nbsp;</span
+                >{{ usePhone2FA ? t("PersonalMainRegistration.phoneImportantInfo") : t("PersonalMainRegistration.phoneOptionalInfo") }}</small
+              >
               <small class="text-red-500 mt-1 text-[12px]">
                 {{ regError.phone }}
               </small>
@@ -148,10 +153,10 @@
             {{ t("PersonalMainRegistration.phoneMustBePolish") }}
           </small>
 
-          <!-- Email (required) -->
+          <!-- Email (conditionally required) -->
           <div>
             <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.email") }}
+              {{ t("PersonalMainRegistration.email") }} <span v-if="!usePhone2FA" class="text-red-500">*</span>
             </label>
             <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.email }">
               <InputText
@@ -159,14 +164,15 @@
                 v-model="regForm.email"
                 type="email"
                 id="email"
+                :required="!usePhone2FA"
                 :placeholder="t('PersonalMainRegistration.emailPlaceholder')"
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
               />
             </div>
             <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
               <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                >{{ t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
-              >{{ t("PersonalMainRegistration.numberInfo") }}</small
+                >{{ usePhone2FA ? t("PersonalMainRegistration.emailOptional") : t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
+              >{{ usePhone2FA ? t("PersonalMainRegistration.emailOptionalInfo") : t("PersonalMainRegistration.numberInfo") }}</small
             >
             <small class="text-red-500 mt-1 text-[12px]">
               {{ regError.email }}
@@ -481,8 +487,8 @@ function sendReg() {
     email: "",
     first_name: "",
     last_name: "",
-    birth_date: null, // 👈
-    gender: "", // 👈
+    birth_date: null, 
+    gender: "",
     password: "",
     password_confirm: "",
     referral_code: "",

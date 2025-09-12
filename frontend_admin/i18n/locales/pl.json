@@ -157,7 +157,13 @@
     "Information": "Informacja",
     "ReferralCodeEntered": "Wpisałeś kod polecający.",
     "usePhone2FA": "Używaj telefonu (SMS) do uwierzytelniania dwuskładnikowego",
-    "phoneMustBePolish": "Numer telefonu musi zaczynać się od +48, aby włączyć SMS."
+    "phoneMustBePolish": "Numer telefonu musi zaczynać się od +48, aby włączyć SMS.",
+    "phoneImportant": "Ważne:",
+    "phoneOptional": "Opcjonalne:",
+    "phoneImportantInfo": "Wymagane do uwierzytelniania dwuskładnikowego SMS i komunikacji operacyjnej.",
+    "phoneOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby.",
+    "emailOptional": "Opcjonalne:",
+    "emailOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby."
   },
 
   "DynamicForm": {

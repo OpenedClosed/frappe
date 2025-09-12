@@ -158,8 +158,14 @@
     "ReferralCode": "რეფერალური კოდი",
     "Information": "ინფორმაცია",
     "ReferralCodeEntered": "თქვენ შეიყვანეთ რეფერალური კოდი.",
-    "usePhone2FA": "Use phone (SMS) for two-factor authentication",
-    "phoneMustBePolish": "Phone number must start with +48 to enable SMS codes."
+    "usePhone2FA": "ტელეფონის (SMS) გამოყენება ორი-ფაქტორული ავთენტიფიკაციისთვის",
+    "phoneMustBePolish": "ტელეფონის ნომერი უნდა იწყებოდეს +48-ით SMS კოდების გაააქტიურებისთვის.",
+    "phoneImportant": "მნიშვნელოვანი:",
+    "phoneOptional": "არასავალდებულო:",
+    "phoneImportantInfo": "აუცილებელია SMS ორი-ფაქტორული ავთენტიფიკაციისა და ოპერატიული კომუნიკაციისთვის.",
+    "phoneOptionalInfo": "ოპერატიული კომუნიკაციისთვის საჭიროების შემთხვევაში.",
+    "emailOptional": "არასავალდებულო:",
+    "emailOptionalInfo": "ოპერატიული კომუნიკაციისთვის საჭიროების შემთხვევაში."
   },
 
   "DynamicForm": {
