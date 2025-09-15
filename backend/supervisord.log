@@ -1,0 +1,360 @@
+2025-09-15 22:17:35,459 INFO supervisord started with pid 60970
+2025-09-15 22:17:36,461 INFO spawned: 'celery-beat' with pid 60987
+2025-09-15 22:17:36,463 INFO spawned: 'celery-worker' with pid 60988
+2025-09-15 22:17:36,464 INFO spawned: 'fastapi' with pid 60989
+2025-09-15 22:17:36,985 WARN exited: celery-worker (exit status 1; not expected)
+2025-09-15 22:17:36,985 WARN exited: celery-beat (exit status 1; not expected)
+2025-09-15 22:17:38,173 INFO spawned: 'celery-beat' with pid 61011
+2025-09-15 22:17:38,175 INFO spawned: 'celery-worker' with pid 61012
+2025-09-15 22:17:38,175 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:17:38,369 WARN exited: celery-worker (exit status 1; not expected)
+2025-09-15 22:17:38,369 WARN exited: celery-beat (exit status 1; not expected)
+2025-09-15 22:17:40,372 INFO spawned: 'celery-beat' with pid 61038
+2025-09-15 22:17:40,373 INFO spawned: 'celery-worker' with pid 61039
+2025-09-15 22:17:40,557 WARN exited: celery-worker (exit status 1; not expected)
+2025-09-15 22:17:40,557 WARN exited: celery-beat (exit status 1; not expected)
+2025-09-15 22:17:43,564 INFO spawned: 'celery-beat' with pid 61067
+2025-09-15 22:17:43,567 INFO spawned: 'celery-worker' with pid 61068
+2025-09-15 22:17:43,761 WARN exited: celery-worker (exit status 1; not expected)
+2025-09-15 22:17:43,761 WARN exited: celery-beat (exit status 1; not expected)
+2025-09-15 22:17:44,762 INFO gave up: celery-beat entered FATAL state, too many start retries too quickly
+2025-09-15 22:17:44,762 INFO gave up: celery-worker entered FATAL state, too many start retries too quickly
+2025-09-15 22:18:05,786 WARN received SIGINT indicating exit request
+2025-09-15 22:18:05,787 INFO waiting for fastapi to die
+2025-09-15 22:18:05,866 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:18:06,679 INFO supervisord started with pid 61410
+2025-09-15 22:18:07,682 INFO spawned: 'celery-beat' with pid 61429
+2025-09-15 22:18:07,683 INFO spawned: 'celery-worker' with pid 61430
+2025-09-15 22:18:07,685 INFO spawned: 'fastapi' with pid 61431
+2025-09-15 22:18:09,057 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:18:09,057 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:18:09,057 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:19:45,170 WARN received SIGINT indicating exit request
+2025-09-15 22:19:45,170 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 22:19:45,246 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:19:47,158 INFO stopped: celery-worker (exit status 0)
+2025-09-15 22:19:47,331 INFO stopped: celery-beat (exit status 0)
+2025-09-15 22:19:48,366 INFO supervisord started with pid 62752
+2025-09-15 22:19:49,369 INFO spawned: 'celery-beat' with pid 62768
+2025-09-15 22:19:49,370 INFO spawned: 'celery-worker' with pid 62769
+2025-09-15 22:19:49,371 INFO spawned: 'fastapi' with pid 62770
+2025-09-15 22:19:50,726 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:19:50,727 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:19:50,727 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:34:10,254 WARN received SIGINT indicating exit request
+2025-09-15 22:34:10,254 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 22:34:10,279 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:34:12,130 INFO stopped: celery-worker (exit status 0)
+2025-09-15 22:34:12,658 INFO stopped: celery-beat (exit status 0)
+2025-09-15 22:34:12,804 INFO supervisord started with pid 75157
+2025-09-15 22:34:13,808 INFO spawned: 'celery-beat' with pid 75169
+2025-09-15 22:34:13,810 INFO spawned: 'celery-worker' with pid 75170
+2025-09-15 22:34:13,811 INFO spawned: 'fastapi' with pid 75171
+2025-09-15 22:34:15,253 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:34:15,253 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:34:15,253 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:39:26,845 WARN received SIGINT indicating exit request
+2025-09-15 22:39:26,845 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 22:39:26,944 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:39:28,921 INFO stopped: celery-worker (exit status 0)
+2025-09-15 22:39:29,395 INFO stopped: celery-beat (exit status 0)
+2025-09-15 22:39:30,789 INFO supervisord started with pid 80267
+2025-09-15 22:39:31,797 INFO spawned: 'celery-beat' with pid 80285
+2025-09-15 22:39:31,801 INFO spawned: 'celery-worker' with pid 80286
+2025-09-15 22:39:31,804 INFO spawned: 'fastapi' with pid 80287
+2025-09-15 22:39:33,242 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:39:33,243 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:39:33,243 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:42:26,084 WARN received SIGINT indicating exit request
+2025-09-15 22:42:26,085 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 22:42:26,149 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:42:28,110 INFO stopped: celery-worker (exit status 0)
+2025-09-15 22:42:28,505 INFO stopped: celery-beat (exit status 0)
+2025-09-15 22:49:59,368 INFO supervisord started with pid 90269
+2025-09-15 22:50:00,370 INFO spawned: 'celery-beat' with pid 90281
+2025-09-15 22:50:00,372 INFO spawned: 'celery-worker' with pid 90282
+2025-09-15 22:50:00,373 INFO spawned: 'fastapi' with pid 90283
+2025-09-15 22:50:01,738 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:50:01,738 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:50:01,738 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:51:36,567 WARN received SIGINT indicating exit request
+2025-09-15 22:51:36,568 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 22:51:36,634 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:51:38,262 INFO stopped: celery-worker (exit status 0)
+2025-09-15 22:51:38,736 INFO stopped: celery-beat (exit status 0)
+2025-09-15 22:51:43,607 INFO supervisord started with pid 92052
+2025-09-15 22:51:44,609 INFO spawned: 'celery-beat' with pid 92071
+2025-09-15 22:51:44,610 INFO spawned: 'celery-worker' with pid 92072
+2025-09-15 22:51:44,612 INFO spawned: 'fastapi' with pid 92073
+2025-09-15 22:51:46,040 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:51:46,040 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:51:46,040 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:52:31,880 WARN received SIGINT indicating exit request
+2025-09-15 22:52:31,880 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 22:52:31,897 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:52:33,756 INFO stopped: celery-worker (exit status 0)
+2025-09-15 22:52:34,207 INFO stopped: celery-beat (exit status 0)
+2025-09-15 22:52:35,879 INFO supervisord started with pid 92947
+2025-09-15 22:52:36,882 INFO spawned: 'celery-beat' with pid 92951
+2025-09-15 22:52:36,883 INFO spawned: 'celery-worker' with pid 92952
+2025-09-15 22:52:36,885 INFO spawned: 'fastapi' with pid 92953
+2025-09-15 22:52:38,316 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:52:38,317 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:52:38,317 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 22:55:35,157 WARN received SIGINT indicating exit request
+2025-09-15 22:55:35,159 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 22:55:35,254 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 22:55:37,110 INFO stopped: celery-worker (exit status 0)
+2025-09-15 22:55:37,400 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:00:55,628 INFO supervisord started with pid 1947
+2025-09-15 23:00:56,631 INFO spawned: 'celery-beat' with pid 1965
+2025-09-15 23:00:56,632 INFO spawned: 'celery-worker' with pid 1966
+2025-09-15 23:00:56,633 INFO spawned: 'fastapi' with pid 1967
+2025-09-15 23:00:57,638 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:00:57,638 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:00:57,638 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:04:06,919 WARN received SIGINT indicating exit request
+2025-09-15 23:04:06,920 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:04:06,921 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:04:08,983 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:04:09,425 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:04:10,405 INFO supervisord started with pid 5167
+2025-09-15 23:04:11,410 INFO spawned: 'celery-beat' with pid 5192
+2025-09-15 23:04:11,415 INFO spawned: 'celery-worker' with pid 5193
+2025-09-15 23:04:11,419 INFO spawned: 'fastapi' with pid 5194
+2025-09-15 23:04:12,930 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:04:12,930 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:04:12,930 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:04:29,933 WARN received SIGINT indicating exit request
+2025-09-15 23:04:29,934 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:04:29,945 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:04:31,875 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:04:32,420 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:04:34,522 INFO supervisord started with pid 5666
+2025-09-15 23:04:35,524 INFO spawned: 'celery-beat' with pid 5685
+2025-09-15 23:04:35,525 INFO spawned: 'celery-worker' with pid 5686
+2025-09-15 23:04:35,526 INFO spawned: 'fastapi' with pid 5687
+2025-09-15 23:04:36,888 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:04:36,889 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:04:36,889 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:08:25,934 WARN received SIGINT indicating exit request
+2025-09-15 23:08:25,935 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:08:26,018 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:08:28,037 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:08:28,403 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:08:29,180 INFO supervisord started with pid 9476
+2025-09-15 23:08:30,182 INFO spawned: 'celery-beat' with pid 9497
+2025-09-15 23:08:30,183 INFO spawned: 'celery-worker' with pid 9498
+2025-09-15 23:08:30,185 INFO spawned: 'fastapi' with pid 9499
+2025-09-15 23:08:31,533 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:08:31,533 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:08:31,533 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:11:22,932 WARN received SIGINT indicating exit request
+2025-09-15 23:11:22,932 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:11:22,961 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:11:24,913 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:11:25,148 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:11:26,037 INFO supervisord started with pid 12385
+2025-09-15 23:11:27,043 INFO spawned: 'celery-beat' with pid 12402
+2025-09-15 23:11:27,048 INFO spawned: 'celery-worker' with pid 12403
+2025-09-15 23:11:27,051 INFO spawned: 'fastapi' with pid 12404
+2025-09-15 23:11:28,384 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:11:28,384 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:11:28,385 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:11:48,241 WARN received SIGINT indicating exit request
+2025-09-15 23:11:48,242 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:11:48,337 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:11:50,416 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:11:50,928 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:11:51,749 INFO supervisord started with pid 12885
+2025-09-15 23:11:52,752 INFO spawned: 'celery-beat' with pid 12900
+2025-09-15 23:11:52,755 INFO spawned: 'celery-worker' with pid 12901
+2025-09-15 23:11:52,756 INFO spawned: 'fastapi' with pid 12902
+2025-09-15 23:11:52,902 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:11:52,902 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:11:54,419 INFO spawned: 'celery-beat' with pid 12910
+2025-09-15 23:11:54,424 INFO spawned: 'celery-worker' with pid 12911
+2025-09-15 23:11:54,424 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:11:54,567 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:11:54,567 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:11:56,575 INFO spawned: 'celery-beat' with pid 12933
+2025-09-15 23:11:56,577 INFO spawned: 'celery-worker' with pid 12934
+2025-09-15 23:11:56,722 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:11:56,722 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:11:59,727 INFO spawned: 'celery-beat' with pid 13048
+2025-09-15 23:11:59,728 INFO spawned: 'celery-worker' with pid 13049
+2025-09-15 23:11:59,876 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:11:59,876 INFO gave up: celery-beat entered FATAL state, too many start retries too quickly
+2025-09-15 23:11:59,876 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:12:00,876 INFO gave up: celery-worker entered FATAL state, too many start retries too quickly
+2025-09-15 23:12:02,879 WARN received SIGINT indicating exit request
+2025-09-15 23:12:02,879 INFO waiting for fastapi to die
+2025-09-15 23:12:02,913 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:12:04,630 INFO supervisord started with pid 13095
+2025-09-15 23:12:05,632 INFO spawned: 'celery-beat' with pid 13115
+2025-09-15 23:12:05,634 INFO spawned: 'celery-worker' with pid 13116
+2025-09-15 23:12:05,635 INFO spawned: 'fastapi' with pid 13117
+2025-09-15 23:12:05,768 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:12:05,769 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:12:07,288 INFO spawned: 'celery-beat' with pid 13140
+2025-09-15 23:12:07,292 INFO spawned: 'celery-worker' with pid 13141
+2025-09-15 23:12:07,293 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:12:07,438 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:12:07,438 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:12:09,442 INFO spawned: 'celery-beat' with pid 13161
+2025-09-15 23:12:09,445 INFO spawned: 'celery-worker' with pid 13162
+2025-09-15 23:12:09,593 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:12:09,593 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:12:12,601 INFO spawned: 'celery-beat' with pid 13256
+2025-09-15 23:12:12,605 INFO spawned: 'celery-worker' with pid 13257
+2025-09-15 23:12:12,747 WARN exited: celery-worker (exit status 2; not expected)
+2025-09-15 23:12:12,748 INFO gave up: celery-worker entered FATAL state, too many start retries too quickly
+2025-09-15 23:12:12,748 WARN exited: celery-beat (exit status 2; not expected)
+2025-09-15 23:12:13,749 INFO gave up: celery-beat entered FATAL state, too many start retries too quickly
+2025-09-15 23:12:18,753 WARN received SIGINT indicating exit request
+2025-09-15 23:12:18,754 INFO waiting for fastapi to die
+2025-09-15 23:12:18,816 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:12:19,438 INFO supervisord started with pid 13320
+2025-09-15 23:12:20,440 INFO spawned: 'celery-beat' with pid 13414
+2025-09-15 23:12:20,441 INFO spawned: 'celery-worker' with pid 13415
+2025-09-15 23:12:20,443 INFO spawned: 'fastapi' with pid 13416
+2025-09-15 23:12:21,786 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:12:21,786 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:12:21,786 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:12:48,648 WARN received SIGINT indicating exit request
+2025-09-15 23:12:48,648 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:12:48,707 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:12:50,360 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:12:50,860 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:12:51,708 INFO supervisord started with pid 13941
+2025-09-15 23:12:52,710 INFO spawned: 'celery-beat' with pid 13961
+2025-09-15 23:12:52,711 INFO spawned: 'celery-worker' with pid 13962
+2025-09-15 23:12:52,712 INFO spawned: 'fastapi' with pid 13963
+2025-09-15 23:12:54,054 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:12:54,055 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:12:54,055 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:14:49,910 WARN received SIGINT indicating exit request
+2025-09-15 23:14:49,910 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:14:49,915 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:14:51,761 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:14:52,265 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:14:55,028 INFO supervisord started with pid 15971
+2025-09-15 23:14:56,030 INFO spawned: 'celery-beat' with pid 15990
+2025-09-15 23:14:56,031 INFO spawned: 'celery-worker' with pid 15991
+2025-09-15 23:14:56,032 INFO spawned: 'fastapi' with pid 15992
+2025-09-15 23:14:57,370 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:14:57,371 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:14:57,371 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:15:28,219 WARN received SIGINT indicating exit request
+2025-09-15 23:15:28,219 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:15:28,306 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:15:29,961 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:15:30,494 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:15:31,376 INFO supervisord started with pid 16550
+2025-09-15 23:15:32,379 INFO spawned: 'celery-beat' with pid 16584
+2025-09-15 23:15:32,380 INFO spawned: 'celery-worker' with pid 16586
+2025-09-15 23:15:32,381 INFO spawned: 'fastapi' with pid 16587
+2025-09-15 23:15:33,721 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:15:33,722 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:15:33,722 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:17:56,215 WARN received SIGINT indicating exit request
+2025-09-15 23:17:56,215 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:17:56,216 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:17:57,616 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:17:58,122 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:18:09,628 INFO supervisord started with pid 19166
+2025-09-15 23:18:10,631 INFO spawned: 'celery-beat' with pid 19186
+2025-09-15 23:18:10,632 INFO spawned: 'celery-worker' with pid 19187
+2025-09-15 23:18:10,634 INFO spawned: 'fastapi' with pid 19188
+2025-09-15 23:18:11,976 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:18:11,976 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:18:11,976 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:20:16,838 WARN received SIGINT indicating exit request
+2025-09-15 23:20:16,839 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:20:16,899 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:20:18,746 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:20:19,202 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:20:29,677 INFO supervisord started with pid 21481
+2025-09-15 23:20:30,679 INFO spawned: 'celery-beat' with pid 21500
+2025-09-15 23:20:30,680 INFO spawned: 'celery-worker' with pid 21501
+2025-09-15 23:20:30,682 INFO spawned: 'fastapi' with pid 21502
+2025-09-15 23:20:32,024 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:20:32,024 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:20:32,024 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:21:29,888 WARN received SIGINT indicating exit request
+2025-09-15 23:21:29,888 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:21:29,943 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:21:31,843 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:21:32,288 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:21:44,765 INFO supervisord started with pid 22716
+2025-09-15 23:21:45,768 INFO spawned: 'celery-beat' with pid 22720
+2025-09-15 23:21:45,769 INFO spawned: 'celery-worker' with pid 22721
+2025-09-15 23:21:45,770 INFO spawned: 'fastapi' with pid 22722
+2025-09-15 23:21:47,118 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:21:47,118 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:21:47,118 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:22:18,965 WARN received SIGINT indicating exit request
+2025-09-15 23:22:18,965 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:22:18,996 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:22:20,714 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:22:21,229 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:22:22,392 INFO supervisord started with pid 23393
+2025-09-15 23:22:23,394 INFO spawned: 'celery-beat' with pid 23417
+2025-09-15 23:22:23,396 INFO spawned: 'celery-worker' with pid 23418
+2025-09-15 23:22:23,397 INFO spawned: 'fastapi' with pid 23419
+2025-09-15 23:22:24,744 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:22:24,744 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:22:24,745 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:23:00,973 WARN received SIGINT indicating exit request
+2025-09-15 23:23:00,973 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:23:01,076 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:23:02,889 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:23:03,400 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:23:04,976 INFO supervisord started with pid 24123
+2025-09-15 23:23:05,978 INFO spawned: 'celery-beat' with pid 24143
+2025-09-15 23:23:05,979 INFO spawned: 'celery-worker' with pid 24144
+2025-09-15 23:23:05,981 INFO spawned: 'fastapi' with pid 24145
+2025-09-15 23:23:07,329 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:23:07,330 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:23:07,330 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:24:52,181 WARN received SIGINT indicating exit request
+2025-09-15 23:24:52,181 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:24:52,269 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:24:53,925 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:24:54,418 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:24:55,344 INFO supervisord started with pid 25977
+2025-09-15 23:24:56,348 INFO spawned: 'celery-beat' with pid 25982
+2025-09-15 23:24:56,352 INFO spawned: 'celery-worker' with pid 25983
+2025-09-15 23:24:56,356 INFO spawned: 'fastapi' with pid 25984
+2025-09-15 23:24:57,720 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:24:57,720 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:24:57,720 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:28:59,573 WARN received SIGINT indicating exit request
+2025-09-15 23:28:59,574 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:28:59,576 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:29:01,621 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:29:01,815 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:29:02,618 INFO supervisord started with pid 29950
+2025-09-15 23:29:03,620 INFO spawned: 'celery-beat' with pid 30045
+2025-09-15 23:29:03,621 INFO spawned: 'celery-worker' with pid 30046
+2025-09-15 23:29:03,622 INFO spawned: 'fastapi' with pid 30047
+2025-09-15 23:29:04,978 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:29:04,978 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:29:04,978 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:35:33,571 WARN received SIGINT indicating exit request
+2025-09-15 23:35:33,572 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:35:33,609 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:35:35,640 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:35:36,141 INFO stopped: celery-beat (exit status 0)
+2025-09-15 23:35:38,205 INFO supervisord started with pid 36357
+2025-09-15 23:35:39,207 INFO spawned: 'celery-beat' with pid 36436
+2025-09-15 23:35:39,208 INFO spawned: 'celery-worker' with pid 36437
+2025-09-15 23:35:39,209 INFO spawned: 'fastapi' with pid 36438
+2025-09-15 23:35:40,566 INFO success: celery-beat entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:35:40,566 INFO success: celery-worker entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:35:40,566 INFO success: fastapi entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-09-15 23:42:05,410 WARN received SIGINT indicating exit request
+2025-09-15 23:42:05,411 INFO waiting for celery-beat, celery-worker, fastapi to die
+2025-09-15 23:42:05,434 WARN stopped: fastapi (terminated by SIGTERM)
+2025-09-15 23:42:07,262 INFO stopped: celery-worker (exit status 0)
+2025-09-15 23:42:07,701 INFO stopped: celery-beat (exit status 0)

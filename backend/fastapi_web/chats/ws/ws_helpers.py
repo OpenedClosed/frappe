@@ -11,9 +11,10 @@ from auth.utils.help_functions import is_token_blacklisted
 from fastapi import WebSocket, status
 from fastapi_jwt_auth import AuthJWT
 from starlette.websockets import WebSocketState
-from bson import ObjectId  
+from bson import ObjectId  # для совместимости с закомментированным кодом
 from utils.encoders import DateTimeEncoder
-from fastapi_jwt_auth.exceptions import JWTDecodeError, MissingTokenError
+from fastapi_jwt_auth.exceptions import JWTDecodeError, MissingTokenError  # noqa: F401
+
 # ==============================
 # Глобальные менеджеры
 # ==============================
@@ -21,10 +22,10 @@ from fastapi_jwt_auth.exceptions import JWTDecodeError, MissingTokenError
 chat_managers: Dict[str, "ConnectionManager"] = {}
 typing_managers: Dict[str, "TypingManager"] = {}
 
-
 # ==============================
 # Менеджеры
 # ==============================
+
 
 class ConnectionManager:
     """Менеджер WebSocket-соединений."""
@@ -47,7 +48,8 @@ class ConnectionManager:
                 return
         else:
             logging.warning(
-                f"WebSocket not CONNECTING ({user_id}); skip accept()")
+                f"WebSocket not CONNECTING ({user_id}); skip accept()"
+            )
             return
 
         self.active_connections[user_id] = websocket
@@ -64,13 +66,12 @@ class ConnectionManager:
                 logging.error(f"WebSocket close error ({user_id}): {e}")
         log_all_connections()
 
-    async def safe_send(self, websocket: WebSocket,
-                        user_id: str, message: str) -> None:
+    async def safe_send(self, websocket: WebSocket, user_id: str, message: str) -> None:
         try:
             await websocket.send_text(message)
         except RuntimeError as e:
-            if "call 'accept' first" in str(
-                    e).lower() or "not connected" in str(e).lower():
+            msg = str(e).lower()
+            if "call 'accept' first" in msg or "not connected" in msg:
                 logging.warning(f"Stale socket; closing ({user_id})")
                 try:
                     await websocket.close()
@@ -92,11 +93,11 @@ class ConnectionManager:
             logging.warning(f"No active connection for {user_id}")
 
     async def broadcast(self, message: str) -> None:
-        for user_id, ws in list(self.active_connections.items()):
+        for uid, ws in list(self.active_connections.items()):
             if ws.client_state == WebSocketState.CONNECTED:
-                await self.safe_send(ws, user_id, message)
+                await self.safe_send(ws, uid, message)
             else:
-                await self.disconnect(user_id)
+                await self.disconnect(uid)
 
 
 class TypingManager:
@@ -105,27 +106,40 @@ class TypingManager:
     def __init__(self) -> None:
         self.typing_users: Dict[str, Set[str]] = defaultdict(set)
 
-    async def add_typing(self, chat_id: str, client_id: str,
-                         manager: ConnectionManager) -> None:
+    async def add_typing(
+        self,
+        chat_id: str,
+        client_id: str,
+        manager: "ConnectionManager",
+    ) -> None:
         if client_id not in self.typing_users[chat_id]:
             self.typing_users[chat_id].add(client_id)
             await self.broadcast_typing(chat_id, manager)
 
-    async def remove_typing(self, chat_id: str, client_id: str,
-                            manager: ConnectionManager) -> None:
+    async def remove_typing(
+        self,
+        chat_id: str,
+        client_id: str,
+        manager: "ConnectionManager",
+    ) -> None:
         if client_id in self.typing_users.get(chat_id, set()):
             self.typing_users[chat_id].discard(client_id)
             if not self.typing_users[chat_id]:
                 del self.typing_users[chat_id]
             await self.broadcast_typing(chat_id, manager)
 
-    async def broadcast_typing(self, chat_id: str,
-                               manager: ConnectionManager) -> None:
-        message = custom_json_dumps({
-            "type": "typing_users",
-            "chat_id": chat_id,
-            "users": list(self.typing_users.get(chat_id, []))
-        })
+    async def broadcast_typing(
+        self,
+        chat_id: str,
+        manager: "ConnectionManager",
+    ) -> None:
+        message = custom_json_dumps(
+            {
+                "type": "typing_users",
+                "chat_id": chat_id,
+                "users": list(self.typing_users.get(chat_id, [])),
+            }
+        )
         await manager.broadcast(message)
 
 
@@ -155,17 +169,15 @@ class GptTaskManager:
 
 gpt_task_manager = GptTaskManager()
 
-
 # ==============================
 # Сериализаторы и утилиты
 # ==============================
 
 # class DateTimeEncoder(json.JSONEncoder):
 #     """JSONEncoder для datetime."""
-
 #     def default(self, o: Any) -> Any:
 #         if isinstance(o, datetime):
-#             return o.isoformat() 
+#             return o.isoformat()
 #         elif isinstance(o, ObjectId):
 #             return str(o)
 
@@ -180,35 +192,33 @@ def log_all_connections() -> None:
     for chat_id, mgr in chat_managers.items():
         parts.append(f"Chat {chat_id} (manager id={id(mgr)})")
         for uid, ws in mgr.active_connections.items():
-            parts.append(
-                f"  • {uid} | ws id={id(ws)} | state={ws.client_state}")
+            parts.append(f"  • {uid} | ws id={id(ws)} | state={ws.client_state}")
     parts.append("-" * 60)
     logging.debug("\n".join(parts))
-
 
 # ==============================
 # Фабрики менеджеров
 # ==============================
 
-async def get_ws_manager(chat_id: str) -> ConnectionManager:
+
+async def get_ws_manager(chat_id: str) -> "ConnectionManager":
     """Возвращает менеджер соединений чата."""
     return chat_managers.setdefault(chat_id, ConnectionManager())
 
 
-async def get_typing_manager(chat_id: str) -> TypingManager:
+async def get_typing_manager(chat_id: str) -> "TypingManager":
     """Возвращает менеджер печатающих пользователей чата."""
     return typing_managers.setdefault(chat_id, TypingManager())
-
 
 # ==============================
 # Аутентификация WebSocket
 # ==============================
 
+
 async def websocket_jwt_required(websocket: WebSocket) -> Optional[str]:
     """Извлекает и валидирует JWT, возвращает user_id или None."""
     try:
-        token = parse_qs(urlparse(str(websocket.url)).query).get(
-            "token", [None])[0]
+        token = parse_qs(urlparse(str(websocket.url)).query).get("token", [None])[0]
         if not token:
             return None
 

@@ -17,3 +17,6 @@ COPY infra/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Запускаем Supervisor
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+
+# supervisord -c ./infra/supervisord_local.conf

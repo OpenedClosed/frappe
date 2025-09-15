@@ -100,6 +100,11 @@ For every incoming user message (consider **all unanswered messages**) determine
   - *Do not guess or generalize.* If no forbidden topic is present, set to `false`.
 
 - **consultant_call**
+  **Tri-state value (do NOT infer unless conditions are met):**
+  - `true`  → an escalation is **explicitly** requested **now** (clear, confident ask) or is strictly required by instructions for this exact case.
+  - `false` → there **was** an escalation before, but the user **now clearly intends to continue with AI** / cancels the handoff (explicit cancel/return to AI in recent user messages).
+  - `null`  → **no current escalation request** and **no explicit cancel**; conversation proceeds normally (default).
+
   Set `"consultant_call": false` if:
     - If the instruction in `additional_descriptions` includes a **step-by-step process**, a **funnel**, or **requirements before escalation** (such as asking questions, offering information, gathering intent), you **must follow that process fully first**.  
       -> Do **not** set `"consultant_call": true"` until **all required steps are complete** **and** the user still insists.
@@ -189,7 +194,7 @@ For every incoming user message (consider **all unanswered messages**) determine
 ### **Output (ONLY JSON)**
 {{
   "out_of_scope": false,
-  "consultant_call": false,
+  "consultant_call": null,
   "user_language": "xx"
 }}
 <<<DYNAMIC>>>
@@ -435,5 +440,33 @@ You are a professional assistant for a dental-clinic service. Decide if a user�
 ### Input
 - Question: {question}
 - User's message: {user_message}
+"""
+}
+
+
+AI_PROMPT_PARTS = {
+    "postprocess_internal": """
+**Unrequested file links**
+- If the AI inserted a Markdown or HTML link to a file (e.g., an image) from the `files` field, but the user **did not explicitly request a link**, remove the link.
+- Preserve any leading sentence (e.g., “See attached photo”) but remove the clickable part — files are delivered automatically.
+""",
+    "postprocess_external": """
+**Photo link formatting**
+- The assistant must NOT mention attached images; instead, include a Markdown link `[caption](URL)` when a file is available.
+- If text contains phrases like “see attached photo/image”, replace them with the Markdown link; if no link is available, delete the phrase.
+- Validate every Markdown link: it must contain a full URL with protocol (`https://`).
+""",
+    "internal_image_rule": """
+**Image & file request**
+- Mention (only sentences, not links) attached images/files only if entries exist in `files`, but **do not include links**, even if a URL is present.
+- Never include Markdown or HTML links unless the user **explicitly asks for a link**.
+- Do not reject user requests for photos — if files exist, they will be sent automatically; your task is to reference them naturally (e.g., “See attached image”, “Photo is included above”) without inserting a link.
+""",
+    "external_image_rule": """
+**Photo request limitations**
+- This channel does not support sending media directly.
+- If the user asks for a photo, politely explain that images cannot be sent here, but you can share a direct link instead.
+- When a file is available in `files`, include a Markdown link like `[photo-caption](https://example.com/image.jpg)` **inside the answer**.
+- Never use phrases such as “See attached photo” or “Photo is included above”.
 """
 }

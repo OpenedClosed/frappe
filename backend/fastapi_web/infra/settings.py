@@ -4,9 +4,13 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+import logging
 
 # Загрузка переменных окружения
-load_dotenv(dotenv_path=Path("../infra/.env"))
+env_path = Path(__file__).resolve().parent.parent.parent / "infra" / ".env"
+logging.error("================================")
+logging.error(f"env path {env_path}")
+load_dotenv(dotenv_path=env_path)
 
 # Базовые настройки
 APP_NAME = "main"
@@ -111,7 +115,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TOKEN", "change_me")
 TELEGRAM_BOT_ID = os.getenv("TELEGRAM_BOT_ID", "change_me")
 
 # Constructor.chat настройки
-CONSTRUCTOR_URL = "https://ai-chat-bbho.onrender.com/graphql"
+# CONSTRUCTOR_URL = "https://ai-chat-bbho.onrender.com/graphql"
+CONSTRUCTOR_URL = ""
 CONSTRUCTOR_TOKEN = os.getenv("CONSTRUCTOR_TOKEN", "change_me")
 CONSTRUCTOR_ASSISTANT_ID = os.getenv("CONSTRUCTOR_ASSISTANT_ID", "change_me")
 

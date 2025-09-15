@@ -1,4 +1,5 @@
 """Задачи Celery."""
+from datetime import datetime, timedelta
 import logging
 import os
 
@@ -6,11 +7,46 @@ from celery import shared_task
 from fastapi_web.infra import settings
 from pymongo import MongoClient
 
+
 logger = logging.getLogger(__name__)
 
 # Подключение к MongoDB (синхронное)
 mongo_client = MongoClient(settings.MONGO_URL)
 sync_db = mongo_client[settings.MONGO_DB_NAME]
+
+
+@shared_task(name="reset_chat_modes")
+def reset_chat_modes(hours: int = 12):
+    """
+    Сбрасывает ручные режимы у "застывших" чатов:
+    - manual_mode -> False
+    - consultant_requested -> False
+    если last_activity старше чем `hours` часов.
+    """
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    logger.info((settings.MONGO_DB_NAME))
+    logger.info((cutoff))
+    filt = {
+        "last_activity": {"$lt": cutoff},
+        "$or": [
+            {"manual_mode": True},
+            {"consultant_requested": True},
+        ],
+    }
+    update = {
+        "$set": {
+            "manual_mode": False,
+            "consultant_requested": False,
+        }
+    }
+
+    result = sync_db.chats.update_many(filt, update)
+
+    logger.info(
+        f"[reset_chat_modes] cutoff={cutoff.isoformat()} "
+        f"matched={result.matched_count}, modified={result.modified_count}"
+    )
+    return {"matched": result.matched_count, "modified": result.modified_count}
 
 
 @shared_task(name="count_documents")

@@ -9,6 +9,7 @@ from celery import Celery
 from celery.schedules import timedelta
 from dotenv import load_dotenv
 
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -18,7 +19,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Загрузка переменных окружения
-load_dotenv(dotenv_path=Path("../infra/.env"))
+env_path = Path(__file__).resolve().parent.parent / "infra" / ".env"
+loaded = load_dotenv(dotenv_path=env_path)
+
 
 # Добавляем путь к fastapi_web
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -50,6 +53,11 @@ celery.conf.beat_schedule = {
         "task": "clean_unused_media_files",
         "schedule": timedelta(hours=1),
         # "schedule": timedelta(seconds=5),
+    },
+    "reset-chat-modes-hourly": {
+        "task": "reset_chat_modes",
+        # "schedule": timedelta(hours=1),
+        "schedule": timedelta(seconds=10),
     },
 }
 
