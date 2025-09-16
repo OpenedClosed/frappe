@@ -384,7 +384,7 @@ class ChatSessionAdmin(BaseAdmin):
 
     search_config = {
         "mode": "partial",
-        "logic": "or",
+        "logic": "and",
         "fields": [
             {"path": "messages.message"},
             {"path": "company_name"},
@@ -399,16 +399,6 @@ class ChatSessionAdmin(BaseAdmin):
             }}
         ]
     }
-
-    # Оставлю и классический список на всякий случай
-    search_fields = [
-        "messages.message",
-        "company_name",
-        "chat_id",
-    ]
-    searchable_computed_fields = ["is_unanswered"]
-    default_search_mode = "partial"
-    default_search_combine = "or"
 
     # Фильтры
     filter_config = {

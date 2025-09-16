@@ -63,11 +63,6 @@ class BaseCrudCore:
     # ------------------------------
     # Поиск/фильтры/сортировка (настройки)
     # ------------------------------
-    search_fields: List[str] = []
-    searchable_computed_fields: List[str] = []
-    default_search_mode: str = "partial"  # "exact" | "partial"
-    default_search_combine: str = "or"    # "or" | "and"
-
     # Расширенный поиск
     search_config: Dict[str, Any] = {}
 
@@ -117,13 +112,8 @@ class BaseCrudCore:
         return "_id" if self.user_collection_name == self.db.name else "user_id"
 
     def _is_computed(self, name: str) -> bool:
-        return name in (self.computed_fields or []) or name in (self.searchable_computed_fields or [])
-
-    def get_search_fields(self) -> List[str]:
-        """По умолчанию даём искать и по searchable_computed_fields тоже."""
-        base = list(self.search_fields or list(getattr(self.model, "__annotations__", {}).keys()))
-        extra = [f for f in self.searchable_computed_fields if f not in base]
-        return base + extra
+        # вычисляемыми считаем только явно перечисленные в computed_fields
+        return name in (self.computed_fields or [])
 
     def get_filter_config(self) -> Dict[str, Dict[str, Any]]:
         return self.filter_config
@@ -208,7 +198,7 @@ class BaseCrudCore:
         return all(self._match_token(s, t) for t in tokens)
 
     # ------------------------------
-    # ЛОГИКА computed-поиска
+    # ЛОГИКА computed-поиска (оставлена для совместимости/узких мест)
     # ------------------------------
     async def search_match_computed(
         self,
@@ -252,7 +242,7 @@ class BaseCrudCore:
             print("[search] search_match_computed single token →", ok)
             return ok
 
-        # многословный: каждый токен должен найтись хотя бы в одном из computed-полей
+        # многословный: учитываем combine
         values: List[str] = []
         for cf in computed_fields:
             method = getattr(self, f"get_{cf}", None)
@@ -267,12 +257,22 @@ class BaseCrudCore:
             print("[search] search_match_computed no values for computed fields → False")
             return False
 
-        for t in tokens:
-            if not any(self._match_token(val, t) for val in values):
-                print("[search] search_match_computed miss token:", t, "→ False")
-                return False
-        print("[search] search_match_computed all tokens matched → True")
-        return True
+        if combine == "and":
+            # каждый токен должен встретиться хотя бы в одном computed-поле
+            for t in tokens:
+                if not any(self._match_token(val, t) for val in values):
+                    print("[search] search_match_computed miss token (AND):", t, "→ False")
+                    return False
+            print("[search] search_match_computed all tokens matched (AND) → True")
+            return True
+        else:
+            # достаточно совпадения любого токена в любом computed-поле
+            for t in tokens:
+                if any(self._match_token(val, t) for val in values):
+                    print("[search] search_match_computed some token matched (OR) → True")
+                    return True
+            print("[search] search_match_computed no tokens matched (OR) → False")
+            return False
 
     # ------------------------------
     # Служебные: нормализация полей для поиска
@@ -334,63 +334,18 @@ class BaseCrudCore:
     # ------------------------------
     # Построение поиска (базовый + декларативный)
     # ------------------------------
-    def build_mongo_search(self, params: Optional[dict | str]) -> Tuple[dict, Set[str], str, str, str]:
-        print("[search] build_mongo_search IN params:", repr(params))
-        if not params:
-            print("[search] build_mongo_search OUT: empty params")
-            return {}, set(), "", self.default_search_mode, self.default_search_combine
-
-        if isinstance(params, str):
-            q = params.strip()
-            mode = self.default_search_mode
-            combine = self.default_search_combine
-            fields = self.get_search_fields()
-        else:
-            q = str(params.get("q", "")).strip()
-            mode = str(params.get("mode", self.default_search_mode)).lower()
-            combine = str(params.get("combine", self.default_search_combine)).lower()
-            fields_raw = params.get("fields")
-            fields = self._normalize_field_list(fields_raw) if fields_raw else self.get_search_fields()
-
-        print(f"[search] build_mongo_search q='{q}' mode='{mode}' combine='{combine}' fields={fields}")
-
-        if not q or not fields:
-            print("[search] build_mongo_search OUT: no q or no fields")
-            return {}, set(), "", mode, combine
-
-        tokens = self._tokenize_query(q) if mode != "exact" else [q]
-        plain_fields = [f for f in fields if not self._is_computed(f)]
-        computed: Set[str] = {f for f in fields if self._is_computed(f)}
-        print("[search] tokens:", tokens)
-        print("[search] plain_fields:", plain_fields, "computed_fields:", computed)
-
-        if mode == "exact":
-            parts = [{f: q} for f in plain_fields]
-            mongo_part = {"$and": parts} if (combine == "and" and parts) else {"$or": parts} if parts else {}
-        else:
-            if len(tokens) <= 1:
-                parts = [{f: {"$regex": re.escape(tokens[0]), "$options": "i"}} for f in plain_fields]
-                mongo_part = {"$and": parts} if (combine == "and" and parts) else {"$or": parts} if parts else {}
-            else:
-                per_token_blocks: List[dict] = []
-                for t in tokens:
-                    token_ors = [{f: {"$regex": re.escape(t), "$options": "i"}} for f in plain_fields]
-                    if token_ors:
-                        per_token_blocks.append({"$or": token_ors})
-                mongo_part = {"$and": per_token_blocks} if per_token_blocks else {}
-
-        mongo_part = self.customize_search_query(mongo_part, {"q": q, "mode": mode, "combine": combine, "fields": fields}, None)
-        print("[search] build_mongo_search OUT mongo_part:", mongo_part)
-        return mongo_part, computed, q, mode, combine
-
-    async def build_declarative_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], str, str, str]:
+    # --- BaseCrudCore.build_declarative_search (замена) ---
+    async def build_declarative_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], List[str], str, str, str]:
+        """
+        Возвращает (mongo_part, computed_fields, plain_fields, q, mode, logic).
+        """
         cfg = self.get_search_config()
         if not cfg:
             print("[search] build_declarative_search: no cfg → fallback to build_mongo_search")
             return self.build_mongo_search(params)
 
-        logic = str(cfg.get("logic", self.default_search_combine)).lower()
-        mode = str(cfg.get("mode", self.default_search_mode)).lower()
+        logic = str(cfg.get("logic", "or")).lower()
+        mode = str(cfg.get("mode", "partial")).lower()
         fields_cfg = cfg.get("fields", [])
 
         print("[search] build_declarative_search IN params:", repr(params))
@@ -398,17 +353,131 @@ class BaseCrudCore:
 
         q = ""
         computed: Set[str] = set()
+        plain_fields_cfg, computed_from_cfg = self._split_search_config_fields(fields_cfg)
+        computed |= computed_from_cfg
+
+        param_exprs: Dict[str, List[dict]] = {}
+
+        def acc_expr(param_name: str, expr: Optional[dict]) -> None:
+            if expr and isinstance(expr, dict) and expr:  # не добавляем пустые {}
+                param_exprs.setdefault(param_name, []).append(expr)
+
+        if params:
+            q = str(params.get("q", "") or "")
+            print(f"[search] q='{q}'")
+            if q.strip() and plain_fields_cfg:
+                tokens = self._tokenize_query(q) if mode != "exact" else [q]
+                print("[search] tokens:", tokens)
+                if mode == "exact":
+                    bf_parts = [{f: q.strip()} for f in plain_fields_cfg]
+                    # exact также делаем OR по полям
+                    base_expr = {"$or": bf_parts} if bf_parts else {}
+                else:
+                    if len(tokens) <= 1:
+                        # одиночный токен: всегда OR по полям
+                        bf_parts = [{f: {"$regex": re.escape(tokens[0]), "$options": "i"}} for f in plain_fields_cfg]
+                        base_expr = {"$or": bf_parts} if bf_parts else {}
+                    else:
+                        if logic == "and":
+                            # много токенов + AND — проверим позже пост-фильтром
+                            base_expr = {}
+                        else:
+                            flat: List[dict] = []
+                            for t in tokens:
+                                for f in plain_fields_cfg:
+                                    flat.append({f: {"$regex": re.escape(t), "$options": "i"}})
+                            base_expr = {"$or": flat} if flat else {}
+                print("[search] base_expr for q over plain fields:", base_expr)
+                acc_expr("q", base_expr)
+
+        # --- Lookups
+        for item in fields_cfg:
+            if not isinstance(item, dict) or "lookup" not in item:
+                continue
+            lkp = item["lookup"] or {}
+
+            param_name = lkp.get("param", "q")
+            val = (params or {}).get(param_name)
+            if not isinstance(val, str) or not val.strip():
+                continue
+            val = val.strip()
+
+            collection = lkp.get("collection")
+            query_field = lkp.get("query_field")
+            project_field = lkp.get("project_field")
+            map_to = lkp.get("map_to")
+            operator = str(lkp.get("operator", "regex")).lower()
+
+            print(f"[search] lookup param='{param_name}' val='{val}' → {collection}.{query_field} -> {map_to} ({operator})")
+
+            dbh = self.db.database if hasattr(self.db, "database") else None
+            if dbh is None or not (collection and query_field and project_field and map_to):
+                continue
+
+            if operator == "exact":
+                lq = {query_field: val}
+            else:
+                lq = {query_field: {"$regex": re.escape(val), "$options": "i"}}
+
+            cursor = dbh[collection].find(lq, {project_field: 1, "_id": 0})
+            values = [doc.get(project_field) async for doc in cursor if doc.get(project_field) is not None]
+            values = list({v for v in values})
+
+            # ВАЖНО: если lookup ничего не нашёл — НИЧЕГО не добавляем, чтобы не занулить выдачу.
+            if values:
+                expr = {map_to: {"$in": values}}
+                print("[search] lookup expr:", expr)
+                acc_expr(param_name, expr)
+
+        if not param_exprs:
+            mongo = {}
+            print("[search] build_declarative_search mongo: {} (only computed or nothing)")
+        else:
+            grouped: List[dict] = []
+            for _, exprs in param_exprs.items():
+                if not exprs:
+                    continue
+                grouped.append(exprs[0] if len(exprs) == 1 else {"$or": exprs})
+            mongo = grouped[0] if len(grouped) == 1 else {"$and": grouped}
+            print("[search] build_declarative_search mongo grouped:", mongo)
+
+        mongo = self.customize_search_query(
+            mongo,
+            {"q": q or "", "mode": mode, "combine": logic, "fields": fields_cfg},
+            None
+        )
+        print("[search] build_declarative_search OUT mongo:", mongo, "computed:", computed, "plain:", plain_fields_cfg)
+        return mongo, computed, plain_fields_cfg, (q or ""), mode, logic
+
+
+    async def build_declarative_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], List[str], str, str, str]:
+        """
+        Возвращает (mongo_part, computed_fields, plain_fields, q, mode, logic(combine)).
+        По умолчанию mode='partial', logic='or'.
+        """
+        cfg = self.get_search_config()
+        if not cfg:
+            print("[search] build_declarative_search: no cfg → fallback to build_mongo_search")
+            return self.build_mongo_search(params)
+
+        logic = str(cfg.get("logic", "or")).lower()
+        mode = str(cfg.get("mode", "partial")).lower()
+        fields_cfg = cfg.get("fields", [])
+
+        print("[search] build_declarative_search IN params:", repr(params))
+        print("[search] cfg logic:", logic, "mode:", mode, "fields_cfg:", repr(fields_cfg))
+
+        q = ""
+        computed: Set[str] = set()
+        plain_fields_cfg, computed_from_cfg = self._split_search_config_fields(fields_cfg)
+        computed |= computed_from_cfg
+
         param_exprs: Dict[str, List[dict]] = {}
 
         def acc_expr(param_name: str, expr: Optional[dict]) -> None:
             if expr:
                 param_exprs.setdefault(param_name, []).append(expr)
 
-        # делим поля из конфига на обычные/вычисляемые
-        plain_fields_cfg, computed_from_cfg = self._split_search_config_fields(fields_cfg)
-        computed |= computed_from_cfg
-
-        # --- Базовые поля для param "q"
         if params:
             q = str(params.get("q", "") or "")
             print(f"[search] q='{q}'")
@@ -423,12 +492,15 @@ class BaseCrudCore:
                         bf_parts = [{f: {"$regex": re.escape(tokens[0]), "$options": "i"}} for f in plain_fields_cfg]
                         base_expr = {"$and": bf_parts} if (logic == "and" and bf_parts) else {"$or": bf_parts} if bf_parts else {}
                     else:
-                        per_token_blocks: List[dict] = []
-                        for t in tokens:
-                            token_ors = [{f: {"$regex": re.escape(t), "$options": "i"}} for f in plain_fields_cfg]
-                            if token_ors:
-                                per_token_blocks.append({"$or": token_ors})
-                        base_expr = {"$and": per_token_blocks} if per_token_blocks else {}
+                        if logic == "and":
+                            # не сужаем mongo — проверим AND по всем полям пост-фильтром
+                            base_expr = {}
+                        else:
+                            flat: List[dict] = []
+                            for t in tokens:
+                                for f in plain_fields_cfg:
+                                    flat.append({f: {"$regex": re.escape(t), "$options": "i"}})
+                            base_expr = {"$or": flat} if flat else {}
                 print("[search] base_expr for q over plain fields:", base_expr)
                 acc_expr("q", base_expr)
 
@@ -473,7 +545,6 @@ class BaseCrudCore:
             print("[search] lookup expr:", expr)
             acc_expr(param_name, expr)
 
-        # Склейка mongo-части
         if not param_exprs:
             mongo = {}
             print("[search] build_declarative_search mongo: {} (only computed or nothing)")
@@ -491,8 +562,98 @@ class BaseCrudCore:
             {"q": q or "", "mode": mode, "combine": logic, "fields": fields_cfg},
             None
         )
-        print("[search] build_declarative_search OUT mongo:", mongo, "computed:", computed)
-        return mongo, computed, (q or ""), mode, logic
+        print("[search] build_declarative_search OUT mongo:", mongo, "computed:", computed, "plain:", plain_fields_cfg)
+        return mongo, computed, plain_fields_cfg, (q or ""), mode, logic
+
+    # ------------------------------
+    # Объединённый матч по plain+computed (чинит AND по токенам)
+    # ------------------------------
+    async def search_match_fields(
+        self,
+        doc: dict,
+        plain_fields: List[str],
+        computed_fields: Set[str],
+        q: str,
+        mode: str,
+        current_user: Optional[BaseModel],
+        combine: str,
+    ) -> bool:
+        def collect_by_path(root: Any, path: str) -> List[Any]:
+            parts = path.split(".")
+            current: List[Any] = [root]
+            for p in parts:
+                nxt: List[Any] = []
+                for item in current:
+                    if isinstance(item, dict):
+                        if p in item:
+                            val = item[p]
+                            if isinstance(val, list):
+                                nxt.extend(val)
+                            else:
+                                nxt.append(val)
+                    elif isinstance(item, list):
+                        for el in item:
+                            if isinstance(el, dict) and p in el:
+                                val = el[p]
+                                if isinstance(val, list):
+                                    nxt.extend(val)
+                                else:
+                                    nxt.append(val)
+                current = nxt
+                if not current:
+                    break
+            # расплющиваем
+            out: List[Any] = []
+            for v in current:
+                if isinstance(v, (list, tuple)):
+                    out.extend(v)
+                else:
+                    out.append(v)
+            return out
+
+        values: List[str] = []
+        for f in plain_fields:
+            values.extend(["" if v is None else str(v) for v in collect_by_path(doc, f)])
+
+        for cf in computed_fields:
+            method = getattr(self, f"get_{cf}", None)
+            if not callable(method):
+                continue
+            v = method(doc, current_user=current_user)
+            if hasattr(v, "__await__"):
+                v = await v
+            if isinstance(v, (list, tuple)):
+                values.extend(["" if i is None else str(i) for i in v])
+            else:
+                values.append("" if v is None else str(v))
+
+        if not values:
+            return False
+
+        if mode == "exact":
+            return any(val == q for val in values)
+
+        tokens = self._tokenize_query(q)
+        if len(tokens) <= 1:
+            needle = q
+            any_hits = any(re.search(re.escape(needle), val, flags=re.IGNORECASE) for val in values)
+            # одиночный токен: независимо от combine ведём себя как OR по полям
+            return any_hits
+
+        # много токенов
+        if combine == "and":
+            # каждый токен должен встретиться хотя бы в одном из значений (любой plain/computed)
+            for t in tokens:
+                if not any(re.search(re.escape(t), val, flags=re.IGNORECASE) for val in values):
+                    return False
+            return True
+        else:
+            return any(
+                re.search(re.escape(t), val, flags=re.IGNORECASE)
+                for t in tokens
+                for val in values
+            )
+
 
     # ------------------------------
     # Фильтры (generic + декларативные) + пост-фильтры по computed
@@ -932,6 +1093,7 @@ class BaseCrudCore:
     # ------------------------------
     # Запросы (list, list_with_meta, get)
     # ------------------------------
+    # --- BaseCrudCore.get_queryset (замена только логики need_and_merge/union блока) ---
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
@@ -942,19 +1104,15 @@ class BaseCrudCore:
         current_user: Optional[BaseModel] = None,
         format: bool = True,
     ) -> List[dict]:
-        """Возвращает список документов с фильтрами и пагинацией."""
         self.check_permission("read", current_user)
 
         base_filter = await self.permission_class.get_base_filter(current_user)
 
         plain_filters, search_params, filter_params = self.extract_advanced(filters)
         mongo_filters, post_filters = await self.build_mongo_filters(filter_params, current_user)
-        search_mongo, computed_for_search, q, mode, combine = await self.build_declarative_search(search_params)
+        search_mongo, computed_for_search, plain_for_search, q, mode, combine = await self.build_declarative_search(search_params)
 
-        # базовая часть без поискового mongo — нужна для union по computed (logic="or")
         pre_search_query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
-
-        # полная mongo-часть, если есть
         query: Dict[str, Any] = pre_search_query
         if search_mongo:
             query = {"$and": [query, search_mongo]} if query else search_mongo
@@ -964,8 +1122,14 @@ class BaseCrudCore:
 
         sort_key, ord_val, strategy_name, strategy_cfg = self.resolve_sort(sort_by, order)
 
-        # если нет computed/пост-фильтров/стратегий — отдаём всё силами mongo
-        needs_post = bool(computed_for_search) or bool(post_filters) or (sort_key in self.computed_fields) or bool(strategy_name)
+        tokens = self._tokenize_query(q) if (q and mode != "exact") else [q] if q else []
+        need_and_merge = bool(q and mode != "exact" and combine == "and" and len(tokens) > 1)
+        # одиночный токен + AND ведём как OR, но нужно добавить computed-only матчи
+        should_union = bool(computed_for_search and q and q.strip() and (
+            combine == "or" or (combine == "and" and mode != "exact" and len(tokens) <= 1)
+        ))
+
+        needs_post = bool(computed_for_search) or bool(post_filters) or (sort_key in self.computed_fields) or bool(strategy_name) or need_and_merge or should_union
 
         if not needs_post:
             cursor = self.db.find(query).sort(sort_key, ord_val)
@@ -973,38 +1137,33 @@ class BaseCrudCore:
                 cursor = cursor.skip((page - 1) * page_size).limit(page_size)
             if not format:
                 return [raw async for raw in cursor]
-
             objs: List[dict] = []
             async for raw_doc in cursor:
                 objs.append(await self.format_document(raw_doc, current_user))
             return objs
 
-        # --- post-путь
-        raw_docs: List[dict] = [d async for d in self.db.find(query)]
-
-        # объединение/пересечение computed-поиска
-        if computed_for_search and q.strip():
-            if combine == "and":
-                # усиливаем mongo-результаты
-                flags = await asyncio.gather(*[
-                    self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in raw_docs
-                ])
-                raw_docs = [d for d, ok in zip(raw_docs, flags) if ok]
-                print(f"[search] AND computed filter kept {len(raw_docs)} docs")
-            else:
-                # OR: оставляем mongo-совпадения и ДОБАВЛЯЕМ документы,
-                # которые соответствуют computed, но не попали в mongo-поиск
-                print("[search] OR computed union: scanning candidates up to", self.computed_scan_limit)
-                # кандидатами возьмём документы без mongo-поиска (только базовые фильтры)
+        # --- пост-путь
+        if need_and_merge:
+            candidates: List[dict] = [d async for d in self.db.find(pre_search_query)]
+            flags = await asyncio.gather(*[
+                self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                for d in candidates
+            ])
+            raw_docs: List[dict] = [d for d, ok in zip(candidates, flags) if ok]
+            print(f"[search] AND(all-fields) kept {len(raw_docs)} docs from {len(candidates)} candidates")
+        else:
+            raw_docs: List[dict] = [d async for d in self.db.find(query)]
+            if should_union:
+                print("[search] union over plain+computed: scanning candidates up to", self.computed_scan_limit)
                 candidates: List[dict] = [d async for d in self.db.find(pre_search_query).limit(self.computed_scan_limit)]
                 flags = await asyncio.gather(*[
-                    self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in candidates
+                    self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                    for d in candidates
                 ])
-                computed_only = [d for d, ok in zip(candidates, flags) if ok]
-                # склеиваем по _id
+                matched = [d for d, ok in zip(candidates, flags) if ok]
                 seen: Set[str] = {str(x.get("_id")) for x in raw_docs}
-                extra = [d for d in computed_only if str(d.get("_id")) not in seen]
-                print(f"[search] OR computed union adds {len(extra)} docs")
+                extra = [d for d in matched if str(d.get("_id")) not in seen]
+                print(f"[search] union adds {len(extra)} docs")
                 raw_docs.extend(extra)
 
         if post_filters:
@@ -1049,6 +1208,7 @@ class BaseCrudCore:
 
         return [await self.format_document(d, current_user) for d in paged]
 
+
     async def get_singleton_object(self, current_user) -> Optional[dict]:
         filters = {"user_id": current_user.data.get("user_id")}
         return await self.db.find_one(filters)
@@ -1087,36 +1247,41 @@ class BaseCrudCore:
         base_filter = await self.permission_class.get_base_filter(current_user)
         plain_filters, search_params, filter_params = self.extract_advanced(filters)
         mongo_filters, post_filters = await self.build_mongo_filters(filter_params, current_user)
-        search_mongo, computed_for_search, q, mode, combine = await self.build_declarative_search(search_params)
+        search_mongo, computed_for_search, plain_for_search, q, mode, combine = await self.build_declarative_search(search_params)
 
         pre_search_query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
         query: Dict[str, Any] = pre_search_query
         if search_mongo:
             query = {"$and": [query, search_mongo]} if query else search_mongo
 
-        # считаем total с учётом computed-поиска и пост-фильтров
-        if computed_for_search or post_filters:
-            # База: берём либо mongo-поиск (если AND), либо базовые кандидаты (если OR)
+        tokens = self._tokenize_query(q) if (q and mode != "exact") else [q] if q else []
+        need_and_merge = bool(q and mode != "exact" and combine == "and" and len(tokens) > 1)
+
+        # считаем total
+        if need_and_merge:
+            candidates: List[dict] = [d async for d in self.db.find(pre_search_query)]
+            flags = await asyncio.gather(*[
+                self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                for d in candidates
+            ])
+            all_docs = [d for d, ok in zip(candidates, flags) if ok]
+            if post_filters:
+                all_docs = await self._apply_post_filters(all_docs, post_filters, current_user)
+            total_count = len(all_docs)
+        elif computed_for_search or post_filters:
             if computed_for_search and q.strip() and combine == "or":
                 print("[search] list_with_meta total via OR union scan")
                 all_docs: List[dict] = [d async for d in self.db.find(pre_search_query)]
                 flags = await asyncio.gather(*[
-                    self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in all_docs
+                    self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                    for d in all_docs
                 ])
-                # mongo-матчеры
                 base_set_ids = {str(x.get("_id")) for x in await self.db.find(query).to_list(None)}
-                # computed-матчеры
                 comp_ids = {str(d.get("_id")) for d, ok in zip(all_docs, flags) if ok}
-                # объединяем
                 union_ids = base_set_ids | comp_ids
                 total_count = len(union_ids)
             else:
                 all_docs: List[dict] = [d async for d in self.db.find(query)]
-                if computed_for_search and q.strip() and combine == "and":
-                    flags = await asyncio.gather(*[
-                        self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in all_docs
-                    ])
-                    all_docs = [d for d, ok in zip(all_docs, flags) if ok]
                 if post_filters:
                     all_docs = await self._apply_post_filters(all_docs, post_filters, current_user)
                 total_count = len(all_docs)
@@ -1753,6 +1918,7 @@ class BaseCrud(BaseCrudCore):
         super().__init__(db)
         self.db = db[self.collection_name]
 
+    # --- BaseCrud.get_queryset (заменить ту же часть, что и в Core; здесь короткая версия) ---
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
@@ -1769,7 +1935,7 @@ class BaseCrud(BaseCrudCore):
 
         plain_filters, search_params, filter_params = self.extract_advanced(filters)
         mongo_filters, post_filters = await self.build_mongo_filters(filter_params, current_user)
-        search_mongo, computed_for_search, q, mode, combine = await self.build_declarative_search(search_params)
+        search_mongo, computed_for_search, plain_for_search, q, mode, combine = await self.build_declarative_search(search_params)
 
         pre_search_query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
         query: Dict[str, Any] = pre_search_query
@@ -1780,7 +1946,14 @@ class BaseCrud(BaseCrudCore):
         print("[search] (BaseCrud) get_queryset final query:", query)
 
         sort_key, ord_val, strategy_name, strategy_cfg = self.resolve_sort(sort_by, order)
-        needs_post = bool(computed_for_search) or bool(post_filters) or (sort_key in self.computed_fields) or bool(strategy_name)
+
+        tokens = self._tokenize_query(q) if (q and mode != "exact") else [q] if q else []
+        need_and_merge = bool(q and mode != "exact" and combine == "and" and len(tokens) > 1)
+        should_union = bool(computed_for_search and q and q.strip() and (
+            combine == "or" or (combine == "and" and mode != "exact" and len(tokens) <= 1)
+        ))
+
+        needs_post = bool(computed_for_search) or bool(post_filters) or (sort_key in self.computed_fields) or bool(strategy_name) or need_and_merge or should_union
 
         if not needs_post:
             cursor = (
@@ -1794,26 +1967,27 @@ class BaseCrud(BaseCrudCore):
                 return raw_docs
             return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))
 
-        raw_docs: List[dict] = [d async for d in self.db.find(query)]
-
-        # объединение/пересечение computed-поиска
-        if computed_for_search and q.strip():
-            if combine == "and":
-                flags = await asyncio.gather(*[
-                    self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in raw_docs
-                ])
-                raw_docs = [d for d, ok in zip(raw_docs, flags) if ok]
-                print(f"[search] (BaseCrud) AND computed filter kept {len(raw_docs)} docs")
-            else:
-                print("[search] (BaseCrud) OR computed union: scanning candidates up to", self.computed_scan_limit)
+        if need_and_merge:
+            candidates: List[dict] = [d async for d in self.db.find(pre_search_query)]
+            flags = await asyncio.gather(*[
+                self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                for d in candidates
+            ])
+            raw_docs: List[dict] = [d for d, ok in zip(candidates, flags) if ok]
+            print(f"[search] (BaseCrud) AND(all-fields) kept {len(raw_docs)} docs from {len(candidates)} candidates")
+        else:
+            raw_docs: List[dict] = [d async for d in self.db.find(query)]
+            if should_union:
+                print("[search] (BaseCrud) union: scanning candidates up to", self.computed_scan_limit)
                 candidates: List[dict] = [d async for d in self.db.find(pre_search_query).limit(self.computed_scan_limit)]
                 flags = await asyncio.gather(*[
-                    self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in candidates
+                    self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                    for d in candidates
                 ])
-                computed_only = [d for d, ok in zip(candidates, flags) if ok]
+                matched = [d for d, ok in zip(candidates, flags) if ok]
                 seen: Set[str] = {str(x.get("_id")) for x in raw_docs}
-                extra = [d for d in computed_only if str(d.get("_id")) not in seen]
-                print(f"[search] (BaseCrud) OR computed union adds {len(extra)} docs")
+                extra = [d for d in matched if str(d.get("_id")) not in seen]
+                print(f"[search] (BaseCrud) union adds {len(extra)} docs")
                 raw_docs.extend(extra)
 
         if post_filters:
@@ -1853,3 +2027,81 @@ class BaseCrud(BaseCrudCore):
             return raw_docs
 
         return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))
+
+    # --- BaseCrud.list_with_meta (аналогичная правка блока подсчёта) ---
+    async def list_with_meta(
+        self,
+        page: int = 1,
+        page_size: int = 100,
+        sort_by: Optional[str] = None,
+        order: int = 1,
+        filters: Optional[dict] = None,
+        current_user: Optional[BaseModel] = None,
+    ) -> dict:
+        self.check_permission("read", current_user)
+
+        base_filter = await self.permission_class.get_base_filter(current_user)
+        plain_filters, search_params, filter_params = self.extract_advanced(filters)
+        mongo_filters, post_filters = await self.build_mongo_filters(filter_params, current_user)
+        search_mongo, computed_for_search, plain_for_search, q, mode, combine = await self.build_declarative_search(search_params)
+
+        pre_search_query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
+        query: Dict[str, Any] = pre_search_query
+        if search_mongo:
+            query = {"$and": [query, search_mongo]} if query else search_mongo
+
+        tokens = self._tokenize_query(q) if (q and mode != "exact") else [q] if q else []
+        need_and_merge = bool(q and mode != "exact" and combine == "and" and len(tokens) > 1)
+        should_union = bool(computed_for_search and q and q.strip() and (
+            combine == "or" or (combine == "and" and mode != "exact" and len(tokens) <= 1)
+        ))
+
+        if need_and_merge:
+            candidates: List[dict] = [d async for d in self.db.find(pre_search_query)]
+            flags = await asyncio.gather(*[
+                self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                for d in candidates
+            ])
+            all_docs = [d for d, ok in zip(candidates, flags) if ok]
+            if post_filters:
+                all_docs = await self._apply_post_filters(all_docs, post_filters, current_user)
+            total_count = len(all_docs)
+        elif should_union or post_filters:
+            if should_union:
+                all_docs: List[dict] = [d async for d in self.db.find(pre_search_query)]
+                flags = await asyncio.gather(*[
+                    self.search_match_fields(d, plain_for_search, computed_for_search, q, mode, current_user, combine)
+                    for d in all_docs
+                ])
+                base_ids = {str(x.get("_id")) for x in await self.db.find(query).to_list(None)}
+                comp_ids = {str(d.get("_id")) for d, ok in zip(all_docs, flags) if ok}
+                union_ids = base_ids | comp_ids
+                total_count = len(union_ids)
+            else:
+                all_docs = [d async for d in self.db.find(query)]
+                if post_filters:
+                    all_docs = await self._apply_post_filters(all_docs, post_filters, current_user)
+                total_count = len(all_docs)
+        else:
+            total_count = await self.db.count_documents(query)
+
+        total_pages = (total_count + page_size - 1) // page_size
+
+        data = await self.get_queryset(
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            page=page,
+            page_size=page_size,
+            current_user=current_user,
+        )
+
+        return {
+            "data": data,
+            "meta": {
+                "page": page,
+                "page_size": page_size,
+                "total_count": total_count,
+                "total_pages": total_pages,
+            },
+        }
