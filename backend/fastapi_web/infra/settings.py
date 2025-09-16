@@ -8,8 +8,6 @@ import logging
 
 # Загрузка переменных окружения
 env_path = Path(__file__).resolve().parent.parent.parent / "infra" / ".env"
-logging.error("================================")
-logging.error(f"env path {env_path}")
 load_dotenv(dotenv_path=env_path)
 
 # Базовые настройки

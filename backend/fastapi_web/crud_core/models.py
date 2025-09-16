@@ -1,26 +1,28 @@
 """Базовые сущности панели приложения ядро CRUD создания."""
 import asyncio
-from datetime import datetime, timezone
 import json
 import logging
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Type
 
 from bson import ObjectId
 from fastapi import HTTPException
-from fastapi.exceptions import HTTPException
-from pydantic import TypeAdapter
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from .permissions import AllowAll, BasePermission
 
 logger = logging.getLogger(__name__)
 
 
+# ==============================
+# БЛОК: Базовое ядро CRUD
+# ==============================
 class BaseCrudCore:
     """Базовый класс для CRUD-операций."""
 
+    # Модель (pydantic)
     model: Type[BaseModel]
 
     # Метаинформация
@@ -46,6 +48,7 @@ class BaseCrudCore:
     user_collection_name: Optional[str] = None
     max_instances_per_user: Optional[int] = None
 
+    # Разрешения CRUD (вкл/выкл)
     allow_crud_actions: Dict[str, bool] = {
         "create": True,
         "read": True,
@@ -53,33 +56,43 @@ class BaseCrudCore:
         "delete": True,
     }
 
+    # Права
     permission_class: BasePermission = AllowAll()  # type: ignore
 
     def __init__(self, db: AsyncIOMotorCollection) -> None:
         """Сохраняет ссылку на коллекцию MongoDB."""
         self.db = db
 
-    # --- Контроль доступа ---
+    # ------------------------------
+    # Контроль доступа
+    # ------------------------------
     def check_crud_enabled(self, action: str) -> None:
         """Проверяет, включено ли действие."""
         if not self.allow_crud_actions.get(action, False):
-            raise HTTPException(
-                403, f"{action.capitalize()} is disabled for this model.")
+            raise HTTPException(403, f"{action.capitalize()} is disabled for this model.")
 
     def check_object_permission(
-        self, action: str, user: Optional[BaseModel], obj: Optional[dict] = None
+        self,
+        action: str,
+        user: Optional[BaseModel],
+        obj: Optional[dict] = None
     ) -> None:
         """Проверяет права через permission_class."""
         self.permission_class.check(action, user, obj)
 
     def check_permission(
-        self, action: str, user: Optional[BaseModel], obj: Optional[dict] = None
+        self,
+        action: str,
+        user: Optional[BaseModel],
+        obj: Optional[dict] = None
     ) -> None:
         """Проверяет включенность действия и права пользователя."""
         self.check_crud_enabled(action)
         self.check_object_permission(action, user, obj)
 
-    # --- Вспомогательные методы ---
+    # ------------------------------
+    # Вспомогательные методы
+    # ------------------------------
     def detect_id_field(self) -> str:
         """Определяет имя поля-идентификатора."""
         return "id" if "id" in self.model.__fields__ else "_id"
@@ -88,7 +101,9 @@ class BaseCrudCore:
         """Возвращает имя поля пользователя."""
         return "_id" if self.user_collection_name == self.db.name else "user_id"
 
-    # --- Основные методы ---
+    # ------------------------------
+    # Запросы (list, list_with_meta, get)
+    # ------------------------------
     async def get_queryset(
         self,
         filters: Optional[dict] = None,
@@ -107,22 +122,20 @@ class BaseCrudCore:
         cursor = self.db.find(query).sort(sort_field, order)
 
         if page is not None and page_size is not None:
-            skip_count = (page - 1) * page_size
-            cursor = cursor.skip(skip_count).limit(page_size)
+            cursor = cursor.skip((page - 1) * page_size).limit(page_size)
+
+        if not format:
+            return [raw async for raw in cursor]
 
         objs: List[dict] = []
         async for raw_doc in cursor:
-            objs.append(await self.format_document(raw_doc, current_user) if format else raw_doc)
+            objs.append(await self.format_document(raw_doc, current_user))
         return objs
-    
-    async def get_singleton_object(self, current_user) -> Optional[dict]:
-        """
-        Возвращает единственный объект пользователя, если max_instances == 1.
-        """
-        filters = {"user_id": current_user.data.get("user_id")}  # или patient_id, в зависимости от модели
-        result = await self.db.find_one(filters)
-        return result
 
+    async def get_singleton_object(self, current_user) -> Optional[dict]:
+        """Возвращает единственный объект пользователя, если max_instances == 1."""
+        filters = {"user_id": current_user.data.get("user_id")}
+        return await self.db.find_one(filters)
 
     async def list(
         self,
@@ -158,10 +171,11 @@ class BaseCrudCore:
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         query = {**(filters or {}), **base_filter}
+
         total_count = await self.db.count_documents(query)
         total_pages = (total_count + page_size - 1) // page_size
 
-        raw_docs = await self.get_queryset(
+        data = await self.get_queryset(
             filters=filters,
             sort_by=sort_by,
             order=order,
@@ -171,7 +185,7 @@ class BaseCrudCore:
         )
 
         return {
-            "data": raw_docs,
+            "data": data,
             "meta": {
                 "page": page,
                 "page_size": page_size,
@@ -180,8 +194,11 @@ class BaseCrudCore:
             },
         }
 
-    async def get(self, object_id: str,
-                  current_user: Optional[BaseModel] = None) -> Optional[dict]:
+    async def get(
+        self,
+        object_id: str,
+        current_user: Optional[BaseModel] = None
+    ) -> Optional[dict]:
         """Возвращает один документ по _id с учётом прав."""
         self.check_crud_enabled("read")
         docs = await self.get_queryset(filters={"_id": ObjectId(object_id)}, current_user=current_user)
@@ -190,26 +207,29 @@ class BaseCrudCore:
             self.check_object_permission("read", current_user, obj)
         return obj
 
-    async def create(self, data: dict,
-                     current_user: Optional[BaseModel] = None) -> dict:
+    # ------------------------------
+    # Изменение данных (create, update, delete)
+    # ------------------------------
+    async def create(
+        self,
+        data: dict,
+        current_user: Optional[BaseModel] = None
+    ) -> dict:
         """Создаёт документ с проверкой прав и ограничений."""
         self.check_permission("create", current_user)
 
         user_field = self.get_user_field_name()
 
+        # лимит инстансов на пользователя
         if self.max_instances_per_user is not None and current_user:
-            filter_by_user = {
-                user_field: str(
-                    getattr(
-                        current_user,
-                        "id",
-                        None))}
+            filter_by_user = {user_field: str(getattr(current_user, "id", None))}
             count = await self.db.count_documents(filter_by_user)
             if count >= self.max_instances_per_user:
-                raise HTTPException(
-                    403, "You have reached the maximum number of allowed instances.")
+                raise HTTPException(403, "You have reached the maximum number of allowed instances.")
 
         valid_data = await self.process_data(data=data)
+
+        # авто-проставление user_id, если требуется
         if current_user and user_field == "user_id" and "user_id" not in valid_data:
             user_id = current_user.data["user_id"]
             if user_id:
@@ -225,38 +245,11 @@ class BaseCrudCore:
 
         return await self.format_document(created_raw, current_user)
 
-    # async def update(
-    #     self, object_id: str, data: dict, current_user: Optional[BaseModel] = None
-    # ) -> dict:
-    #     """Обновляет документ, исключая вычисляемые поля."""
-    #     self.check_crud_enabled("update")
-
-    #     obj = await self.db.find_one({"_id": ObjectId(object_id)})
-    #     if not obj:
-    #         raise HTTPException(404, "Item not found.")
-
-    #     self.check_object_permission("update", current_user, obj)
-
-    #     valid_data = await self.process_data(data=data, existing_obj=obj, partial=True)
-
-    #     for field in self.computed_fields:
-    #         valid_data.pop(field, None)
-
-    #     # 🔄 Рекурсивная сериализация перед обновлением в Mongo
-    #     valid_data = self.recursive_model_dump(valid_data)
-
-    #     res = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": valid_data})
-    #     if res.matched_count == 0:
-    #         raise HTTPException(500, "Failed to update object.")
-
-    #     updated_raw = await self.db.find_one({"_id": ObjectId(object_id)})
-    #     if not updated_raw:
-    #         raise HTTPException(500, "Failed to retrieve updated object.")
-
-    #     return await self.format_document(updated_raw, current_user)
-
     async def update(
-        self, object_id: str, data: dict, current_user: Optional[BaseModel] = None
+        self,
+        object_id: str,
+        data: dict,
+        current_user: Optional[BaseModel] = None
     ) -> dict:
         """Обновляет документ, исключая вычисляемые поля."""
         self.check_crud_enabled("update")
@@ -267,15 +260,11 @@ class BaseCrudCore:
 
         self.check_object_permission("update", current_user, obj)
 
-        # 🔥 автообновление updated_at
+        # автообновление updated_at (если поле есть в схеме)
         if "updated_at" in self.model.__annotations__:
             data["updated_at"] = datetime.utcnow()
 
         valid_data = await self.process_data(data=data, existing_obj=obj, partial=True)
-
-        # for field in self.computed_fields:
-        #     valid_data.pop(field, None)
-
         valid_data = self.recursive_model_dump(valid_data)
 
         res = await self.db.update_one({"_id": ObjectId(object_id)}, {"$set": valid_data})
@@ -288,9 +277,11 @@ class BaseCrudCore:
 
         return await self.format_document(updated_raw, current_user)
 
-
-    async def delete(self, object_id: str,
-                     current_user: Optional[BaseModel] = None) -> dict:
+    async def delete(
+        self,
+        object_id: str,
+        current_user: Optional[BaseModel] = None
+    ) -> dict:
         """Удаляет документ после проверки прав."""
         self.check_crud_enabled("delete")
 
@@ -306,27 +297,33 @@ class BaseCrudCore:
 
         return {"status": "success"}
 
-    def recursive_model_dump(self, obj):
+    # ------------------------------
+    # Сериализация/форматирование
+    # ------------------------------
+    def recursive_model_dump(self, obj: Any) -> Any:
+        """Рекурсивный dump pydantic-моделей в чистые dict/list."""
         if isinstance(obj, BaseModel):
             return {k: self.recursive_model_dump(v) for k, v in obj.model_dump().items()}
-        elif isinstance(obj, dict):
+        if isinstance(obj, dict):
             return {k: self.recursive_model_dump(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
+        if isinstance(obj, list):
             return [self.recursive_model_dump(i) for i in obj]
-        else:
-            return obj
+        return obj
 
     async def get_field_overrides(
-        self, obj: Optional[dict] = None, current_user: Optional[Any] = None
+        self,
+        obj: Optional[dict] = None,
+        current_user: Optional[Any] = None
     ) -> dict:
         """
-        Переопределяет свойства отдельных полей схемы.
-        Может использовать данные текущего объекта и пользователя.
-        Переопределения могут быть частичными — например, только choices или placeholder.
+        Переопределения свойств отдельных полей схемы.
+        Можно использовать obj и current_user.
         """
         return {}
 
-    # --- Обработка данных ---
+    # ------------------------------
+    # Валидация и обработка данных
+    # ------------------------------
     def serialize_value(self, value: Any) -> Any:
         """Сериализует значение перед сохранением."""
         if isinstance(value, BaseModel):
@@ -336,15 +333,17 @@ class BaseCrudCore:
         return value
 
     async def process_inlines(
-        self, existing_doc: Optional[dict], update_data: dict, partial: bool = False
+        self,
+        existing_doc: Optional[dict],
+        update_data: dict,
+        partial: bool = False
     ) -> dict:
         """Обрабатывает инлайны (добавление, обновление, удаление)."""
         inline_data: Dict[str, Any] = {}
 
         try:
             for field, inline_cls in self.inlines.items():
-                existing_inlines = existing_doc.get(
-                    field, []) if existing_doc else []
+                existing_inlines = existing_doc.get(field, []) if existing_doc else []
 
                 if field not in update_data:
                     inline_data[field] = existing_inlines
@@ -352,12 +351,10 @@ class BaseCrudCore:
 
                 inline_inst = inline_cls(self.db)
                 update_inlines = update_data.pop(field)
-                update_inlines = update_inlines if isinstance(
-                    update_inlines, list) else [update_inlines]
+                update_inlines = update_inlines if isinstance(update_inlines, list) else [update_inlines]
 
                 if existing_doc:
-                    existing_by_id = {
-                        item["id"]: item for item in existing_inlines if "id" in item}
+                    existing_by_id = {item["id"]: item for item in existing_inlines if "id" in item}
                     merged_inlines: List[dict] = []
 
                     for item in update_inlines:
@@ -365,6 +362,7 @@ class BaseCrudCore:
                             continue
 
                         if "id" in item:
+                            # удалить
                             if item.get("_delete", False):
                                 existing_by_id.pop(item["id"], None)
                                 continue
@@ -381,9 +379,9 @@ class BaseCrudCore:
                             merged_inlines.append(final_inline)
                             existing_by_id.pop(item["id"], None)
                         else:
+                            # новый
                             validated = await inline_inst.validate_data(item, partial=False)
-                            full_validated = inline_inst.model.parse_obj(
-                                validated).dict()
+                            full_validated = inline_inst.model.parse_obj(validated).dict()
                             final_inline = full_validated
 
                             if inline_inst.inlines:
@@ -395,14 +393,14 @@ class BaseCrudCore:
                     merged_inlines.extend(existing_by_id.values())
                     inline_data[field] = merged_inlines
                 else:
+                    # нет существующего — просто валидируем новые
                     validated_items: List[dict] = []
                     for item in update_inlines:
                         if not isinstance(item, dict):
                             continue
 
                         validated = await inline_inst.validate_data(item, partial=False)
-                        full_validated = inline_inst.model.parse_obj(
-                            validated).dict()
+                        full_validated = inline_inst.model.parse_obj(validated).dict()
                         final_inline = full_validated
 
                         if inline_inst.inlines:
@@ -418,14 +416,19 @@ class BaseCrudCore:
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
-    async def get_inlines(self, doc: dict,
-                          current_user: Optional[dict] = None) -> dict:
+    async def get_inlines(
+        self,
+        doc: dict,
+        current_user: Optional[dict] = None
+    ) -> dict:
         """Возвращает отформатированные инлайны."""
         inl_data: Dict[str, Any] = {}
+
         for field, inline_cls in self.inlines.items():
             inline_inst = inline_cls(self.db)
             inline_inst.parent_document = doc
             parent_id = doc.get("_id")
+
             if not parent_id:
                 inl_data[field] = []
                 continue
@@ -435,41 +438,16 @@ class BaseCrudCore:
                 await inline_inst.format_document(child, current_user) if "id" not in child else child
                 for child in found
             ]
+
         return inl_data
-    
-    # def parse_json_recursive(self, value: Any) -> Any:
-    #     if isinstance(value, str):
-    #         try:
-    #             # Попробовать как JSON
-    #             parsed = json.loads(value)
-    #             if isinstance(parsed, (dict, list, str)):
-    #                 return self.parse_json_recursive(parsed)
-    #         except json.JSONDecodeError:
-    #             # Попробовать как дату ISO без 'Z'
-    #             try:
-    #                 dt = datetime.fromisoformat(value)
-    #                 if dt.tzinfo is None:
-    #                     dt = dt.replace(tzinfo=timezone.utc)
-    #                 return dt.isoformat().replace('+00:00', 'Z')
-    #             except ValueError as e:
-    #                 pass
-    #         return value
 
-    #     if isinstance(value, datetime):
-    #         if value.tzinfo is None:
-    #             value = value.replace(tzinfo=timezone.utc)
-    #         return value.isoformat().replace('+00:00', 'Z')
-
-    #     if isinstance(value, list):
-    #         return [self.parse_json_recursive(i) for i in value]
-
-    #     if isinstance(value, dict):
-    #         return {k: self.parse_json_recursive(v) for k, v in value.items()}
-
-    #     return value
-
+    # ------------------------------
+    # Парсинг / форматирование значений
+    # ------------------------------
     def parse_json_recursive(self, value: Any) -> Any:
+        """Рекурсивно парсит строки JSON и ISO-даты."""
         if isinstance(value, str):
+            # Попытка как JSON
             try:
                 parsed = json.loads(value)
                 if isinstance(parsed, (dict, list, str)):
@@ -477,22 +455,22 @@ class BaseCrudCore:
             except json.JSONDecodeError:
                 pass
 
-            # Попробовать как ISO-дату, но только если строка начинается с цифр и имеет T или пробел
+            # Попытка как ISO-дата (мягкая проверка)
             if any(c in value for c in ("T", " ")) and value[:1].isdigit():
                 try:
                     dt = datetime.fromisoformat(value)
                     if dt.tzinfo is None:
                         dt = dt.replace(tzinfo=timezone.utc)
-                    return dt.isoformat().replace('+00:00', 'Z')
+                    return dt.isoformat().replace("+00:00", "Z")
                 except ValueError:
-                    pass  # Не паникуем
+                    pass
 
             return value
 
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
-            return value.isoformat().replace('+00:00', 'Z')
+            return value.isoformat().replace("+00:00", "Z")
 
         if isinstance(value, list):
             return [self.parse_json_recursive(i) for i in value]
@@ -502,113 +480,37 @@ class BaseCrudCore:
 
         return value
 
-
-    async def format_document(self, doc: dict,
-                              current_user: Optional[dict] = None) -> dict:
+    async def format_document(
+        self,
+        doc: dict,
+        current_user: Optional[dict] = None
+    ) -> dict:
         """Форматирует документ и добавляет вычисляемые поля с инлайнами."""
-        # def parse_json_recursive(value: Any) -> Any:
-        #     if isinstance(value, str):
-        #         try:
-        #             parsed = json.loads(value)
-        #             if isinstance(parsed, (dict, list, str)):
-        #                 return parsed
-        #         except json.JSONDecodeError:
-        #             pass
-        #     if isinstance(value, list):
-        #         return [parse_json_recursive(i) for i in value]
-        #     if isinstance(value, dict):
-        #         return {k: parse_json_recursive(v) for k, v in value.items()}
-        #     return value
-
         fields_set = list(set(self.list_display + self.detail_fields))
         result: Dict[str, Any] = {"id": str(doc.get("_id", doc.get("id")))}
 
         for field in fields_set:
             result[field] = self.parse_json_recursive(doc.get(field))
 
-        # for cf in self.computed_fields:
-        #     method = getattr(self, f"get_{cf}", None)
-        #     if method:
-        #         result[cf] = self.parse_json_recursive(await method(doc))
-
         for cf in self.computed_fields:
             method = getattr(self, f"get_{cf}", None)
             if method:
                 result[cf] = self.parse_json_recursive(await method(doc, current_user=current_user))
 
-
         result.update(await self.get_inlines(doc, current_user))
         return result
 
-    # async def validate_data(self, data: dict, partial: bool = False) -> dict:
-    #     """Валидирует данные модели (без инлайнов)."""
-    #     def try_parse_json(value: Any) -> Any:
-    #         if isinstance(value, str):
-    #             try:
-    #                 parsed = json.loads(value)
-    #                 if isinstance(parsed, dict):
-    #                     return parsed
-    #             except json.JSONDecodeError:
-    #                 pass
-    #         return value
-
-    #     errors: Dict[str, Any] = {}
-    #     validated: Dict[str, Any] = {}
-
-    #     try:
-    #         if partial:
-    #             for field, val in data.items():
-    #                 # 🔥 Исключаем updated_at из read_only блокировки
-    #                 if field in ("id", *self.read_only_fields) and field != "updated_at":
-    #                     continue
-
-    #                 if field in self.inlines:
-    #                     validated[field] = self.serialize_value(val)
-    #                     continue
-    #                 if field in self.model.__annotations__:
-    #                     # if field == "updated_at" and isinstance(val, datetime):
-    #                     #     validated[field] = self.serialize_value(val)
-    #                     #     continue
-    #                     field_type = self.model.__annotations__[field]
-    #                     parsed_val = try_parse_json(val)
-    #                     # validated_val = self.model._validate_field_type(
-    #                     #     field, field_type, parsed_val)
-    #                     try:
-    #                         validated_val = TypeAdapter(field_type).validate_python(parsed_val)
-    #                     except ValidationError as ve:
-    #                         errors[field] = ve.errors()[0]["msg"]
-    #                         continue
-    #                     validated[field] = self.serialize_value(validated_val)
-    #         else:
-    #             filtered = {
-    #                 k: try_parse_json(v) for k,
-    #                 v in data.items() if k not in self.inlines}
-    #             obj = self.model(**filtered)
-    #             validated = {
-    #                 k: self.serialize_value(v) for k,
-    #                 v in obj.dict().items()}
-
-    #     except ValidationError as e:
-    #         for err in e.errors():
-    #             loc, msg = err["loc"], err["msg"]
-    #             ref = errors
-    #             for part in loc[:-1]:
-    #                 ref = ref.setdefault(part, {})
-    #             ref[loc[-1]] = msg
-
-    #     if errors:
-    #         raise HTTPException(400, detail=errors)
-
-    #     return validated
-
-    async def validate_data(self, data: dict, *, partial: bool = False) -> dict:
+    async def validate_data(
+        self,
+        data: dict,
+        *,
+        partial: bool = False
+    ) -> dict:
         """
         Валидирует данные модели.
         partial=False → полное создание;
         partial=True  → частичное обновление (валидируются только переданные поля).
         """
-
-        # --- Шаблоны сообщений ---
         FIELD_REQUIRED_MESSAGE = {
             "ru": "Поле обязательно для заполнения.",
             "en": "This field is required.",
@@ -651,10 +553,8 @@ class BaseCrudCore:
                     pass
             return v
 
-        # --- 1. Подготовка входа ---
         incoming = {k: try_parse_json(v) for k, v in data.items() if k not in self.inlines}
 
-        # --- 2. Валидируем ---
         try:
             obj = self.model(**incoming)
         except ValidationError as exc:
@@ -662,17 +562,15 @@ class BaseCrudCore:
 
             for err in exc.errors():
                 field = err["loc"][0]
-                msg   = err["msg"]
+                msg = err["msg"]
 
-                # При partial пропускаем "Field required" для непереданных полей
-                if (
-                    partial
-                    and field not in incoming
-                    and msg in {"Field required", "Missing required field", "value is required"}
-                ):
+                # при partial пропускаем required для непереданных полей
+                if partial and field not in incoming and msg in {
+                    "Field required", "Missing required field", "value is required"
+                }:
                     continue
 
-                # --- нормализация сообщения ---
+                # нормализация сообщения
                 if msg in {"Field required", "Missing required field", "value is required"}:
                     final_msg = FIELD_REQUIRED_MESSAGE
                 elif isinstance(msg, dict):
@@ -700,24 +598,21 @@ class BaseCrudCore:
                 errors[field] = final_msg
 
             if errors:
-                # Были реальные ошибки — отдаём 400
                 raise HTTPException(400, detail=errors)
 
-            # Ошибок нет (значит остались только "Field required", которые мы пропустили).
-            # Создаём объект БЕЗ повторной валидации — для сериализации нужных полей.
+            # Ошибок нет — создаём объект без повторной валидации
             obj = self.model.model_construct(**incoming)
 
-        # --- 3. Формируем результат ---
         if partial:
-            # Отдаём только переданные поля
             return {k: self.serialize_value(getattr(obj, k)) for k in incoming}
 
-        # Полное создание — отдаём весь dump
         return {k: self.serialize_value(v) for k, v in obj.model_dump().items()}
 
-
     async def process_data(
-        self, data: dict, existing_obj: Optional[dict] = None, partial: bool = False
+        self,
+        data: dict,
+        existing_obj: Optional[dict] = None,
+        partial: bool = False
     ) -> dict:
         """Валидирует данные и мерджит инлайны."""
         valid = await self.validate_data(data, partial=partial)
@@ -726,7 +621,9 @@ class BaseCrudCore:
             valid.update(inline_data)
         return valid
 
-    # --- Поиск во вложенных структурах ---
+    # ------------------------------
+    # Поиск во вложенных структурах
+    # ------------------------------
     def nested_find(self, doc: Any, target_id: str) -> bool:
         """Ищет target_id во вложенных структурах."""
         if isinstance(doc, dict):
@@ -773,6 +670,9 @@ class BaseCrudCore:
         return self.verbose_name
 
 
+# ==============================
+# БЛОК: CRUD для вложенных объектов (Inline)
+# ==============================
 class InlineCrud(BaseCrudCore):
     """CRUD для вложенных объектов."""
 
@@ -782,8 +682,7 @@ class InlineCrud(BaseCrudCore):
 
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         super().__init__(db)
-        self.db = db[self.collection_name] if isinstance(
-            db, AsyncIOMotorDatabase) else db
+        self.db = db[self.collection_name] if isinstance(db, AsyncIOMotorDatabase) else db
 
     async def get_nested_field(self, doc: dict, dot_path: str) -> Any:
         """Возвращает данные по точечной нотации."""
@@ -823,8 +722,11 @@ class InlineCrud(BaseCrudCore):
 
         return await asyncio.gather(*(self.format_document(i, current_user) for i in results))
 
-    async def get(self, object_id: str,
-                  current_user: Optional[dict] = None) -> Optional[dict]:
+    async def get(
+        self,
+        object_id: str,
+        current_user: Optional[dict] = None
+    ) -> Optional[dict]:
         """Возвращает вложенный объект по ID."""
         self.check_crud_enabled("read")
 
@@ -834,17 +736,22 @@ class InlineCrud(BaseCrudCore):
             return None
 
         nested = await self.get_nested_field(parent, self.dot_field_path)
-        item = next((el for el in nested if el.get("id") == object_id), None) if isinstance(nested, list) else (
-            nested if isinstance(nested, dict) and nested.get(
-                "id") == object_id else None
-        )
+        if isinstance(nested, list):
+            item = next((el for el in nested if el.get("id") == object_id), None)
+        elif isinstance(nested, dict) and nested.get("id") == object_id:
+            item = nested
+        else:
+            item = None
 
         if item:
             self.permission_class.check("read", current_user, item)
         return item
 
-    async def create(self, data: dict,
-                     current_user: Optional[dict] = None) -> dict:
+    async def create(
+        self,
+        data: dict,
+        current_user: Optional[dict] = None
+    ) -> dict:
         """Добавляет новый вложенный объект."""
         self.check_permission("create", current_user)
 
@@ -859,10 +766,15 @@ class InlineCrud(BaseCrudCore):
             raise HTTPException(500, "Failed to create object.")
         return valid
 
-    async def update(self, object_id: str, data: dict,
-                     current_user: Optional[dict] = None) -> dict:
+    async def update(
+        self,
+        object_id: str,
+        data: dict,
+        current_user: Optional[dict] = None
+    ) -> dict:
         """Обновляет вложенный объект."""
         self.check_crud_enabled("update")
+
         if "updated_at" in self.model.__annotations__:
             data["updated_at"] = datetime.utcnow()
 
@@ -877,18 +789,18 @@ class InlineCrud(BaseCrudCore):
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         filters = {**base_filter, f"{self.dot_field_path}.id": object_id}
-        update_query = {
-            "$set": {
-                f"{self.dot_field_path}.$.{k}": v for k,
-                v in valid.items()}}
+        update_query = {"$set": {f"{self.dot_field_path}.$.{k}": v for k, v in valid.items()}}
 
         res = await self.db.update_one(filters, update_query)
         if res.matched_count == 0:
             raise HTTPException(500, "Failed to update object.")
         return await self.get(object_id, current_user)
 
-    async def delete(self, object_id: str,
-                     current_user: Optional[dict] = None) -> dict:
+    async def delete(
+        self,
+        object_id: str,
+        current_user: Optional[dict] = None
+    ) -> dict:
         """Удаляет вложенный объект."""
         self.check_crud_enabled("delete")
 
@@ -899,6 +811,7 @@ class InlineCrud(BaseCrudCore):
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         filters = {**base_filter, f"{self.dot_field_path}.id": object_id}
+
         parent = await self.db.find_one(filters)
         if not parent:
             raise HTTPException(404, "Parent document not found.")
@@ -916,9 +829,11 @@ class InlineCrud(BaseCrudCore):
         return {"status": "success"}
 
 
+# ==============================
+# БЛОК: CRUD для коллекций
+# ==============================
 class BaseCrud(BaseCrudCore):
     """CRUD для коллекций."""
-
     collection_name: str
     inlines: Dict[str, Type[InlineCrud]] = {}
 
@@ -950,7 +865,6 @@ class BaseCrud(BaseCrudCore):
         )
 
         raw_docs: List[dict] = [doc async for doc in cursor]
-
         if not format:
             return raw_docs
 
