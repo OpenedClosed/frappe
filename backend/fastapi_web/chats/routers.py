@@ -124,7 +124,7 @@ async def get_active_chats(
 
 
 
-@chat_router.get("/commands", summary="Получить список доступных команд")
+# @chat_router.get("/commands", summary="Получить список доступных команд")
 async def get_available_commands():
     """Возвращает список всех зарегистрированных команд с их описанием."""
     return {

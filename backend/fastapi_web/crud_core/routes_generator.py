@@ -4,8 +4,8 @@
 - стандартные эндпоинты авторизации (login / refresh / logout);
 - генерация CRUD-маршрутов для зарегистрированных админ-моделей;
 - автоподхват кастомных методов из админ-классов через декоратор @admin_route.
+- прокидка декларативных конфигов поиска/фильтров/сортировки в /info для UI.
 """
-from __future__ import annotations
 
 import importlib
 import logging
@@ -216,13 +216,21 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                 order: int = 1,
                 Authorize: AuthJWT = Depends(),
             ):
+                """
+                Поддерживаем три способа передать критерии:
+                  1) filters=<JSON>         — сложные фильтры (__filters / advanced)
+                  2) search=<JSON или строка> — расширенный/простой поиск (__search / q)
+                  3) q=<строка>             — короткий поиск
+                Всё это мержится в единый dict и уходит в instance.list/list_with_meta().
+                """
                 user_doc = await get_current_user(Authorize)
 
                 has_page = "page" in request.query_params
                 has_page_size = "page_size" in request.query_params
 
                 raw_filters = request.query_params.get("filters")
-                raw_search = request.query_params.get("search") or request.query_params.get("q")
+                raw_search = request.query_params.get("search")
+                raw_q = request.query_params.get("q")
 
                 parsed_filters: Optional[dict] = None
                 if raw_filters:
@@ -234,14 +242,20 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                 parsed_search: Optional[dict] = None
                 if raw_search:
                     try:
-                        parsed_search = json.loads(raw_search) if str(raw_search).strip().startswith("{") else {"q": str(raw_search)}
+                        if str(raw_search).strip().startswith("{"):
+                            parsed_search = json.loads(raw_search)
+                        else:
+                            parsed_search = {"q": str(raw_search)}
                     except Exception:
                         parsed_search = {"q": str(raw_search)}
+                elif raw_q:
+                    parsed_search = {"q": str(raw_q)}
 
                 combined_filters = None
                 if parsed_filters or parsed_search:
                     combined_filters = {"__filters": parsed_filters or {}, "__search": parsed_search or {}}
 
+                # singleton-режим без критериев
                 if instance.max_instances_per_user == 1 and not (parsed_filters or parsed_search):
                     items = await instance.get_queryset(current_user=user_doc)
                     item: Optional[dict] = None
@@ -422,7 +436,7 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
         response: Response,
         Authorize: AuthJWT = Depends(),
     ):
-        """Возвращает структуру описания админ-моделей и их маршрутов."""
+        """Возвращает структуру описания админ-моделей и их маршрутов + декларативные конфиги для UI."""
         current_user = await get_current_user(Authorize)
         return await get_routes_by_apps(registry, current_user)
 
@@ -652,7 +666,7 @@ def deep_update(dst: dict, src: dict) -> None:
 
 
 async def build_model_info(instance: Any, current_user: Any) -> dict:
-    """Формирует описание админ-модели для UI: поля, группы, инлайны, разрешения."""
+    """Формирует описание админ-модели для UI: поля, группы, инлайны, разрешения и декларативные конфиги запросов."""
     attrs = get_instance_attributes(instance)
     schema_props, _ = get_schema_data(instance)
     model_annotations = getattr(instance.model, "__annotations__", {})
@@ -690,6 +704,38 @@ async def build_model_info(instance: Any, current_user: Any) -> dict:
     groups_schema = build_field_groups(attrs["field_groups"])
     inlines_list = await build_inlines(instance, attrs["inlines_dict"], model_annotations, current_user)
 
+    # Прокидываем декларативные конфиги для фронта (чтобы рисовать UI поиска/фильтров/сортировки)
+    search_config = getattr(instance, "get_search_config", None)
+    filter_config = getattr(instance, "get_filter_config", None)
+    sort_config = getattr(instance, "get_sort_config", None)
+
+    search_cfg = search_config() if callable(search_config) else (getattr(instance, "search_config", {}) or {})
+    filter_cfg = filter_config() if callable(filter_config) else (getattr(instance, "filter_config", {}) or {})
+    sort_cfg = sort_config() if callable(sort_config) else (getattr(instance, "sort_config", {}) or {})
+
+    query_ui = {
+        "search": {
+            "default_mode": getattr(instance, "default_search_mode", "partial"),
+            "default_combine": getattr(instance, "default_search_combine", "or"),
+            "fields": getattr(instance, "search_fields", []),
+            "computed_fields": getattr(instance, "searchable_computed_fields", []),
+            "config": search_cfg,
+        },
+        "filters": {
+            "config": filter_cfg
+        },
+        "sort": {
+            "config": sort_cfg
+        },
+        # Подсказка фронту: как правильно слать параметры в list:
+        # GET /{entity}/?sort_by=...&order=1&filters=<JSON>&search=<JSON>|q=...
+        "request_params_hints": {
+            "filters_param": "filters",  # JSON, внутри можно указывать __filters и __search
+            "search_param": "search",    # JSON ИЛИ строка; альтернативно q=<string>
+            "q_param": "q",
+        }
+    }
+
     return {
         "name": instance.model.__name__,
         "verbose_name": instance.verbose_name,
@@ -706,6 +752,7 @@ async def build_model_info(instance: Any, current_user: Any) -> dict:
         "is_inline": isinstance(instance, InlineCrud),
         "max_instances_per_user": attrs["max_instances"],
         "allow_crud_actions": attrs["allow_crud"],
+        "query_ui": query_ui,
     }
 
 

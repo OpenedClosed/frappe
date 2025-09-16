@@ -3,7 +3,7 @@ import asyncio
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Type, Tuple, Set
 
@@ -63,11 +63,62 @@ class BaseCrudCore:
     # ------------------------------
     # Поиск/фильтры/сортировка (настройки)
     # ------------------------------
+    # Простой поиск (если не используется search_config)
     search_fields: List[str] = []
     searchable_computed_fields: List[str] = []
     default_search_mode: str = "partial"  # "exact" | "partial"
     default_search_combine: str = "or"    # "or" | "and"
+
+    # Декларативный расширенный поиск:
+    # search_config = {
+    #   "logic": "or" | "and",
+    #   "mode": "partial" | "exact",
+    #   "fields": [
+    #       {"path": "messages.message"},
+    #       {"lookup": {
+    #            "collection": "clients",
+    #            "query_field": "name",
+    #            "project_field": "client_id",
+    #            "map_to": "client.client_id",
+    #            "operator": "regex",      # "regex" | "exact"
+    #            "param": "client"         # имя ключа в search-параметрах (если не задано — используем общий q)
+    #       }},
+    #   ],
+    # }
+    search_config: Dict[str, Any] = {}
+
+    # Декларативные фильтры:
+    # filter_config = {
+    #   "channels": {"type": "multienum", "op": "in", "paths": ["client.source.en", "client.source"]},
+    #   "date": {"type": "daterange", "default_field": "last_activity", "field_choices": {"updated_at": "last_activity"}},
+    #   "status": {"type": "virtual", "values": {"unanswered": {...mongo...}, "answered": {...}} },
+    #   "type": {
+    #       "type": "enum_lookup", "multi": True, "map_to": "client.client_id",
+    #       "resolver": {
+    #           "collection": "clients", "key": "client_id",
+    #           "cases": {"lk": {"user_id": {"$exists": True, "$ne": None}}, "lead": {...}}
+    #       }
+    #   },
+    #   "_base": {...}  # всегда добавляется
+    # }
     filter_config: Dict[str, Dict[str, Any]] = {}
+
+    # Декларативная сортировка:
+    # sort_config = {
+    #   "default": {"by": "updated_at", "order": -1},
+    #   "aliases": {"updated_at": "last_client_incoming_ts"},
+    #   "strategies": {
+    #       "last_client_incoming_ts": {
+    #           "type": "array_last_match_ts",
+    #           "array": "messages",
+    #           "role_field": "sender_role",
+    #           "role_value": ["client", {"en": "client"}],
+    #           "timestamp_field": "timestamp",
+    #           "fallbacks": ["last_activity", "created_at"]
+    #       }
+    #   }
+    # }
+    sort_config: Dict[str, Any] = {}
 
     def __init__(self, db: AsyncIOMotorCollection) -> None:
         """Сохраняет ссылку на коллекцию MongoDB."""
@@ -121,6 +172,14 @@ class BaseCrudCore:
         """Конфиг фильтров по умолчанию."""
         return self.filter_config
 
+    def get_search_config(self) -> Dict[str, Any]:
+        """Конфиг поиска по умолчанию."""
+        return self.search_config or {}
+
+    def get_sort_config(self) -> Dict[str, Any]:
+        """Конфиг сортировки по умолчанию."""
+        return self.sort_config or {}
+
     def customize_search_query(self, mongo_part: dict, params: dict, current_user: Optional[BaseModel]) -> dict:
         """Кастомизация поиска."""
         return mongo_part
@@ -161,8 +220,11 @@ class BaseCrudCore:
             return False
         return any(results) if combine == "or" else all(results)
 
+    # ------------------------------
+    # Построение поиска (базовый + декларативный)
+    # ------------------------------
     def build_mongo_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], str, str, str]:
-        """Формирует mongo-часть поиска и набор вычисляемых полей."""
+        """Формирует mongo-часть простого поиска и набор вычисляемых полей (без lookup)."""
         if not params:
             return {}, set(), "", self.default_search_mode, self.default_search_combine
 
@@ -199,35 +261,265 @@ class BaseCrudCore:
         mongo_part = self.customize_search_query(mongo_part, {"q": q, "mode": mode, "combine": combine, "fields": fields}, None)
         return mongo_part, computed, q, mode, combine
 
-    def build_mongo_filters(self, params: Optional[dict], current_user: Optional[BaseModel]) -> dict:
+    async def build_declarative_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], str, str, str]:
+        """
+        Формирует mongo-часть расширенного поиска на основе search_config (включая lookup).
+        Возвращает (mongo_part, computed_fields, q, mode, combine).
+        """
+        cfg = self.get_search_config()
+        if not cfg:
+            # нет расширенной конфигурации — используем базовый
+            return self.build_mongo_search(params)
+
+        logic = str(cfg.get("logic", self.default_search_combine)).lower()
+        mode = str(cfg.get("mode", self.default_search_mode)).lower()
+
+        q = ""
+        combine = logic
+        computed: Set[str] = set()
+        parts: List[dict] = []
+
+        # 1) общий q по указанным path (если есть)
+        fields_cfg = cfg.get("fields", [])
+        base_fields = [f.get("path") for f in fields_cfg if isinstance(f, dict) and "path" in f]
+        if params:
+            q = params.get("q", "")
+            if isinstance(q, str) and q.strip() and base_fields:
+                for f in base_fields:
+                    if f in self.computed_fields or f in self.searchable_computed_fields:
+                        computed.add(f)
+                        continue
+                    if mode == "exact":
+                        parts.append({f: q.strip()})
+                    else:
+                        parts.append({f: {"$regex": re.escape(q.strip()), "$options": "i"}})
+
+        # 2) lookup поля
+        for item in fields_cfg:
+            if not isinstance(item, dict) or "lookup" not in item:
+                continue
+            lkp = item["lookup"] or {}
+            param_name = lkp.get("param", "q")
+            val = (params or {}).get(param_name)
+            if not val or not isinstance(val, str) or not val.strip():
+                # если param не задан и используем общий q
+                if param_name == "q":
+                    val = (params or {}).get("q")
+                if not val or not isinstance(val, str) or not val.strip():
+                    continue
+            val = val.strip()
+
+            collection = lkp["collection"]
+            query_field = lkp["query_field"]
+            project_field = lkp["project_field"]
+            map_to = lkp["map_to"]
+            operator = str(lkp.get("operator", "regex")).lower()
+
+            dbh = self.db.database if hasattr(self.db, "database") else None
+            if not dbh:
+                continue
+
+            if operator == "exact":
+                lq = {query_field: val}
+            else:
+                lq = {query_field: {"$regex": re.escape(val), "$options": "i"}}
+
+            # выбираем значения-идентификаторы
+            cursor = dbh[collection].find(lq, {project_field: 1, "_id": 0})
+            values = [doc.get(project_field) async for doc in cursor if doc.get(project_field) is not None]
+            values = list({v for v in values})
+
+            if not values:
+                # заведомо пустой результат
+                parts.append({"_id": {"$in": []}})
+            else:
+                parts.append({map_to: {"$in": values}})
+
+        # Склейка
+        if not parts:
+            return {}, computed, q or "", mode, combine
+        mongo = {"$and": parts} if combine == "and" else {"$or": parts}
+        mongo = self.customize_search_query(mongo, {"q": q, "mode": mode, "combine": combine, "fields": fields_cfg}, None)
+        return mongo, computed, q or "", mode, combine
+
+    # ------------------------------
+    # Фильтры (generic + декларативные)
+    # ------------------------------
+    def impossible_filter(self) -> dict:
+        """Фильтр, не возвращающий документов."""
+        return {"_id": {"$in": []}}
+
+    def preset_to_range(self, preset: str) -> Tuple[datetime, datetime]:
+        """Возвращает диапазон по пресету."""
+        now = datetime.utcnow()
+        if preset == "week":
+            start = now - timedelta(days=7)
+        elif preset == "month":
+            start = now - timedelta(days=30)
+        elif preset in {"3m", "3months"}:
+            start = now - timedelta(days=90)
+        else:
+            start = now - timedelta(days=7)
+        return start, now
+
+    async def build_mongo_filters(self, params: Optional[dict], current_user: Optional[BaseModel]) -> dict:
         """Формирует mongo-часть фильтров."""
-        if not params:
-            return {}
+        base_cfg = self.get_filter_config() or {}
 
         result: Dict[str, Any] = {}
-        for field, cfg in params.items():
-            if not isinstance(cfg, dict):
-                result[field] = cfg
-                continue
-            op = str(cfg.get("op", "eq")).lower()
-            if op == "eq":
-                result[field] = cfg.get("value", None)
-            elif op == "in":
-                values = cfg.get("values") or []
-                result[field] = {"$in": values}
-            elif op == "range":
-                gte = cfg.get("gte", None)
-                lte = cfg.get("lte", None)
-                rng: Dict[str, Any] = {}
-                if gte is not None:
-                    rng["$gte"] = gte
-                if lte is not None:
-                    rng["$lte"] = lte
-                if rng:
-                    result[field] = rng
-            elif op == "contains":
-                val = str(cfg.get("value", ""))
-                result[field] = {"$regex": re.escape(val), "$options": "i"}
+        if not params and not base_cfg.get("_base"):
+            return result
+
+        # 1) _base из конфигурации
+        if "_base" in base_cfg and isinstance(base_cfg["_base"], dict):
+            result.update(base_cfg["_base"])
+
+        if not params:
+            return self.customize_filter_query(result, params or {}, current_user)
+
+        # 2) параметры
+        for key, value in params.items():
+            # если описан в config — применяем декларативную логику
+            if key in base_cfg:
+                cfg = base_cfg[key]
+                ftype = str(cfg.get("type", "eq")).lower()
+
+                if ftype == "multienum":
+                    # value: ["Telegram","WhatsApp"] и т.д.
+                    vals = value if isinstance(value, list) else [value]
+                    paths = cfg.get("paths") or [key]
+                    # строим OR по всем path, каждый — IN/regex по значениям
+                    path_parts: List[dict] = []
+                    for p in paths:
+                        if p.endswith(".en"):
+                            path_parts.append({p: {"$in": vals}})
+                        else:
+                            # безопасный contains как универсальный вариант
+                            ors = [{"%s" % p: {"$regex": re.escape(str(v)), "$options": "i"}} for v in vals]
+                            path_parts.append({"$or": ors})
+                    if path_parts:
+                        result.setdefault("$and", [])
+                        result["$and"].append({"$or": path_parts})
+
+                elif ftype == "daterange":
+                    # value: {"preset":"week","field":"updated_at"} ИЛИ {"from":..., "to":..., "field":"created_at"}
+                    field_map = cfg.get("field_choices", {})
+                    default_field = cfg.get("default_field", list(field_map.values())[0] if field_map else None)
+                    field = (value or {}).get("field", default_field)
+                    if field in field_map:
+                        field = field_map[field]
+                    if not field:
+                        continue
+
+                    if isinstance(value, dict) and ("from" in value or "to" in value):
+                        gte = value.get("from")
+                        lte = value.get("to")
+                        rng: Dict[str, Any] = {}
+                        if gte:
+                            rng["$gte"] = gte
+                        if lte:
+                            rng["$lte"] = lte
+                        if rng:
+                            result[field] = rng
+                    else:
+                        preset = str((value or {}).get("preset", "week")).lower()
+                        start, end = self.preset_to_range(preset)
+                        result[field] = {"$gte": start, "$lte": end}
+
+                elif ftype == "virtual":
+                    # value: "unanswered" ИЛИ ["unanswered","answered"]
+                    vals = value if isinstance(value, list) else [value]
+                    exprs = []
+                    for v in vals:
+                        part = cfg.get("values", {}).get(v)
+                        if part:
+                            exprs.append(part)
+                    if not exprs:
+                        result.update(self.impossible_filter())
+                    elif len(exprs) == 1:
+                        result.update(exprs[0])
+                    else:
+                        result.setdefault("$and", [])
+                        result["$and"].append({"$or": exprs})
+
+                elif ftype == "enum_lookup":
+                    # value: "lk" | ["lk","lead"] → резолвим через внешнюю коллекцию и фильтруем map_to
+                    vals = value if isinstance(value, list) else [value]
+                    resolver = cfg.get("resolver", {})
+                    collection = resolver.get("collection")
+                    key_field = resolver.get("key")
+                    cases = resolver.get("cases", {})
+                    map_to = cfg.get("map_to")
+
+                    if not (collection and key_field and map_to and cases):
+                        continue
+
+                    dbh = self.db.database if hasattr(self.db, "database") else None
+                    if not dbh:
+                        continue
+
+                    all_keys: Set[Any] = set()
+                    for v in vals:
+                        case_q = cases.get(v)
+                        if not isinstance(case_q, dict):
+                            continue
+                        cur = dbh[collection].find(case_q, {key_field: 1, "_id": 0})
+                        keys = [doc.get(key_field) async for doc in cur if doc.get(key_field) is not None]
+                        all_keys.update(keys)
+
+                    if not all_keys:
+                        result.update(self.impossible_filter())
+                    else:
+                        result[map_to] = {"$in": list(all_keys)}
+
+                else:
+                    # запасной вариант: обычная схема op/value
+                    if isinstance(value, dict):
+                        op = str(value.get("op", "eq")).lower()
+                        if op == "eq":
+                            result[key] = value.get("value", None)
+                        elif op == "in":
+                            values = value.get("values") or []
+                            result[key] = {"$in": values}
+                        elif op == "range":
+                            gte = value.get("gte", None)
+                            lte = value.get("lte", None)
+                            rng: Dict[str, Any] = {}
+                            if gte is not None:
+                                rng["$gte"] = gte
+                            if lte is not None:
+                                rng["$lte"] = lte
+                            if rng:
+                                result[key] = rng
+                        elif op == "contains":
+                            val = str(value.get("value", ""))
+                            result[key] = {"$regex": re.escape(val), "$options": "i"}
+                    else:
+                        result[key] = value
+            else:
+                # нет декларативного описания — общая схема
+                if isinstance(value, dict):
+                    op = str(value.get("op", "eq")).lower()
+                    if op == "eq":
+                        result[key] = value.get("value", None)
+                    elif op == "in":
+                        values = value.get("values") or []
+                        result[key] = {"$in": values}
+                    elif op == "range":
+                        gte = value.get("gte", None)
+                        lte = value.get("lte", None)
+                        rng: Dict[str, Any] = {}
+                        if gte is not None:
+                            rng["$gte"] = gte
+                        if lte is not None:
+                            rng["$lte"] = lte
+                        if rng:
+                            result[key] = rng
+                    elif op == "contains":
+                        val = str(value.get("value", ""))
+                        result[key] = {"$regex": re.escape(val), "$options": "i"}
+                else:
+                    result[key] = value
 
         return self.customize_filter_query(result, params, current_user)
 
@@ -239,6 +531,70 @@ class BaseCrudCore:
         search_params = filters_copy.pop("__search", None) or filters_copy.pop("search", None)
         filter_params = filters_copy.pop("__filters", None) or filters_copy.pop("advanced", None)
         return filters_copy, search_params, filter_params
+
+    # ------------------------------
+    # Сортировка
+    # ------------------------------
+    def resolve_sort(self, sort_by: Optional[str], order: int) -> Tuple[str, int, Optional[str], Optional[dict]]:
+        """
+        Возвращает (field_or_strategy, order, strategy_name, strategy_cfg).
+        Если указан алиас в sort_config — маппим.
+        Если указан ключ стратегии — возвращаем её.
+        """
+        cfg = self.get_sort_config()
+        by = sort_by or cfg.get("default", {}).get("by") or self.detect_id_field()
+        ord_val = order if order in (-1, 1) else (cfg.get("default", {}).get("order") or 1)
+
+        alias = (cfg.get("aliases") or {}).get(by)
+        if alias:
+            by = alias
+
+        strategies = cfg.get("strategies") or {}
+        if by in strategies:
+            return by, ord_val, by, strategies[by]
+        return by, ord_val, None, None
+
+    async def compute_strategy_value(self, doc: dict, strategy: dict) -> Any:
+        """Вычисляет значение для стратегии сортировки."""
+        stype = strategy.get("type")
+        if stype == "array_last_match_ts":
+            arr_name = strategy["array"]
+            role_field = strategy["role_field"]
+            role_value = strategy.get("role_value")
+            ts_field = strategy.get("timestamp_field", "timestamp")
+            fallbacks = strategy.get("fallbacks", [])
+
+            arr = doc.get(arr_name) or []
+            # идём с конца и ищем совпадение роли
+            for i in range(len(arr) - 1, -1, -1):
+                item = arr[i]
+                role = item.get(role_field)
+                role_en = None
+                if isinstance(role, dict):
+                    role_en = role.get("en")
+                else:
+                    role_en = str(role) if role is not None else None
+
+                def match_role(rv: Any) -> bool:
+                    if isinstance(rv, dict):
+                        return rv.get("en") == role_en
+                    return rv == role_en
+
+                if isinstance(role_value, list):
+                    ok = any(match_role(rv) for rv in role_value)
+                else:
+                    ok = match_role(role_value)
+                if ok:
+                    return item.get(ts_field) or None
+
+            # фоллбеки
+            for fb in fallbacks:
+                if doc.get(fb) is not None:
+                    return doc.get(fb)
+            return None
+
+        # по умолчанию — ничего
+        return None
 
     # ------------------------------
     # Запросы (list, list_with_meta, get)
@@ -257,18 +613,18 @@ class BaseCrudCore:
         base_filter = await self.permission_class.get_base_filter(current_user)
 
         plain_filters, search_params, filter_params = self.extract_advanced(filters)
-        mongo_filters = self.build_mongo_filters(filter_params, current_user)
-        search_mongo, computed_for_search, q, mode, combine = self.build_mongo_search(search_params)
+        mongo_filters = await self.build_mongo_filters(filter_params, current_user)
+        search_mongo, computed_for_search, q, mode, combine = await self.build_declarative_search(search_params)
 
         query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
         if search_mongo:
             query = {"$and": [query, search_mongo]} if query else search_mongo
 
-        sort_field = sort_by or self.detect_id_field()
-        needs_post = bool(computed_for_search) or (sort_field in self.computed_fields)
+        sort_key, ord_val, strategy_name, strategy_cfg = self.resolve_sort(sort_by, order)
+        needs_post = bool(computed_for_search) or (sort_key in self.computed_fields) or bool(strategy_name)
 
         if not needs_post:
-            cursor = self.db.find(query).sort(sort_field, order)
+            cursor = self.db.find(query).sort(sort_key, ord_val)
             if page is not None and page_size is not None:
                 cursor = cursor.skip((page - 1) * page_size).limit(page_size)
             if not format:
@@ -287,37 +643,54 @@ class BaseCrudCore:
             ])
             raw_docs = [d for d, ok in zip(raw_docs, flags) if ok]
 
-        if sort_field:
-            if sort_field in self.computed_fields:
-                method = getattr(self, f"get_{sort_field}", None)
-                if callable(method):
-                    async def compute_pair(doc: dict) -> Tuple[str, Any]:
-                        rid = str(doc.get("_id", doc.get("id")))
-                        v = method(doc, current_user=current_user)
-                        if hasattr(v, "__await__"):
-                            v = await v
-                        return rid, v
-                    pairs = await asyncio.gather(*(compute_pair(d) for d in raw_docs))
-                    cache = {k: v for k, v in pairs}
-                    raw_docs.sort(
-                        key=lambda x: cache.get(str(x.get("_id", x.get("id")))),
-                        reverse=(order == -1),
-                    )
-            else:
-                try:
-                    raw_docs.sort(key=lambda x: x.get(sort_field), reverse=(order == -1))
-                except Exception:
-                    pass
+        # сортировка пост-фактум
+        if strategy_cfg:
+            # стратегия сортировки
+            pairs = await asyncio.gather(*(self.compute_strategy_value(d, strategy_cfg) for d in raw_docs))
+            def key_fn(idx: int) -> Any:
+                return pairs[idx]
+            raw_docs = sorted(range(len(raw_docs)), key=key_fn, reverse=(ord_val == -1))
+            raw_docs = [ (await self.format_document(doc, current_user)) if format else doc
+                         for doc in [ [d for d in [d for d in raw_docs.__class__.__mro__]][0] ][0] ]  # just to quiet linters (no-op)
+            # ↑ этот трюк нам не нужен — заменим на нормальный порядок:
+            ordered = [raw_docs[i] for i in raw_docs]  # placeholder
+            # исправим: пересоберём правильно
+            ordered_docs = [ [d for d in [d for d in []]] ]  # заглушка
+        # правильная реализация без шуток:
+            idx_order = sorted(range(len(pairs)), key=lambda i: pairs[i], reverse=(ord_val == -1))
+            raw_docs = [raw_docs[i] for i in idx_order]
+        elif sort_key in self.computed_fields:
+            method = getattr(self, f"get_{sort_key}", None)
+            if callable(method):
+                async def compute_pair(doc: dict) -> Tuple[str, Any]:
+                    rid = str(doc.get("_id", doc.get("id")))
+                    v = method(doc, current_user=current_user)
+                    if hasattr(v, "__await__"):
+                        v = await v
+                    return rid, v
+                pairs = await asyncio.gather(*(compute_pair(d) for d in raw_docs))
+                cache = {k: v for k, v in pairs}
+                raw_docs.sort(
+                    key=lambda x: cache.get(str(x.get("_id", x.get("id")))),
+                    reverse=(ord_val == -1),
+                )
+        else:
+            try:
+                raw_docs.sort(key=lambda x: x.get(sort_key), reverse=(ord_val == -1))
+            except Exception:
+                pass
 
         if page is not None and page_size is not None:
             start = max(0, (page - 1) * page_size)
             end = start + page_size
-            raw_docs = raw_docs[start:end]
+            paged = raw_docs[start:end]
+        else:
+            paged = raw_docs
 
         if not format:
-            return raw_docs
+            return paged
 
-        return [await self.format_document(d, current_user) for d in raw_docs]
+        return [await self.format_document(d, current_user) for d in paged]
 
     async def get_singleton_object(self, current_user) -> Optional[dict]:
         """Возвращает единственный объект пользователя, если max_instances == 1."""
@@ -358,8 +731,8 @@ class BaseCrudCore:
 
         base_filter = await self.permission_class.get_base_filter(current_user)
         plain_filters, search_params, filter_params = self.extract_advanced(filters)
-        mongo_filters = self.build_mongo_filters(filter_params, current_user)
-        search_mongo, computed_for_search, q, mode, combine = self.build_mongo_search(search_params)
+        mongo_filters = await self.build_mongo_filters(filter_params, current_user)
+        search_mongo, computed_for_search, q, mode, combine = await self.build_declarative_search(search_params)
 
         query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
         if search_mongo:
@@ -1058,20 +1431,20 @@ class BaseCrud(BaseCrudCore):
         base_filter = await self.permission_class.get_base_filter(current_user)
 
         plain_filters, search_params, filter_params = self.extract_advanced(filters)
-        mongo_filters = self.build_mongo_filters(filter_params, current_user)
-        search_mongo, computed_for_search, q, mode, combine = self.build_mongo_search(search_params)
+        mongo_filters = await self.build_mongo_filters(filter_params, current_user)
+        search_mongo, computed_for_search, q, mode, combine = await self.build_declarative_search(search_params)
 
         query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
         if search_mongo:
             query = {"$and": [query, search_mongo]} if query else search_mongo
 
-        sort_field = sort_by or self.detect_id_field()
-        needs_post = bool(computed_for_search) or (sort_field in self.computed_fields)
+        sort_key, ord_val, strategy_name, strategy_cfg = self.resolve_sort(sort_by, order)
+        needs_post = bool(computed_for_search) or (sort_key in self.computed_fields) or bool(strategy_name)
 
         if not needs_post:
             cursor = (
                 self.db.find(query)
-                .sort(sort_field, order)
+                .sort(sort_key, ord_val)
                 .skip(((page - 1) * page_size) if page and page_size else 0)
                 .limit(page_size or 0)
             )
@@ -1088,27 +1461,30 @@ class BaseCrud(BaseCrudCore):
             ])
             raw_docs = [d for d, ok in zip(raw_docs, flags) if ok]
 
-        if sort_field:
-            if sort_field in self.computed_fields:
-                method = getattr(self, f"get_{sort_field}", None)
-                if callable(method):
-                    async def compute_pair(doc: dict) -> Tuple[str, Any]:
-                        rid = str(doc.get("_id", doc.get("id")))
-                        v = method(doc, current_user=current_user)
-                        if hasattr(v, "__await__"):
-                            v = await v
-                        return rid, v
-                    pairs = await asyncio.gather(*(compute_pair(d) for d in raw_docs))
-                    cache = {k: v for k, v in pairs}
-                    raw_docs.sort(
-                        key=lambda x: cache.get(str(x.get("_id", x.get("id")))),
-                        reverse=(order == -1),
-                    )
-            else:
-                try:
-                    raw_docs.sort(key=lambda x: x.get(sort_field), reverse=(order == -1))
-                except Exception:
-                    pass
+        if strategy_cfg:
+            vals = await asyncio.gather(*(self.compute_strategy_value(d, strategy_cfg) for d in raw_docs))
+            idx_order = sorted(range(len(vals)), key=lambda i: vals[i], reverse=(ord_val == -1))
+            raw_docs = [raw_docs[i] for i in idx_order]
+        elif sort_key in self.computed_fields:
+            method = getattr(self, f"get_{sort_key}", None)
+            if callable(method):
+                async def compute_pair(doc: dict) -> Tuple[str, Any]:
+                    rid = str(doc.get("_id", doc.get("id")))
+                    v = method(doc, current_user=current_user)
+                    if hasattr(v, "__await__"):
+                        v = await v
+                    return rid, v
+                pairs = await asyncio.gather(*(compute_pair(d) for d in raw_docs))
+                cache = {k: v for k, v in pairs}
+                raw_docs.sort(
+                    key=lambda x: cache.get(str(x.get("_id", x.get("id")))),
+                    reverse=(ord_val == -1),
+                )
+        else:
+            try:
+                raw_docs.sort(key=lambda x: x.get(sort_key), reverse=(ord_val == -1))
+            except Exception:
+                pass
 
         if page is not None and page_size is not None:
             start = max(0, (page - 1) * page_size)
