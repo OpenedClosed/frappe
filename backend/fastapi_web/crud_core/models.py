@@ -2,9 +2,10 @@
 import asyncio
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Tuple, Set
 
 from bson import ObjectId
 from fastapi import HTTPException
@@ -59,6 +60,15 @@ class BaseCrudCore:
     # Права
     permission_class: BasePermission = AllowAll()  # type: ignore
 
+    # ------------------------------
+    # Поиск/фильтры/сортировка (настройки)
+    # ------------------------------
+    search_fields: List[str] = []
+    searchable_computed_fields: List[str] = []
+    default_search_mode: str = "partial"  # "exact" | "partial"
+    default_search_combine: str = "or"    # "or" | "and"
+    filter_config: Dict[str, Dict[str, Any]] = {}
+
     def __init__(self, db: AsyncIOMotorCollection) -> None:
         """Сохраняет ссылку на коллекцию MongoDB."""
         self.db = db
@@ -101,6 +111,135 @@ class BaseCrudCore:
         """Возвращает имя поля пользователя."""
         return "_id" if self.user_collection_name == self.db.name else "user_id"
 
+    def get_search_fields(self) -> List[str]:
+        """Поля поиска по умолчанию."""
+        if self.search_fields:
+            return self.search_fields
+        return list(getattr(self.model, "__annotations__", {}).keys())
+
+    def get_filter_config(self) -> Dict[str, Dict[str, Any]]:
+        """Конфиг фильтров по умолчанию."""
+        return self.filter_config
+
+    def customize_search_query(self, mongo_part: dict, params: dict, current_user: Optional[BaseModel]) -> dict:
+        """Кастомизация поиска."""
+        return mongo_part
+
+    def customize_filter_query(self, mongo_part: dict, params: dict, current_user: Optional[BaseModel]) -> dict:
+        """Кастомизация фильтров."""
+        return mongo_part
+
+    def match_text(self, value: Any, q: str, mode: str) -> bool:
+        """Сопоставление текста."""
+        if value is None:
+            return False
+        s = str(value)
+        if mode == "exact":
+            return s == q
+        return re.search(re.escape(q), s, flags=re.IGNORECASE) is not None
+
+    async def search_match_computed(
+        self,
+        doc: dict,
+        computed_fields: Set[str],
+        q: str,
+        mode: str,
+        current_user: Optional[BaseModel],
+        combine: str,
+    ) -> bool:
+        """Проверка совпадений по вычисляемым полям."""
+        results: List[bool] = []
+        for cf in computed_fields:
+            method = getattr(self, f"get_{cf}", None)
+            if not callable(method):
+                continue
+            v = method(doc, current_user=current_user)
+            if hasattr(v, "__await__"):
+                v = await v
+            results.append(self.match_text(v, q, mode))
+        if not results:
+            return False
+        return any(results) if combine == "or" else all(results)
+
+    def build_mongo_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], str, str, str]:
+        """Формирует mongo-часть поиска и набор вычисляемых полей."""
+        if not params:
+            return {}, set(), "", self.default_search_mode, self.default_search_combine
+
+        if isinstance(params, str):
+            q = params.strip()
+            mode = self.default_search_mode
+            combine = self.default_search_combine
+            fields = self.get_search_fields()
+        else:
+            q = str(params.get("q", "")).strip()
+            mode = str(params.get("mode", self.default_search_mode)).lower()
+            combine = str(params.get("combine", self.default_search_combine)).lower()
+            fields = params.get("fields") or self.get_search_fields()
+
+        if not q or not fields:
+            return {}, set(), "", mode, combine
+
+        parts: List[dict] = []
+        computed: Set[str] = set()
+
+        for f in fields:
+            if f in self.computed_fields or f in self.searchable_computed_fields:
+                computed.add(f)
+                continue
+            if mode == "exact":
+                parts.append({f: q})
+            else:
+                parts.append({f: {"$regex": re.escape(q), "$options": "i"}})
+
+        mongo_part: dict = {}
+        if parts:
+            mongo_part = {"$and": parts} if combine == "and" else {"$or": parts}
+
+        mongo_part = self.customize_search_query(mongo_part, {"q": q, "mode": mode, "combine": combine, "fields": fields}, None)
+        return mongo_part, computed, q, mode, combine
+
+    def build_mongo_filters(self, params: Optional[dict], current_user: Optional[BaseModel]) -> dict:
+        """Формирует mongo-часть фильтров."""
+        if not params:
+            return {}
+
+        result: Dict[str, Any] = {}
+        for field, cfg in params.items():
+            if not isinstance(cfg, dict):
+                result[field] = cfg
+                continue
+            op = str(cfg.get("op", "eq")).lower()
+            if op == "eq":
+                result[field] = cfg.get("value", None)
+            elif op == "in":
+                values = cfg.get("values") or []
+                result[field] = {"$in": values}
+            elif op == "range":
+                gte = cfg.get("gte", None)
+                lte = cfg.get("lte", None)
+                rng: Dict[str, Any] = {}
+                if gte is not None:
+                    rng["$gte"] = gte
+                if lte is not None:
+                    rng["$lte"] = lte
+                if rng:
+                    result[field] = rng
+            elif op == "contains":
+                val = str(cfg.get("value", ""))
+                result[field] = {"$regex": re.escape(val), "$options": "i"}
+
+        return self.customize_filter_query(result, params, current_user)
+
+    def extract_advanced(self, filters: Optional[dict]) -> Tuple[dict, Optional[dict], Optional[dict]]:
+        """Выделяет спец-ключи из filters."""
+        if not filters or not isinstance(filters, dict):
+            return {}, None, None
+        filters_copy = dict(filters)
+        search_params = filters_copy.pop("__search", None) or filters_copy.pop("search", None)
+        filter_params = filters_copy.pop("__filters", None) or filters_copy.pop("advanced", None)
+        return filters_copy, search_params, filter_params
+
     # ------------------------------
     # Запросы (list, list_with_meta, get)
     # ------------------------------
@@ -116,21 +255,69 @@ class BaseCrudCore:
     ) -> List[dict]:
         """Возвращает список документов с фильтрами и пагинацией."""
         base_filter = await self.permission_class.get_base_filter(current_user)
-        query = {**(filters or {}), **base_filter}
+
+        plain_filters, search_params, filter_params = self.extract_advanced(filters)
+        mongo_filters = self.build_mongo_filters(filter_params, current_user)
+        search_mongo, computed_for_search, q, mode, combine = self.build_mongo_search(search_params)
+
+        query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
+        if search_mongo:
+            query = {"$and": [query, search_mongo]} if query else search_mongo
 
         sort_field = sort_by or self.detect_id_field()
-        cursor = self.db.find(query).sort(sort_field, order)
+        needs_post = bool(computed_for_search) or (sort_field in self.computed_fields)
+
+        if not needs_post:
+            cursor = self.db.find(query).sort(sort_field, order)
+            if page is not None and page_size is not None:
+                cursor = cursor.skip((page - 1) * page_size).limit(page_size)
+            if not format:
+                return [raw async for raw in cursor]
+
+            objs: List[dict] = []
+            async for raw_doc in cursor:
+                objs.append(await self.format_document(raw_doc, current_user))
+            return objs
+
+        raw_docs: List[dict] = [d async for d in self.db.find(query)]
+
+        if computed_for_search:
+            flags = await asyncio.gather(*[
+                self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in raw_docs
+            ])
+            raw_docs = [d for d, ok in zip(raw_docs, flags) if ok]
+
+        if sort_field:
+            if sort_field in self.computed_fields:
+                method = getattr(self, f"get_{sort_field}", None)
+                if callable(method):
+                    async def compute_pair(doc: dict) -> Tuple[str, Any]:
+                        rid = str(doc.get("_id", doc.get("id")))
+                        v = method(doc, current_user=current_user)
+                        if hasattr(v, "__await__"):
+                            v = await v
+                        return rid, v
+                    pairs = await asyncio.gather(*(compute_pair(d) for d in raw_docs))
+                    cache = {k: v for k, v in pairs}
+                    raw_docs.sort(
+                        key=lambda x: cache.get(str(x.get("_id", x.get("id")))),
+                        reverse=(order == -1),
+                    )
+            else:
+                try:
+                    raw_docs.sort(key=lambda x: x.get(sort_field), reverse=(order == -1))
+                except Exception:
+                    pass
 
         if page is not None and page_size is not None:
-            cursor = cursor.skip((page - 1) * page_size).limit(page_size)
+            start = max(0, (page - 1) * page_size)
+            end = start + page_size
+            raw_docs = raw_docs[start:end]
 
         if not format:
-            return [raw async for raw in cursor]
+            return raw_docs
 
-        objs: List[dict] = []
-        async for raw_doc in cursor:
-            objs.append(await self.format_document(raw_doc, current_user))
-        return objs
+        return [await self.format_document(d, current_user) for d in raw_docs]
 
     async def get_singleton_object(self, current_user) -> Optional[dict]:
         """Возвращает единственный объект пользователя, если max_instances == 1."""
@@ -170,9 +357,23 @@ class BaseCrudCore:
         self.check_permission("read", current_user)
 
         base_filter = await self.permission_class.get_base_filter(current_user)
-        query = {**(filters or {}), **base_filter}
+        plain_filters, search_params, filter_params = self.extract_advanced(filters)
+        mongo_filters = self.build_mongo_filters(filter_params, current_user)
+        search_mongo, computed_for_search, q, mode, combine = self.build_mongo_search(search_params)
 
-        total_count = await self.db.count_documents(query)
+        query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
+        if search_mongo:
+            query = {"$and": [query, search_mongo]} if query else search_mongo
+
+        if computed_for_search:
+            all_docs: List[dict] = [d async for d in self.db.find(query)]
+            flags = await asyncio.gather(*[
+                self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in all_docs
+            ])
+            total_count = sum(1 for ok in flags if ok)
+        else:
+            total_count = await self.db.count_documents(query)
+
         total_pages = (total_count + page_size - 1) // page_size
 
         data = await self.get_queryset(
@@ -855,16 +1056,65 @@ class BaseCrud(BaseCrudCore):
         self.check_permission("read", current_user)
 
         base_filter = await self.permission_class.get_base_filter(current_user)
-        query = {**(filters or {}), **base_filter}
 
-        cursor = (
-            self.db.find(query)
-            .sort(sort_by or self.detect_id_field(), order)
-            .skip(((page - 1) * page_size) if page and page_size else 0)
-            .limit(page_size or 0)
-        )
+        plain_filters, search_params, filter_params = self.extract_advanced(filters)
+        mongo_filters = self.build_mongo_filters(filter_params, current_user)
+        search_mongo, computed_for_search, q, mode, combine = self.build_mongo_search(search_params)
 
-        raw_docs: List[dict] = [doc async for doc in cursor]
+        query: Dict[str, Any] = {**(plain_filters or {}), **base_filter, **mongo_filters}
+        if search_mongo:
+            query = {"$and": [query, search_mongo]} if query else search_mongo
+
+        sort_field = sort_by or self.detect_id_field()
+        needs_post = bool(computed_for_search) or (sort_field in self.computed_fields)
+
+        if not needs_post:
+            cursor = (
+                self.db.find(query)
+                .sort(sort_field, order)
+                .skip(((page - 1) * page_size) if page and page_size else 0)
+                .limit(page_size or 0)
+            )
+            raw_docs: List[dict] = [doc async for doc in cursor]
+            if not format:
+                return raw_docs
+            return await asyncio.gather(*(self.format_document(d, current_user) for d in raw_docs))
+
+        raw_docs: List[dict] = [d async for d in self.db.find(query)]
+
+        if computed_for_search:
+            flags = await asyncio.gather(*[
+                self.search_match_computed(d, computed_for_search, q, mode, current_user, combine) for d in raw_docs
+            ])
+            raw_docs = [d for d, ok in zip(raw_docs, flags) if ok]
+
+        if sort_field:
+            if sort_field in self.computed_fields:
+                method = getattr(self, f"get_{sort_field}", None)
+                if callable(method):
+                    async def compute_pair(doc: dict) -> Tuple[str, Any]:
+                        rid = str(doc.get("_id", doc.get("id")))
+                        v = method(doc, current_user=current_user)
+                        if hasattr(v, "__await__"):
+                            v = await v
+                        return rid, v
+                    pairs = await asyncio.gather(*(compute_pair(d) for d in raw_docs))
+                    cache = {k: v for k, v in pairs}
+                    raw_docs.sort(
+                        key=lambda x: cache.get(str(x.get("_id", x.get("id")))),
+                        reverse=(order == -1),
+                    )
+            else:
+                try:
+                    raw_docs.sort(key=lambda x: x.get(sort_field), reverse=(order == -1))
+                except Exception:
+                    pass
+
+        if page is not None and page_size is not None:
+            start = max(0, (page - 1) * page_size)
+            end = start + page_size
+            raw_docs = raw_docs[start:end]
+
         if not format:
             return raw_docs
 

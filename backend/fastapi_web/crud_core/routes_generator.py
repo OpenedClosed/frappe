@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib
 import logging
 import os
+import json
 from datetime import datetime
 from importlib import import_module
 from pathlib import Path
@@ -220,7 +221,28 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                 has_page = "page" in request.query_params
                 has_page_size = "page_size" in request.query_params
 
-                if instance.max_instances_per_user == 1:
+                raw_filters = request.query_params.get("filters")
+                raw_search = request.query_params.get("search") or request.query_params.get("q")
+
+                parsed_filters: Optional[dict] = None
+                if raw_filters:
+                    try:
+                        parsed_filters = json.loads(raw_filters)
+                    except Exception:
+                        raise HTTPException(status_code=400, detail="Invalid filters JSON")
+
+                parsed_search: Optional[dict] = None
+                if raw_search:
+                    try:
+                        parsed_search = json.loads(raw_search) if str(raw_search).strip().startswith("{") else {"q": str(raw_search)}
+                    except Exception:
+                        parsed_search = {"q": str(raw_search)}
+
+                combined_filters = None
+                if parsed_filters or parsed_search:
+                    combined_filters = {"__filters": parsed_filters or {}, "__search": parsed_search or {}}
+
+                if instance.max_instances_per_user == 1 and not (parsed_filters or parsed_search):
                     items = await instance.get_queryset(current_user=user_doc)
                     item: Optional[dict] = None
                     if items:
@@ -233,15 +255,23 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                         raise HTTPException(status_code=404, detail="Item not found")
                     return item
 
-                if has_page and has_page_size:
+                use_meta = bool(parsed_filters or parsed_search or (has_page and has_page_size))
+                if use_meta:
                     return await instance.list_with_meta(
                         page=page,
                         page_size=page_size,
                         sort_by=sort_by,
                         order=order,
+                        filters=combined_filters,
                         current_user=user_doc,
                     )
-                return await instance.list(sort_by=sort_by, order=order, current_user=user_doc)
+
+                return await instance.list(
+                    sort_by=sort_by,
+                    order=order,
+                    filters=combined_filters,
+                    current_user=user_doc,
+                )
 
             @router.get(f"/{snake_name}/{{item_id}}", name=f"get_{snake_name}")
             @jwt_required()
