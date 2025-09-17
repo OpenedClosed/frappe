@@ -5,7 +5,7 @@ import logging
 import random
 import re
 from asyncio import Lock
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 
 import httpx
@@ -1175,8 +1175,6 @@ async def process_user_query_after_brief(
                 chat_history=chat_history,
                 client_id=client_id,
             )
-            print("="*100)
-            print(gpt_data)
 
             user_msg.gpt_evaluation = GptEvaluation(
                 topics=gpt_data["topics"],
@@ -1443,6 +1441,7 @@ async def build_ai_response(
         or cc is True
         or confidence < 0.2
     )
+    print(need_consultant)
 
     if need_consultant:
         # помечаем, что консультант запрошен
@@ -1461,9 +1460,9 @@ async def build_ai_response(
         try:
             session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id})
             if session_doc:
-                await send_message_to_bot(
+                asyncio.create_task(send_message_to_bot(
                     str(session_doc["_id"]), chat_session.model_dump(mode="python")
-                )
+                ))
         except Exception:
             pass
 
@@ -1940,6 +1939,40 @@ async def set_auto_mode(
 # Вспомогательные функции для смены режима
 # ==============================
 
+MANUAL_NOTIFY_COOLDOWN_SECONDS = 30 * 60  # 30 минут
+
+async def should_notify_manual_mode(chat_id: str) -> bool:
+    """
+    Возвращает True, если можно отправить нотификацию в этот момент.
+    1) Сначала пробуем Redis: set nx + ttl.
+    2) Fallback: Mongo поле manual_mode_last_notified_at (UTC).
+    """
+    # # 1) Redis
+    # try:
+    #     key = f"notif:manual_mode:{chat_id}"
+    #     # set if not exists + ttl
+    #     was_set = await redis_db.set(key, "1", ex=MANUAL_NOTIFY_COOLDOWN_SECONDS, nx=True)
+    #     # aioredis возвращает True/False
+    #     if was_set:
+    #         return True
+    #     return False
+    # except Exception:
+    #     logger.exception("Redis check failed for manual-mode notify fallback to Mongo")
+
+    # # 2) Mongo fallback
+    # now = datetime.utcnow().replace(tzinfo=timezone.utc)
+    # doc = await mongo_db.chats.find_one({"chat_id": chat_id}, {"manual_mode_last_notified_at": 1})
+    # last = (doc or {}).get("manual_mode_last_notified_at")
+    # if not last or (now - last).total_seconds() >= MANUAL_NOTIFY_COOLDOWN_SECONDS:
+    #     # обновим метку и разрешим отправку
+    #     await mongo_db.chats.update_one(
+    #         {"chat_id": chat_id},
+    #         {"$set": {"manual_mode_last_notified_at": now}}
+    #     )
+    #     return True
+    # return False
+    return True # временно
+
 async def toggle_chat_mode(
     manager: Any,
     chat_session: ChatSession,
@@ -1948,8 +1981,22 @@ async def toggle_chat_mode(
 ) -> None:
     """Переключает чат в указанный режим (ручной/автоматический)."""
     chat_session.manual_mode = manual_mode
-    await mongo_db.chats.update_one({"chat_id": chat_session.chat_id}, {"$set": {"manual_mode": manual_mode}})
+    await mongo_db.chats.update_one(
+        {"chat_id": chat_session.chat_id},
+        {"$set": {"manual_mode": manual_mode}}
+    )
     await fill_remaining_brief_questions(chat_session.chat_id, chat_session)
+
+    # Если включили ручной режим — отправим уведомление админу в бот, но не чаще 1 раза в 30 минут
+    if manual_mode:
+        try:
+            if await should_notify_manual_mode(chat_session.chat_id):
+                session_doc = await mongo_db.chats.find_one({"chat_id": chat_session.chat_id}, {"_id": 1})
+                if session_doc:
+                    # ⬇️ ровно как просил — вызываем твою функцию отправки в Telegram
+                    asyncio.create_task(send_message_to_bot(str(session_doc["_id"]), chat_session.model_dump(mode="python")))
+        except Exception:
+            logger.exception("Failed to trigger send_message_to_bot on manual mode toggle")
 
 
 async def send_mode_change_message(

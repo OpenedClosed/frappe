@@ -111,10 +111,6 @@ async def route_incoming_message(
     """Единый обработчик, одинаковый для Telegram, Instagram, Facebook …"""
     is_echo = metadata.get("is_echo", False)
     raw_metadata = metadata.get("raw_metadata")
-    print(settings_bot_id, sender_id)
-    logger.warning(f"BOT_ID {settings_bot_id}")
-    logger.warning(f"SENDER_ID {sender_id}")
-    logger.warning(f"{metadata}")
 
     if is_echo and raw_metadata == "broadcast":
         return

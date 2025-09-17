@@ -73,7 +73,6 @@ async def export_chats_to_constructor_cli(company: str | None, year: int | None,
         query["created_at"] = {"$gte": month_start, "$lt": month_end}
 
     cursor = mongo_db.chats.find(query)
-    print(query)
     total, exported = 0, 0
 
     async for doc in cursor:

@@ -209,7 +209,7 @@ class BaseCrudCore:
         current_user: Optional[BaseModel],
         combine: str,
     ) -> bool:
-        print(f"[search] search_match_computed mode={mode} combine={combine} computed_fields={list(computed_fields)} q='{q}'")
+
         if not computed_fields:
             return False
 
@@ -224,7 +224,7 @@ class BaseCrudCore:
                     v = await v
                 results.append(self.match_text(v, q, mode))
             ok = any(results) if combine == "or" else (all(results) if results else False)
-            print("[search] search_match_computed exact →", ok)
+       
             return ok
 
         tokens = self._tokenize_query(q)
@@ -239,7 +239,7 @@ class BaseCrudCore:
                     v = await v
                 results.append(self.match_text(v, q, mode))
             ok = any(results) if combine == "or" else (all(results) if results else False)
-            print("[search] search_match_computed single token →", ok)
+          
             return ok
 
         # многословный: учитываем combine
@@ -254,34 +254,34 @@ class BaseCrudCore:
             values.append("" if v is None else str(v))
 
         if not values:
-            print("[search] search_match_computed no values for computed fields → False")
+         
             return False
 
         if combine == "and":
             # каждый токен должен встретиться хотя бы в одном computed-поле
             for t in tokens:
                 if not any(self._match_token(val, t) for val in values):
-                    print("[search] search_match_computed miss token (AND):", t, "→ False")
+                
                     return False
-            print("[search] search_match_computed all tokens matched (AND) → True")
+      
             return True
         else:
             # достаточно совпадения любого токена в любом computed-поле
             for t in tokens:
                 if any(self._match_token(val, t) for val in values):
-                    print("[search] search_match_computed some token matched (OR) → True")
+               
                     return True
-            print("[search] search_match_computed no tokens matched (OR) → False")
+          
             return False
 
     # ------------------------------
     # Служебные: нормализация полей для поиска
     # ------------------------------
     def _normalize_field_list(self, fields) -> List[str]:
-        print("[search] _normalize_field_list IN:", repr(fields))
+    
         out: List[str] = []
         if not fields:
-            print("[search] _normalize_field_list OUT: [] (empty input)")
+        
             return out
 
         if isinstance(fields, (list, tuple, set)):

@@ -508,17 +508,14 @@ class ChatSessionAdmin(BaseAdmin):
         except Exception:
             return ""
         master = await get_master_client_by_id(client.client_id)
-        print("="*100)
         
         master_name = (master.name or "") if master else ""
         result = ""
         if not master_name:
             if master.user_id:
                 user_doc = await mongo_db.users.find_one({"_id": ObjectId(master.user_id)})
-                # print(user_doc)
                 if user_doc:
                     result = user_doc["full_name"] or master_name or ""
-        print(result)
         return result
 
     async def get_client_source_display(self, obj: dict, current_user=None) -> str:

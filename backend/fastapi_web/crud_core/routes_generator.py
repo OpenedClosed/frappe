@@ -1,3 +1,4 @@
+# admin_core/routes.py
 """Маршруты админ-панели: auth, CRUD и кастомные экшены с @admin_route, + /info для UI."""
 import importlib
 import inspect
@@ -212,13 +213,19 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                 parsed_search: Optional[dict] = None
                 if raw_search:
                     try:
-                        parsed_search = json.loads(raw_search) if str(raw_search).strip().startswith("{") else {"q": str(raw_search)}
+                        parsed_search = (
+                            json.loads(raw_search) if str(raw_search).strip().startswith("{") else {"q": str(raw_search)}
+                        )
                     except Exception:
                         parsed_search = {"q": str(raw_search)}
                 elif raw_q:
                     parsed_search = {"q": str(raw_q)}
 
-                combined = {"__filters": parsed_filters or {}, "__search": parsed_search or {}} if (parsed_filters or parsed_search) else None
+                combined = (
+                    {"__filters": parsed_filters or {}, "__search": parsed_search or {}}
+                    if (parsed_filters or parsed_search)
+                    else None
+                )
 
                 # singleton без критериев
                 if instance.max_instances_per_user == 1 and not combined:
@@ -411,6 +418,10 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
 # Построение UI-схемы
 # =========================
 def map_python_type_to_ui(py_type: Any) -> str:
+    """
+    Маппинг python/typing-типа в строковый тип UI.
+    ВСЕГДА возвращает строку.
+    """
     mapping: Dict[Any, str] = {
         str: "string",
         int: "number",
@@ -421,10 +432,10 @@ def map_python_type_to_ui(py_type: Any) -> str:
     }
     if py_type in mapping:
         return mapping[py_type]
-    if is_enum_type(py_type):
-        return "select"
-    if is_list_of_enum(py_type):
-        return "multiselect"
+
+    # typing.Any
+    if py_type is Any or str(py_type) == "typing.Any":
+        return "json"
 
     origin = get_origin(py_type)
     if origin in (list, List):
@@ -490,7 +501,8 @@ def determine_field_type_and_choices(
         return "calendar", None
 
     auto_ui = map_python_type_to_ui(py_type)
-    return (auto_ui if auto_ui != "unknown" else py_type, None)  # type: ignore[return-value]
+    # ВАЖНО: возвращаем СТРОКУ, никогда не python-тип
+    return auto_ui, None
 
 
 def get_schema_data(instance: Any) -> Tuple[Dict[str, Any], List[str]]:

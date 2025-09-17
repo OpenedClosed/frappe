@@ -14,6 +14,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import parse_qs, urlparse
 
+from notifications.db.mongo.enums import NotificationChannel, Priority
+from notifications.utils.help_functions import create_notifications
+
 from .translations import TRANSLATIONS
 import httpx
 from bson import ObjectId
@@ -254,99 +257,241 @@ def find_last_bot_message(chat_session: ChatSession) -> Optional[ChatMessage]:
 # БЛОК: Уведомление админ-бота
 # ==============================
 
-async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> None:
-    """Отправляет информацию о чате в админ-бот (если не localhost)."""
-    if settings.HOST == "localhost":
-        return
+def format_dt_iso(value: Any) -> str:
+    if isinstance(value, datetime):
+        value = value.astimezone(timezone.utc).replace(microsecond=0)
+        return value.isoformat() + " UTC+0"
+    return str(value)
 
-    bot_webhook_url = "http://bot:9999/webhook/send_message"
-    admin_chat_url = f"https://{settings.HOST}/admin/chats/chat_sessions"
 
-    def dt_iso(value: Any) -> str:
-        if isinstance(value, datetime):
-            value = value.astimezone(timezone.utc).replace(microsecond=0)
-            return value.isoformat() + " UTC+0"
-        return str(value)
-
-    def is_client_sender(m: dict) -> bool:
-        try:
-            return json.loads(m.get("sender_role", "{}")).get("en") == SenderRole.CLIENT.en_value
-        except (json.JSONDecodeError, AttributeError):
-            return False
-
-    def get_ru_source_label(source_field: Any) -> str:
-        try:
-            parsed = json.loads(source_field) if isinstance(source_field, str) else source_field
-            return parsed.get("ru", "—")
-        except (json.JSONDecodeError, TypeError, AttributeError):
-            return "—"
-
-    client = chat_session.get("client") or {}
-    client_id = client.get("client_id", "❌ Неизвестен")
-    external_id = chat_session.get("external_id") or "—"
-    messages = chat_session.get("messages", [])
-
-    last_client_message = next((m for m in reversed(messages) if is_client_sender(m) and m.get("message")), None)
-    last_message_text = last_client_message["message"] if last_client_message else "—"
-
+def is_client_sender(m: dict) -> bool:
     try:
-        position, total = await get_chat_position(chat_session["chat_id"])
-    except Exception:
-        position, total = -1, -1
+        return json.loads(m.get("sender_role", "{}")).get("en") == SenderRole.CLIENT.en_value
+    except (json.JSONDecodeError, AttributeError):
+        return False
 
-    position_display = f"{position} из {total}" if position > 0 else "не определена"
 
+def get_source_label_ru(source_field: Any) -> str:
     try:
-        master_client = await get_master_client_by_id(client_id) if client_id else None
-        master_external_id = master_client.external_id if master_client and master_client.external_id else "—"
-        master_source = get_ru_source_label(master_client.source) if master_client and master_client.source else "—"
-    except Exception:
-        master_external_id = master_source = "—"
+        parsed = json.loads(source_field) if isinstance(source_field, str) else source_field
+        return parsed.get("ru", "—")
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return "—"
 
-    message_text = f"""
-<b>🆘 Новый чат</b>
 
-🆔 <b>Чат ID:</b> {chat_session["chat_id"]}
-🔗 <b>External ID:</b> {external_id}
-👤 <b>Клиент ID:</b> {client_id}
-📡 <b>Источник:</b> {master_source}
-🤖 <b>Ручной режим:</b> {"✅ Включен" if chat_session.get("manual_mode") else "❌ Выключен"}
+def format_new_chat_html(chat_session: Dict[str, Any], *,
+                         position: Tuple[int, int] = (-1, -1),
+                         master_source_ru: str = "—",
+                         last_message_text: str = "—",
+                         admin_chat_url: str = "#") -> str:
+    pos, total = position
+    pos_display = f"{pos} из {total}" if pos > 0 else "не определена"
+
+    manual_mode = "✅ Включен" if chat_session.get("manual_mode") else "❌ Выключен"
+    consultant_req = "✅ Да" if chat_session.get("consultant_requested") else "❌ Нет"
+    messages = chat_session.get("messages") or []
+
+    return f"""
+<b>🔔 Новый чат</b>
+
+🆔 <b>Chat ID:</b> {chat_session.get("chat_id")}
+📡 <b>Источник:</b> {master_source_ru}
+🤖 <b>Ручной режим:</b> {manual_mode}
+☎️ <b>Вызван консультант:</b> {consultant_req}
 💬 <b>Сообщений:</b> {len(messages)}
-📅 <b>Создан:</b> {dt_iso(chat_session.get("created_at"))}
-🕒 <b>Последняя активность:</b> {dt_iso(chat_session.get("last_activity"))}
-📊 <b>Позиция в очереди:</b> {position_display}
+🕒 <b>Последняя активность:</b> {format_dt_iso(chat_session.get("last_activity"))}
+📊 <b>Позиция в очереди:</b> {pos_display}
 
-🗣️ <b>Последнее сообщение клиента:</b>
+<b>🗣️ Последнее сообщение клиента:</b>
 {last_message_text}
 
-🔍 <a href="{admin_chat_url}">Открыть чат в админке</a>
+🔗 <a href="{admin_chat_url}">Открыть чат</a>
 """.strip()
 
-    admin_chat_id = bot_settings.ADMIN_CHAT_ID
-    message_thread_id = None
 
-    if "/" in admin_chat_id:
-        parts = admin_chat_id.split("/")
-        if len(parts) >= 2:
-            admin_chat_id = parts[0]
-            message_thread_id = int(parts[1]) if parts[1] else None
+async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> None:
+    """
+    Обновлённая версия:
+    1) Формирует «крутую» HTML-карточку, добавляет "Вызван консультант".
+    2) Создаёт 2 уведомления через create_notifications: Web (in-app) + Telegram.
+    3) Реальная отправка в Telegram выполняется внутри create_notifications (для Telegram).
+    """
+    # if settings.HOST == "localhost":
+    #     return
+
+    # admin_chat_url = f"https://{settings.HOST}/admin/chats/chat_sessions"
+    print("мы тут")
+
+    admin_chat_url = f"https://test.com/admin/chats/chat_sessions"
+
+    client = chat_session.get("client") or {}
+    client_id = client.get("client_id") or "—"
+    messages = chat_session.get("messages", [])
+    last_client_message = next((m for m in reversed(messages) if is_client_sender(m) and m.get("message")), None)
+    last_text = (last_client_message or {}).get("message") or "—"
 
     try:
-        async with httpx.AsyncClient() as client_http:
-            payload = {
-                "chat_id": admin_chat_id,
-                "text": message_text,
-                "parse_mode": "HTML",
-            }
-            if message_thread_id:
-                payload["message_thread_id"] = message_thread_id
-
-            response = await client_http.post(bot_webhook_url, json=payload, timeout=10.0)
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        logging.error(f"Ошибка от бота ({exc.response.status_code}): {exc.response.text}")
+        position = await get_chat_position(chat_session["chat_id"])  # (pos, total)
     except Exception:
-        logging.exception("Ошибка при отправке сообщения в бот")
+        position = (-1, -1)
+
+    try:
+        master_client = await get_master_client_by_id(client_id) if client_id and client_id != "—" else None
+        master_source_ru = get_source_label_ru(getattr(master_client, "source", None)) if master_client else "—"
+    except Exception:
+        master_source_ru = "—"
+
+    html = format_new_chat_html(
+        chat_session,
+        position=position,
+        master_source_ru=master_source_ru,
+        last_message_text=last_text,
+        admin_chat_url=admin_chat_url,
+    )
+
+    # создаём два уведомления; ресурс передаём английским значением из Enum
+    result = await create_notifications([
+        {
+            "resource_en": NotificationChannel.WEB.en_value,       # "Web (in-app)"
+            "kind": "chat_new",
+            "priority": "high",
+            "title": {"en": "New chat", "ru": "Новый чат"},
+            "message": html,
+            "recipient_user_id": None,  # общий админ-фид; можно подставить user_id
+            "entity": {
+                "entity_type": "chat",
+                "entity_id": chat_session.get("chat_id"),
+                "route": "/admin/chats/chat_sessions",
+                "extra": {"client_id": client_id},
+            },
+            "link_url": admin_chat_url,
+            "popup": True,
+            "sound": True,
+            "meta": {"badge": "new-chat"},
+        },
+        {
+            "resource_en": NotificationChannel.TELEGRAM.en_value,  # "Telegram"
+            "kind": "chat_new",
+            "priority": Priority.HIGH,  # можно и строкой "high"
+            "title": {"en": "New chat", "ru": "Новый чат"},
+            "message": html,  # HTML
+            "recipient_user_id": None,
+            "entity": {
+                "entity_type": "chat",
+                "entity_id": chat_session.get("chat_id"),
+                "route": "/admin/chats/chat_sessions",
+                "extra": {"client_id": client_id},
+            },
+            "link_url": admin_chat_url,
+            "popup": True,
+            "sound": True,
+            "telegram": {
+                # можно явно задать, а можно оставить пустым — возьмётся bot_settings.ADMIN_CHAT_ID
+                # "chat_id": chat_id,
+                # "message_thread_id": 123,
+            },
+            "meta": {"badge": "new-chat"},
+        },
+    ])
+    print(result)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# СТАРАЯ ВЕРСИЯ
+# ─────────────────────────────────────────────────────────────────────────
+
+# async def send_message_to_bot(chat_id: str, chat_session: Dict[str, Any]) -> None:
+#     if settings.HOST == "localhost":
+#         return
+
+#     bot_webhook_url = "http://bot:9999/webhook/send_message"
+#     admin_chat_url = f"https://{settings.HOST}/admin/chats/chat_sessions"
+
+#     def dt_iso(value: Any) -> str:
+#         if isinstance(value, datetime):
+#             value = value.astimezone(timezone.utc).replace(microsecond=0)
+#             return value.isoformat() + " UTC+0"
+#         return str(value)
+
+#     def is_client_sender(m: dict) -> bool:
+#         try:
+#             return json.loads(m.get("sender_role", "{}")).get("en") == SenderRole.CLIENT.en_value
+#         except (json.JSONDecodeError, AttributeError):
+#             return False
+
+#     def get_ru_source_label(source_field: Any) -> str:
+#         try:
+#             parsed = json.loads(source_field) if isinstance(source_field, str) else source_field
+#             return parsed.get("ru", "—")
+#         except (json.JSONDecodeError, TypeError, AttributeError):
+#             return "—"
+
+#     client = chat_session.get("client") or {}
+#     client_id = client.get("client_id", "❌ Неизвестен")
+#     external_id = chat_session.get("external_id") or "—"
+#     messages = chat_session.get("messages", [])
+
+#     last_client_message = next((m for m in reversed(messages) if is_client_sender(m) and m.get("message")), None)
+#     last_message_text = last_client_message["message"] if last_client_message else "—"
+
+#     try:
+#         position, total = await get_chat_position(chat_session["chat_id"])
+#     except Exception:
+#         position, total = -1, -1
+
+#     position_display = f"{position} из {total}" if position > 0 else "не определена"
+
+#     try:
+#         master_client = await get_master_client_by_id(client_id) if client_id else None
+#         master_external_id = master_client.external_id if master_client and master_client.external_id else "—"
+#         master_source = get_ru_source_label(master_client.source) if master_client and master_client.source else "—"
+#     except Exception:
+#         master_external_id = master_source = "—"
+
+#     message_text = f\"\"\"
+# <b>🆘 Новый чат</b>
+
+# 🆔 <b>Чат ID:</b> {chat_session["chat_id"]}
+# 🔗 <b>External ID:</b> {external_id}
+# 👤 <b>Клиент ID:</b> {client_id}
+# 📡 <b>Источник:</b> {master_source}
+# 🤖 <b>Ручной режим:</b> {"✅ Включен" if chat_session.get("manual_mode") else "❌ Выключен"}
+# 💬 <b>Сообщений:</b> {len(messages)}
+# 📅 <b>Создан:</b> {dt_iso(chat_session.get("created_at"))}
+# 🕒 <b>Последняя активность:</b> {dt_iso(chat_session.get("last_activity"))}
+# 📊 <b>Позиция в очереди:</b> {position_display}
+
+# 🗣️ <b>Последнее сообщение клиента:</b>
+# {last_message_text}
+
+# 🔍 <a href="{admin_chat_url}">Открыть чат в админке</a>
+# \"\"\".strip()
+
+#     admin_chat_id = bot_settings.ADMIN_CHAT_ID
+#     message_thread_id = None
+
+#     if "/" in admin_chat_id:
+#         parts = admin_chat_id.split("/")
+#         if len(parts) >= 2:
+#             admin_chat_id = parts[0]
+#             message_thread_id = int(parts[1]) if parts[1] else None
+
+#     try:
+#         async with httpx.AsyncClient() as client_http:
+#             payload = {
+#                 "chat_id": admin_chat_id,
+#                 "text": message_text,
+#                 "parse_mode": "HTML",
+#             }
+#             if message_thread_id:
+#                 payload["message_thread_id"] = message_thread_id
+
+#             response = await client_http.post(bot_webhook_url, json=payload, timeout=10.0)
+#         response.raise_for_status()
+#     except httpx.HTTPStatusError as exc:
+#         logging.error(f"Ошибка от бота ({exc.response.status_code}): {exc.response.text}")
+#     except Exception:
+#         logging.exception("Ошибка при отправке сообщения в бот")
 
 
 # ==============================
