@@ -58,12 +58,28 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
     async def register(data: RegistrationSchema, background_tasks: BackgroundTasks):
         """
         Проверяет ввод и отправляет 6-значный код подтверждения
-        по каналу, указанному в поле `via` («email» | «phone»).
+        на e-mail или по SMS. Достаточно указать ЛИБО email, ЛИБО телефон.
         """
         errors: dict[str, dict] = {}
 
-        # ——— канал
-        via: str = data.via if data.via in {"email", "phone"} else "email"
+        # ——— канал (предпочтение пользователя)
+        requested_via: str = data.via if data.via in {"email", "phone"} else "email"
+
+        # ——— телефон / email (теперь «или-или»)
+        email_key = (data.email or "").strip().lower() or None
+        phone_key = normalize_numbers(data.phone) if data.phone else None
+
+        if not email_key and not phone_key:
+            msg = {
+                "ru": "Укажите e-mail или телефон (достаточно одного).",
+                "en": "Provide e-mail or phone (one is enough).",
+                "pl": "Podaj e-mail lub telefon (wystarczy jedno).",
+                "uk": "Вкажіть e-mail або телефон (достатньо одного).",
+                "de": "E-Mail oder Telefonnummer angeben (eines genügt).",
+                "be": "Укажыце e-mail ці тэлефон (досыць аднаго).",
+            }
+            errors["email"] = msg
+            errors["phone"] = msg
 
         # ——— приём условий
         if not data.accept_terms:
@@ -86,52 +102,13 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "de": "Passwörter stimmen nicht überein.",
                 "be": "Паролі не супадаюць.",
             }
-            errors["password"] = errors["password_confirm"] = msg
+            errors["password"] = msg
+            errors["password_confirm"] = msg
 
         # ——— сила пароля
         pwd_error = data.password_strength_errors()
         if pwd_error:
             errors["password"] = pwd_error | {"be": pwd_error.get("ru", "")}
-
-        # ——— телефон
-        phone_key = normalize_numbers(data.phone)
-        if not phone_key:
-            errors["phone"] = {
-                "ru": "Телефон обязателен.",
-                "en": "Phone is required.",
-                "pl": "Telefon jest wymagany.",
-                "uk": "Телефон обов'язковий.",
-                "de": "Telefonnummer ist erforderlich.",
-                "be": "Тэлефон абавязковы.",
-            }
-        else:
-            contact_doc = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
-            if contact_doc:
-                user_doc = await mongo_db["users"].find_one(
-                    {"_id": ObjectId(contact_doc["user_id"])}
-                )
-                if user_doc:
-                    errors["phone"] = {
-                        "ru": "Пользователь с таким телефоном уже существует.",
-                        "en": "User with this phone already exists.",
-                        "pl": "Użytkownik z tym numerem już istnieje.",
-                        "uk": "Користувач з таким телефоном вже існує.",
-                        "de": "Ein Benutzer mit dieser Telefonnummer existiert bereits.",
-                        "be": "Карыстальнік з такім тэлефонам ужо існуе.",
-                    }
-                else:
-                    await cascade_delete_user(contact_doc["user_id"])
-
-        # ——— email
-        if not data.email:
-            errors["email"] = {
-                "ru": "Email обязателен.",
-                "en": "Email is required.",
-                "pl": "Email jest wymagany.",
-                "uk": "Email обов'язковий.",
-                "de": "E-Mail ist erforderlich.",
-                "be": "Email абавязковы.",
-            }
 
         # ——— возраст
         today = datetime.utcnow().date()
@@ -176,7 +153,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 "be": "Пол абавязковы.",
             }
 
-        # ——— реферальный код (проверка не менялась)
+        # ——— реферальный код (как было)
         referral_id: Optional[str] = None
         if data.referral_code:
             m = re.fullmatch(r"([A-Za-z0-9]{2,10})_([A-Za-z0-9\-]{3,36})", data.referral_code)
@@ -205,30 +182,67 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                         "pl": "Błąd CRM podczas weryfikacji kodu.",
                     }
 
-        # ——— анти-флуд
-        identifier = data.email.lower() if via == "email" else phone_key
-        sent_key = f"reg:sent:{via}:{identifier}"
-        if await redis_db.exists(sent_key):
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "errors": {
-                        "email": {
-                            "ru": "Код уже был отправлен, попробуйте через минуту.",
-                            "en": "Code already sent, please wait a minute.",
-                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
-                        },
-                        "phone": {
-                            "ru": "Код уже был отправлен, попробуйте через минуту.",
-                            "en": "Code already sent, please wait a minute.",
-                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
-                        }
+        # ——— проверки уникальности контактов (если указаны)
+        if phone_key:
+            contact_doc = await mongo_db["patients_contact_info"].find_one({"phone": phone_key})
+            if contact_doc:
+                user_doc = await mongo_db["users"].find_one({"_id": ObjectId(contact_doc["user_id"])})
+                if user_doc:
+                    errors["phone"] = {
+                        "ru": "Пользователь с таким телефоном уже существует.",
+                        "en": "User with this phone already exists.",
+                        "pl": "Użytkownik z tym numerem już istnieje.",
                     }
-                },
-            )
+                else:
+                    await cascade_delete_user(contact_doc["user_id"])
 
+        if email_key:
+            contact_doc = await mongo_db["patients_contact_info"].find_one({"email": email_key})
+            if contact_doc:
+                user_doc = await mongo_db["users"].find_one({"_id": ObjectId(contact_doc["user_id"])})
+                if user_doc:
+                    errors["email"] = {
+                        "ru": "Пользователь с таким e-mail уже существует.",
+                        "en": "User with this e-mail already exists.",
+                        "pl": "Użytkownik z tym e-mailem już istnieje.",
+                    }
+                else:
+                    await cascade_delete_user(contact_doc["user_id"])
+
+        # ——— если уже накопили ошибки — выходим
         if errors:
+            print(errors)
             return JSONResponse(status_code=400, content={"errors": errors})
+
+        # ——— определяем фактический канал отправки
+        if requested_via == "email" and not email_key:
+            via = "phone"
+        elif requested_via == "phone" and not phone_key:
+            via = "email"
+        else:
+            via = requested_via
+
+        # ——— анти-флуд по выбранному каналу
+        identifier = email_key if via == "email" else phone_key
+        sent_key = f"reg:sent:{via}:{identifier}"
+        # if await redis_db.exists(sent_key):
+        #     return JSONResponse(
+        #         status_code=429,
+        #         content={
+        #             "errors": {
+        #                 "email": {
+        #                     "ru": "Код уже был отправлен, попробуйте через минуту.",
+        #                     "en": "Code already sent, please wait a minute.",
+        #                     "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+        #                 },
+        #                 "phone": {
+        #                     "ru": "Код уже был отправлен, попробуйте через минуту.",
+        #                     "en": "Code already sent, please wait a minute.",
+        #                     "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+        #                 }
+        #             }
+        #         },
+        #     )
 
         # ——— генерируем 6-значный код
         code: str = "".join(random.choices("0123456789", k=6))
@@ -263,16 +277,15 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                     body=f"Twój kod weryfikacyjny: {code}",
                     html_body=html_body,
                 )
-
             except HTTPException:
                 return JSONResponse(
                     status_code=400,
                     content={
                         "errors": {
                             "email": {
-                                "ru": "Ошибка при отправке письма. Проверьте email.",
-                                "en": "Failed to send email. Please check the address.",
-                                "pl": "Nie udało się wysłać wiadomości email. Sprawdź adres.",
+                                "ru": "Ошибка при отправке письма. Проверьте e-mail.",
+                                "en": "Failed to send e-mail. Please check the address.",
+                                "pl": "Nie udało się wysłać e-maila. Sprawdź adres.",
                             }
                         }
                     },
@@ -280,6 +293,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         else:
             try:
                 await send_sms(identifier, f"Twój kod potwierdzający to: {code}")
+                # background_tasks.add_task(send_sms, identifier, f"Twój kod potwierdzający to: {code}")
             except HTTPException:
                 return JSONResponse(
                     status_code=400,
@@ -296,11 +310,12 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
 
         return {
             "message": {
-                "ru": "Код отправлен." if via == "phone" else "Код отправлен на email.",
+                "ru": "Код отправлен." if via == "phone" else "Код отправлен на e-mail.",
                 "en": "Code sent." if via == "phone" else "Code sent to e-mail.",
                 "pl": "Kod wysłany." if via == "phone" else "Kod wysłany na e-mail.",
             }
         }
+
 
 
     # ────────────────────────────────────────────────────────────────
@@ -625,6 +640,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
 
         else:
             await send_sms(identifier, f"Twój kod 2FA to: {code_2fa}")
+            # background_tasks.add_task(send_sms, identifier, f"Twój kod 2FA to: {code_2fa}")
 
         return {
             "message": {
