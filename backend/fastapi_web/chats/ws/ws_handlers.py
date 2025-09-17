@@ -5,9 +5,11 @@ import logging
 import random
 import re
 from asyncio import Lock
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Union
 
+from notifications.db.mongo.enums import NotificationChannel, Priority
+from notifications.utils.help_functions import create_notifications
 import httpx
 from chats.integrations.constructor_chat.handlers import push_to_constructor
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
@@ -863,15 +865,138 @@ async def replicate_message_to_external_channel(
         )
 
 
+INTEGRATION_TOKEN_ALERT_TTL = 30 * 60  # 30 минут
+
+async def should_notify_integration_token_issue(service: str, account_id: Optional[str] = None) -> bool:
+    """
+    Throttling 30 минут: сначала Redis (SET NX EX), потом fallback в Mongo.
+    Ключ строим из названия сервиса и аккаунта/страницы (если есть).
+    """
+    key_suffix = f"{service}:{account_id}" if account_id else service
+    redis_key = f"notif:intg:token:{key_suffix}"
+
+    # 1) Redis
+    try:
+        # aioredis возвращает True/False при nx=True
+        was_set = await redis_db.set(redis_key, "1", ex=INTEGRATION_TOKEN_ALERT_TTL, nx=True)
+        if was_set:
+            return True
+        return False
+    except Exception:
+        logger.exception("Redis throttle failed, falling back to Mongo")
+
+    # 2) Mongo fallback (документ-«ключ-значение» в коллекции system_meta)
+    now = datetime.utcnow().replace(tzinfo=timezone.utc)
+    doc_id = "integration_token_alerts"
+    doc = await mongo_db.system_meta.find_one({"_id": doc_id}) or {"_id": doc_id, "last": {}}
+    last_map: Dict[str, str] = doc.get("last", {})
+    last_iso = last_map.get(key_suffix)
+    if not last_iso:
+        last_map[key_suffix] = now.isoformat()
+        await mongo_db.system_meta.update_one({"_id": doc_id}, {"$set": {"last": last_map}}, upsert=True)
+        return True
+    try:
+        last_dt = datetime.fromisoformat(last_iso)
+    except Exception:
+        last_dt = now - timedelta(seconds=INTEGRATION_TOKEN_ALERT_TTL + 1)
+    if (now - last_dt).total_seconds() >= INTEGRATION_TOKEN_ALERT_TTL:
+        last_map[key_suffix] = now.isoformat()
+        await mongo_db.system_meta.update_one({"_id": doc_id}, {"$set": {"last": last_map}}, upsert=True)
+        return True
+    return False
+
+
+def _integration_admin_url() -> str:
+    # если есть свой конкретный роут настроек — замени
+    host = getattr(settings, "HOST", "localhost")
+    schema = "https" if host and host != "localhost" else "http"
+    return f"{schema}://{host}/admin/system/integrations"
+
+
+async def notify_integration_token_issue(service: str, *, account_id: Optional[str] = None, details: Optional[str] = None) -> None:
+    """
+    Создаёт 2 уведомления (Web + Telegram) о проблеме с токеном интеграции.
+    Учитывает throttling (30 минут).
+    """
+    if not await should_notify_integration_token_issue(service, account_id):
+        return
+
+    admin_url = _integration_admin_url()
+    acc_part = f" (account: {account_id})" if account_id else ""
+    details_text = f"\n\n<b>Details:</b> {details}" if details else ""
+
+    # общий HTML для обоих каналов
+    html = f"""
+⚠️ Проблема с токеном интеграции
+<b>Сервис:</b>{service}{acc_part}
+<b>Ошибка:</b>401 Unauthorized — токен недействителен или истёк.
+
+Проверьте и обновите токен в настройках интеграций.
+🔗 <a href="{admin_url}">Открыть настройки интеграций</a>
+
+{details_text}
+""".strip()
+
+    title = {
+        "en": "Integration token issue",
+        "ru": "Проблема с токеном интеграции",
+        "pl": "Problem z tokenem integracji",
+        "uk": "Проблема з токеном інтеграції",
+        "ka": "ინტეგრაციის ტოკენის პრობლემა",
+    }
+
+    payloads: List[Dict[str, Any]] = [
+        {
+            "resource_en": NotificationChannel.WEB.en_value,  # "Web (in-app)"
+            "kind": "integration_token_invalid",
+            "priority": Priority.CRITICAL,
+            "title": title,
+            "message": html,
+            "recipient_user_id": None,  # общий админ-фид
+            "entity": {
+                "entity_type": "integration",
+                "entity_id": service.lower(),
+                "route": "/admin/system/integrations",
+                "extra": {"account_id": account_id} if account_id else {},
+            },
+            "link_url": admin_url,
+            "popup": True,
+            "sound": True,
+            "meta": {"badge": "integration-token"},
+        },
+        {
+            "resource_en": NotificationChannel.TELEGRAM.en_value,  # "Telegram"
+            "kind": "integration_token_invalid",
+            "priority": Priority.CRITICAL,
+            "title": title,
+            "message": html,  # HTML
+            "recipient_user_id": None,
+            "entity": {
+                "entity_type": "integration",
+                "entity_id": service.lower(),
+                "route": "/admin/system/integrations",
+                "extra": {"account_id": account_id} if account_id else {},
+            },
+            "link_url": admin_url,
+            "popup": True,
+            "sound": True,
+            "telegram": {},  # возьмётся bot_settings.ADMIN_CHAT_ID внутри твоего create_notifications
+            "meta": {"badge": "integration-token"},
+        },
+    ]
+
+    try:
+        await create_notifications(payloads)
+    except Exception:
+        logger.exception("Failed to create integration token notifications")
+
+
 # ==============================
 # Instagram
 # ==============================
 
 
-async def send_instagram_message(
-    recipient_id: str, message_obj: ChatMessage
-) -> Optional[str]:
-    """Отправляет сообщение в Instagram Direct, разбивая текст и убирая Markdown."""
+async def send_instagram_message(recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
     url = "https://graph.instagram.com/v22.0/me/messages"
     headers = {
         "Authorization": f"Bearer {settings.INSTAGRAM_ACCESS_TOKEN}",
@@ -880,10 +1005,9 @@ async def send_instagram_message(
 
     raw_text = (message_obj.message or "").strip()
     files = message_obj.files or []
-    first_file = None  # files[0] if files else None
+    first_file = None
 
     cleaned_text = clean_markdown(raw_text)
-
     text_chunks = split_text_into_chunks(cleaned_text)
 
     async with httpx.AsyncClient() as client:
@@ -903,22 +1027,26 @@ async def send_instagram_message(
                 resp.raise_for_status()
 
             message_id = None
-            for i, chunk in enumerate(text_chunks):
+            for chunk in text_chunks:
                 payload_text = {
                     "recipient": {"id": recipient_id},
-                    "message": {
-                        "text": chunk,
-                        "metadata": "broadcast"
-                    }
+                    "message": {"text": chunk, "metadata": "broadcast"}
                 }
-                response = await client.post(url, json=payload_text, headers=headers)
-                response.raise_for_status()
-                message_id = response.json().get("message_id")
-
+                resp = await client.post(url, json=payload_text, headers=headers)
+                resp.raise_for_status()
+                message_id = resp.json().get("message_id")
             return message_id
-        except Exception as exc:
-            logging.exception(f"❌ Ошибка при отправке сообщения в Instagram: {exc}")
+
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and exc.response.status_code == 401:
+                await notify_integration_token_issue("Instagram")
+            logger.exception("Instagram send error (HTTP): %s", exc)
             return None
+        except Exception as exc:
+            logger.exception("Instagram send error: %s", exc)
+            return None
+
+
 
 
 # async def send_instagram_message(recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
@@ -937,15 +1065,13 @@ async def send_instagram_message(
 # ==============================
 
 
-async def send_whatsapp_message(
-        recipient_phone_id: str, message_obj: ChatMessage) -> Optional[str]:
-    """Отправляет сообщение в WhatsApp через Cloud API."""
+async def send_whatsapp_message(recipient_phone_id: str, message_obj: ChatMessage) -> Optional[str]:
     url = f"https://graph.facebook.com/v22.0/{settings.WHATSAPP_BOT_NUMBER_ID}/messages"
     payload = {
         "messaging_product": "whatsapp",
         "to": recipient_phone_id,
         "type": "text",
-        "text": {"body": message_obj.message.strip()},
+        "text": {"body": (message_obj.message or "").strip()},
         "metadata": "broadcast"
     }
     headers = {
@@ -956,12 +1082,23 @@ async def send_whatsapp_message(
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code == 401:
+                # иногда хочется не поднимать исключение, чтобы сохранить тело ответа для логов
+                await notify_integration_token_issue("WhatsApp")
+                logger.error("WhatsApp 401 response: %s", await _safe_text(resp))
+                return None
             resp.raise_for_status()
             data = resp.json()
             return data.get("messages", [{}])[0].get("id")
-        except Exception as exc:
-            logging.error(f"WhatsApp send error: {exc}")
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and exc.response.status_code == 401:
+                await notify_integration_token_issue("WhatsApp")
+            logger.exception("WhatsApp send error (HTTP): %s", exc)
             return None
+        except Exception as exc:
+            logger.exception("WhatsApp send error: %s", exc)
+            return None
+
 
 
 # ==============================
@@ -969,21 +1106,19 @@ async def send_whatsapp_message(
 # ==============================
 
 
-async def send_facebook_message(
-        recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
-    """Отправляет сообщение в Facebook Messenger."""
+async def send_facebook_message(recipient_id: str, message_obj: ChatMessage) -> Optional[str]:
     url = f"https://graph.facebook.com/v22.0/{settings.FACEBOOK_PAGE_ID}/messages"
     headers = {
         "Authorization": f"Bearer {settings.FACEBOOK_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
 
-    text = message_obj.message.strip()
+    text = (message_obj.message or "").strip()
     files = message_obj.files or []
-    first_file = None  # files[0] if files else None
+    first_file = None
 
-    if first_file:
-        payload = {
+    payload = (
+        {
             "recipient": {"id": recipient_id},
             "message": {
                 "attachment": {
@@ -994,22 +1129,43 @@ async def send_facebook_message(
                 "metadata": "broadcast"
             }
         }
-    else:
-        payload = {
+        if first_file else
+        {
             "recipient": {"id": recipient_id},
             "message": {"text": text, "metadata": "broadcast"}
         }
+    )
 
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code == 401:
+                await notify_integration_token_issue("Facebook")
+                logger.error("Facebook 401 response: %s", await _safe_text(resp))
+                return None
             resp.raise_for_status()
             data = resp.json()
-            return data.get("message_id") or data.get(
-                "messages", [{}])[0].get("id")
-        except Exception as exc:
-            logging.error(f"Facebook send error: {exc}")
+            return data.get("message_id") or data.get("messages", [{}])[0].get("id")
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and exc.response.status_code == 401:
+                await notify_integration_token_issue("Facebook")
+            logger.exception("Facebook send error (HTTP): %s", exc)
             return None
+        except Exception as exc:
+            logger.exception("Facebook send error: %s", exc)
+            return None
+
+
+# helper для логов тела ответа без падений
+async def _safe_text(resp: httpx.Response) -> str:
+    try:
+        return resp.text
+    except Exception:
+        try:
+            return json.dumps(resp.json(), ensure_ascii=False)
+        except Exception:
+            return "<unreadable>"
+
 
 
 # ==============================
@@ -1947,31 +2103,32 @@ async def should_notify_manual_mode(chat_id: str) -> bool:
     1) Сначала пробуем Redis: set nx + ttl.
     2) Fallback: Mongo поле manual_mode_last_notified_at (UTC).
     """
-    # # 1) Redis
-    # try:
-    #     key = f"notif:manual_mode:{chat_id}"
-    #     # set if not exists + ttl
-    #     was_set = await redis_db.set(key, "1", ex=MANUAL_NOTIFY_COOLDOWN_SECONDS, nx=True)
-    #     # aioredis возвращает True/False
-    #     if was_set:
-    #         return True
-    #     return False
-    # except Exception:
-    #     logger.exception("Redis check failed for manual-mode notify fallback to Mongo")
+    # 1) Redis
+    try:
+        key = f"notif:manual_mode:{chat_id}"
+        # set if not exists + ttl
+        was_set = await redis_db.set(key, "1", ex=MANUAL_NOTIFY_COOLDOWN_SECONDS, nx=True)
+        # aioredis возвращает True/False
+        if was_set:
+            return True
+        return False
+    except Exception:
+        logger.exception("Redis check failed for manual-mode notify fallback to Mongo")
 
-    # # 2) Mongo fallback
-    # now = datetime.utcnow().replace(tzinfo=timezone.utc)
-    # doc = await mongo_db.chats.find_one({"chat_id": chat_id}, {"manual_mode_last_notified_at": 1})
-    # last = (doc or {}).get("manual_mode_last_notified_at")
-    # if not last or (now - last).total_seconds() >= MANUAL_NOTIFY_COOLDOWN_SECONDS:
-    #     # обновим метку и разрешим отправку
-    #     await mongo_db.chats.update_one(
-    #         {"chat_id": chat_id},
-    #         {"$set": {"manual_mode_last_notified_at": now}}
-    #     )
-    #     return True
-    # return False
-    return True # временно
+    # 2) Mongo fallback
+    now = datetime.utcnow().replace(tzinfo=timezone.utc)
+    doc = await mongo_db.chats.find_one({"chat_id": chat_id}, {"manual_mode_last_notified_at": 1})
+    last = (doc or {}).get("manual_mode_last_notified_at")
+    if not last or (now - last).total_seconds() >= MANUAL_NOTIFY_COOLDOWN_SECONDS:
+        # обновим метку и разрешим отправку
+        await mongo_db.chats.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"manual_mode_last_notified_at": now}}
+        )
+        return True
+    return False
+
+    # return True # временно
 
 async def toggle_chat_mode(
     manager: Any,

@@ -72,7 +72,6 @@ async def create_notifications(items: List[Dict[str, Any]]) -> Dict[str, Any]:
     tg_errors: List[str] = []
 
     BOT_WEBHOOK_URL = "http://bot:9999/webhook/send_message"
-    BOT_WEBHOOK_URL = "http://localhost:9999/webhook/send_message"
     print('='*100)
     print("Вызвана нотификация!")
 
@@ -110,6 +109,8 @@ async def create_notifications(items: List[Dict[str, Any]]) -> Dict[str, Any]:
             print(channel)
             print(channel == NotificationChannel.TELEGRAM)
             if channel == NotificationChannel.TELEGRAM:
+                if "localhost" in BOT_WEBHOOK_URL:
+                    continue
                 # локально — не шлём (поведение старой версии)
                 tg_opts = item.get("telegram") or {}
                 admin_chat_id = tg_opts.get("chat_id") or bot_settings.ADMIN_CHAT_ID
@@ -129,8 +130,7 @@ async def create_notifications(items: List[Dict[str, Any]]) -> Dict[str, Any]:
 
                 try:
                     async with httpx.AsyncClient() as client_http:
-                        print(BOT_WEBHOOK_URL)
-                        print("-"*100)
+
                         payload: Dict[str, Any] = {
                             "chat_id": admin_chat_id,
                             "text": notif.message,
