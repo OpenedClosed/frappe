@@ -357,30 +357,6 @@ class ChatSessionAdmin(BaseAdmin):
     read_only_fields = ["created_at", "last_activity"]
     inlines = {"messages": ChatMessageInline, "client": ClientInline}
 
-    # # Поиск (включаем computed client_name_display + lookup в master_clients)
-    # search_config = {
-    #     "mode": "partial",
-    #     "logic": "or",
-    #     "fields": [
-    #         {"path": "messages.message"},
-    #         {"path": "company_name"},
-    #         {"path": "chat_id"},
-    #         {"path": "client_name_display"},   # << computed
-    #         {"lookup": {
-    #             "collection": "master_clients",
-    #             "query_field": "name",
-    #             "project_field": "client_id",
-    #             "map_to": "client.client_id",
-    #             "operator": "regex"
-    #         }}
-    #     ]
-    # }
-
-    # # Классический список — оставим (ядро само объединит)
-    # search_fields = ["messages.message", "company_name", "chat_id"]
-    # searchable_computed_fields = ["is_unanswered", "client_name_display"]
-    # default_search_mode = "partial"
-    # default_search_combine = "or"
 
     search_config = {
         "mode": "partial",
