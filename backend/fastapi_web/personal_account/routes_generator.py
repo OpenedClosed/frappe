@@ -225,24 +225,24 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ——— анти-флуд по выбранному каналу
         identifier = email_key if via == "email" else phone_key
         sent_key = f"reg:sent:{via}:{identifier}"
-        # if await redis_db.exists(sent_key):
-        #     return JSONResponse(
-        #         status_code=429,
-        #         content={
-        #             "errors": {
-        #                 "email": {
-        #                     "ru": "Код уже был отправлен, попробуйте через минуту.",
-        #                     "en": "Code already sent, please wait a minute.",
-        #                     "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
-        #                 },
-        #                 "phone": {
-        #                     "ru": "Код уже был отправлен, попробуйте через минуту.",
-        #                     "en": "Code already sent, please wait a minute.",
-        #                     "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
-        #                 }
-        #             }
-        #         },
-        #     )
+        if await redis_db.exists(sent_key):
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "errors": {
+                        "email": {
+                            "ru": "Код уже был отправлен, попробуйте через минуту.",
+                            "en": "Code already sent, please wait a minute.",
+                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+                        },
+                        "phone": {
+                            "ru": "Код уже был отправлен, попробуйте через минуту.",
+                            "en": "Code already sent, please wait a minute.",
+                            "pl": "Kod został już wysłany, spróbuj ponownie za minutę.",
+                        }
+                    }
+                },
+            )
 
         # ——— генерируем 6-значный код
         code: str = "".join(random.choices("0123456789", k=6))
@@ -292,8 +292,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
                 )
         else:
             try:
-                await send_sms(identifier, f"Twój kod potwierdzający to: {code}")
-                # background_tasks.add_task(send_sms, identifier, f"Twój kod potwierdzający to: {code}")
+                # await send_sms(identifier, f"Twój kod potwierdzający to: {code}")
+                background_tasks.add_task(send_sms, identifier, f"Twój kod potwierdzający to: {code}")
             except HTTPException:
                 return JSONResponse(
                     status_code=400,
@@ -639,8 +639,8 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
             )
 
         else:
-            await send_sms(identifier, f"Twój kod 2FA to: {code_2fa}")
-            # background_tasks.add_task(send_sms, identifier, f"Twój kod 2FA to: {code_2fa}")
+            # await send_sms(identifier, f"Twój kod 2FA to: {code_2fa}")
+            background_tasks.add_task(send_sms, identifier, f"Twój kod 2FA to: {code_2fa}")
 
         return {
             "message": {
