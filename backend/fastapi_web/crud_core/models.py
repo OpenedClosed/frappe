@@ -331,123 +331,75 @@ class BaseCrudCore:
         print("[search] _split_search_config_fields OUT plain:", plain, "computed:", computed)
         return plain, computed
 
-    # ------------------------------
-    # Построение поиска (базовый + декларативный)
-    # ------------------------------
-    # --- BaseCrudCore.build_declarative_search (замена) ---
-    async def build_declarative_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], List[str], str, str, str]:
+    def build_mongo_search(
+        self,
+        params: Optional[dict | str]
+    ) -> Tuple[dict, Set[str], List[str], str, str, str]:
         """
-        Возвращает (mongo_part, computed_fields, plain_fields, q, mode, logic).
+        Back-compat для моделей без search_config.
+        Возвращает: (mongo_part, computed_fields, plain_fields, q, mode, combine)
         """
-        cfg = self.get_search_config()
-        if not cfg:
-            print("[search] build_declarative_search: no cfg → fallback to build_mongo_search")
-            return self.build_mongo_search(params)
+        print("[search] build_mongo_search IN params:", repr(params))
 
-        logic = str(cfg.get("logic", "or")).lower()
-        mode = str(cfg.get("mode", "partial")).lower()
-        fields_cfg = cfg.get("fields", [])
-
-        print("[search] build_declarative_search IN params:", repr(params))
-        print("[search] cfg logic:", logic, "mode:", mode, "fields_cfg:", repr(fields_cfg))
-
+        # дефолты (т.к. ты убрал default_* атрибуты у класса)
+        mode = "partial"
+        combine = "or"
         q = ""
-        computed: Set[str] = set()
-        plain_fields_cfg, computed_from_cfg = self._split_search_config_fields(fields_cfg)
-        computed |= computed_from_cfg
 
-        param_exprs: Dict[str, List[dict]] = {}
+        if not params:
+            return {}, set(), [], "", mode, combine
 
-        def acc_expr(param_name: str, expr: Optional[dict]) -> None:
-            if expr and isinstance(expr, dict) and expr:  # не добавляем пустые {}
-                param_exprs.setdefault(param_name, []).append(expr)
-
-        if params:
-            q = str(params.get("q", "") or "")
-            print(f"[search] q='{q}'")
-            if q.strip() and plain_fields_cfg:
-                tokens = self._tokenize_query(q) if mode != "exact" else [q]
-                print("[search] tokens:", tokens)
-                if mode == "exact":
-                    bf_parts = [{f: q.strip()} for f in plain_fields_cfg]
-                    # exact также делаем OR по полям
-                    base_expr = {"$or": bf_parts} if bf_parts else {}
-                else:
-                    if len(tokens) <= 1:
-                        # одиночный токен: всегда OR по полям
-                        bf_parts = [{f: {"$regex": re.escape(tokens[0]), "$options": "i"}} for f in plain_fields_cfg]
-                        base_expr = {"$or": bf_parts} if bf_parts else {}
-                    else:
-                        if logic == "and":
-                            # много токенов + AND — проверим позже пост-фильтром
-                            base_expr = {}
-                        else:
-                            flat: List[dict] = []
-                            for t in tokens:
-                                for f in plain_fields_cfg:
-                                    flat.append({f: {"$regex": re.escape(t), "$options": "i"}})
-                            base_expr = {"$or": flat} if flat else {}
-                print("[search] base_expr for q over plain fields:", base_expr)
-                acc_expr("q", base_expr)
-
-        # --- Lookups
-        for item in fields_cfg:
-            if not isinstance(item, dict) or "lookup" not in item:
-                continue
-            lkp = item["lookup"] or {}
-
-            param_name = lkp.get("param", "q")
-            val = (params or {}).get(param_name)
-            if not isinstance(val, str) or not val.strip():
-                continue
-            val = val.strip()
-
-            collection = lkp.get("collection")
-            query_field = lkp.get("query_field")
-            project_field = lkp.get("project_field")
-            map_to = lkp.get("map_to")
-            operator = str(lkp.get("operator", "regex")).lower()
-
-            print(f"[search] lookup param='{param_name}' val='{val}' → {collection}.{query_field} -> {map_to} ({operator})")
-
-            dbh = self.db.database if hasattr(self.db, "database") else None
-            if dbh is None or not (collection and query_field and project_field and map_to):
-                continue
-
-            if operator == "exact":
-                lq = {query_field: val}
-            else:
-                lq = {query_field: {"$regex": re.escape(val), "$options": "i"}}
-
-            cursor = dbh[collection].find(lq, {project_field: 1, "_id": 0})
-            values = [doc.get(project_field) async for doc in cursor if doc.get(project_field) is not None]
-            values = list({v for v in values})
-
-            # ВАЖНО: если lookup ничего не нашёл — НИЧЕГО не добавляем, чтобы не занулить выдачу.
-            if values:
-                expr = {map_to: {"$in": values}}
-                print("[search] lookup expr:", expr)
-                acc_expr(param_name, expr)
-
-        if not param_exprs:
-            mongo = {}
-            print("[search] build_declarative_search mongo: {} (only computed or nothing)")
+        if isinstance(params, str):
+            q = params.strip()
+            fields_raw = None
         else:
-            grouped: List[dict] = []
-            for _, exprs in param_exprs.items():
-                if not exprs:
-                    continue
-                grouped.append(exprs[0] if len(exprs) == 1 else {"$or": exprs})
-            mongo = grouped[0] if len(grouped) == 1 else {"$and": grouped}
-            print("[search] build_declarative_search mongo grouped:", mongo)
+            q = str(params.get("q", "")).strip()
+            mode = str(params.get("mode", mode)).lower()
+            combine = str(params.get("combine", combine)).lower()
+            fields_raw = params.get("fields")
 
-        mongo = self.customize_search_query(
-            mongo,
-            {"q": q or "", "mode": mode, "combine": logic, "fields": fields_cfg},
+        # Если поля не заданы — берём все аннотированные поля модели
+        if fields_raw:
+            fields = self._normalize_field_list(fields_raw)
+        else:
+            fields = list(getattr(self.model, "__annotations__", {}).keys())
+
+        if not q or not fields:
+            return {}, set(), fields, q, mode, combine
+
+        # plain vs computed
+        plain_fields = [f for f in fields if not self._is_computed(f)]
+        computed: Set[str] = {f for f in fields if self._is_computed(f)}
+
+        # токены
+        tokens = self._tokenize_query(q) if mode != "exact" else [q]
+
+        # строим mongo по plain-полям
+        if mode == "exact":
+            parts = [{f: q} for f in plain_fields]
+            mongo_part = {"$or": parts} if parts else {}
+        else:
+            if len(tokens) <= 1:
+                parts = [{f: {"$regex": re.escape(tokens[0]), "$options": "i"}} for f in plain_fields]
+                mongo_part = {"$or": parts} if parts else {}
+            else:
+                if combine == "and":
+                    # не сужаем mongo — AND по токенам обработаем пост-фильтром
+                    mongo_part = {}
+                else:
+                    flat: List[dict] = []
+                    for t in tokens:
+                        for f in plain_fields:
+                            flat.append({f: {"$regex": re.escape(t), "$options": "i"}})
+                    mongo_part = {"$or": flat} if flat else {}
+
+        mongo_part = self.customize_search_query(
+            mongo_part,
+            {"q": q, "mode": mode, "combine": combine, "fields": fields},
             None
         )
-        print("[search] build_declarative_search OUT mongo:", mongo, "computed:", computed, "plain:", plain_fields_cfg)
-        return mongo, computed, plain_fields_cfg, (q or ""), mode, logic
+        print("[search] build_mongo_search OUT mongo_part:", mongo_part)
+        return mongo_part, computed, plain_fields, q, mode, combine
 
 
     async def build_declarative_search(self, params: Optional[dict]) -> Tuple[dict, Set[str], List[str], str, str, str]:
