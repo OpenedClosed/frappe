@@ -1,16 +1,9 @@
-"""Формирование маршрутов приложения (ядро CRUD + кастомные экшены).
-
-Здесь:
-- стандартные эндпоинты авторизации (login / refresh / logout);
-- генерация CRUD-маршрутов для зарегистрированных админ-моделей;
-- автоподхват кастомных методов из админ-классов через декоратор @admin_route.
-- прокидка декларативных конфигов поиска/фильтров/сортировки в /info для UI.
-"""
-
+"""Маршруты админ-панели: auth, CRUD и кастомные экшены с @admin_route, + /info для UI."""
 import importlib
+import inspect
+import json
 import logging
 import os
-import json
 from datetime import datetime
 from importlib import import_module
 from pathlib import Path
@@ -27,9 +20,8 @@ from infra import settings
 from users.db.mongo.schemas import LoginSchema, User
 from users.utils.help_functions import get_current_user
 from utils.help_functions import to_snake_case
-import inspect
 
-from .decorators import admin_route  # импорт, чтобы декоратор был виден при импорте модулей
+from .decorators import admin_route  # noqa: F401  (импорт, чтобы декоратор подхватывался при автоимпорте)
 from .models import InlineCrud
 from .registry import BaseRegistry
 from .utils.help_functions import (
@@ -53,66 +45,58 @@ from .utils.help_functions import (
 logger = logging.getLogger(__name__)
 
 
-# =====================================
+# =========================
 # Автоимпорт модулей
-# =====================================
-
+# =========================
 async def auto_discover_modules(module_name: str) -> None:
-    """Ищет и импортирует все файлы с именем module_name.py внутри BASE_DIR."""
+    """Импортирует все *module_name*.py внутри BASE_DIR."""
     base_dir = settings.BASE_DIR
     for root, _, files in os.walk(base_dir):
         for file in files:
             if file != f"{module_name}.py":
                 continue
-            relative = Path(root).relative_to(base_dir)
-            module_path = relative.as_posix().replace("/", ".")
-            full_module = f"{module_path}.{module_name}"
+            rel = Path(root).relative_to(base_dir)
+            mod_path = rel.as_posix().replace("/", ".")
+            full = f"{mod_path}.{module_name}"
             try:
-                importlib.import_module(full_module)
-                logger.debug("Импортирован модуль: %s", full_module)
+                importlib.import_module(full)
             except Exception as exc:
-                logger.exception("Ошибка при импорте %s: %s", full_module, exc)
+                logger.exception("Auto-import failed: %s -> %s", full, exc)
 
 
-# =====================================
-# Генерация маршрутов
-# =====================================
+# =========================
+# AUTH
+# =========================
+async def _revoke_cookie_token(
+    request: Request,
+    Authorize: AuthJWT,
+    cookie_name: str,
+    token_kind: str,
+    user_id: Optional[str] = None,
+    check_refresh: bool = False,
+) -> None:
+    token = request.cookies.get(cookie_name)
+    if not token:
+        return
+    try:
+        Authorize._token = token  # FastAPI-JWT-Auth внутренний механизм
+        if check_refresh:
+            Authorize.jwt_refresh_token_required()
+        else:
+            Authorize.jwt_required()
+        raw = Authorize.get_raw_jwt()
+        jti = raw["jti"]
+        await add_token_to_blacklist(user_id or Authorize.get_jwt_subject(), token_kind, jti)
+    except Exception:
+        return
 
+
+# =========================
+# Генератор маршрутов
+# =========================
 def generate_base_routes(registry: BaseRegistry) -> APIRouter:
-    """Создает APIRouter со стандартными и кастомными маршрутами админ-панели."""
+    """Создаёт APIRouter для всех зарегистрированных админ-моделей."""
     router = APIRouter()
-    logger.info("Генерируем маршруты...")
-
-    # -------------------------------------
-    # Вспомогательное: блэклист токена из cookie
-    # -------------------------------------
-    async def revoke_cookie_token(
-        request: Request,
-        Authorize: AuthJWT,
-        cookie_name: str,
-        token_kind: str,
-        user_id: Optional[str] = None,
-        check_refresh: bool = False,
-    ) -> None:
-        """Кладет токен из cookie в blacklist, если он присутствует."""
-        token = request.cookies.get(cookie_name)
-        if not token:
-            return
-        try:
-            Authorize._token = token
-            if check_refresh:
-                Authorize.jwt_refresh_token_required()
-            else:
-                Authorize.jwt_required()
-            raw = Authorize.get_raw_jwt()
-            jti = raw["jti"]
-            await add_token_to_blacklist(user_id or Authorize.get_jwt_subject(), token_kind, jti)
-        except Exception:
-            return
-
-    # =====================================
-    # AUTH ENDPOINTS
-    # =====================================
 
     @router.post("/login")
     async def login(
@@ -121,7 +105,6 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
         login_data: LoginSchema,
         Authorize: AuthJWT = Depends(),
     ) -> Dict[str, Any]:
-        """Вход: проверка пользователя, блэклист старых токенов, выдача новых, запись в cookies."""
         user_doc = await mongo_db["users"].find_one({"username": login_data.username})
         if not user_doc:
             raise HTTPException(status_code=401, detail="Invalid credentials.")
@@ -132,8 +115,10 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
         if not user.check_password(login_data.password):
             raise HTTPException(status_code=401, detail="Invalid credentials.")
 
-        await revoke_cookie_token(request, Authorize, "access_token", "access", str(user_doc["_id"]))
-        await revoke_cookie_token(request, Authorize, "refresh_token", "refresh", str(user_doc["_id"]), check_refresh=True)
+        await _revoke_cookie_token(request, Authorize, "access_token", "access", str(user_doc["_id"]))
+        await _revoke_cookie_token(
+            request, Authorize, "refresh_token", "refresh", str(user_doc["_id"]), check_refresh=True
+        )
 
         access_token = Authorize.create_access_token(subject=str(user_doc["_id"]))
         refresh_token = Authorize.create_refresh_token(subject=str(user_doc["_id"]))
@@ -148,7 +133,6 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
         response: Response,
         Authorize: AuthJWT = Depends(),
     ) -> Dict[str, str]:
-        """Обновление пары токенов: проверка refresh, блэклист старых, выдача новых, запись в cookies."""
         old_refresh = request.cookies.get("refresh_token")
         if not old_refresh:
             raise HTTPException(status_code=401, detail="Refresh token is missing")
@@ -167,7 +151,7 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
             raise HTTPException(status_code=401, detail="Refresh token is blacklisted")
 
         await add_token_to_blacklist(current_user, "refresh", refresh_jti)
-        await revoke_cookie_token(request, Authorize, "access_token", "access", current_user)
+        await _revoke_cookie_token(request, Authorize, "access_token", "access", current_user)
 
         new_access = Authorize.create_access_token(subject=current_user)
         new_refresh = Authorize.create_refresh_token(subject=current_user)
@@ -184,28 +168,23 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
         response: Response,
         Authorize: AuthJWT = Depends(),
     ) -> Dict[str, str]:
-        """Выход: блэклист access/refresh из cookies, удаление cookies."""
         current_user = Authorize.get_jwt_subject()
-        await revoke_cookie_token(request, Authorize, "access_token", "access", current_user)
-        await revoke_cookie_token(request, Authorize, "refresh_token", "refresh", current_user, check_refresh=True)
+        await _revoke_cookie_token(request, Authorize, "access_token", "access", current_user)
+        await _revoke_cookie_token(request, Authorize, "refresh_token", "refresh", current_user, check_refresh=True)
         response.delete_cookie("access_token")
         response.delete_cookie("refresh_token")
         return {"message": "Logged out"}
 
-    # =====================================
-    # CRUD и кастомные маршруты
-    # =====================================
+    # -------------------------
+    # CRUD + кастомные экшены
+    # -------------------------
+    def create_routes(registered_name: str, instance: Any) -> None:
+        snake = to_snake_case(registered_name)
 
-    def create_routes(name: str, instance):
-        """
-        Регистрирует CRUD-маршруты и кастомные методы (@admin_route) для одной модели.
-        """
-        snake_name = to_snake_case(name)
-
-        # ---------- READ ----------
+        # ----- READ -----
         if instance.allow_crud_actions.get("read", False):
 
-            @router.get(f"/{snake_name}/", name=f"list_{snake_name}")
+            @router.get(f"/{snake}/", name=f"list_{snake}")
             @jwt_required()
             async def list_items(
                 request: Request,
@@ -216,17 +195,8 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                 order: int = 1,
                 Authorize: AuthJWT = Depends(),
             ):
-                """
-                Поддерживаем три способа передать критерии:
-                  1) filters=<JSON>         — сложные фильтры (__filters / advanced)
-                  2) search=<JSON или строка> — расширенный/простой поиск (__search / q)
-                  3) q=<строка>             — короткий поиск
-                Всё это мержится в единый dict и уходит в instance.list/list_with_meta().
-                """
+                """Список с поддержкой filters/search/q и meta."""
                 user_doc = await get_current_user(Authorize)
-
-                has_page = "page" in request.query_params
-                has_page_size = "page_size" in request.query_params
 
                 raw_filters = request.query_params.get("filters")
                 raw_search = request.query_params.get("search")
@@ -242,52 +212,50 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                 parsed_search: Optional[dict] = None
                 if raw_search:
                     try:
-                        if str(raw_search).strip().startswith("{"):
-                            parsed_search = json.loads(raw_search)
-                        else:
-                            parsed_search = {"q": str(raw_search)}
+                        parsed_search = json.loads(raw_search) if str(raw_search).strip().startswith("{") else {"q": str(raw_search)}
                     except Exception:
                         parsed_search = {"q": str(raw_search)}
                 elif raw_q:
                     parsed_search = {"q": str(raw_q)}
 
-                combined_filters = None
-                if parsed_filters or parsed_search:
-                    combined_filters = {"__filters": parsed_filters or {}, "__search": parsed_search or {}}
+                combined = {"__filters": parsed_filters or {}, "__search": parsed_search or {}} if (parsed_filters or parsed_search) else None
 
-                # singleton-режим без критериев
-                if instance.max_instances_per_user == 1 and not (parsed_filters or parsed_search):
+                # singleton без критериев
+                if instance.max_instances_per_user == 1 and not combined:
                     items = await instance.get_queryset(current_user=user_doc)
-                    item: Optional[dict] = None
-                    if items:
-                        first_obj = items[0]
-                        item_id = first_obj.get("_id") or first_obj.get("id")
-                        if not item_id:
-                            raise HTTPException(status_code=404, detail="Invalid document: missing _id")
-                        item = await instance.get(object_id=item_id, current_user=user_doc)
-                    if not item:
+                    if not items:
                         raise HTTPException(status_code=404, detail="Item not found")
-                    return item
+                    first = items[0]
+                    item_id = first.get("_id") or first.get("id")
+                    if not item_id:
+                        raise HTTPException(status_code=404, detail="Invalid document: missing _id")
+                    obj = await instance.get(object_id=item_id, current_user=user_doc)
+                    if not obj:
+                        raise HTTPException(status_code=404, detail="Item not found")
+                    return obj
 
-                use_meta = bool(parsed_filters or parsed_search or (has_page and has_page_size))
+                has_page = "page" in request.query_params
+                has_page_size = "page_size" in request.query_params
+                use_meta = bool(combined or (has_page and has_page_size))
+
                 if use_meta:
                     return await instance.list_with_meta(
                         page=page,
                         page_size=page_size,
                         sort_by=sort_by,
                         order=order,
-                        filters=combined_filters,
+                        filters=combined,
                         current_user=user_doc,
                     )
 
                 return await instance.list(
                     sort_by=sort_by,
                     order=order,
-                    filters=combined_filters,
+                    filters=combined,
                     current_user=user_doc,
                 )
 
-            @router.get(f"/{snake_name}/{{item_id}}", name=f"get_{snake_name}")
+            @router.get(f"/{snake}/{{item_id}}", name=f"get_{snake}")
             @jwt_required()
             async def get_item(
                 request: Request,
@@ -301,10 +269,10 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                     raise HTTPException(status_code=404, detail="Item not found")
                 return item
 
-        # ---------- CREATE ----------
+        # ----- CREATE -----
         if instance.allow_crud_actions.get("create", False):
 
-            @router.post(f"/{snake_name}/", name=f"create_{snake_name}")
+            @router.post(f"/{snake}/", name=f"create_{snake}")
             @jwt_required()
             async def create_item(
                 request: Request,
@@ -319,10 +287,10 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                     errors = {err["loc"][-1]: err["msg"] for err in exc.errors()}
                     raise HTTPException(status_code=400, detail=errors)
 
-        # ---------- UPDATE ----------
+        # ----- UPDATE -----
         if instance.allow_crud_actions.get("update", False):
 
-            @router.patch(f"/{snake_name}/{{item_id}}", name=f"patch_{snake_name}")
+            @router.patch(f"/{snake}/{{item_id}}", name=f"patch_{snake}")
             @jwt_required()
             async def patch_item(
                 request: Request,
@@ -341,10 +309,10 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                     errors = {err["loc"][-1]: err["msg"] for err in exc.errors()}
                     raise HTTPException(status_code=400, detail=errors)
 
-        # ---------- DELETE ----------
+        # ----- DELETE -----
         if instance.allow_crud_actions.get("delete", False):
 
-            @router.delete(f"/{snake_name}/{{item_id}}", name=f"delete_{snake_name}")
+            @router.delete(f"/{snake}/{{item_id}}", name=f"delete_{snake}")
             @jwt_required()
             async def delete_item(
                 request: Request,
@@ -358,76 +326,72 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
                     raise HTTPException(status_code=404, detail="Item not deleted")
                 return {"status": "success"}
 
-        # ---------- CUSTOM (@admin_route) ----------
-        for attr_name, handler in inspect.getmembers(instance, predicate=inspect.ismethod):
-            func = getattr(handler, "__func__", handler)  # оригинальная функция из bound-метода
+        # ----- CUSTOM (@admin_route) -----
+        def make_custom_endpoint(bound_handler, meta: dict):
+            async def endpoint(request: Request, Authorize: AuthJWT = Depends()):
+                current_user = None
+                if meta.get("auth"):
+                    try:
+                        Authorize.jwt_required()
+                    except Exception:
+                        raise HTTPException(status_code=401, detail="Not authenticated")
+                    current_user = await get_current_user(Authorize)
+                    try:
+                        instance.check_permission(meta.get("permission_action", "read"), current_user)
+                    except HTTPException as e:
+                        raise e
+                    except Exception:
+                        raise HTTPException(status_code=403, detail="Permission denied")
+
+                body: Dict[str, Any] = {}
+                if request.method in {"POST", "PUT", "PATCH"}:
+                    try:
+                        body = await request.json()
+                    except Exception:
+                        body = {}
+
+                path_params = dict(request.path_params)
+                query_params = dict(request.query_params)
+
+                result = bound_handler(
+                    data=body,
+                    current_user=current_user,
+                    request=request,
+                    path_params=path_params,
+                    query_params=query_params,
+                )
+                if inspect.isawaitable(result):
+                    result = await result
+                return result
+
+            return endpoint
+
+        for _, handler in inspect.getmembers(instance, predicate=inspect.ismethod):
+            func = getattr(handler, "__func__", handler)
             meta_list = getattr(func, "admin_route_meta", None)
             if not isinstance(meta_list, list):
                 continue
 
             for meta in meta_list:
-                relative = meta["path"] if meta["path"].startswith("/") else f"/{meta['path']}"
-                full_path = f"/{snake_name}{relative}"
+                rel = meta["path"] if meta["path"].startswith("/") else f"/{meta['path']}"
+                full_path = f"/{snake}{rel}"
+                route_name = meta.get("name") or f"{snake}_{meta['method'].lower()}_{rel.strip('/').replace('/', '_') or 'root'}"
 
-                async def endpoint(
-                    request: Request,
-                    Authorize: AuthJWT = Depends(),
-                    _h=handler,   # bound-метод (важно: оставляем bound, а не func)
-                    _m=meta,
-                ):
-                    current_user = None
-                    if _m["auth"]:
-                        try:
-                            Authorize.jwt_required()
-                        except Exception:
-                            raise HTTPException(status_code=401, detail="Not authenticated")
-                        current_user = await get_current_user(Authorize)
-                        try:
-                            instance.check_permission(_m["permission_action"], current_user)
-                        except HTTPException as e:
-                            raise e
-                        except Exception:
-                            raise HTTPException(status_code=403, detail="Permission denied")
-
-                    body: Dict[str, Any] = {}
-                    if request.method in {"POST", "PUT", "PATCH"}:
-                        try:
-                            body = await request.json()
-                        except Exception:
-                            body = {}
-
-                    path_params = dict(request.path_params)
-                    query_params = dict(request.query_params)
-
-                    result = _h(
-                        data=body,
-                        current_user=current_user,
-                        request=request,
-                        path_params=path_params,
-                        query_params=query_params,
-                    )
-                    if callable(result):
-                        result = result()
-                    if hasattr(result, "__await__"):
-                        result = await result
-                    return result
-
-                route_name = meta["name"] or f"{snake_name}_{meta['method'].lower()}_{relative.strip('/').replace('/', '_') or 'root'}"
+                endpoint = make_custom_endpoint(handler, meta)
                 router.add_api_route(
                     full_path,
                     endpoint,
                     methods=[meta["method"]],
                     name=route_name,
-                    status_code=meta["status_code"],
-                    response_model=meta["response_model"],
-                    summary=meta["summary"],
-                    description=meta["description"],
-                    tags=meta["tags"],
+                    status_code=meta.get("status_code", 200),
+                    response_model=meta.get("response_model"),
+                    summary=meta.get("summary"),
+                    description=meta.get("description"),
+                    tags=meta.get("tags"),
                 )
 
-
-    for registered_name, instance in registry.get_registered().items():
-        create_routes(registered_name, instance)
+    for reg_name, inst in registry.get_registered().items():
+        create_routes(reg_name, inst)
 
     @router.get("/info")
     @jwt_required()
@@ -436,19 +400,17 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
         response: Response,
         Authorize: AuthJWT = Depends(),
     ):
-        """Возвращает структуру описания админ-моделей и их маршрутов + декларативные конфиги для UI."""
+        """Сводка моделей для UI."""
         current_user = await get_current_user(Authorize)
         return await get_routes_by_apps(registry, current_user)
 
     return router
 
 
-# =====================================
-# Помощники для UI-схемы
-# =====================================
-
+# =========================
+# Построение UI-схемы
+# =========================
 def map_python_type_to_ui(py_type: Any) -> str:
-    """Маппинг python-типа в тип UI-поля по умолчанию."""
     mapping: Dict[Any, str] = {
         str: "string",
         int: "number",
@@ -475,7 +437,6 @@ def map_python_type_to_ui(py_type: Any) -> str:
 
 
 def get_instance_attributes(instance: Any) -> Dict[str, Any]:
-    """Возвращает основные атрибуты админ-класса, нужные для построения схемы."""
     return {
         "list_display": getattr(instance, "list_display", []),
         "detail_fields": getattr(instance, "detail_fields", []),
@@ -499,7 +460,6 @@ def determine_field_type_and_choices(
     field: str,
     read_only_fields: List[str],
 ) -> Tuple[str, Optional[List[Any]]]:
-    """Возвращает кортеж (ui_type, choices) на основании аннотации поля."""
     if py_type is None:
         return "unknown", None
     if is_enum_type(py_type):
@@ -534,7 +494,6 @@ def determine_field_type_and_choices(
 
 
 def get_schema_data(instance: Any) -> Tuple[Dict[str, Any], List[str]]:
-    """Возвращает свойства и обязательные поля pydantic-схемы модели."""
     try:
         schema = instance.model.schema(by_alias=False)
         return schema.get("properties", {}), schema.get("required", [])
@@ -547,7 +506,6 @@ def extract_default_value_and_settings(
     field_name: str,
     default_value: Any,
 ) -> Tuple[Any, Dict[str, Any]]:
-    """Возвращает default и settings для поля из json-схемы и json_schema_extra."""
     field_def = getattr(instance.model, "model_fields", {}).get(field_name)
 
     if default_value is None and field_def and hasattr(field_def, "default_factory"):
@@ -579,7 +537,6 @@ def build_field_schema(
     help_texts: Dict[str, Dict[str, str]],
     field_titles: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Собирает описание поля для UI."""
     field_info = schema_props.get(field, {})
     field_title = field_titles.get(field, field_info.get("title", {}))
     field_default, field_settings = extract_default_value_and_settings(instance, field, field_info.get("default"))
@@ -627,7 +584,6 @@ async def build_inlines(
     model_annotations: Dict[str, Any],
     current_user: Any,
 ) -> List[dict]:
-    """Возвращает список описаний inline-моделей (single или list)."""
     result: List[dict] = []
     for inline_field, inline_cls in inlines_dict.items():
         inline_instance = inline_cls(instance.db)
@@ -644,7 +600,6 @@ async def build_inlines(
 
 
 def build_field_groups(field_groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Собирает описание групп полей для UI."""
     return [
         {
             "title": group["title"],
@@ -657,7 +612,6 @@ def build_field_groups(field_groups: List[Dict[str, Any]]) -> List[Dict[str, Any
 
 
 def deep_update(dst: dict, src: dict) -> None:
-    """Глубокое слияние словаря src в dst."""
     for k, v in src.items():
         if isinstance(v, dict) and isinstance(dst.get(k), dict):
             deep_update(dst[k], v)
@@ -666,7 +620,7 @@ def deep_update(dst: dict, src: dict) -> None:
 
 
 async def build_model_info(instance: Any, current_user: Any) -> dict:
-    """Формирует описание админ-модели для UI: поля, группы, инлайны, разрешения и декларативные конфиги запросов."""
+    """Возвращает описание модели для UI."""
     attrs = get_instance_attributes(instance)
     schema_props, _ = get_schema_data(instance)
     model_annotations = getattr(instance.model, "__annotations__", {})
@@ -693,8 +647,7 @@ async def build_model_info(instance: Any, current_user: Any) -> dict:
             if attrs["max_instances"] == 1:
                 override_obj = await instance.get_singleton_object(current_user)
             overrides = await instance.get_field_overrides(obj=override_obj, current_user=current_user)
-        except Exception as exc:
-            logger.debug("get_field_overrides error for %s: %s", instance, exc)
+        except Exception:
             overrides = {}
 
     for fld in fields_schema:
@@ -704,43 +657,27 @@ async def build_model_info(instance: Any, current_user: Any) -> dict:
     groups_schema = build_field_groups(attrs["field_groups"])
     inlines_list = await build_inlines(instance, attrs["inlines_dict"], model_annotations, current_user)
 
-    # Прокидываем декларативные конфиги для фронта (чтобы рисовать UI поиска/фильтров/сортировки)
-    search_config = getattr(instance, "get_search_config", None)
-    filter_config = getattr(instance, "get_filter_config", None)
-    sort_config = getattr(instance, "get_sort_config", None)
-
-    search_cfg = search_config() if callable(search_config) else (getattr(instance, "search_config", {}) or {})
-    filter_cfg = filter_config() if callable(filter_config) else (getattr(instance, "filter_config", {}) or {})
-    sort_cfg = sort_config() if callable(sort_config) else (getattr(instance, "sort_config", {}) or {})
+    # Декларативные конфиги для фронта (взяты из самого инстанса)
+    search_cfg = instance.get_search_config() if hasattr(instance, "get_search_config") else (getattr(instance, "search_config", {}) or {})
+    filter_cfg = instance.get_filter_config() if hasattr(instance, "get_filter_config") else (getattr(instance, "filter_config", {}) or {})
+    sort_cfg = instance.get_sort_config() if hasattr(instance, "get_sort_config") else (getattr(instance, "sort_config", {}) or {})
 
     query_ui = {
-        "search": {
-            "default_mode": getattr(instance, "default_search_mode", "partial"),
-            "default_combine": getattr(instance, "default_search_combine", "or"),
-            "fields": getattr(instance, "search_fields", []),
-            "computed_fields": getattr(instance, "searchable_computed_fields", []),
-            "config": search_cfg,
-        },
-        "filters": {
-            "config": filter_cfg
-        },
-        "sort": {
-            "config": sort_cfg
-        },
-        # Подсказка фронту: как правильно слать параметры в list:
-        # GET /{entity}/?sort_by=...&order=1&filters=<JSON>&search=<JSON>|q=...
+        "search": {"config": search_cfg},
+        "filters": {"config": filter_cfg},
+        "sort": {"config": sort_cfg},
         "request_params_hints": {
-            "filters_param": "filters",  # JSON, внутри можно указывать __filters и __search
-            "search_param": "search",    # JSON ИЛИ строка; альтернативно q=<string>
+            "filters_param": "filters",
+            "search_param": "search",
             "q_param": "q",
-        }
+        },
     }
 
     return {
         "name": instance.model.__name__,
-        "verbose_name": instance.verbose_name,
-        "plural_name": instance.plural_name,
-        "icon": instance.icon,
+        "verbose_name": getattr(instance, "verbose_name", "Unnamed Model"),
+        "plural_name": getattr(instance, "plural_name", "Unnamed Models"),
+        "icon": getattr(instance, "icon", ""),
         "list_display": attrs["list_display"],
         "detail_fields": attrs["detail_fields"],
         "computed_fields": attrs["computed_fields"],
@@ -757,15 +694,13 @@ async def build_model_info(instance: Any, current_user: Any) -> dict:
 
 
 async def build_inline_schema(inline_field: str, inline_instance: Any, inline_type: str, current_user: Any) -> dict:
-    """Формирует описание inline-модели, добавляя поле 'field' и тип инлайна."""
-    base_schema = await build_model_info(inline_instance, current_user)
-    base_schema["field"] = inline_field
-    base_schema["inline_type"] = inline_type
-    return base_schema
+    base = await build_model_info(inline_instance, current_user)
+    base["field"] = inline_field
+    base["inline_type"] = inline_type
+    return base
 
 
 def get_app_info(module_path: str, registry_name: str) -> tuple[str, str, str, str]:
-    """Определяет имя приложения, verbose-имя, иконку и цвет по модулю модели."""
     parts = module_path.split(".")
     app_name = parts[-1]
     if registry_name in parts:
@@ -786,40 +721,34 @@ def get_app_info(module_path: str, registry_name: str) -> tuple[str, str, str, s
 
 
 def get_model_routes(api_prefix: str, registered_name: str, instance: Any) -> List[Dict[str, str]]:
-    """Возвращает список маршрутов модели: CRUD + кастомные @admin_route."""
-    snake_name = to_snake_case(registered_name)
+    snake = to_snake_case(registered_name)
     routes: List[Dict[str, str]] = []
 
-    # CRUD
     if instance.allow_crud_actions.get("read", False):
-        routes.append({"method": "GET", "path": f"{api_prefix}/{snake_name}/", "name": f"list_{snake_name}"})
-        routes.append({"method": "GET", "path": f"{api_prefix}/{snake_name}/{{item_id}}", "name": f"get_{snake_name}"})
+        routes.append({"method": "GET", "path": f"{api_prefix}/{snake}/", "name": f"list_{snake}"})
+        routes.append({"method": "GET", "path": f"{api_prefix}/{snake}/{{item_id}}", "name": f"get_{snake}"})
     if instance.allow_crud_actions.get("create", False):
-        routes.append({"method": "POST", "path": f"{api_prefix}/{snake_name}/", "name": f"create_{snake_name}"})
+        routes.append({"method": "POST", "path": f"{api_prefix}/{snake}/", "name": f"create_{snake}"})
     if instance.allow_crud_actions.get("update", False):
-        routes.append({"method": "PATCH", "path": f"{api_prefix}/{snake_name}/{{item_id}}", "name": f"patch_{snake_name}"})
+        routes.append({"method": "PATCH", "path": f"{api_prefix}/{snake}/{{item_id}}", "name": f"patch_{snake}"})
     if instance.allow_crud_actions.get("delete", False):
-        routes.append({"method": "DELETE", "path": f"{api_prefix}/{snake_name}/{{item_id}}", "name": f"delete_{snake_name}"})
+        routes.append({"method": "DELETE", "path": f"{api_prefix}/{snake}/{{item_id}}", "name": f"delete_{snake}"})
 
-    # Кастомные методы: перебираем только bound-методы, метаданные ищем у .__func__
     for _, handler in inspect.getmembers(instance, predicate=inspect.ismethod):
         func = getattr(handler, "__func__", handler)
         meta_list = getattr(func, "admin_route_meta", None)
         if not isinstance(meta_list, list):
             continue
-
         for meta in meta_list:
-            relative = meta["path"] if meta["path"].startswith("/") else f"/{meta['path']}"
-            full_path = f"{api_prefix}/{snake_name}{relative}"
-            route_name = meta["name"] or f"{snake_name}_{meta['method'].lower()}_{relative.strip('/').replace('/', '_') or 'root'}"
-            routes.append({"method": meta["method"], "path": full_path, "name": route_name})
+            rel = meta["path"] if meta["path"].startswith("/") else f"/{meta['path']}"
+            full = f"{api_prefix}/{snake}{rel}"
+            route_name = meta.get("name") or f"{snake}_{meta['method'].lower()}_{rel.strip('/').replace('/', '_') or 'root'}"
+            routes.append({"method": meta["method"], "path": full, "name": route_name})
 
     return routes
 
 
-
 async def build_model_entry(instance: Any, api_prefix: str, registered_name: str, current_user: Any) -> Dict[str, Any]:
-    """Возвращает описание модели для UI: схема и перечень маршрутов."""
     return {
         "registered_name": registered_name,
         "model": await build_model_info(instance, current_user),
@@ -828,14 +757,13 @@ async def build_model_entry(instance: Any, api_prefix: str, registered_name: str
 
 
 async def get_routes_by_apps(registry: BaseRegistry, current_user: Any) -> Dict[str, Any]:
-    """Группирует модели по приложениям и возвращает структуру для админ-интерфейса."""
     apps: Dict[str, Any] = {}
     api_prefix = f"/api/{registry.name}"
 
     for registered_name, instance in registry.get_registered().items():
         module_path = instance.__module__
         try:
-            instance.check_permission("read", user=current_user)
+            instance.check_permission("read", current_user)
         except HTTPException:
             continue
 
