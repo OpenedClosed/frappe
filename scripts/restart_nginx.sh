@@ -7,7 +7,7 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/restart_nginx_$(date +'%Y-%m-%d_%H-%M').log"
 
 ## ----------  НОВОЕ: глобальный замок деплоя  ----------
-LOCK_FILE="/var/lock/dentist_deploy.lock"
+LOCK_FILE="/var/lock/deploy.lock"
 if [ -e "$LOCK_FILE" ]; then
   echo "🚧 Найден файл $LOCK_FILE — идёт деплой. Завершаю работу." | tee -a "$LOG_FILE"
   exit 0
