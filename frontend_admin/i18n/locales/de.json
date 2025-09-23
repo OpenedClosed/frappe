@@ -161,7 +161,6 @@
     "Information": "Information",
     "ReferralCodeEntered": "You have entered a referral code.",
     "usePhone2FA": "Telefon (SMS) für Zwei-Faktor-Authentifizierung verwenden",
-    "phoneMustBePolish": "Telefonnummer muss mit +48 beginnen, um SMS zu aktivieren.",
     "phoneImportant": "Wichtig:",
     "phoneOptional": "Optional:",
     "phoneImportantInfo": "Erforderlich für SMS-Zwei-Faktor-Authentifizierung und operative Kommunikation.",
@@ -680,6 +679,25 @@
     "ClosedByOperator": "📪🔒 Manuell geschlossen",
     "BriefInProgress": "📋🛠️ Brief wird ausgefüllt",
     "BriefCompleted": "📋✅ Brief abgeschlossen"
+  },
+  "countryPhone": {
+    "country": "Ländercode",
+    "phone": "Telefonnummer",
+    "selectCountry": "Land auswählen",
+    "searchCountry": "Nach Ländercode suchen...",
+    "phonePlaceholder": "Telefonnummer eingeben",
+    "selectCountryFirst": "Bitte zuerst ein Land auswählen",
+    "invalidFormat": "Ungültiges Telefonnummernformat",
+    "tooShort": "Telefonnummer zu kurz für das gewählte Land",
+    "tooLong": "Telefonnummer zu lang für das gewählte Land",
+    "required": "Dieses Feld ist erforderlich",
+    "phoneRequired": "Telefonnummer ist für SMS-Verifizierung erforderlich",
+    "emailRequired": "E-Mail ist für E-Mail-Verifizierung erforderlich",
+    "smsAvailable": "SMS-Verifizierung für alle Länder verfügbar",
+    "emailAvailable": "E-Mail-Verifizierung als Alternative verfügbar",
+    "chooseMethod": "Verifizierungsmethode wählen",
+    "smsVerification": "SMS-Verifizierung",
+    "emailVerification": "E-Mail-Verifizierung"
   },
   "test": {
     "test": "Test"

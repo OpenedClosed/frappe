@@ -110,48 +110,15 @@
           </div>
 
           <Divider />
-
           <!-- Номер телефона (conditionally required) -->
-          <div>
-            <label for="phone" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.phone") }} <span v-if="usePhone2FA" class="text-red-500">*</span>
-            </label>
-            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.phone }">
-              <InputMask
-                v-model="regForm.phone"
-                id="phone"
-                size="small"
-                type="tel"
-                :required="usePhone2FA"
-                mask="+48 999 999 999"
-                placeholder="+48 ___ ___ ___"
-                :minlength="8"
-                :maxlength="30"
-                :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
-                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
-              />
-            </div>
-            <div class="flex flex-col">
-              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
-                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                  >{{ usePhone2FA ? t("PersonalMainRegistration.phoneImportant") : t("PersonalMainRegistration.phoneOptional") }} &nbsp;</span
-                >{{ usePhone2FA ? t("PersonalMainRegistration.phoneImportantInfo") : t("PersonalMainRegistration.phoneOptionalInfo") }}</small
-              >
-              <small class="text-red-500 mt-1 text-[12px]">
-                {{ regError.phone }}
-              </small>
-            </div>
-          </div>
+          <CountryPhoneSelector v-model="regForm.phone" :required="usePhone2FA" :error="regError.phone" :phoneError="regError.phone" />
           <!-- 2FA Method Toggle -->
           <div class="flex items-center justify-between mt-2">
             <label class="text-[14px] text-black dark:text-white">
               {{ t("PersonalMainRegistration.usePhone2FA") }}
             </label>
-            <InputSwitch v-model="usePhone2FA" :disabled="!isPolishPhone" />
+            <ToggleSwitch v-model="usePhone2FA" />
           </div>
-          <small v-if="!isPolishPhone" class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
-            {{ t("PersonalMainRegistration.phoneMustBePolish") }}
-          </small>
 
           <!-- Email (conditionally required) -->
           <div>
@@ -354,14 +321,13 @@ const hasReferralCode = ref(false);
 const isCode = ref(false);
 const usePhone2FA = ref(false); // toggle state
 
-// Computed helper to check if phone starts with +48 (Polish number)
-const isPolishPhone = computed(() => regForm.value.phone.startsWith("+48"));
 // Управление видом пароля
 const passwordType = ref("password");
 const passwordTypeConfirm = ref("password");
 const { currentLanguage } = useLanguageState();
 
 import { useErrorParser } from "~/composables/useErrorParser.js";
+import CountryPhoneSelector from "~/components/ui/CountryPhoneSelector.vue";
 const { parseAxiosError } = useErrorParser();
 const toast = useToast();
 // язык пользователя из состояния

@@ -157,7 +157,6 @@
     "Information": "Informacja",
     "ReferralCodeEntered": "Wpisałeś kod polecający.",
     "usePhone2FA": "Używaj telefonu (SMS) do uwierzytelniania dwuskładnikowego",
-    "phoneMustBePolish": "Numer telefonu musi zaczynać się od +48, aby włączyć SMS.",
     "phoneImportant": "Ważne:",
     "phoneOptional": "Opcjonalne:",
     "phoneImportantInfo": "Wymagane do uwierzytelniania dwuskładnikowego SMS i komunikacji operacyjnej.",
@@ -676,8 +675,27 @@
     "BriefInProgress": "📋🛠️ Wypełnianie briefu",
     "BriefCompleted": "📋✅ Brief ukończony"
   },
-
+  "countryPhone": {
+    "country": "Kod kraju",
+    "phone": "Numer telefonu",
+    "selectCountry": "Wybierz kraj",
+    "searchCountry": "Szukaj po kodzie kraju...",
+    "phonePlaceholder": "Wprowadź numer telefonu",
+    "selectCountryFirst": "Najpierw wybierz kraj",
+    "invalidFormat": "Nieprawidłowy format numeru telefonu",
+    "tooShort": "Numer telefonu jest za krótki dla wybranego kraju",
+    "tooLong": "Numer telefonu jest za długi dla wybranego kraju",
+    "required": "To pole jest wymagane",
+    "phoneRequired": "Numer telefonu jest wymagany do weryfikacji SMS",
+    "emailRequired": "Email jest wymagany do weryfikacji email",
+    "smsAvailable": "Weryfikacja SMS dostępna dla wszystkich krajów",
+    "emailAvailable": "Weryfikacja email dostępna jako alternatywa",
+    "chooseMethod": "Wybierz metodę weryfikacji",
+    "smsVerification": "Weryfikacja SMS",
+    "emailVerification": "Weryfikacja email"
+  },
   "test": {
     "test": "Test"
   }
 }
+
