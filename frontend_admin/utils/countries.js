@@ -1,21 +1,6 @@
-import worldCountries from 'world-countries';
+import { countries as countryData } from 'country-codes-flags-phone-codes';
 
 const { currentLanguage } = useLanguageState();
-
-// Функция для сопоставления языковых кодов с ключами переводов в world-countries
-function getTranslationKey(languageCode) {
-  const langMap = {
-    'en': 'eng',
-    'de': 'deu',
-    'pl': 'pol', 
-    'ru': 'rus',
-    'be': 'bel',
-    'uk': 'ukr',
-    'ua': 'ukr',
-    'ka': 'kat'
-  };
-  return langMap[languageCode] || 'eng';
-}
 
 // Приоритетные страны с кастомными настройками
 const priorityCountries = {
@@ -28,25 +13,19 @@ const priorityCountries = {
   'KA': 7,
 };
 
-const exceptionCode = {
-  'RU': '+7',
-};
-
-console.log('warldCountries', worldCountries);
-// Генерация списка стран из world-countries
-export const countries = worldCountries
-  .filter(country => country.idd && country.idd.root && country.idd.suffixes && country.idd.suffixes.length > 0)
+// Генерация списка стран из country-codes-flags-phone-codes
+export const countries = countryData
   .map(country => {
-    const iso = country.cca2;
+    const iso = country.code;
     const priority = priorityCountries[iso];
     
-    // Формируем код страны из idd
-    const callingCode = exceptionCode[iso] || country.idd.root + country.idd.suffixes[0];
+    // Используем готовый dialCode из новой библиотеки или исключения
+    const callingCode = country.dialCode;
     const mask = '999 999 999';
     const placeholder = '___ ___ ___';
 
     return {
-      name: country.translations?.[getTranslationKey(currentLanguage.value)] || country.name.common,
+      name: country.name, // Уже локализовано в библиотеке
       code: callingCode,
       iso: iso,
       mask: mask,

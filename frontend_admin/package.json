@@ -16,6 +16,7 @@
     "autoprefixer": "^10.4.19",
     "axios": "^1.6.8",
     "chart.js": "^4.4.5",
+    "country-codes-flags-phone-codes": "^1.1.1",
     "docx": "^9.0.2",
     "file-saver": "^2.0.5",
     "isomorphic-dompurify": "^2.9.0",
@@ -40,7 +41,6 @@
     "vue-flow": "^0.3.0",
     "vue-router": "^4.3.2",
     "vuedraggable": "^2.24.3",
-    "world-countries": "^5.1.0",
     "xlsx": "^0.18.5",
     "yup": "^1.4.0"
   },

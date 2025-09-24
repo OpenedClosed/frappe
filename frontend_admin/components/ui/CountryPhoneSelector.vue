@@ -18,8 +18,7 @@
               :filter="true"
               :filterMatchMode="'contains'"
               :filterFields="['name', 'code', 'iso']"
-              :filterPlaceholder="$t('countryPhone.searchCountry')"
-              class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+              class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px] country-select-wide"
               @change="onCountryChange"
             >
               <template #value="slotProps">
@@ -52,7 +51,7 @@
         />
       </div>
       <div class="flex flex-col">
-        <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
+        <small v-if="needAdditionalInfo" class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
           <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
             >{{ required ? $t("PersonalMainRegistration.phoneImportant") : $t("PersonalMainRegistration.phoneOptional") }} &nbsp;</span
           >{{ required ? $t("PersonalMainRegistration.phoneImportantInfo") : $t("PersonalMainRegistration.phoneOptionalInfo") }}</small
@@ -95,6 +94,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  needAdditionalInfo: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Emits
@@ -113,14 +116,6 @@ const isValidPhone = computed(() => {
   if (!selectedCountry.value || !phoneNumber.value) return false;
   const cleanPhone = phoneNumber.value.replace(/\D/g, "");
   return cleanPhone.length >= (selectedCountry.value.minLength || 7) && cleanPhone.length <= (selectedCountry.value.maxLength || 15);
-});
-
-const phoneError = computed(() => {
-  if (props.error) return props.error;
-  if (phoneNumber.value && !isValidPhone.value) {
-    return "countryPhone.invalidPhone";
-  }
-  return "";
 });
 
 // Helper functions
@@ -205,3 +200,10 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped>
+
+:deep(.p-select-overlay) {
+  min-width: 600px !important; /* Adjust this value as needed */
+}
+</style>

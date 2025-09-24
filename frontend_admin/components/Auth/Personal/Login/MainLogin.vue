@@ -42,27 +42,12 @@
 
         <!-- Phone (required) -->
         <div class="w-full flex flex-col justify-start" v-else>
-          <label for="phone" class="w-full block mb-1 text-[14px] text-black dark:text-white">
-            {{ t("PersonalMainLogin.phone") }} <span class="text-red-500">*</span>
-          </label>
-          <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!loginError.phone }">
-            <InputMask
-              v-model="loginForm.phone"
-              required
-              id="phone"
-              size="small"
-              type="tel"
-              mask="+48 999 999 999"
-              placeholder="+48 ___ ___ ___"
-              :minlength="8"
-              :maxlength="30"
-              :placeholder="t('PersonalMainLogin.phonePlaceholder')"
-              class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
-            />
-          </div>
-          <small class="text-red-500 mt-1 text-[12px]">
-            {{ loginError.phone }}
-          </small>
+          <CountryPhoneSelector 
+            v-model="loginForm.phone" 
+            :required="true" 
+            :error="loginError.phone" 
+            :phoneError="loginError.phone"
+          />
         </div>
 
         <!-- Пароль -->
@@ -161,6 +146,7 @@ const { currentLanguage } = useLanguageState();
 const { t } = useI18n();
 
 import { useErrorParser } from "~/composables/useErrorParser.js";
+import CountryPhoneSelector from "~/components/ui/CountryPhoneSelector.vue";
 const { parseAxiosError } = useErrorParser();
 /**
  * Управление видимостью пароля

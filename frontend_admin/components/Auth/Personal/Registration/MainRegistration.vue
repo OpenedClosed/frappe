@@ -111,7 +111,13 @@
 
           <Divider />
           <!-- Номер телефона (conditionally required) -->
-          <CountryPhoneSelector v-model="regForm.phone" :required="usePhone2FA" :error="regError.phone" :phoneError="regError.phone" />
+          <CountryPhoneSelector
+            v-model="regForm.phone"
+            :required="usePhone2FA"
+            :error="regError.phone"
+            :phoneError="regError.phone"
+            :needAdditionalInfo="true"
+          />
           <!-- 2FA Method Toggle -->
           <div class="flex items-center justify-between mt-2">
             <label class="text-[14px] text-black dark:text-white">
@@ -121,7 +127,7 @@
           </div>
 
           <!-- Email (conditionally required) -->
-          <div>
+          <div class="flex flex-col">
             <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
               {{ t("PersonalMainRegistration.email") }} <span v-if="!usePhone2FA" class="text-red-500">*</span>
             </label>
@@ -138,7 +144,10 @@
             </div>
             <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
               <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                >{{ usePhone2FA ? t("PersonalMainRegistration.emailOptional") : t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
+                >{{
+                  usePhone2FA ? t("PersonalMainRegistration.emailOptional") : t("PersonalMainRegistration.numberImportant")
+                }}
+                &nbsp;</span
               >{{ usePhone2FA ? t("PersonalMainRegistration.emailOptionalInfo") : t("PersonalMainRegistration.numberInfo") }}</small
             >
             <small class="text-red-500 mt-1 text-[12px]">
@@ -453,7 +462,7 @@ function sendReg() {
     email: "",
     first_name: "",
     last_name: "",
-    birth_date: null, 
+    birth_date: null,
     gender: "",
     password: "",
     password_confirm: "",
@@ -465,14 +474,13 @@ function sendReg() {
   is_loading.value = true;
   loading_text_displayed.value = false;
   let formData = regForm.value;
-  console.log("formData", formData);
   useNuxtApp()
     .$api.post(`/api/${currentPageName.value}/register`, formData)
     .then((response) => {
       isCode.value = true;
       is_loading.value = false;
       const responceData = response.data;
-      console.log("responceData", responceData);
+
       testCode.value = responceData?.debug_code;
     })
     .catch((err) => {
@@ -490,7 +498,7 @@ function sendCode() {
     .$api.post(url, formData)
     .then((response) => {
       let responceData = response.data;
-      console.log("responceData", responceData);
+
       reloadNuxtApp({ path: `/${currentPageName.value}`, ttl: 1000 });
     })
     .catch((err) => {
@@ -531,16 +539,6 @@ watch(usePhone2FA, (newVal) => {
   regForm.value.via = newVal ? "phone" : "email";
 });
 
-// Disable phone-based 2FA if phone is not Polish
-watch(
-  () => regForm.value.phone,
-  (newPhone) => {
-    if (!newPhone.startsWith("+48")) {
-      usePhone2FA.value = false;
-      regForm.value.via = "email";
-    }
-  }
-);
 onMounted(() => {
   if (referralCode) {
     regForm.value.referral_code = referralCode;
