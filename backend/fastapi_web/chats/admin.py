@@ -515,7 +515,7 @@ class ChatSessionAdmin(BaseAdmin):
             if master.user_id:
                 user_doc = await mongo_db.users.find_one({"_id": ObjectId(master.user_id)})
                 if user_doc:
-                    result = user_doc["full_name"] or master_name or ""
+                    result = user_doc.get("full_name") or master_name or ""
         return result
 
     async def get_client_source_display(self, obj: dict, current_user=None) -> str:

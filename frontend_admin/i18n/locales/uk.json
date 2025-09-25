@@ -25,6 +25,10 @@
     "sourceLabel": "Джерело",
     "userIdLabel": "Користувач",
     "closeButton": "Закрити",
+    "userInfoDialogHeader": "Інформація про користувача",
+    "startedLabel": "Почато",
+    "externalIdLabel": "Зовнішній ID",
+    "phoneLabel": "Телефон",
 
     "seeSources": "Переглянути джерела",
     "excelSuccess": "Excel-файл створено",

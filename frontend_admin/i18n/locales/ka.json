@@ -25,6 +25,10 @@
     "sourceLabel": "წყარო",
     "userIdLabel": "მომხმარებელი",
     "closeButton": "დახურვა",
+    "userInfoDialogHeader": "მომხმარებლის ინფორმაცია",
+    "startedLabel": "დაიწყო",
+    "externalIdLabel": "გარე ID",
+    "phoneLabel": "ტელეფონი",
 
     "seeSources": "იხილეთ წყაროები",
     "excelSuccess": "Excel ფაილი შექმნილია",

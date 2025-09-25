@@ -25,6 +25,10 @@
     "sourceLabel": "Źródło",
     "userIdLabel": "Użytkownik",
     "closeButton": "Zamknij",
+    "userInfoDialogHeader": "Informacje o użytkowniku",
+    "startedLabel": "Rozpoczęto",
+    "externalIdLabel": "ID zewnętrzne",
+    "phoneLabel": "Telefon",
 
     "seeSources": "Zobacz źródła",
     "excelSuccess": "Plik Excel utworzony",

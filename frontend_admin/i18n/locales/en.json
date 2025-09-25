@@ -28,6 +28,10 @@
     "sourceLabel": "Source",
     "userIdLabel": "User",
     "closeButton": "Close",
+    "userInfoDialogHeader": "User Information",
+    "startedLabel": "Started",
+    "externalIdLabel": "External ID",
+    "phoneLabel": "Phone",
 
     "seeSources": "See sources",
     "excelSuccess": "Excel created",

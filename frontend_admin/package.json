@@ -32,6 +32,7 @@
     "nuxt-maplibre": "1.0.1",
     "nuxt-umami": "^3.2.0",
     "postcss": "^8.4.38",
+    "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.4",
     "quill": "^2.0.3",

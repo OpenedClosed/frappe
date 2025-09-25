@@ -25,6 +25,10 @@
     "sourceLabel": "Источник",
     "userIdLabel": "Пользователь",
     "closeButton": "Закрыть",
+    "userInfoDialogHeader": "Информация о пользователе",
+    "startedLabel": "Начался",
+    "externalIdLabel": "Внешний ID",
+    "phoneLabel": "Телефон",
 
     "seeSources": "Показать источники",
     "excelSuccess": "Файл Excel создан",

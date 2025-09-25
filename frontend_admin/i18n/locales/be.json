@@ -28,6 +28,10 @@
     "sourceLabel": "Крыніца",
     "userIdLabel": "Карыстальнік",
     "closeButton": "Закрыць",
+    "userInfoDialogHeader": "Інфармацыя аб карыстальніку",
+    "startedLabel": "Пачалося",
+    "externalIdLabel": "Знешні ID",
+    "phoneLabel": "Тэлефон",
 
     "seeSources": "Паказаць крыніцы",
     "excelSuccess": "Excel створаны",

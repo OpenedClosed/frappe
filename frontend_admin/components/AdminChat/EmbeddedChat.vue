@@ -1,25 +1,37 @@
 <!-- ~/components/ChatPanel.vue -->
 <template>
-  <div class="flex flex-col h-[80vh] max-h-[80vh]">
+  <div class="flex flex-col " :class="isMobile ? 'h-[100vh] max-h-[100vh]' : 'h-[80vh] max-h-[80vh]'">
     <Toast class="max-w-[18rem] md:max-w-full" />
-    <div class="flex flex-row justify-between items-center">
-      <div class="flex items-center gap-3 m-2">
-        <!-- “All” label -->
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.allLabel") }} </span>
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-1 sm:gap-0 p-2  sm:py-2">
+      <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div class="flex flex-row items-center gap-2 sm:gap-3">
+          <!-- Mobile: Stack labels and switch vertically, Desktop: Horizontal -->
+          <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <!-- InputSwitch (PrimeVue) -->
+            <div class="flex items-center gap-2 justify-center sm:justify-start">
+              <span class="text-xs sm: text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.allLabel") }} </span>
+              <InputSwitch
+                v-model="unreadOnly"
+                :onLabel="t('EmbeddedChat.unreadLabel')"
+                :offLabel="t('EmbeddedChat.allLabel')"
+                onIcon="pi pi-envelope-open"
+                offIcon="pi pi-inbox"
+                class="h-6 w-11 shrink-0 cursor-pointer outline-none transition-colors duration-200"
+              />
+              <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.unreadLabel") }} </span>
+            </div>
+          </div>
 
-        <!-- InputSwitch (PrimeVue) -->
-        <InputSwitch
-          v-model="unreadOnly"
-          :onLabel="t('EmbeddedChat.unreadLabel')"
-          :offLabel="t('EmbeddedChat.allLabel')"
-          onIcon="pi pi-envelope-open"
-          offIcon="pi pi-inbox"
-          class="h-6 w-11 shrink-0 cursor-pointer outline-none transition-colors duration-200"
-        />
-
-        <!-- “Unread” label -->
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.unreadLabel") }} </span>
-        <Button icon="pi pi-info-circle" text @click="toggleLegend" />
+          <Button icon="pi pi-info-circle" text size="small" class="self-center sm:self-auto" @click="toggleLegend" />
+          <Button
+            v-if="isExportChangeButtonVisible"
+            :icon="showExport ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+            class="sm:hidden"
+            text
+            size="small"
+            @click="toggleExport"
+          />
+        </div>
 
         <OverlayPanel ref="legendPanel">
           <div class="text-sm space-y-1">
@@ -37,14 +49,19 @@
           </div>
         </OverlayPanel>
       </div>
-      <SplitButton
-        :label="t('EmbeddedChat.exportButton')"
-        icon="pi pi-file-excel"
-        :model="exportItems"
-        severity="success"
-        class="m-2"
-        @click="onExportToExcel"
-      />
+
+      <transition name="slide-down">
+        <SplitButton
+          v-show="isExportVisible"
+          :label="t('EmbeddedChat.exportButton')"
+          icon="pi pi-file-excel"
+          :model="exportItems"
+          severity="success"
+          size="small"
+          class="w-auto sm:w-auto mt-2 sm:mt-0 mobile-icon-only sm:block"
+          @click="onExportToExcel"
+        />
+      </transition>
     </div>
 
     <vue-advanced-chat
@@ -74,19 +91,30 @@
       :text-messages="textMessagesJson"
     >
       <div slot="room-header-avatar" class="flex items-center justify-center">
-        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2" />
-        <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2" />
+        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" :size="isMobile ? 'normal' : 'large'" shape="circle" class="mr-2" />
+        <Avatar v-else icon="pi pi-user" :size="isMobile ? 'normal' : 'large'" shape="circle" class="mr-2" />
       </div>
-      <div slot="room-header-info" class="flex-1">
+      <div slot="room-header-info" class="flex-1 pl-1">
         <!-- 🔥 Added flex-1 here -->
         <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
-          <div class="flex flex-col">
-            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
-              {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
-            </h2>
-            <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+          <div class="flex flex-col flex-1">
+            <!-- Mobile: Compact view with dialog button -->
+            <div v-if="isMobile" class="flex items-center justify-between gap-2">
+              <h2 class="font-bold text-sm truncate max-w-[8rem]">
+                {{ activePdEntry?.username || activeUserId }}
+              </h2>
+              <Button icon="pi pi-info" severity="info" size="small" class="p-1 text-xs" @click="showUserInfoDialog = true" />
+            </div>
+
+            <div v-else class="flex flex-col justify-center items-start gap-2">
+              <!-- Desktop: Full view -->
+              <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
+                {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
+              </h2>
+              <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+            </div>
           </div>
-          <div class="flex flex-row justify-center items-center gap-1">
+          <div v-if="!isMobile" class="flex flex-row justify-center items-center gap-1">
             {{ t("EmbeddedChat.sourceLabel") }}:
             <p class="text-sm">{{ currentRoomSource }}</p>
           </div>
@@ -100,7 +128,10 @@
       </div>
     </vue-advanced-chat>
     <!-- ⬇️ add this right after the closing </vue-advanced-chat> tag -->
-    <Paginator :rows="20" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" />
+    <Paginator :rows="20" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" :template="{
+        '640px': 'FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink JumpToPageDropdown',
+        default: 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink JumpToPageDropdown'
+    }" />
     <!-- place this just before </template> so it sits outside vue‑advanced-chat -->
     <Dialog v-model:visible="showMsgDialog" modal :header="t('EmbeddedChat.messageDialogHeader')" :style="{ width: '600px' }">
       <p class="mb-3">
@@ -117,12 +148,51 @@
         <Button :label="t('EmbeddedChat.closeButton')" icon="pi pi-times" @click="showMsgDialog = false" />
       </template>
     </Dialog>
+
+    <!-- User Info Dialog for Mobile -->
+    <Dialog
+      v-model:visible="showUserInfoDialog"
+      modal
+      :closable="false"
+      :header="t('EmbeddedChat.userInfoDialogHeader')"
+      :style="{ width: '90vw' }"
+    >
+      <div class="space-y-3">
+        <div v-if="activePdEntry?.avatar" class="flex justify-center">
+          <Avatar :image="activePdEntry.avatar" size="xlarge" shape="circle" />
+        </div>
+        <div>
+          <strong>{{ t("EmbeddedChat.userIdLabel") }}:</strong>
+          <p class="mt-1">{{ activePdEntry?.username || activeUserId }}</p>
+        </div>
+        <div>
+          <strong>{{ t("EmbeddedChat.sourceLabel") }}:</strong>
+          <p class="mt-1">{{ currentRoomSource }}</p>
+        </div>
+        <div>
+          <strong>{{ t("EmbeddedChat.startedLabel") }}:</strong>
+          <p class="mt-1">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+        </div>
+        <div v-if="activePdEntry?.externalId">
+          <strong>{{ t("EmbeddedChat.externalIdLabel") }}:</strong>
+          <p class="mt-1">{{ activePdEntry.externalId }}</p>
+        </div>
+        <div v-if="activePdEntry?.phone">
+          <strong>{{ t("EmbeddedChat.phoneLabel") }}:</strong>
+          <p class="mt-1">{{ activePdEntry.phone }}</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button :label="t('EmbeddedChat.closeButton')" icon="pi pi-times" @click="showUserInfoDialog = false" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 /* ── imports ──────────────────────────────────────────────── */
-import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount } from "vue";
+import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount, onMounted } from "vue";
 import { register } from "vue-advanced-chat";
 import Toast from "primevue/toast";
 import { useChatLogic } from "~/composables/useChatLogic";
@@ -143,14 +213,46 @@ const colorMode = useColorMode();
 const { $listen } = useNuxtApp();
 const roomsLoaded = computed(() => rooms.value.length > 0);
 const unreadOnly = ref(false); // false → “All”, true → “Unread”
-const legendPanel = ref()
+const legendPanel = ref();
 
 const toggleLegend = (event) => {
-  legendPanel.value.toggle(event)
-}
+  legendPanel.value.toggle(event);
+};
+
+const toggleExport = () => {
+  showExport.value = !showExport.value;
+};
+const showExport = ref(false);
+
+const windowWidth = ref(0);
+
+const isMobile = computed(() => {
+  return windowWidth.value < 640;
+});
+
+const isExportVisible = computed(() => {
+  return !isMobile.value || showExport.value;
+});
+
+const isExportChangeButtonVisible = computed(() => {
+  return isMobile.value;
+});
+
+const updateWindowWidth = () => {
+  if (typeof window !== "undefined") {
+    windowWidth.value = window.innerWidth;
+  }
+};
+
+onMounted(() => {
+  updateWindowWidth();
+  window.addEventListener("resize", updateWindowWidth);
+});
+
 /* ── REFS ───────────────────────────────────────────── */
 const showMsgDialog = ref(false);
 const selectedMsg = ref(null);
+const showUserInfoDialog = ref(false);
 
 /* ── CUSTOM DROPDOWN ITEMS (only one in this example) ─ */
 const messageActions = [{ name: "seeSources", title: t("EmbeddedChat.seeSources") }];
@@ -296,7 +398,6 @@ watch(props, () => {
 });
 
 /* ── expose refs coming from useChatLogic ──────────────────── */
-const isMobile = computed(() => chatLogic.value?.isMobile);
 // const currentUserId = computed(() => chatLogic.value?.currentUserId);
 const isChoiceStrict = computed(() => chatLogic.value?.isChoiceStrict);
 const timerExpired = computed(() => chatLogic.value?.timerExpired);
@@ -551,7 +652,12 @@ watch(
 // });
 
 /* ── tidy up on unmount ───────────────────────────────────── */
-onBeforeUnmount(() => chatLogic.value?.destroy?.());
+onBeforeUnmount(() => {
+  chatLogic.value?.destroy?.();
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", updateWindowWidth);
+  }
+});
 </script>
 
 <style>
@@ -566,5 +672,36 @@ onBeforeUnmount(() => chatLogic.value?.destroy?.());
 <style scoped>
 :deep(.vac-button-download) {
   display: none !important;
+}
+
+/* Custom slide-down animation similar to PrimeFlex */
+.slide-down-enter-active {
+  animation: slide-down-in 0.3s ease-out;
+}
+
+.slide-down-leave-active {
+  animation: slide-down-out 0.3s ease-in;
+}
+
+@keyframes slide-down-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
 }
 </style>
