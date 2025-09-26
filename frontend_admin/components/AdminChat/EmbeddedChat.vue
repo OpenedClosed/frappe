@@ -2,6 +2,44 @@
 <template>
   <div class="flex flex-col " :class="isMobile ? 'h-[100vh] max-h-[100vh]' : 'h-[80vh] max-h-[80vh]'">
     <Toast class="max-w-[18rem] md:max-w-full" />
+
+     <!-- Filter Metadata Test Component -->
+    <div class="mt-4">
+      <FilterMetadataParser 
+        v-if="filterMetadata" 
+        :metadata="filterMetadata" 
+        :show-debug="true"
+        @filters-changed="onFiltersChanged"
+        @search-changed="onSearchChanged" 
+      />
+      <div v-else class="text-center py-4">
+        <div v-if="metadataLoading">Loading filter metadata...</div>
+        <div v-else class="text-red-500">Failed to load filter metadata</div>
+      </div>
+      
+      <!-- Active Filters Indicator -->
+      <div v-if="isFiltered" class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-filter text-blue-600 dark:text-blue-400"></i>
+            <span class="text-sm font-medium text-blue-800 dark:text-blue-200">
+              {{ t('EmbeddedChat.filtersActive', 'Filters Active') }}
+            </span>
+            <span class="text-xs text-blue-600 dark:text-blue-400">
+              ({{ filteredChatsData.length }} {{ t('EmbeddedChat.results', 'results') }})
+            </span>
+          </div>
+          <Button 
+            @click="clearFilters"
+            :label="t('EmbeddedChat.clearFilters', 'Clear Filters')" 
+            icon="pi pi-times" 
+            size="small" 
+            text 
+            severity="secondary"
+          />
+        </div>
+      </div>
+    </div> 
     <div class="flex flex-col sm:flex-row justify-between items-center gap-1 sm:gap-0 p-2  sm:py-2">
       <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
         <div class="flex flex-row items-center gap-2 sm:gap-3">
@@ -202,6 +240,7 @@ import ReadonlyKB from "~/components/Dashboard/Components/ReadonlyKB.vue";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { useI18n } from "#imports";
+import FilterMetadataParser from "./FilterMetadataParser.vue";
 const { t, locale } = useI18n();
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 const route = useRoute();
@@ -244,15 +283,22 @@ const updateWindowWidth = () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   updateWindowWidth();
   window.addEventListener("resize", updateWindowWidth);
+  await fetchFilterMetadata();
 });
 
 /* ── REFS ───────────────────────────────────────────── */
 const showMsgDialog = ref(false);
 const selectedMsg = ref(null);
 const showUserInfoDialog = ref(false);
+
+// Filter metadata refs
+const filterMetadata = ref(null);
+const metadataLoading = ref(false);
+const appliedFilters = ref({});
+const appliedSearch = ref({});
 
 /* ── CUSTOM DROPDOWN ITEMS (only one in this example) ─ */
 const messageActions = [{ name: "seeSources", title: t("EmbeddedChat.seeSources") }];
@@ -276,6 +322,7 @@ const props = defineProps({
   totalRecords: { type: Number, default: 0 },
   chatsData: { type: Array, default: () => [] },
   isRoomsLoading: { type: Boolean, default: false },
+  pageSize: { type: Number, default: 20 },
 });
 
 watch(props, () => {
@@ -385,9 +432,17 @@ async function onExportToExcel() {
   }
 }
 
-const chatRows = computed(() => props.chatsData.filter((row) => !row._isBlank && row.chat_id));
+// Store filtered data separately from props
+const filteredChatsData = ref([]);
+const isFiltered = ref(false);
 
-const emit = defineEmits(["close-chat", "page"]); // Emit if you still need "exportToExcel" or other events
+const chatRows = computed(() => {
+  // Use filtered data if filters are applied, otherwise use props data
+  const sourceData = isFiltered.value ? filteredChatsData.value : props.chatsData;
+  return sourceData.filter((row) => !row._isBlank && row.chat_id);
+});
+
+const emit = defineEmits(["close-chat", "page", "refresh-chats"]); // Added refresh-chats emit
 
 function onPageChange(e) {
   emit("page", e.page);
@@ -626,6 +681,110 @@ function buildRooms(chats, consultantId) {
       pdEntry: normalizedPd,
     };
   });
+}
+
+/* ── Filter metadata functionality ────────────────────────────── */
+async function fetchFilterMetadata() {
+  metadataLoading.value = true;
+  try {
+    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/info`);
+    console.log('Filter metadata response:', response); // Debug log
+    filterMetadata.value = response;
+  } catch (error) {
+    console.error('Failed to fetch filter metadata:', error);
+    filterMetadata.value = null;
+  } finally {
+    metadataLoading.value = false;
+  }
+}
+
+function onFiltersChanged(filters) {
+  console.log('Filters changed:', filters);
+  appliedFilters.value = filters;
+  
+  // Check if filters are empty - if so, clear filtered state
+  if (Object.keys(filters).length === 0) {
+    clearFilters();
+    return;
+  }
+  
+  // Apply filters to the chat list
+  refreshChatList();
+}
+
+function onSearchChanged(search) {
+  console.log('Search changed:', search);
+  appliedSearch.value = search;
+  
+  // Check if search is empty - if so and no filters, clear filtered state
+  if ((!search?.q || !search.q.trim()) && Object.keys(appliedFilters.value).length === 0) {
+    clearFilters();
+    return;
+  }
+  
+  // Apply search to the chat list
+  refreshChatList();
+}
+
+// Function to clear filters and return to original data
+function clearFilters() {
+  filteredChatsData.value = [];
+  isFiltered.value = false;
+  appliedFilters.value = {};
+  appliedSearch.value = {};
+}
+
+// Function to refresh chat list with filters and search
+async function refreshChatList() {
+  try {
+    const params = new URLSearchParams();
+    
+    // Add sorting
+    params.append('sort_by', 'updated_at');
+    params.append('order', '-1');
+    
+    // Add filters if any
+    if (Object.keys(appliedFilters.value).length > 0) {
+      params.append('filters', JSON.stringify(appliedFilters.value));
+    }
+    
+    // Add search if any
+    if (appliedSearch.value?.q && appliedSearch.value.q.trim()) {
+      // Use the search object format from the documentation
+      params.append('search', JSON.stringify(appliedSearch.value));
+    }
+    
+    // Add pagination if needed
+    params.append('page', '1');
+    params.append('page_size', props.pageSize);
+    
+    const response = await useNuxtApp().$api.get(
+      `api/${currentPageName.value}/${currentEntity.value}/?${params.toString()}`
+    );
+    
+    console.log('Filtered chat response:', response);
+    
+    // Store filtered data locally and mark as filtered
+    filteredChatsData.value = response.data || response;
+    isFiltered.value = true;
+    
+    // Also emit to parent for pagination and other metadata
+    emit('refresh-chats', {
+      data: response.data || response,
+      meta: response.meta,
+      filters: appliedFilters.value,
+      search: appliedSearch.value
+    });
+    
+  } catch (error) {
+    console.error('Failed to refresh chat list with filters:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Filter Error',
+      detail: 'Failed to apply filters to chat list',
+      life: 5000
+    });
+  }
 }
 
 const currentRoomSource = computed(() => {

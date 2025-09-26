@@ -118,6 +118,7 @@
             :id="filteredTableData[0]?.chat_id"
             :chatsData="filteredTableData"
             :totalRecords="totalRecords"
+            :pageSize="pageSize"
             @page="changeCurrentPage"
             :isRoomsLoading="isLoading"
             @exportToExcel="onExportToExcel"
