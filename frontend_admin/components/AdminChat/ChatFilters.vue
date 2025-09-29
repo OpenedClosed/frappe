@@ -46,7 +46,7 @@
     </template>
     <div v-if="metadata" class="rounded-lg overflow-hidden" :class="containerClasses">
     <!-- Main Filter Content -->
-    <div class="p-3">
+    <div>
     <!-- Filters Section -->
     <div class="filters-section">
       <h3>{{ $t('filters.title', 'Filters') }}</h3>
