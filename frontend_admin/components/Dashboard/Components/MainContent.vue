@@ -114,13 +114,7 @@
         >
           <EmbeddedChat
             class="w-full"
-            v-if="filteredTableData.length > 0"
-            :id="filteredTableData[0]?.chat_id"
-            :chatsData="filteredTableData"
-            :totalRecords="totalRecords"
-            :pageSize="pageSize"
             @page="changeCurrentPage"
-            :isRoomsLoading="isLoading"
             @exportToExcel="onExportToExcel"
           />
         </div>
@@ -550,6 +544,12 @@ function parseError(error) {
 const fetchTableData = async () => {
   if (!currentEntity.value) {
     console.warn("No entity specified in the route.");
+    return;
+  }
+
+  // Skip data fetching for chat_sessions without ID since EmbeddedChat handles its own data
+  if (currentEntity.value === 'chat_sessions' && !currentId.value) {
+    console.log('Skipping table data fetch for chat_sessions - EmbeddedChat will handle its own data');
     return;
   }
 
