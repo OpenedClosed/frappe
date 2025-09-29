@@ -1039,11 +1039,6 @@ async function onFiltersChanged(filters) {
 
 // Function to clear filters and return to original data
 async function clearFilters() {
-  // Prevent duplicate clear operations
-  if (!hasActiveFilters.value) {
-    console.log('Already cleared, skipping clear operation');
-    return;
-  }
   
   appliedFilters.value = {};
   appliedSearch.value = {};
