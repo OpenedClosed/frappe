@@ -1,0 +1,28 @@
+{
+    "frappe": {
+        "resolution": {
+            "commit_hash": null,
+            "branch": null
+        },
+        "required": [],
+        "idx": 1,
+        "version": "15.71.0"
+    },
+    "erpnext": {
+        "is_repo": true,
+        "resolution": {
+            "commit_hash": "d2ac603fd7a964b69ccda4769542961557647c10",
+            "branch": "version-15"
+        },
+        "required": [],
+        "idx": 2,
+        "version": "15.65.2"
+    },
+    "dantist_app": {
+        "is_repo": false,
+        "resolution": "not a repo",
+        "required": [],
+        "idx": 3,
+        "version": "0.0.1"
+    }
+}

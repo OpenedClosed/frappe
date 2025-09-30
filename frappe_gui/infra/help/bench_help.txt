@@ -1,0 +1,61 @@
+[БАЗОВЫЕ КОМАНДЫ BENCH]
+# из каталога bench (у нас: ./frappe_gui)
+
+# запустить dev-сервер
+bench start
+
+# создать сайт
+bench new-site <site_name> \
+  --admin-password <pwd> \
+  --db-name <db_name> \
+  --mariadb-root-username root \
+  --mariadb-root-password <root_pwd> \
+  --mariadb-user-host-login-scope='localhost'
+
+# поставить приложение на сайт
+bench --site <site_name> install-app <app_name>
+
+# какие приложения стоят на сайте
+bench --site <site_name> list-apps
+
+# переключить default_site
+bench set-config -g default_site <site_name>
+bench use <site_name>
+
+# удалить сайт (бекапнёт и отправит в archived/sites)
+bench drop-site <site_name> --root-login root --root-password <root_pwd> --force
+
+# бэкап/restore (минимум)
+bench --site <site_name> backup
+bench --site <site_name> restore /path/to/private/backups/<dump>.sql.gz --force
+
+# обновить всё (pull + миграции)
+bench update --reset
+
+[ЧТО ГДЕ ХРАНИТСЯ]
+• В приложении (apps/<app_name>):
+  - DocType (метаданные) и их JSON (внутри app), код, Python/JS, шаблоны, отчёты,
+    миграции, фикстуры и т.п. => это версионируется в Git.
+• В сайте (sites/<site_name>):
+  - Конфиг сайта: sites/<site>/site_config.json (db_name, db_password, host и т.д.)
+  - Файлы пользователей (public/private), логи, бэкапы.
+  - Данные (записи в БД) — в MariaDB.
+
+[FIXTURES — что «забирать» из БД в код]
+• Полезно выносить: Role, Workspace, Print Format, Custom Field, Property Setter,
+  System Settings (частично), Website Theme и т.п.
+• Настрой: в app (hooks.py -> fixtures = [...]); затем:
+  bench --site <site> export-fixtures
+→ получишь JSON в apps/<app_name>/<fixtures_dir>. Эти JSON попадут в Git.
+• На проде: при установке приложения эти объекты применятся (или запускай
+  bench --site <site> migrate).
+
+[ГДЕ КОНФИГИ]
+• sites/common_site_config.json — общие для всех сайтов в bench.
+• sites/<site_name>/site_config.json — конкретного сайта (БД, пароли и т.п.).
+
+[ПРО DB-ПОЛЬЗОВАТЕЛЕЙ]
+• Для установки new-site Frappé коннектится к MariaDB через unix-socket (localhost).
+  Поэтому нужен пользователь '<db_user>'@'localhost'.
+• Для удобства TCP-подключений добавляем того же пользователя как '<db_user>'@'%'
+  с тем же паролем (скрипт делает это автоматически).

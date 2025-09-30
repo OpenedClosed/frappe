@@ -1,0 +1,8 @@
+[submodule "frappe_gui/apps/frappe"]
+	path = frappe_gui/apps/frappe
+	url = https://github.com/OpenedClosed/frappe.git
+	branch = dantist
+[submodule "frappe_gui/apps/erpnext"]
+	path = frappe_gui/apps/erpnext
+	url = https://github.com/OpenedClosed/erpnext.git
+	branch = dantist
