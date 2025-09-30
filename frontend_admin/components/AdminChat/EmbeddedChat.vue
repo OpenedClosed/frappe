@@ -63,16 +63,17 @@
       </div>
 
       <transition name="slide-down">
-        <SplitButton
-          v-show="isExportVisible"
-          :label="t('EmbeddedChat.exportButton')"
-          icon="pi pi-file-excel"
-          :model="exportItems"
-          severity="success"
-          size="small"
-          class="w-auto sm:w-auto mt-2 sm:mt-0 mobile-icon-only sm:block"
-          @click="onExportToExcel"
-        />
+        <div v-show="isExportVisible" class="flex items-center gap-1">
+          <SplitButton
+            :label="t('EmbeddedChat.exportButton')"
+            :icon="hasActiveFilters ? 'pi pi-filter' : 'pi pi-file-excel'"
+            :model="exportItems"
+            severity="success"
+            size="small"
+            class="w-auto sm:w-auto mt-2 sm:mt-0 mobile-icon-only sm:block"
+            @click="onExportToExcel"
+          ></SplitButton>
+        </div>
       </transition>
     </div>
 
@@ -225,6 +226,7 @@
 import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount, onMounted, nextTick } from "vue";
 import { register } from "vue-advanced-chat";
 import Toast from "primevue/toast";
+import Badge from "primevue/badge";
 import { useChatLogic } from "~/composables/useChatLogic";
 import LoaderOverlay from "../LoaderOverlay.vue";
 import LoaderSmall from "../LoaderSmall.vue";
@@ -433,10 +435,35 @@ async function onExportToCSV() {
   try {
     const { utils } = await import("xlsx");
 
-    /* gather rows exactly like onExportToExcel() */
-    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/?order=-1`);
+    // Build URL with current filters and search parameters
+    const params = new URLSearchParams();
+    params.append('order', '-1');
+    params.append('export', 'true'); // Flag to get all filtered data
+    
+    // Add filters if any are applied
+    if (Object.keys(appliedFilters.value).length > 0) {
+      params.append('filters', JSON.stringify(appliedFilters.value));
+    }
+    
+    // Add search if any is applied (from filters or room search)
+    const searchQuery = appliedSearch.value?.q || roomSearchQuery.value;
+    if (searchQuery && searchQuery.trim()) {
+      params.append('search', searchQuery.trim());
+    }
+    
+    // Add unread filter if active
+    if (unreadOnly.value) {
+      params.append('unread_only', 'true');
+    }
 
-    const rows = response.data.flatMap((chat) =>
+    const url = `api/${currentPageName.value}/${currentEntity.value}/?${params.toString()}`;
+    const response = await useNuxtApp().$api.get(url);
+
+    // Handle response data structure
+    const data = response.data?.data ? response.data.data : response.data;
+    const chats = Array.isArray(data) ? data : [data];
+
+    const rows = chats.flatMap((chat) =>
       chat.messages.map((m) => ({
         ChatID: chat.chat_id,
         Time: m.timestamp,
@@ -451,9 +478,29 @@ async function onExportToCSV() {
 
     /* trigger download */
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`);
+    const filename = hasActiveFilters.value 
+      ? `chats_filtered_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`
+      : `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`;
+    saveAs(blob, filename);
 
-    toast.add({ severity: "success", summary: t("EmbeddedChat.csvSuccess"), life: 3000 });
+    // Build export summary message
+    let exportSummary = "";
+    if (hasActiveFilters.value) {
+      const activeFilterTypes = [];
+      if (Object.keys(appliedFilters.value).length > 0) activeFilterTypes.push(t("EmbeddedChat.filters", "filters"));
+      if (searchQuery && searchQuery.trim()) activeFilterTypes.push(t("EmbeddedChat.search", "search"));
+      if (unreadOnly.value) activeFilterTypes.push(t("EmbeddedChat.unreadOnly", "unread only"));
+      
+      exportSummary = t("EmbeddedChat.exportedWithFilters", 
+        `Exported ${rows.length} messages with: ${activeFilterTypes.join(", ")}`);
+    }
+
+    toast.add({ 
+      severity: "success", 
+      summary: t("EmbeddedChat.csvSuccess"), 
+      detail: exportSummary || undefined,
+      life: 3000 
+    });
   } catch (err) {
     console.error("CSV export failed:", err);
     toast.add({
@@ -474,11 +521,37 @@ async function onExportToExcel() {
     const wb = utils.book_new();
     const usedNames = new Set();
 
-    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/?order=-1`);
+    // Build URL with current filters and search parameters
+    const params = new URLSearchParams();
+    params.append('order', '-1');
+    params.append('export', 'true'); // Flag to get all filtered data
+    
+    // Add filters if any are applied
+    if (Object.keys(appliedFilters.value).length > 0) {
+      params.append('filters', JSON.stringify(appliedFilters.value));
+    }
+    
+    // Add search if any is applied (from filters or room search)
+    const searchQuery = appliedSearch.value?.q || roomSearchQuery.value;
+    if (searchQuery && searchQuery.trim()) {
+      params.append('search', searchQuery.trim());
+    }
+    
+    // Add unread filter if active
+    if (unreadOnly.value) {
+      params.append('unread_only', 'true');
+    }
+
+    const url = `api/${currentPageName.value}/${currentEntity.value}/?${params.toString()}`;
+    const response = await useNuxtApp().$api.get(url);
     console.log("response", response); // For debugging: log API response
 
+    // Handle response data structure
+    const data = response.data?.data ? response.data.data : response.data;
+    const chats = Array.isArray(data) ? data : [data];
+
     // ── 2. Добавляем листы без дубликатов ──────────────
-    response.data.forEach((chat, idx) => {
+    chats.forEach((chat, idx) => {
       const rows = chat.messages.map((m) => ({
         ChatID: chat.chat_id,
         Time: m.timestamp,
@@ -506,9 +579,29 @@ async function onExportToExcel() {
     });
 
     // ── 3. Сохраняем файл ──────────────────────────────
-    writeFileXLSX(wb, `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`);
+    const filename = hasActiveFilters.value 
+      ? `chats_filtered_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`
+      : `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`;
+    writeFileXLSX(wb, filename);
 
-    toast.add({ severity: "success", summary: t("EmbeddedChat.excelSuccess"), life: 3000 });
+    // Build export summary message
+    let exportSummary = "";
+    if (hasActiveFilters.value) {
+      const activeFilterTypes = [];
+      if (Object.keys(appliedFilters.value).length > 0) activeFilterTypes.push(t("EmbeddedChat.filters", "filters"));
+      if (searchQuery && searchQuery.trim()) activeFilterTypes.push(t("EmbeddedChat.search", "search"));
+      if (unreadOnly.value) activeFilterTypes.push(t("EmbeddedChat.unreadOnly", "unread only"));
+      
+      exportSummary = t("EmbeddedChat.exportedWithFilters", 
+        `Exported ${chats.length} chats with: ${activeFilterTypes.join(", ")}`);
+    }
+
+    toast.add({ 
+      severity: "success", 
+      summary: t("EmbeddedChat.excelSuccess"), 
+      detail: exportSummary || undefined,
+      life: 3000 
+    });
   } catch (err) {
     console.error("Excel export failed:", err);
     toast.add({
@@ -523,8 +616,19 @@ async function onExportToExcel() {
 // Single source of truth for all chat data
 const hasActiveFilters = computed(() => {
   return Object.keys(appliedFilters.value).length > 0 || 
-         (appliedSearch.value?.q && appliedSearch.value.q.trim());
+         (appliedSearch.value?.q && appliedSearch.value.q.trim()) ||
+         (roomSearchQuery.value && roomSearchQuery.value.trim()) ||
+         unreadOnly.value;
 });
+
+// Count active filters for badge display
+const getActiveFiltersCount = () => {
+  let count = 0;
+  if (Object.keys(appliedFilters.value).length > 0) count++;
+  if ((appliedSearch.value?.q && appliedSearch.value.q.trim()) || (roomSearchQuery.value && roomSearchQuery.value.trim())) count++;
+  if (unreadOnly.value) count++;
+  return count;
+};
 
 // Check if filtered results are empty
 const hasEmptyFilterResults = computed(() => {
