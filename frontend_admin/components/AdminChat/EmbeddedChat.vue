@@ -33,6 +33,7 @@
             :show-debug="true"
             @filters-changed="onFiltersChanged"
             @clear-filters="clearFilters"
+            @filters-loaded="onFiltersLoaded"
           />
           <Button
             v-if="isExportChangeButtonVisible"
@@ -95,7 +96,7 @@
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
-      :rooms-loaded="!isRoomsLoading"
+      :rooms-loaded="!isRoomsLoading && !filtersLoaded"
       @fetch-more-rooms="loadMoreChats"
       :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
@@ -122,7 +123,12 @@
               <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
                 {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
               </h2>
-              <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+              <div class="flex flex-row justify-center items-center gap-1">
+                <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+                <p class="text-sm flex justify-center items-center" v-if="activeRoomCreatedAt">
+                  ({{ t("EmbeddedChat.createdLabel") }}: {{ activeRoomCreatedAt }})
+                </p>
+              </div>
             </div>
           </div>
           <div v-if="!isMobile" class="flex flex-row justify-center items-center gap-1">
@@ -145,7 +151,7 @@
       </div>
     </vue-advanced-chat>
     <!-- ⬇️ add this right after the closing </vue-advanced-chat> tag -->
-    <Paginator :rows="props.pageSize" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" :template="{
+    <Paginator :rows="pageSize" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" :template="{
         '640px': 'FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink JumpToPageDropdown',
         default: 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink JumpToPageDropdown'
     }" />
@@ -189,6 +195,10 @@
         <div>
           <strong>{{ t("EmbeddedChat.startedLabel") }}:</strong>
           <p class="mt-1">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+        </div>
+        <div v-if="activeRoomCreatedAt">
+          <strong>{{ t("EmbeddedChat.createdLabel") }}:</strong>
+          <p class="mt-1">{{ activeRoomCreatedAt }}</p>
         </div>
         <div v-if="activePdEntry?.externalId">
           <strong>{{ t("EmbeddedChat.externalIdLabel") }}:</strong>
@@ -313,6 +323,7 @@ const chatSearchRef = ref(null);
 // Filter metadata and chat data refs
 const filterMetadata = ref(null);
 const metadataLoading = ref(false);
+const filtersLoaded = ref(false);
 const appliedFilters = ref({});
 const appliedSearch = ref({});
 const chatData = ref([]);
@@ -326,7 +337,7 @@ const isRoomsLoading = ref(false);
 const tableDataOriginal = ref([]);
 const currentEntityName = ref("");
 const isEntityInline = ref(false);
-const pageSize = ref(20);
+const pageSize = ref(10);
 const searchQuery = ref("");
 const selectedField = ref(null);
 const dateRange = ref({ start: null, end: null });
@@ -352,14 +363,6 @@ function onMessageAction(messageAction) {
 }
 
 /* ── props / emits ─────────────────────────────────────────── */
-const props = defineProps({
-  pageSize: { type: Number, default: 20 },
-});
-
-watch(props, () => {
-  console.log("props", props); // For debugging: log props changes (e.g. close chat on user_id change)
-});
-
 const toast = useToast();
 
 /* ── Error handling from MainContent ──────────────────────── */
@@ -575,7 +578,7 @@ function validateEntityConfig() {
 async function onPageChange(e) {
   // PrimeVue's DataTable uses zero-based 'page' in the event
   const newPage = typeof e.page !== 'undefined' ? e.page : e;
-  const newPageSize = e.rows || props.pageSize || pageSize.value;
+  const newPageSize = e.rows || pageSize.value;
   
   
   // Update local state
@@ -588,10 +591,6 @@ async function onPageChange(e) {
   // Emit to parent
   emit("page", newPage);
 }
-
-watch(props, () => {
-  console.log("props", props); // For debugging: log props changes (e.g. close chat on user_id change)
-});
 
 /* ── expose refs coming from useChatLogic ──────────────────── */
 // const currentUserId = computed(() => chatLogic.value?.currentUserId);
@@ -609,6 +608,8 @@ const activeUsername = ref(null);
 const activeUserId = ref(null);
 const activePdEntry = ref(null);
 const activeStartDate = ref(null);
+const activeRoomCreatedAt = ref(null);
+const activeRoomUpdatedAt = ref(null);
 
 const textMessagesObject = computed(() => ({
   SEARCH: t("textMessages.SEARCH"),
@@ -651,6 +652,8 @@ function getChatId(data) {
       activeUserId.value = room?.roomName || null;
       activePdEntry.value = room?.pdEntry || null;
       activeStartDate.value = room?.lastMessage?.timestamp || null;
+      activeRoomCreatedAt.value = room?.createdAtFormatted || null;
+      activeRoomUpdatedAt.value = room?.updatedAtFormatted || null;
     }
   }
 }
@@ -658,6 +661,55 @@ function getChatId(data) {
 function clearRoomName(room) {
   const clean = room.roomName.replace(/^🔴\s*/, ""); // strip a previous badge
   return clean;
+}
+
+/**
+ * Update a specific room's data when a new message arrives
+ * @param {string} roomId - The ID of the room to update
+ * @param {Object} newMessage - The new message object
+ */
+function updateRoomOnNewMessage(roomId, newMessage) {
+  const roomIndex = rooms.value.findIndex(room => room.roomId === roomId);
+  
+  if (roomIndex === -1) {
+    console.warn('Room not found for update:', roomId);
+    return;
+  }
+  
+  const room = rooms.value[roomIndex];
+  const currentTime = new Date().toISOString();
+  const formattedTime = formatDateEU(currentTime);
+  
+  // Extract the base room name without the old timestamp
+  const baseRoomName = room.roomName.replace(/\s•\s.*$/, ''); // Remove existing timestamp
+  const isUnread = newMessage.sender_role?.en === t("EmbeddedChat.client");
+  
+  // Update room data with new message info
+  const updatedRoom = {
+    ...room,
+    lastMessage: {
+      content: newMessage.message || newMessage.content || '',
+      senderId: newMessage.sender_id || (newMessage.sender_role?.en === t("EmbeddedChat.client") ? "1234" : currentUserId.value),
+      timestamp: formattedTime,
+    },
+    updatedAt: currentTime,
+    updatedAtFormatted: formattedTime,
+    // Update room name with new timestamp (preserve structure)
+    roomName: `${baseRoomName} • ${formattedTime}`,
+    // Mark as unread if message is from client
+    seen: isUnread ? false : room.seen
+  };
+  
+  // Update the room in the array
+  rooms.value[roomIndex] = updatedRoom;
+  
+  // If this is the active room, update the active room data
+  if (roomId === activeRoomId.value) {
+    activeStartDate.value = formattedTime;
+    activeRoomUpdatedAt.value = formattedTime;
+  }
+  
+  console.log('Room updated on new message:', roomId, updatedRoom);
 }
 
 /* ── Chat logic instance (re‑created on room switch) ───────── */
@@ -829,21 +881,32 @@ function buildRooms(chats, consultantId) {
     };
 
     const last = chat.messages && chat.messages.length ? chat.messages[chat.messages.length - 1] : null;
+    
+    // Calculate proper last message timestamp
+    const lastMessageTimestamp = last ? formatDateEU(last.timestamp || last.created_at) : formatDateEU(chat.created_at);
+    
+    // Calculate last update date (from last message or updated_at)
+    const lastUpdateDate = last ? (last.timestamp || last.created_at || chat.updated_at || chat.created_at) : (chat.updated_at || chat.created_at);
+    
     const lastMessage = last
       ? {
           content: last.message,
           senderId: last.sender_role && last.sender_role.en === t("EmbeddedChat.client") ? clientUser._id : consultantUser._id,
-          timestamp: formatDateEU(chat.created_at),
+          timestamp: lastMessageTimestamp,
         }
-      : { content: "", senderId: consultantUser._id };
+      : { content: "", senderId: consultantUser._id, timestamp: formatDateEU(chat.created_at) };
     console.log("lastMessage", chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0); // For debugging: log last message data
     const status_emoji = chat.status_emoji;
     const seen = chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0 || false;
+    
+    // Format update date for display in room name
+    const updateDateFormatted = formatDateEU(lastUpdateDate);
+    
     return {
       avatar: sourceAvatars[sourceName] || "/avatars/default.png",
       roomId: chat.chat_id,
       roomName:
-        `${seen ? "" : "🔴"} ${status_emoji || ""} ${normalizedPd.username || client.id}` ||
+        `${seen ? "" : "🔴"} ${status_emoji || ""} ${normalizedPd.username || client.id} • ${updateDateFormatted}` ||
         t("EmbeddedChat.chatFallback", { index: idx + 1 }),
       users: [clientUser, consultantUser],
       lastMessage,
@@ -851,6 +914,10 @@ function buildRooms(chats, consultantId) {
       seen: seen,
       sourceName: sourceName,
       pdEntry: normalizedPd,
+      createdAt: chat.created_at,
+      updatedAt: lastUpdateDate,
+      createdAtFormatted: formatDateEU(chat.created_at),
+      updatedAtFormatted: updateDateFormatted,
     };
   });
 }
@@ -891,7 +958,7 @@ async function fetchChatData(page = 0, filters = {}, search = {}) {
     params.append('sort_by', 'updated_at');
     params.append('order', '-1');
     params.append('page', (page + 1).toString()); // API uses 1-based pagination
-    params.append('page_size', (props.pageSize || pageSize.value).toString());
+    params.append('page_size', pageSize.value.toString());
     
     // Add filters if any
     if (Object.keys(filters).length > 0) {
@@ -1037,6 +1104,17 @@ async function onFiltersChanged(filters) {
   debouncedRefreshChatList(true);
 }
 
+// Function to handle when filters are loaded
+function onFiltersLoaded(loaded) {
+  console.log('Filters loaded state changed:', loaded);
+  filtersLoaded.value = loaded;
+  
+  // You can add additional logic here when filters become ready
+  if (loaded) {
+    console.log('Filters are now ready for use');
+  }
+}
+
 // Function to clear filters and return to original data
 async function clearFilters() {
   
@@ -1054,6 +1132,19 @@ async function clearFilters() {
 async function refreshChatList(resetPage = true) {
   // This function is now just a wrapper around the debounced version
   debouncedRefreshChatList(resetPage);
+}
+
+/**
+ * Refresh rooms data to get latest updates from server
+ * Useful when we want to sync with server after WebSocket events
+ */
+async function refreshRoomsData() {
+  try {
+    await fetchChatData(currentPage.value, appliedFilters.value, appliedSearch.value);
+    console.log('Rooms data refreshed successfully');
+  } catch (error) {
+    console.error('Failed to refresh rooms data:', error);
+  }
 }
 
 const currentRoomSource = computed(() => {
@@ -1092,17 +1183,43 @@ watch(
 );
 
 // Watch for props changes that might affect data fetching
-watch(() => props.pageSize, (newPageSize) => {
-  if (newPageSize && newPageSize !== pageSize.value) {
-    pageSize.value = newPageSize;
-    fetchChatData(0, appliedFilters.value, appliedSearch.value);
+// Watch for chat data changes and build rooms
+/* ── external events ───────────────────────────────────────── */
+// Listen for new messages and update room data accordingly
+$listen("new_message_arrived", (msg) => {
+  console.log('New message arrived:', msg);
+  
+  if (!msg || !msg.chat_id) {
+    console.warn('Invalid message data received:', msg);
+    return;
+  }
+  
+  // Update the specific room's data
+  updateRoomOnNewMessage(msg.chat_id, msg);
+  
+  // If we have a messages map, update it too
+  if (messagesMap.value[msg.chat_id]) {
+    messagesMap.value[msg.chat_id].push(msg);
   }
 });
-/* ── external events ───────────────────────────────────────── */
-// $listen("new_message_arrived", (msg) => {
-//   if (!msg || !messagesMap.value[activeRoomId.value]) return;
-//   messagesMap.value[activeRoomId.value].push(msg);
-// });
+
+// Also listen for WebSocket messages from chatLogic if available
+watch(() => chatLogic.value?.chatMessages?.value, (newMessages, oldMessages) => {
+  if (!newMessages || !oldMessages || !activeRoomId.value) return;
+  
+  // Check if new messages were added
+  if (newMessages.length > oldMessages.length) {
+    const latestMessage = newMessages[newMessages.length - 1];
+    if (latestMessage) {
+      updateRoomOnNewMessage(activeRoomId.value, {
+        message: latestMessage.content,
+        sender_id: latestMessage.senderId,
+        sender_role: { en: latestMessage.senderId === "1234" ? t("EmbeddedChat.client") : t("EmbeddedChat.consultant") },
+        chat_id: activeRoomId.value
+      });
+    }
+  }
+}, { deep: true });
 
 /* ── tidy up on unmount ───────────────────────────────────── */
 onBeforeUnmount(() => {
@@ -1110,6 +1227,13 @@ onBeforeUnmount(() => {
   if (typeof window !== "undefined") {
     window.removeEventListener("resize", updateWindowWidth);
   }
+});
+
+// Expose functions for external use
+defineExpose({
+  updateRoomOnNewMessage,
+  refreshRoomsData,
+  refreshChatList
 });
 </script>
 

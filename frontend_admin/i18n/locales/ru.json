@@ -27,6 +27,7 @@
     "closeButton": "Закрыть",
     "userInfoDialogHeader": "Информация о пользователе",
     "startedLabel": "Начался",
+    "createdLabel": "Создан",
     "externalIdLabel": "Внешний ID",
     "phoneLabel": "Телефон",
 
@@ -721,6 +722,42 @@
     "chooseMethod": "Выберите метод верификации",
     "smsVerification": "SMS-верификация",
     "emailVerification": "Email-верификация"
+  },
+  "filters": {
+    "title": "Фильтры",
+    "activeCount": "активно",
+    "actions": {
+      "apply": "Применить фильтры",
+      "clearAll": "Сбросить все фильтры",
+      "reset": "Сбросить",
+      "clearChannel": "Очистить каналы",
+      "clearDate": "Очистить даты",
+      "clearStatus": "Очистить статусы",
+      "clearClientType": "Очистить типы клиентов"
+    },
+    "clear": "Очистить",
+    "channel": {
+      "placeholder": "Выберите каналы"
+    },
+    "date": {
+      "placeholder": "Выберите диапазон дат",
+      "presets": {
+        "week": "Последняя неделя",
+        "month": "Последний месяц",
+        "quarter": "Последние 3 месяца"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "результатов",
+    "loadingMetadata": "Загрузка метаданных фильтра...",
+    "metadataFailed": "Не удалось загрузить метаданные фильтра",
+    "noResultsFound": "Результаты не найдены",
+    "filtersActive": "Фильтры активны",
+    "filterPanel": "Панель фильтров",
+    "tryDifferentFilters": "Попробуйте другие фильтры или условия поиска",
+    "showingFilteredResults": "Показаны отфильтрованные результаты",
+    "configureFilters": "Настройте ваши фильтры и критерии поиска"
   },
   "test": {
     "test": "Тест"

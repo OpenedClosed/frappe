@@ -30,6 +30,7 @@
     "closeButton": "Close",
     "userInfoDialogHeader": "User Information",
     "startedLabel": "Started",
+    "createdLabel": "Created",
     "externalIdLabel": "External ID",
     "phoneLabel": "Phone",
 
@@ -698,6 +699,42 @@
     "chooseMethod": "Choose verification method",
     "smsVerification": "SMS verification",
     "emailVerification": "Email verification"
+  },
+  "filters": {
+    "title": "Filters",
+    "activeCount": "active",
+    "actions": {
+      "apply": "Apply Filters",
+      "clearAll": "Clear All Filters",
+      "reset": "Reset",
+      "clearChannel": "Clear channels",
+      "clearDate": "Clear dates",
+      "clearStatus": "Clear statuses",
+      "clearClientType": "Clear client types"
+    },
+    "clear": "Clear",
+    "channel": {
+      "placeholder": "Select channels"
+    },
+    "date": {
+      "placeholder": "Select date range",
+      "presets": {
+        "week": "Last Week",
+        "month": "Last Month",
+        "quarter": "Last 3 Months"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "results",
+    "loadingMetadata": "Loading filter metadata...",
+    "metadataFailed": "Failed to load filter metadata",
+    "noResultsFound": "No Results Found",
+    "filtersActive": "Filters Active",
+    "filterPanel": "Filter Panel",
+    "tryDifferentFilters": "Try different filters or search terms",
+    "showingFilteredResults": "Showing filtered results",
+    "configureFilters": "Configure your filters and search criteria"
   },
   "test": {
     "test": "Test"
