@@ -30,6 +30,7 @@
     "closeButton": "Schließen",
     "userInfoDialogHeader": "Benutzerinformationen",
     "startedLabel": "Gestartet",
+    "createdLabel": "Erstellt",
     "externalIdLabel": "Externe ID",
     "phoneLabel": "Telefon",
 
@@ -702,6 +703,42 @@
     "chooseMethod": "Verifizierungsmethode wählen",
     "smsVerification": "SMS-Verifizierung",
     "emailVerification": "E-Mail-Verifizierung"
+  },
+  "filters": {
+    "title": "Filter",
+    "activeCount": "aktiv",
+    "actions": {
+      "apply": "Filter anwenden",
+      "clearAll": "Alle Filter löschen",
+      "reset": "Zurücksetzen",
+      "clearChannel": "Kanäle löschen",
+      "clearDate": "Daten löschen",
+      "clearStatus": "Status löschen",
+      "clearClientType": "Kundentypen löschen"
+    },
+    "clear": "Löschen",
+    "channel": {
+      "placeholder": "Kanäle auswählen"
+    },
+    "date": {
+      "placeholder": "Datumsbereich auswählen",
+      "presets": {
+        "week": "Letzte Woche",
+        "month": "Letzter Monat",
+        "quarter": "Letzte 3 Monate"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "Ergebnisse",
+    "loadingMetadata": "Laden der Filter-Metadaten...",
+    "metadataFailed": "Laden der Filter-Metadaten fehlgeschlagen",
+    "noResultsFound": "Keine Ergebnisse gefunden",
+    "filtersActive": "Filter aktiv",
+    "filterPanel": "Filter-Panel",
+    "tryDifferentFilters": "Probieren Sie andere Filter oder Suchbegriffe aus",
+    "showingFilteredResults": "Gefilterte Ergebnisse anzeigen",
+    "configureFilters": "Konfigurieren Sie Ihre Filter und Suchkriterien"
   },
   "test": {
     "test": "Test"

@@ -18,6 +18,9 @@
     "allLabel": "Все",
     "unreadLabel": "Непрочитанные",
     "exportButton": "Экспортировать чаты в Excel",
+    "exportCSV": "Экспортировать чаты в CSV",
+    "csvSuccess": "CSV создан",
+    "csvFailed": "Не удалось экспортировать CSV",
     "messageDialogHeader": "Сообщение",
     "messageDialogId": "ID",
     "messageDialogText": "Текст",
@@ -39,8 +42,7 @@
     "startedAgo": "Началось {diffDays} дн., {diffHours} ч, {diffMinutes} мин назад",
     "consultant": "Консультант",
     "client": "Клиент",
-    "chatFallback": "Чат {index}",
-    "exportCSV": "Экспортировать чаты в CSV"
+    "chatFallback": "Чат {index}"
   },
   "FilterMetadataTest": {
     "title": "Тест метаданных API",

@@ -18,6 +18,9 @@
     "allLabel": "Wszystkie",
     "unreadLabel": "Nieprzeczytane",
     "exportButton": "Eksportuj czaty do Excela",
+    "exportCSV": "Eksportuj czaty do CSV",
+    "csvSuccess": "CSV utworzony",
+    "csvFailed": "Eksport CSV nie powiódł się",
     "messageDialogHeader": "Wiadomość",
     "messageDialogId": "ID",
     "messageDialogText": "Tekst",
@@ -27,6 +30,7 @@
     "closeButton": "Zamknij",
     "userInfoDialogHeader": "Informacje o użytkowniku",
     "startedLabel": "Rozpoczęto",
+    "createdLabel": "Utworzono",
     "externalIdLabel": "ID zewnętrzne",
     "phoneLabel": "Telefon",
 
@@ -38,8 +42,30 @@
     "startedAgo": "Rozpoczęto {diffDays} dni, {diffHours} godz., {diffMinutes} min temu",
     "consultant": "Konsultant",
     "client": "Klient",
-    "chatFallback": "Czat {index}",
-    "exportCSV": "Eksportuj czaty do CSV"
+    "chatFallback": "Czat {index}"
+  },
+  "FilterMetadataTest": {
+    "title": "Test metadanych API",
+    "fetchButton": "Pobierz metadane",
+    "testFiltersButton": "Testuj filtry",
+    "error": "Błąd",
+    "apiInfo": "Informacje API",
+    "searchConfig": "Konfiguracja wyszukiwania",
+    "filterConfig": "Konfiguracja filtrów",
+    "sortConfig": "Konfiguracja sortowania",
+    "customRoutes": "Trasy niestandardowe",
+    "availableFilters": "Dostępne filtry",
+    "fullResponse": "Pełna odpowiedź API",
+    "testResults": "Wyniki testów filtrów",
+    "resultsCount": "Liczba wyników",
+    "totalRecords": "Łączna liczba rekordów",
+    "noData": "Kliknij 'Pobierz metadane', aby załadować dane",
+    "success": "Sukces",
+    "metadataFetched": "Metadane pobrane pomyślnie",
+    "fetchError": "Błąd pobierania",
+    "testSuccess": "Test zakończony sukcesem",
+    "testFiltersSuccess": "Filtry przetestowane pomyślnie",
+    "testError": "Błąd testu"
   },
   "UseChatLogic": {
     "client": "👤 Klient",
@@ -105,6 +131,7 @@
     "password": "Hasło",
     "passwordPlaceholder": "Wprowadź hasło",
     "loginButton": "Zaloguj się",
+    "usePhoneLogin": "Użyj telefonu (SMS) do logowania",
     "noAccount": "Nie masz konta?",
     "registerLink": "Zarejestruj się",
     "title2FA": "Potwierdzenie logowania",
@@ -697,6 +724,42 @@
     "chooseMethod": "Wybierz metodę weryfikacji",
     "smsVerification": "Weryfikacja SMS",
     "emailVerification": "Weryfikacja email"
+  },
+  "filters": {
+    "title": "Filtry",
+    "activeCount": "aktywne",
+    "actions": {
+      "apply": "Zastosuj filtry",
+      "clearAll": "Wyczyść wszystkie filtry",
+      "reset": "Resetuj",
+      "clearChannel": "Wyczyść kanały",
+      "clearDate": "Wyczyść daty",
+      "clearStatus": "Wyczyść statusy",
+      "clearClientType": "Wyczyść typy klientów"
+    },
+    "clear": "Wyczyść",
+    "channel": {
+      "placeholder": "Wybierz kanały"
+    },
+    "date": {
+      "placeholder": "Wybierz zakres dat",
+      "presets": {
+        "week": "Ostatni tydzień",
+        "month": "Ostatni miesiąc",
+        "quarter": "Ostatnie 3 miesiące"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "wyniki",
+    "loadingMetadata": "Ładowanie metadanych filtrów...",
+    "metadataFailed": "Nie udało się załadować metadanych filtrów",
+    "noResultsFound": "Nie znaleziono wyników",
+    "filtersActive": "Filtry aktywne",
+    "filterPanel": "Panel filtrów",
+    "tryDifferentFilters": "Spróbuj innych filtrów lub kryteriów wyszukiwania",
+    "showingFilteredResults": "Wyświetlanie przefiltrowanych wyników",
+    "configureFilters": "Skonfiguruj filtry i kryteria wyszukiwania"
   },
   "test": {
     "test": "Test"
