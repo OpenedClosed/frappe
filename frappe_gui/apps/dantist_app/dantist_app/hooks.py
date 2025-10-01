@@ -43,6 +43,7 @@ app_include_js = [
     "/assets/dantist_app/js/role_flags.js",
     "/assets/dantist_app/js/ui_boot.js",
     "/assets/dantist_app/js/ui_cleanup.js",
+    # "/assets/dantist_app/css/z_typography_override.css",
     # "/assets/dantist_app/js/ui_rules.js",
 ]
 
