@@ -30,6 +30,7 @@
     "closeButton": "Close",
     "userInfoDialogHeader": "User Information",
     "startedLabel": "Started",
+    "createdLabel": "Created",
     "externalIdLabel": "External ID",
     "phoneLabel": "Phone",
 
@@ -42,6 +43,29 @@
     "consultant": "Consultant",
     "client": "Client",
     "chatFallback": "Chat {index}"
+  },
+  "FilterMetadataTest": {
+    "title": "API Metadata Test",
+    "fetchButton": "Fetch Metadata",
+    "testFiltersButton": "Test Filters",
+    "error": "Error",
+    "apiInfo": "API Information",
+    "searchConfig": "Search Configuration",
+    "filterConfig": "Filter Configuration",
+    "sortConfig": "Sort Configuration",
+    "customRoutes": "Custom Routes",
+    "availableFilters": "Available Filters",
+    "fullResponse": "Full API Response",
+    "testResults": "Filter Test Results",
+    "resultsCount": "Results Count",
+    "totalRecords": "Total Records",
+    "noData": "Click 'Fetch Metadata' to load data",
+    "success": "Success",
+    "metadataFetched": "Metadata fetched successfully",
+    "fetchError": "Fetch Error",
+    "testSuccess": "Test Success",
+    "testFiltersSuccess": "Filters tested successfully",
+    "testError": "Test Error"
   },
   "UseChatLogic": {
     "client": "👤 Client",
@@ -675,6 +699,91 @@
     "chooseMethod": "Choose verification method",
     "smsVerification": "SMS verification",
     "emailVerification": "Email verification"
+  },
+  "filters": {
+    "title": "Filters",
+    "activeCount": "active",
+    "actions": {
+      "apply": "Apply Filters",
+      "clearAll": "Clear All Filters",
+      "reset": "Reset",
+      "clearChannel": "Clear channels",
+      "clearDate": "Clear dates",
+      "clearStatus": "Clear statuses",
+      "clearClientType": "Clear client types"
+    },
+    "clear": "Clear",
+    "channel": {
+      "title": "Channel",
+      "placeholder": "Select channels",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Website",
+        "instagram": "Instagram",
+        "internal": "Internal"
+      }
+    },
+    "updated": {
+      "title": "Updated",
+      "placeholder": "Select date range",
+      "presets": {
+        "week": "Last Week",
+        "month": "Last Month",
+        "quarter": "Last 3 Months"
+      }
+    },
+    "status": {
+      "title": "Answer",
+      "choices": {
+        "unanswered": "Unanswered",
+        "answered": "Answered"
+      }
+    },
+    "clientType": {
+      "title": "Type",
+      "choices": {
+        "lead": "Lead",
+        "account": "Account"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Search in messages",
+        "placeholder": "Search in message content"
+      },
+      "clientName": {
+        "label": "Search by client name",
+        "placeholder": "Search by client name"
+      },
+      "companyName": {
+        "label": "Search by company",
+        "placeholder": "Search by company name"
+      },
+      "chatId": {
+        "label": "Search by Chat ID",
+        "placeholder": "Enter chat ID"
+      }
+    },
+    "date": {
+      "placeholder": "Select date range",
+      "presets": {
+        "week": "Last Week",
+        "month": "Last Month",
+        "quarter": "Last 3 Months"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "results",
+    "loadingMetadata": "Loading filter metadata...",
+    "metadataFailed": "Failed to load filter metadata",
+    "noResultsFound": "No Results Found",
+    "filtersActive": "Filters Active",
+    "filterPanel": "Filter Panel",
+    "tryDifferentFilters": "Try different filters or search terms",
+    "showingFilteredResults": "Showing filtered results",
+    "configureFilters": "Configure your filters and search criteria"
   },
   "test": {
     "test": "Test"

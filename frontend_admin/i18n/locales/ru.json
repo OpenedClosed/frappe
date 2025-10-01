@@ -18,6 +18,9 @@
     "allLabel": "Все",
     "unreadLabel": "Непрочитанные",
     "exportButton": "Экспортировать чаты в Excel",
+    "exportCSV": "Экспортировать чаты в CSV",
+    "csvSuccess": "CSV создан",
+    "csvFailed": "Не удалось экспортировать CSV",
     "messageDialogHeader": "Сообщение",
     "messageDialogId": "ID",
     "messageDialogText": "Текст",
@@ -27,6 +30,7 @@
     "closeButton": "Закрыть",
     "userInfoDialogHeader": "Информация о пользователе",
     "startedLabel": "Начался",
+    "createdLabel": "Создан",
     "externalIdLabel": "Внешний ID",
     "phoneLabel": "Телефон",
 
@@ -38,8 +42,30 @@
     "startedAgo": "Началось {diffDays} дн., {diffHours} ч, {diffMinutes} мин назад",
     "consultant": "Консультант",
     "client": "Клиент",
-    "chatFallback": "Чат {index}",
-    "exportCSV": "Экспортировать чаты в CSV"
+    "chatFallback": "Чат {index}"
+  },
+  "FilterMetadataTest": {
+    "title": "Тест метаданных API",
+    "fetchButton": "Получить метаданные",
+    "testFiltersButton": "Тестировать фильтры",
+    "error": "Ошибка",
+    "apiInfo": "Информация API",
+    "searchConfig": "Конфигурация поиска",
+    "filterConfig": "Конфигурация фильтров",
+    "sortConfig": "Конфигурация сортировки",
+    "customRoutes": "Пользовательские маршруты",
+    "availableFilters": "Доступные фильтры",
+    "fullResponse": "Полный ответ API",
+    "testResults": "Результаты теста фильтров",
+    "resultsCount": "Количество результатов",
+    "totalRecords": "Всего записей",
+    "noData": "Нажмите 'Получить метаданные' для загрузки данных",
+    "success": "Успешно",
+    "metadataFetched": "Метаданные успешно получены",
+    "fetchError": "Ошибка получения",
+    "testSuccess": "Тест успешен",
+    "testFiltersSuccess": "Фильтры успешно протестированы",
+    "testError": "Ошибка теста"
   },
 
   "UseChatLogic": {
@@ -698,6 +724,91 @@
     "chooseMethod": "Выберите метод верификации",
     "smsVerification": "SMS-верификация",
     "emailVerification": "Email-верификация"
+  },
+  "filters": {
+    "title": "Фильтры",
+    "activeCount": "активно",
+    "actions": {
+      "apply": "Применить фильтры",
+      "clearAll": "Сбросить все фильтры",
+      "reset": "Сбросить",
+      "clearChannel": "Очистить каналы",
+      "clearDate": "Очистить даты",
+      "clearStatus": "Очистить статусы",
+      "clearClientType": "Очистить типы клиентов"
+    },
+    "clear": "Очистить",
+    "channel": {
+      "title": "Канал",
+      "placeholder": "Выберите каналы",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Сайт",
+        "instagram": "Instagram",
+        "internal": "Внутренний"
+      }
+    },
+    "updated": {
+      "title": "Обновлён",
+      "placeholder": "Выберите диапазон дат",
+      "presets": {
+        "week": "Последняя неделя",
+        "month": "Последний месяц",
+        "quarter": "Последние 3 месяца"
+      }
+    },
+    "status": {
+      "title": "Ответ",
+      "choices": {
+        "unanswered": "Неотвечён",
+        "answered": "Отвечён"
+      }
+    },
+    "clientType": {
+      "title": "Тип",
+      "choices": {
+        "lead": "Лид",
+        "account": "Клиент ЛК"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Поиск в сообщениях",
+        "placeholder": "Поиск по содержимому сообщений"
+      },
+      "clientName": {
+        "label": "Поиск по имени клиента",
+        "placeholder": "Поиск по имени клиента"
+      },
+      "companyName": {
+        "label": "Поиск по компании",
+        "placeholder": "Поиск по названию компании"
+      },
+      "chatId": {
+        "label": "Поиск по ID чата",
+        "placeholder": "Введите ID чата"
+      }
+    },
+    "date": {
+      "placeholder": "Выберите диапазон дат",
+      "presets": {
+        "week": "Последняя неделя",
+        "month": "Последний месяц",
+        "quarter": "Последние 3 месяца"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "результатов",
+    "loadingMetadata": "Загрузка метаданных фильтра...",
+    "metadataFailed": "Не удалось загрузить метаданные фильтра",
+    "noResultsFound": "Результаты не найдены",
+    "filtersActive": "Фильтры активны",
+    "filterPanel": "Панель фильтров",
+    "tryDifferentFilters": "Попробуйте другие фильтры или условия поиска",
+    "showingFilteredResults": "Показаны отфильтрованные результаты",
+    "configureFilters": "Настройте ваши фильтры и критерии поиска"
   },
   "test": {
     "test": "Тест"
