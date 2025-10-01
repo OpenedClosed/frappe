@@ -702,26 +702,75 @@
   },
   "filters": {
     "title": "Фільтры",
-    "activeCount": "актыўныя",
+    "activeCount": "актыўна",
     "actions": {
       "apply": "Прымяніць фільтры",
-      "clearAll": "Очысціць усе фільтры",
+      "clearAll": "Скінуць усе фільтры",
       "reset": "Скінуць",
-      "clearChannel": "Очысціць каналы",
-      "clearDate": "Очысціць даты",
-      "clearStatus": "Очысціць статусы",
-      "clearClientType": "Очысціць тыпы кліентаў"
+      "clearChannel": "Ачысціць каналы",
+      "clearDate": "Ачысціць даты",
+      "clearStatus": "Ачысціць статусы",
+      "clearClientType": "Ачысціць тыпы кліентаў"
     },
-    "clear": "Очысціць",
+    "clear": "Ачысціць",
     "channel": {
-      "placeholder": "Выберыце каналы"
+      "title": "Канал",
+      "placeholder": "Выберыце каналы",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Сайт",
+        "instagram": "Instagram",
+        "internal": "Унутраны"
+      }
+    },
+    "updated": {
+      "title": "Абноўлены",
+      "placeholder": "Выберыце дыяпазон дат",
+      "presets": {
+        "week": "Апошні тыдзень",
+        "month": "Апошні месяц",
+        "quarter": "Апошнія 3 месяцы"
+      }
+    },
+    "status": {
+      "title": "Адказ",
+      "choices": {
+        "unanswered": "Без адказу",
+        "answered": "Адказаны"
+      }
+    },
+    "clientType": {
+      "title": "Тып",
+      "choices": {
+        "lead": "Лід",
+        "account": "Кліент ЛК"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Пошук у паведамленнях",
+        "placeholder": "Пошук па змесце паведамленняў"
+      },
+      "clientName": {
+        "label": "Пошук па імені кліента",
+        "placeholder": "Пошук па імені кліента"
+      },
+      "companyName": {
+        "label": "Пошук па кампаніі",
+        "placeholder": "Пошук па назве кампаніі"
+      },
+      "chatId": {
+        "label": "Пошук па ID чата",
+        "placeholder": "Увядзіце ID чата"
+      }
     },
     "date": {
-      "placeholder": "Выберыце перыяд дат",
+      "placeholder": "Выберыце дыяпазон дат",
       "presets": {
-        "week": "Мінулы тыдзень",
-        "month": "Мінулы месяц",
-        "quarter": "Мінулыя 3 месяцы"
+        "week": "Апошні тыдзень",
+        "month": "Апошні месяц",
+        "quarter": "Апошнія 3 месяцы"
       }
     }
   },

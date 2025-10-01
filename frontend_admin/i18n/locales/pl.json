@@ -739,7 +739,56 @@
     },
     "clear": "Wyczyść",
     "channel": {
-      "placeholder": "Wybierz kanały"
+      "title": "Kanał",
+      "placeholder": "Wybierz kanały",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Strona internetowa",
+        "instagram": "Instagram",
+        "internal": "Wewnętrzny"
+      }
+    },
+    "updated": {
+      "title": "Zaktualizowano",
+      "placeholder": "Wybierz zakres dat",
+      "presets": {
+        "week": "Ostatni tydzień",
+        "month": "Ostatni miesiąc",
+        "quarter": "Ostatnie 3 miesiące"
+      }
+    },
+    "status": {
+      "title": "Odpowiedź",
+      "choices": {
+        "unanswered": "Bez odpowiedzi",
+        "answered": "Odpowiedziane"
+      }
+    },
+    "clientType": {
+      "title": "Typ",
+      "choices": {
+        "lead": "Lead",
+        "account": "Konto"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Szukaj w wiadomościach",
+        "placeholder": "Szukaj w treści wiadomości"
+      },
+      "clientName": {
+        "label": "Szukaj po nazwie klienta",
+        "placeholder": "Szukaj po nazwie klienta"
+      },
+      "companyName": {
+        "label": "Szukaj po firmie",
+        "placeholder": "Szukaj po nazwie firmy"
+      },
+      "chatId": {
+        "label": "Szukaj po ID czatu",
+        "placeholder": "Wprowadź ID czatu"
+      }
     },
     "date": {
       "placeholder": "Wybierz zakres dat",

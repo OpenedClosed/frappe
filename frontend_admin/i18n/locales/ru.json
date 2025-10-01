@@ -739,7 +739,56 @@
     },
     "clear": "Очистить",
     "channel": {
-      "placeholder": "Выберите каналы"
+      "title": "Канал",
+      "placeholder": "Выберите каналы",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Сайт",
+        "instagram": "Instagram",
+        "internal": "Внутренний"
+      }
+    },
+    "updated": {
+      "title": "Обновлён",
+      "placeholder": "Выберите диапазон дат",
+      "presets": {
+        "week": "Последняя неделя",
+        "month": "Последний месяц",
+        "quarter": "Последние 3 месяца"
+      }
+    },
+    "status": {
+      "title": "Ответ",
+      "choices": {
+        "unanswered": "Неотвечён",
+        "answered": "Отвечён"
+      }
+    },
+    "clientType": {
+      "title": "Тип",
+      "choices": {
+        "lead": "Лид",
+        "account": "Клиент ЛК"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Поиск в сообщениях",
+        "placeholder": "Поиск по содержимому сообщений"
+      },
+      "clientName": {
+        "label": "Поиск по имени клиента",
+        "placeholder": "Поиск по имени клиента"
+      },
+      "companyName": {
+        "label": "Поиск по компании",
+        "placeholder": "Поиск по названию компании"
+      },
+      "chatId": {
+        "label": "Поиск по ID чата",
+        "placeholder": "Введите ID чата"
+      }
     },
     "date": {
       "placeholder": "Выберите диапазон дат",

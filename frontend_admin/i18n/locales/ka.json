@@ -732,7 +732,7 @@
     "actions": {
       "apply": "ფილტრების გამოყენება",
       "clearAll": "ყველა ფილტრის გასუფთავება",
-      "reset": "განულება",
+      "reset": "გადატვირთვა",
       "clearChannel": "არხების გასუფთავება",
       "clearDate": "თარიღების გასუფთავება",
       "clearStatus": "სტატუსების გასუფთავება",
@@ -740,14 +740,63 @@
     },
     "clear": "გასუფთავება",
     "channel": {
-      "placeholder": "აირჩიეთ არხები"
+      "title": "არხი",
+      "placeholder": "აირჩიეთ არხები",
+      "choices": {
+        "telegram": "ტელეგრამი",
+        "whatsapp": "უოთსაპი",
+        "website": "ვებ-საიტი",
+        "instagram": "ინსტაგრამი",
+        "internal": "შიდა"
+      }
+    },
+    "updated": {
+      "title": "განახლდა",
+      "placeholder": "აირჩიეთ თარიღების დიაპაზონი",
+      "presets": {
+        "week": "ბოლო კვირა",
+        "month": "ბოლო თვე",
+        "quarter": "ბოლო 3 თვე"
+      }
+    },
+    "status": {
+      "title": "პასუხი",
+      "choices": {
+        "unanswered": "უპასუხო",
+        "answered": "პასუხგაცემული"
+      }
+    },
+    "clientType": {
+      "title": "ტიპი",
+      "choices": {
+        "lead": "ლიდი",
+        "account": "კაბინეტი"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "ძიება შეტყობინებებში",
+        "placeholder": "ძიება შეტყობინების შიგთავსში"
+      },
+      "clientName": {
+        "label": "ძიება კლიენტის სახელით",
+        "placeholder": "ძიება კლიენტის სახელით"
+      },
+      "companyName": {
+        "label": "ძიება კომპანიით",
+        "placeholder": "ძიება კომპანიის სახელით"
+      },
+      "chatId": {
+        "label": "ძიება ჩეთის ID-ით",
+        "placeholder": "შეიყვანეთ ჩეთის ID"
+      }
     },
     "date": {
-      "placeholder": "აირჩიეთ თარიღის დიაპაზონი",
+      "placeholder": "აირჩიეთ თარიღების დიაპაზონი",
       "presets": {
-        "week": "გასული კვირა",
-        "month": "გასული თვე",
-        "quarter": "გასული 3 თვე"
+        "week": "ბოლო კვირა",
+        "month": "ბოლო თვე",
+        "quarter": "ბოლო 3 თვე"
       }
     }
   },

@@ -358,6 +358,8 @@ const filterConfig = computed(() => {
     if (filters.length === 0) {
       // Fallback to static configuration
       const staticConfig = createChatSessionFilters();
+
+      console.log("Using static filter config as fallback:", staticConfig);
       return staticConfig.filters.reduce((acc, filter) => {
         acc[filter.key] = filter;
         return acc;

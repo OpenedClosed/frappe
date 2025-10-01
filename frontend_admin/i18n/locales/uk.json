@@ -729,7 +729,7 @@
     "activeCount": "активні",
     "actions": {
       "apply": "Застосувати фільтри",
-      "clearAll": "Очистити всі фільтри",
+      "clearAll": "Скинути всі фільтри",
       "reset": "Скинути",
       "clearChannel": "Очистити канали",
       "clearDate": "Очистити дати",
@@ -738,14 +738,63 @@
     },
     "clear": "Очистити",
     "channel": {
-      "placeholder": "Оберіть канали"
+      "title": "Канал",
+      "placeholder": "Виберіть канали",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Сайт",
+        "instagram": "Instagram",
+        "internal": "Внутрішній"
+      }
+    },
+    "updated": {
+      "title": "Оновлено",
+      "placeholder": "Виберіть діапазон дат",
+      "presets": {
+        "week": "Останній тиждень",
+        "month": "Останній місяць",
+        "quarter": "Останні 3 місяці"
+      }
+    },
+    "status": {
+      "title": "Відповідь",
+      "choices": {
+        "unanswered": "Без відповіді",
+        "answered": "Відповідь надана"
+      }
+    },
+    "clientType": {
+      "title": "Тип",
+      "choices": {
+        "lead": "Лід",
+        "account": "Кабінет"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Пошук у повідомленнях",
+        "placeholder": "Пошук за змістом повідомлень"
+      },
+      "clientName": {
+        "label": "Пошук за ім'ям клієнта",
+        "placeholder": "Пошук за ім'ям клієнта"
+      },
+      "companyName": {
+        "label": "Пошук за компанією",
+        "placeholder": "Пошук за назвою компанії"
+      },
+      "chatId": {
+        "label": "Пошук за ID чату",
+        "placeholder": "Введіть ID чату"
+      }
     },
     "date": {
-      "placeholder": "Оберіть діапазон дат",
+      "placeholder": "Виберіть діапазон дат",
       "presets": {
-        "week": "Минулий тиждень",
-        "month": "Минулий місяць",
-        "quarter": "Минулі 3 місяці"
+        "week": "Останній тиждень",
+        "month": "Останній місяць",
+        "quarter": "Останні 3 місяці"
       }
     }
   },
