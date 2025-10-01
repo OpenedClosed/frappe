@@ -11,22 +11,48 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "dantist_app",
-# 		"logo": "/assets/dantist_app/logo.png",
-# 		"title": "Dantist App",
-# 		"route": "/dantist_app",
-# 		"has_permission": "dantist_app.api.permission.has_app_permission"
-# 	}
-# ]
+app_logo_url = "/assets/dantist_app/images/logo.png"
+add_to_apps_screen = [
+	{
+		"name": "dantist_app",
+		"logo": "/assets/dantist_app/images/logo.png",
+		"title": "PaNa Admin",
+		"route": "/app",
+	}
+]
 
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/dantist_app/css/dantist_app.css"
-# app_include_js = "/assets/dantist_app/js/dantist_app.js"
+# app_include_js = [
+#     "/assets/dantist_app/js/aihub_roles.js",
+#     "/assets/dantist_app/js/aihub_ui_config.js",
+#     "/assets/dantist_app/js/aihub_body_flags.js",
+#     "/assets/dantist_app/js/aihub_limit_searchbar.js",
+#     "/assets/dantist_app/js/aihub_lock_workspaces.js",
+#     "/assets/dantist_app/js/aihub_hide_service_ui.js",
+# ]
+
+# app_include_css = [
+#     "/assets/dantist_app/css/aihub_ui_policy.css",
+# ]
+
+# public assets
+app_include_js = [
+    "/assets/dantist_app/js/role_flags.js",
+    "/assets/dantist_app/js/ui_boot.js",
+    "/assets/dantist_app/js/ui_cleanup.js",
+    # "/assets/dantist_app/js/ui_rules.js",
+]
+
+app_include_css = [
+    "/assets/dantist_app/css/ui_restrict.css",
+]
+
+
+
+
 
 # include js, css files in header of web template
 # web_include_css = "/assets/dantist_app/css/dantist_app.css"

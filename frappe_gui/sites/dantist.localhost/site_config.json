@@ -1,5 +1,7 @@
 {
  "db_name": "dantist_db",
- "db_password": "N4hcGTyUicIy6Rtm",
- "db_type": "mariadb"
+ "db_password": "VZiXWIZdxq7RVbaT",
+ "db_type": "mariadb",
+ "developer_mode": 1,
+ "encryption_key": "s31szVT37Ej5masmpLuw8BUzl7R_mFsV3YLVjYXPlKY="
 }
