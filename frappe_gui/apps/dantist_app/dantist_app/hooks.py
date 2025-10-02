@@ -11,11 +11,11 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-app_logo_url = "/assets/dantist_app/images/logo.png"
+app_logo_url = "/assets/dantist_app/images/logo.svg"
 add_to_apps_screen = [
 	{
 		"name": "dantist_app",
-		"logo": "/assets/dantist_app/images/logo.png",
+		"logo": "/assets/dantist_app/images/logo.svg",
 		"title": "PaNa Admin",
 		"route": "/app",
 	}
@@ -40,17 +40,16 @@ add_to_apps_screen = [
 
 # public assets
 app_include_js = [
-    "/assets/dantist_app/js/role_flags.js",
-    "/assets/dantist_app/js/ui_boot.js",
-    "/assets/dantist_app/js/ui_cleanup.js",
-    # "/assets/dantist_app/css/z_typography_override.css",
-    # "/assets/dantist_app/js/ui_rules.js",
 ]
 
 app_include_css = [
-    "/assets/dantist_app/css/ui_restrict.css",
+    "theme.bundle.css"
 ]
 
+website_context = {
+    "favicon": "/assets/dantist_app/images/favicon.ico",
+    "splash_image": "/assets/dantist_app/images/logo.svg",
+}
 
 
 

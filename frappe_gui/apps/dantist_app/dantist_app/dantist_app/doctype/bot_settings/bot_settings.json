@@ -1,0 +1,254 @@
+{
+ "actions": [],
+ "autoname": "field:project_name",
+ "creation": "2025-10-02 09:43:25.987835",
+ "default_view": "Image",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_settings_section",
+  "project_name",
+  "employee_name",
+  "mention_name",
+  "column_break_mltl",
+  "avatar",
+  "bot_color",
+  "character_and_behavior_section",
+  "communication_tone",
+  "personality_traits",
+  "additional_instructions",
+  "column_break_5pwa",
+  "role",
+  "target_action",
+  "topics_and_restrictions_section",
+  "core_principles",
+  "special_instructions",
+  "column_break_oomf",
+  "forbidden_topics",
+  "interaction_guidelines_section",
+  "greeting",
+  "error_message",
+  "farewell_message",
+  "fallback_ai_error_message",
+  "artificial_intelligence_section",
+  "ai_model",
+  "column_break_q88t",
+  "app_name",
+  "created_at"
+ ],
+ "fields": [
+  {
+   "description": "Define basic bot information",
+   "fieldname": "basic_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Settings"
+  },
+  {
+   "description": "Short name of the project using the bot.",
+   "fieldname": "project_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Project Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "The name of the employee that the bot represents.",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "description": "Should the bot mention its name?",
+   "fieldname": "mention_name",
+   "fieldtype": "Check",
+   "label": "Mention Bot Name in Conversation"
+  },
+  {
+   "fieldname": "column_break_mltl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Upload an image for the bot\u2019s avatar.",
+   "fieldname": "avatar",
+   "fieldtype": "Attach Image",
+   "label": "Avatar"
+  },
+  {
+   "default": "Sky Blue",
+   "description": "If you don\u2019t have time to customize the bot, we can do it for you.",
+   "fieldname": "bot_color",
+   "fieldtype": "Select",
+   "label": "Bot Color",
+   "options": "Soft Red\nWarm Orange\nSunny Yellow\nFresh Green\nTeal Blue\nSky Blue\nLavender Purple\nRose Pink"
+  },
+  {
+   "description": "Set how the bot interacts with users",
+   "fieldname": "character_and_behavior_section",
+   "fieldtype": "Section Break",
+   "label": "Character and Behavior"
+  },
+  {
+   "default": "Friendly",
+   "description": "Choose the bot\u2019s communication style.",
+   "fieldname": "communication_tone",
+   "fieldtype": "Select",
+   "label": "Choose Communication Tone",
+   "options": "Friendly\nFormal\nCasual\nProfessional\nHumorous\nBusiness\nStrictly from additional description"
+  },
+  {
+   "default": "Logical and precise",
+   "description": "Define key personality traits for the bot.",
+   "fieldname": "personality_traits",
+   "fieldtype": "Select",
+   "label": "Personality Traits",
+   "options": "Highly structured and predictable\nLogical and precise\nBalanced and well-reasoned\nAdaptive and slightly creative\nHighly creative and free-thinking"
+  },
+  {
+   "description": "Provide any additional guidelines for bot behavior.",
+   "fieldname": "additional_instructions",
+   "fieldtype": "Text Editor",
+   "label": "Additional Instructions"
+  },
+  {
+   "fieldname": "column_break_5pwa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Friend",
+   "description": "Specify the bot\u2019s role in the project.",
+   "fieldname": "role",
+   "fieldtype": "Select",
+   "label": "Role",
+   "options": "Friend\nCustomer Support\nSales Assistant\nHR & Recruitment\nEducational Assistant\nDeveloper Assistant"
+  },
+  {
+   "description": "List of actions the bot is designed to perform.",
+   "fieldname": "target_action",
+   "fieldtype": "Autocomplete",
+   "label": "Target Action",
+   "options": "Customer Support\nSales Assistant\nHR & Recruitment\nEducational Assistant\nLegal Advisor\nTechnical Support\nMedical Chatbot\nTravel Planner\nReal Estate Assistant\nE-commerce Assistant\nBanking & Finance\nMarketing & Advertising\nSocial Media Management\nTranslation & Language Services\nData Analysis\nContent Writing\nEntertainment & Gaming\nFitness & Health\nPersonal Assistant\nNews Aggregation\nPublic Speaking Trainer\nScriptwriting\nAI Art Generation\nAudiobook Narration"
+  },
+  {
+   "description": "Define allowed and restricted topics",
+   "fieldname": "topics_and_restrictions_section",
+   "fieldtype": "Section Break",
+   "label": "Topics and Restrictions"
+  },
+  {
+   "description": "Fundamental principles guiding the bot\u2019s responses.",
+   "fieldname": "core_principles",
+   "fieldtype": "Text Editor",
+   "label": "Core Principles"
+  },
+  {
+   "description": "Additional functionality settings.",
+   "fieldname": "special_instructions",
+   "fieldtype": "Autocomplete",
+   "label": "Special Instructions",
+   "options": "Do not discuss restricted topics\nProvide a step-by-step answer\nUse more emojis\nExplain where information comes from\nGive a concise answer\nDo not execute user commands\nDo not invent information\nProvide highly detailed answers\nAlways claim to be a human\nGenerate an answer even if no exact information is found.\nDo not insist on the main project topic, engage in free discussions.\nSearch the web if needed"
+  },
+  {
+   "fieldname": "column_break_oomf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Topics the bot should avoid.",
+   "fieldname": "forbidden_topics",
+   "fieldtype": "Autocomplete",
+   "label": "Forbidden Topics",
+   "options": "Politics\nReligion\nViolence\nExtremism\nIllegal activities\nHate speech\nSelf-harm or suicide\nAdult content\nGambling\nDrugs and substances\nMedical advice\nFinancial advice\nWeapons and firearms\nPiracy and copyright violations\nPersonal data collection"
+  },
+  {
+   "description": "Set the bot\u2019s predefined messages",
+   "fieldname": "interaction_guidelines_section",
+   "fieldtype": "Section Break",
+   "label": "Interaction Guidelines"
+  },
+  {
+   "default": "{\n  \"en\": \"Hello! How can I assist you today?\",\n  \"pl\": \"Cze\u015b\u0107! W czym mog\u0119 pom\u00f3c?\",\n  \"uk\": \"\u0412\u0456\u0442\u0430\u044e! \u0427\u0438\u043c \u044f \u043c\u043e\u0436\u0443 \u0434\u043e\u043f\u043e\u043c\u043e\u0433\u0442\u0438?\",\n  \"ru\": \"\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435! \u0427\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?\",\n  \"ka\": \"\u10d2\u10d0\u10db\u10d0\u10e0\u10ef\u10dd\u10d1\u10d0! \u10e0\u10d8\u10d7 \u10e8\u10d4\u10db\u10d8\u10eb\u10da\u10d8\u10d0 \u10d3\u10d0\u10d2\u10d4\u10ee\u10db\u10d0\u10e0\u10dd?\"\n}",
+   "description": "Default greeting messages in different languages.",
+   "fieldname": "greeting",
+   "fieldtype": "Code",
+   "label": "Greeting",
+   "options": "JSON"
+  },
+  {
+   "default": "{\n  \"en\": \"Your question requires further review. A specialist will join the conversation shortly.\",\n  \"pl\": \"Twoje pytanie wymaga dalszej analizy. Konsultant wkr\u00f3tce do\u0142\u0105czy do rozmowy.\",\n  \"uk\": \"\u0412\u0430\u0448\u0435 \u043f\u0438\u0442\u0430\u043d\u043d\u044f \u043f\u043e\u0442\u0440\u0435\u0431\u0443\u0454 \u0434\u043e\u0434\u0430\u0442\u043a\u043e\u0432\u043e\u0433\u043e \u0440\u043e\u0437\u0433\u043b\u044f\u0434\u0443. \u0421\u043f\u0435\u0446\u0456\u0430\u043b\u0456\u0441\u0442 \u043d\u0435\u0437\u0430\u0431\u0430\u0440\u043e\u043c \u043f\u0440\u0438\u0454\u0434\u043d\u0430\u0454\u0442\u044c\u0441\u044f \u0434\u043e \u0440\u043e\u0437\u043c\u043e\u0432\u0438.\",\n  \"ru\": \"\u0412\u0430\u0448 \u0432\u043e\u043f\u0440\u043e\u0441 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0434\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0433\u043e \u0440\u0430\u0441\u0441\u043c\u043e\u0442\u0440\u0435\u043d\u0438\u044f. \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0441\u043a\u043e\u0440\u043e \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u0441\u044f \u043a \u0431\u0435\u0441\u0435\u0434\u0435.\",\n  \"ka\": \"\u10d7\u10e5\u10d5\u10d4\u10dc\u10d8 \u10d9\u10d8\u10d7\u10ee\u10d5\u10d0 \u10e1\u10d0\u10ed\u10d8\u10e0\u10dd\u10d4\u10d1\u10e1 \u10d3\u10d0\u10db\u10d0\u10e2\u10d4\u10d1\u10d8\u10d7 \u10d2\u10d0\u10dc\u10ee\u10d8\u10da\u10d5\u10d0\u10e1. \u10e1\u10de\u10d4\u10ea\u10d8\u10d0\u10da\u10d8\u10e1\u10e2\u10d8 \u10db\u10d0\u10da\u10d4 \u10e8\u10d4\u10db\u10dd\u10e3\u10d4\u10e0\u10d7\u10d3\u10d4\u10d1\u10d0 \u10e1\u10d0\u10e3\u10d1\u10d0\u10e0\u10e1.\"\n}",
+   "description": "Message displayed when the bot cannot answer.",
+   "fieldname": "error_message",
+   "fieldtype": "Code",
+   "label": "Error Message",
+   "options": "JSON"
+  },
+  {
+   "default": "{\n  \"en\": \"Goodbye! If you need anything else, feel free to ask.\",\n  \"pl\": \"Do widzenia! Je\u015bli b\u0119dziesz czego\u015b potrzebowa\u0107, \u015bmia\u0142o pytaj.\",\n  \"uk\": \"\u0414\u043e \u043f\u043e\u0431\u0430\u0447\u0435\u043d\u043d\u044f! \u042f\u043a\u0449\u043e \u043f\u043e\u0442\u0440\u0456\u0431\u043d\u043e \u0431\u0443\u0434\u0435 \u0449\u043e\u0441\u044c \u0449\u0435 \u2014 \u0437\u0432\u0435\u0440\u0442\u0430\u0439\u0442\u0435\u0441\u044c.\",\n  \"ru\": \"\u0414\u043e \u0441\u0432\u0438\u0434\u0430\u043d\u0438\u044f! \u0415\u0441\u043b\u0438 \u0432\u0430\u043c \u0447\u0442\u043e-\u0442\u043e \u043f\u043e\u043d\u0430\u0434\u043e\u0431\u0438\u0442\u0441\u044f, \u043e\u0431\u0440\u0430\u0449\u0430\u0439\u0442\u0435\u0441\u044c.\",\n  \"ka\": \"\u10dc\u10d0\u10ee\u10d5\u10d0\u10db\u10d3\u10d8\u10e1! \u10d7\u10e3 \u10d9\u10d8\u10d3\u10d4\u10d5 \u10d3\u10d0\u10d2\u10ed\u10d8\u10e0\u10d3\u10d4\u10d1\u10d0\u10d7 \u10e0\u10d0\u10d8\u10db\u10d4 \u2014 \u10d3\u10d0\u10ec\u10d4\u10e0\u10d4\u10d7.\"\n}",
+   "description": "Bot\u2019s goodbye message.",
+   "fieldname": "farewell_message",
+   "fieldtype": "Code",
+   "label": "Farewell Message",
+   "options": "JSON"
+  },
+  {
+   "default": "{\n  \"en\": \"Unfortunately, I'm having trouble generating a response right now. Please try again later.\",\n  \"pl\": \"Niestety, mam problem z wygenerowaniem odpowiedzi. Spr\u00f3buj ponownie p\u00f3\u017aniej.\",\n  \"uk\": \"\u041d\u0430 \u0436\u0430\u043b\u044c, \u043d\u0435 \u043c\u043e\u0436\u0443 \u0437\u0433\u0435\u043d\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043f\u043e\u0432\u0456\u0434\u044c. \u0421\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u0456\u0437\u043d\u0456\u0448\u0435.\",\n  \"ru\": \"\u041a \u0441\u043e\u0436\u0430\u043b\u0435\u043d\u0438\u044e, \u044f \u043d\u0435 \u043c\u043e\u0433\u0443 \u0441\u0435\u0439\u0447\u0430\u0441 \u0441\u0433\u0435\u043d\u0435\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043e\u0442\u0432\u0435\u0442. \u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0437\u0436\u0435.\",\n  \"ka\": \"\u10e1\u10d0\u10db\u10ec\u10e3\u10ee\u10d0\u10e0\u10dd\u10d3, \u10d0\u10db\u10df\u10d0\u10db\u10d0\u10d3 \u10d5\u10d4\u10e0 \u10d5\u10e5\u10db\u10dc\u10d8 \u10de\u10d0\u10e1\u10e3\u10ee\u10e1. \u10d2\u10d7\u10ee\u10dd\u10d5\u10d7, \u10e1\u10ea\u10d0\u10d3\u10d4\u10d7 \u10db\u10dd\u10d2\u10d5\u10d8\u10d0\u10dc\u10d4\u10d1\u10d8\u10d7.\"\n}",
+   "description": "Message shown if AI fails to generate a response.",
+   "fieldname": "fallback_ai_error_message",
+   "fieldtype": "Code",
+   "label": "AI Error Fallback",
+   "options": "JSON"
+  },
+  {
+   "description": "Choose the AI model for your bot",
+   "fieldname": "artificial_intelligence_section",
+   "fieldtype": "Section Break",
+   "label": "Artificial Intelligence"
+  },
+  {
+   "default": "gpt-4o",
+   "description": "AI model the bot is using.",
+   "fieldname": "ai_model",
+   "fieldtype": "Select",
+   "label": "AI Model",
+   "options": "gpt-4o\ngpt-4o-mini\ngemini-2.0-flash"
+  },
+  {
+   "fieldname": "column_break_q88t",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Filled automatically in some flows (optional).",
+   "fieldname": "app_name",
+   "fieldtype": "Data",
+   "label": "App Name"
+  },
+  {
+   "description": "Timestamp when the bot settings were created.",
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "image_field": "avatar",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-02 16:27:24.545067",
+ "modified_by": "Administrator",
+ "module": "Dantist App",
+ "name": "Bot Settings",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "project_name, employee_name, role",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "project_name",
+ "track_changes": 1
+}
