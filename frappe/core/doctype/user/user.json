@@ -133,16 +133,14 @@
    "no_copy": 1,
    "oldfieldname": "email",
    "oldfieldtype": "Data",
-   "options": "Email",
-   "reqd": 1
+   "options": "Email"
   },
   {
    "fieldname": "first_name",
    "fieldtype": "Data",
    "label": "First Name",
    "oldfieldname": "first_name",
-   "oldfieldtype": "Data",
-   "reqd": 1
+   "oldfieldtype": "Data"
   },
   {
    "fieldname": "middle_name",
@@ -744,8 +742,7 @@
    "description": "Redirect to the selected app after login",
    "fieldname": "default_app",
    "fieldtype": "Select",
-   "label": "Default App",
-   "options": ""
+   "label": "Default App"
   },
   {
    "collapsible": 1,
@@ -875,7 +872,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2025-05-21 14:57:24.333141",
+ "modified": "2025-10-01 16:26:03.040359",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "User",
