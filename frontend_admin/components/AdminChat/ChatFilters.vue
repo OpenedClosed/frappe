@@ -593,6 +593,8 @@ const applyDatePreset = (preset: any) => {
 const clearDateFilter = () => {
   if (selectedFilters.dateRange) {
     selectedFilters.dateRange = null;
+    // Automatically apply filters after clearing
+    applyFilters();
   }
 };
 
@@ -600,18 +602,24 @@ const clearDateFilter = () => {
 const clearChannelFilter = () => {
   if (selectedFilters.channel.length > 0) {
     selectedFilters.channel = [];
+    // Automatically apply filters after clearing
+    applyFilters();
   }
 };
 
 const clearStatusFilter = () => {
   if (selectedFilters.status.length > 0) {
     selectedFilters.status = [];
+    // Automatically apply filters after clearing
+    applyFilters();
   }
 };
 
 const clearClientTypeFilter = () => {
   if (selectedFilters.client_type.length > 0) {
     selectedFilters.client_type = [];
+    // Automatically apply filters after clearing
+    applyFilters();
   }
 };
 
