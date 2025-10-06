@@ -25,22 +25,22 @@ add_to_apps_screen = [
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_js = [
-#     "/assets/dantist_app/js/aihub_roles.js",
-#     "/assets/dantist_app/js/aihub_ui_config.js",
-#     "/assets/dantist_app/js/aihub_body_flags.js",
-#     "/assets/dantist_app/js/aihub_limit_searchbar.js",
-#     "/assets/dantist_app/js/aihub_lock_workspaces.js",
-#     "/assets/dantist_app/js/aihub_hide_service_ui.js",
-# ]
+app_include_js = [
+    "/assets/dantist_app/js/hide/topbar.js",
+    "/assets/dantist_app/js/hide/workspace.js",
+    "/assets/dantist_app/js/hide/user_profile.js",
+    "/assets/dantist_app/js/hide/global_energy.js",
+    "/assets/dantist_app/js/hide/global_forms.js",
+    "/assets/dantist_app/js/hide/user_form.js",
+    "/assets/dantist_app/js/hide/toolbar_user_menu.js",
+    "/assets/dantist_app/js/hide/form_actions_menu.js",
+    "/assets/dantist_app/js/hide/toolbar_notifications.js",
+    "/assets/dantist_app/js/hide/list_view.js",
+]
 
 # app_include_css = [
 #     "/assets/dantist_app/css/aihub_ui_policy.css",
 # ]
-
-# public assets
-app_include_js = [
-]
 
 app_include_css = [
     "theme.bundle.css"
@@ -143,13 +143,13 @@ website_context = {
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+    "User": "dantist_app.permissions.user.rules.user_permission_query_conditions",
+}
+
+has_permission = {
+    "User": "dantist_app.permissions.user.rules.user_has_permission",
+}
 
 # DocType Class
 # ---------------

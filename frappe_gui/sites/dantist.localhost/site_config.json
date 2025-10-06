@@ -3,5 +3,14 @@
  "db_password": "VZiXWIZdxq7RVbaT",
  "db_type": "mariadb",
  "developer_mode": 1,
- "encryption_key": "s31szVT37Ej5masmpLuw8BUzl7R_mFsV3YLVjYXPlKY="
+ "encryption_key": "s31szVT37Ej5masmpLuw8BUzl7R_mFsV3YLVjYXPlKY=",
+
+
+ "dantist_excluded_users": [
+  "Guest",
+  "Administrator",
+  "test@mail.ru",
+  "test", 
+  "demo@example.com"
+ ]
 }
