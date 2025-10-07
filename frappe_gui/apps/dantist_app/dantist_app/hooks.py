@@ -18,7 +18,8 @@ fixtures = [
     "Workspace",
     "Print Format",
     "Report",
-
+    
+    {"doctype": "DocType", "filters": {"name": ["in", ["Bot Settings"]]}},
     {"doctype": "Bot Settings"},
     {"doctype": "Workspace"},
 ]
