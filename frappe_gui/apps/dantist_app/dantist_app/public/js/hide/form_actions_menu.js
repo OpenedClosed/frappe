@@ -1,16 +1,23 @@
-/* ===== AIHub Form Actions Menu Trim (blacklist, scoped) ===== */
+/* ========================================================================
+   Form Actions Menu Trim (blacklist, scoped, role-based)
+   — Keeps only: Delete / Undo / Redo / any "New …"
+   — Removes noisy items (print/email/duplicate/... + submenu patterns)
+   — Scoped strictly to real form action menus; doesn't touch navbar/notifications
+   — Privileged role is always untouched
+   ======================================================================== */
 (function () {
+  // ===== CONFIG (rename for other projects) =====
   const CONFIG = {
-    systemManagerRole: "System Manager",
-    aihubRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
-    lsKey: "aihub_hide_form_actions_menu",
+    privilegedRole: "System Manager",
+    restrictedRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
+    lsKey: "rbac_hide_form_actions_menu",
 
-    // Что оставляем всегда
+    // keep rules
     keepExact: ["delete", "undo", "redo"],
-    keepPrefix: ["new"],                 // "New", "New User", "New …"
+    keepPrefix: ["new"],                 // e.g., "New", "New User", ...
     keepShortcuts: ["⇧+⌘+D","⌘+Z","⌘+Y"],
 
-    // Что убираем (чёрный список)
+    // remove rules (exact)
     removeExact: [
       "print",
       "email",
@@ -24,35 +31,35 @@
       "customize",
       "edit doctype"
     ],
-    // подстроки (надёжно ловят "Permissions > …", "Password > Reset Password" и т.п.)
+    // remove rules (contains)
     removeContains: [
       "permissions >",     // "Permissions > Set User Permissions", …
       "password >",        // "Password > Reset Password"
-      "create user email"  // может встречаться с подсветкой alt-underline
+      "create user email"
     ],
-    // шорткаты, которые хотим убрать (если встретятся)
+    // remove by shortcuts (if any)
     removeShortcuts: ["⌘+E","⌘+J"],
 
-    // жёстко ограничиваем только реальные «меню действий формы»
+    // scope: only these containers are treated as "form actions" context
     formMenuContainers: [".page-actions", ".form-actions"],
-    // контексты, которые никогда не трогаем
+    // exclusions: never touch menus inside these
     excludeContexts: [".navbar", ".notifications-list", "#toolbar-user"]
   };
 
-  /* ===== Roles ===== */
-  function roles() { return (frappe?.boot?.user?.roles) || []; }
-  function isSystemManager() {
+  // ===== ROLE HELPERS =====
+  function roles() { return (window.frappe?.boot?.user?.roles) || []; }
+  function is_privileged() {
     const r = roles();
-    if (frappe.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.systemManagerRole); } catch {} }
-    return r.includes(CONFIG.systemManagerRole);
+    if (window.frappe?.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {} }
+    return r.includes(CONFIG.privilegedRole);
   }
-  function hasAIHubRole() { return roles().some(r => CONFIG.aihubRoles.includes(r)); }
-  function shouldFilter() { return hasAIHubRole() && !isSystemManager(); }
+  function in_restricted_group() { return roles().some(r => CONFIG.restrictedRoles.includes(r)); }
+  function should_filter() { return in_restricted_group() && !is_privileged(); }
 
-  /* ===== Utils ===== */
+  // ===== UTILS =====
   const norm = t => (t || "").replace(/\s+/g, " ").trim().toLowerCase();
 
-  function getItemLabel(li) {
+  function get_item_label(li) {
     const lbl = li.querySelector(".menu-item-label");
     const data = lbl?.getAttribute("data-label") || "";
     if (data) { try { return norm(decodeURIComponent(data)); } catch { return norm(data); } }
@@ -60,48 +67,43 @@
     return norm(txt);
   }
 
-  function hasShortcut(li, list) {
+  function has_shortcut(li, list) {
     const keys = Array.from(li.querySelectorAll("kbd, kbd span")).map(k => (k.textContent || "").trim());
     return keys.some(k => list.includes(k));
   }
 
-  function isFormActionsMenu(ul) {
+  function is_form_actions_menu(ul) {
     if (!ul || !ul.matches("ul.dropdown-menu")) return false;
     for (const sel of CONFIG.excludeContexts) if (ul.closest(sel)) return false;
     for (const sel of CONFIG.formMenuContainers) if (ul.closest(sel)) return true;
-    // Доп. страховка: экшен-меню чаще всего содержит .menu-item-label
+    // extra heuristic: most action menus contain .menu-item-label
     if (ul.querySelector(".menu-item-label")) return true;
     return false;
   }
 
-  function isKept(li) {
+  function is_kept(li) {
     if (li.classList.contains("dropdown-divider")) return true;
-    const t = getItemLabel(li);
+    const t = get_item_label(li);
     if (!t) return false;
     if (CONFIG.keepExact.includes(t)) return true;
     if (CONFIG.keepPrefix.some(p => t === p || t.startsWith(p + " "))) return true;
-    if (hasShortcut(li, CONFIG.keepShortcuts)) return true;
+    if (has_shortcut(li, CONFIG.keepShortcuts)) return true;
     return false;
   }
 
-  function isRemoved(li) {
+  function is_removed(li) {
     if (li.classList.contains("dropdown-divider")) return false;
-    const t = getItemLabel(li);
+    const t = get_item_label(li);
     if (!t) return false;
 
-    // точные совпадения
     if (CONFIG.removeExact.includes(t)) return true;
-
-    // подстроки/шаблоны
     if (CONFIG.removeContains.some(sub => t.includes(sub))) return true;
-
-    // горячие клавиши
-    if (hasShortcut(li, CONFIG.removeShortcuts)) return true;
+    if (has_shortcut(li, CONFIG.removeShortcuts)) return true;
 
     return false;
   }
 
-  function cleanDividers(ul) {
+  function clean_dividers(ul) {
     const items = Array.from(ul.children).filter(li => li.style.display !== "none");
     for (let i = 0; i < items.length; i++) {
       if (!items[i].classList.contains("dropdown-divider")) continue;
@@ -113,72 +115,72 @@
     }
   }
 
-  function trimOneMenu(ul) {
-    if (!shouldFilter() || !isFormActionsMenu(ul)) return;
+  function trim_one_menu(ul) {
+    if (!should_filter() || !is_form_actions_menu(ul)) return;
 
     Array.from(ul.children).forEach(li => {
-      if (isKept(li)) {
+      if (is_kept(li)) {
         li.style.removeProperty("display");
         li.removeAttribute("aria-hidden");
         return;
       }
-      if (isRemoved(li)) {
+      if (is_removed(li)) {
         li.style.display = "none";
         li.setAttribute("aria-hidden", "true");
       } else {
-        // нейтральные пункты оставляем как есть
         li.style.removeProperty("display");
         li.removeAttribute("aria-hidden");
       }
     });
 
-    cleanDividers(ul);
+    clean_dividers(ul);
   }
 
-  function scanVisibleMenus() {
-    if (!shouldFilter()) return;
-    document.querySelectorAll("ul.dropdown-menu.show, ul.dropdown-menu[role='menu']").forEach(trimOneMenu);
+  function scan_visible_menus() {
+    if (!should_filter()) return;
+    document.querySelectorAll("ul.dropdown-menu.show, ul.dropdown-menu[role='menu']").forEach(trim_one_menu);
   }
 
-  // Точечно срабатываем при открытии дропдауна
-  function hookOpen() {
+  // trigger shortly after any click (dropdowns opening)
+  function hook_open() {
     document.addEventListener("click", () => {
       let tries = 0;
       const t = setInterval(() => {
         tries++;
-        scanVisibleMenus();
+        scan_visible_menus();
         if (tries > 10) clearInterval(t);
       }, 30);
     }, true);
   }
 
   function observe() {
-    new MutationObserver(muts => {
-      muts.forEach(m => {
-        if (m.type === "childList") {
-          m.addedNodes && m.addedNodes.forEach(n => {
-            if (n.nodeType !== 1) return;
-            if (n.matches?.("ul.dropdown-menu")) trimOneMenu(n);
-            n.querySelectorAll?.("ul.dropdown-menu.show, ul.dropdown-menu[role='menu']").forEach(trimOneMenu);
-          });
-        } else if (m.type === "attributes" && m.target?.matches?.("ul.dropdown-menu")) {
-          trimOneMenu(m.target);
-        }
+    try {
+      new MutationObserver(muts => {
+        muts.forEach(m => {
+          if (m.type === "childList") {
+            m.addedNodes && m.addedNodes.forEach(n => {
+              if (n.nodeType !== 1) return;
+              if (n.matches?.("ul.dropdown-menu")) trim_one_menu(n);
+              n.querySelectorAll?.("ul.dropdown-menu.show, ul.dropdown-menu[role='menu']").forEach(trim_one_menu);
+            });
+          } else if (m.type === "attributes" && m.target?.matches?.("ul.dropdown-menu")) {
+            trim_one_menu(m.target);
+          }
+        });
+      }).observe(document.body || document.documentElement, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ["class","style"]
       });
-    }).observe(document.body || document.documentElement, {
-      childList: true, subtree: true, attributes: true, attributeFilter: ["class","style"]
-    });
+    } catch (_) {}
   }
 
-  function hookRouter(){ if (frappe.router?.on) frappe.router.on("change", scanVisibleMenus); }
+  function hook_router(){ if (window.frappe?.router?.on) frappe.router.on("change", scan_visible_menus); }
 
-  /* ===== Boot ===== */
+  // ===== BOOT =====
   function boot() {
-    const need = shouldFilter();
+    const need = should_filter();
     try { localStorage.setItem(CONFIG.lsKey, need ? "1" : "0"); } catch {}
-    if (need) { hookOpen(); observe(); hookRouter(); }
+    if (need) { hook_open(); observe(); hook_router(); }
   }
-
   if (window.frappe?.after_ajax) frappe.after_ajax(boot);
   else document.addEventListener("DOMContentLoaded", boot);
 })();

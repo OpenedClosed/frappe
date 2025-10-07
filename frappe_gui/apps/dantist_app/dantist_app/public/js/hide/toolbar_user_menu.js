@@ -1,43 +1,50 @@
-/* ===== AIHub Toolbar User Menu Hide (same style) ===== */
+/* ========================================================================
+   Toolbar User Menu Whitelist (role-based)
+   — Leaves only: My Profile, My Settings, Toggle Theme, Log out
+   — Privileged role is always untouched
+   — Scoped strictly to #toolbar-user menu
+   ======================================================================== */
 (function () {
+  // ===== CONFIG (rename for other projects) =====
   const CONFIG = {
-    systemManagerRole: "System Manager",
-    aihubRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
-    lsKey: "aihub_hide_toolbar_user_menu",
-    // разрешённые ярлыки (нормализуем к lower-case)
+    privilegedRole: "System Manager",
+    restrictedRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
+    lsKey: "rbac_hide_toolbar_user_menu",
+
+    // allowed labels (normalized to lower-case)
     allowedLabels: ["my profile", "my settings", "toggle theme", "log out"]
   };
 
-  /* ===== Role checks ===== */
-  function roles() { return (frappe?.boot?.user?.roles) || []; }
-  function isSystemManager() {
+  // ===== ROLE HELPERS =====
+  function roles() { return (window.frappe?.boot?.user?.roles) || []; }
+  function is_privileged() {
     const r = roles();
-    if (frappe.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.systemManagerRole); } catch {} }
-    return r.includes(CONFIG.systemManagerRole);
+    if (window.frappe?.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {} }
+    return r.includes(CONFIG.privilegedRole);
   }
-  function hasAIHubRole() { return roles().some(r => CONFIG.aihubRoles.includes(r)); }
-  function shouldFilter() { return hasAIHubRole() && !isSystemManager(); }
+  function in_restricted_group() { return roles().some(r => CONFIG.restrictedRoles.includes(r)); }
+  function should_filter() { return in_restricted_group() && !is_privileged(); }
 
+  // ===== MENU FILTER =====
   const norm = t => (t || "").replace(/\s+/g, " ").trim().toLowerCase();
 
-  function isAllowedEl(el) {
-    // 1) по тексту
+  function is_allowed_el(el) {
+    // 1) by text
     const label = norm(el.textContent);
     if (CONFIG.allowedLabels.includes(label)) return true;
 
-    // 2) по атрибутам (fallback)
+    // 2) by attributes (fallback for different locales/templates)
     const href = el.getAttribute?.("href") || "";
     const oc  = el.getAttribute?.("onclick") || "";
-
-    if (href === "/app/user-profile") return true; // My Profile
+    if (href === "/app/user-profile") return true;                     // My Profile
     if (/frappe\.ui\.toolbar\.route_to_user\(\)/.test(oc)) return true; // My Settings
     if (/new\s+frappe\.ui\.ThemeSwitcher\(\)\.show\(\)/.test(oc)) return true; // Toggle Theme
-    if (/frappe\.app\.logout\(\)/.test(oc)) return true; // Log out
+    if (/frappe\.app\.logout\(\)/.test(oc)) return true;               // Log out
 
     return false;
   }
 
-  function cleanDividers(menu) {
+  function clean_dividers(menu) {
     const items = Array.from(menu.children);
     // leading/trailing
     while (items[0] && items[0].classList.contains("dropdown-divider")) { items[0].style.display = "none"; items.shift(); }
@@ -50,18 +57,13 @@
     }
   }
 
-  function filterToolbarUserMenu() {
-    if (!shouldFilter()) return;
+  function filter_toolbar_user_menu() {
+    if (!should_filter()) return;
     const menu = document.getElementById("toolbar-user");
     if (!menu || !menu.classList.contains("dropdown-menu")) return;
 
-    // вернём базовую видимость на всякий
-    menu.querySelectorAll(".dropdown-item, .btn-reset.dropdown-item").forEach(i => {
-      i.style.removeProperty("visibility");
-    });
-
     menu.querySelectorAll(".dropdown-item, .btn-reset.dropdown-item").forEach(el => {
-      if (isAllowedEl(el)) {
+      if (is_allowed_el(el)) {
         el.style.removeProperty("display");
         el.removeAttribute("aria-hidden");
       } else {
@@ -70,18 +72,16 @@
       }
     });
 
-    cleanDividers(menu);
+    clean_dividers(menu);
   }
 
-  // Пытаемся несколько раз после клика на аватар (когда меню открывают)
-  function armOpenHook() {
-    // слушаем любые клики по тулбару
-    document.addEventListener("click", (e) => {
-      // через тик/два меню уже в DOM и с классом .show
+  // try multiple times right after opening the dropdown
+  function arm_open_hook() {
+    document.addEventListener("click", () => {
       let tries = 0;
       const t = setInterval(() => {
         tries++;
-        filterToolbarUserMenu();
+        filter_toolbar_user_menu();
         const menu = document.getElementById("toolbar-user");
         if (tries > 10 || (menu && menu.classList.contains("show"))) clearInterval(t);
       }, 30);
@@ -89,17 +89,21 @@
   }
 
   function observe() {
-    new MutationObserver(() => filterToolbarUserMenu())
-      .observe(document.body || document.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:["class"] });
+    try {
+      new MutationObserver(() => filter_toolbar_user_menu())
+        .observe(document.body || document.documentElement, {
+          childList:true, subtree:true, attributes:true, attributeFilter:["class"]
+        });
+    } catch (_) {}
   }
-  function hookRouter(){ if (frappe.router?.on) frappe.router.on("change", filterToolbarUserMenu); }
+  function hook_router(){ if (window.frappe?.router?.on) frappe.router.on("change", filter_toolbar_user_menu); }
 
+  // ===== BOOT =====
   function boot() {
-    const need = shouldFilter();
+    const need = should_filter();
     try { localStorage.setItem(CONFIG.lsKey, need ? "1" : "0"); } catch {}
-    if (need) { armOpenHook(); observe(); hookRouter(); }
+    if (need) { arm_open_hook(); observe(); hook_router(); }
   }
-
   if (window.frappe?.after_ajax) frappe.after_ajax(boot);
   else document.addEventListener("DOMContentLoaded", boot);
 })();

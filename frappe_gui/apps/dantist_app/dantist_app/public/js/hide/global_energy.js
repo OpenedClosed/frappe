@@ -1,14 +1,20 @@
-/* ===== AIHub Global Energy Hide (configurable) ===== */
+/* ========================================================================
+   Global "Energy" / Leaderboard Cleanup (role-based, reusable)
+   — Hides performance/energy widgets globally and leaderboard entry points
+   — No route guard: applies across the app
+   — Privileged role is always untouched
+   ======================================================================== */
 (function () {
+  // ===== CONFIG (rename for other projects) =====
   const CONFIG = {
-    systemManagerRole: "System Manager",
-    aihubRoles: [
+    privilegedRole: "System Manager",
+    restrictedRoles: [
       "AIHub Super Admin", "AIHub Admin", "AIHub Demo",
       "AIHub User", "AIHub Manager", "AIHub Doctor", "AIHub Assistant",
       "Super Admin"
     ],
-    lsKey: "aihub_hide_global_energy",
-    cssId: "aihub-hide-global-energy-css",
+    lsKey: "rbac_hide_global_energy",
+    cssId: "rbac-hide-global-energy-css",
     css: `
       .performance-graphs,
       .heatmap-container,
@@ -24,23 +30,18 @@
     `
   };
 
-  /* ===== Role checks ===== */
-  function getRoles() { return (frappe?.boot?.user?.roles) || []; }
-  function isSystemManager() {
-    const roles = getRoles();
-    if (frappe.user && typeof frappe.user.has_role === "function") {
-      try { return !!frappe.user.has_role(CONFIG.systemManagerRole); } catch {}
-    }
-    return roles.includes(CONFIG.systemManagerRole);
+  // ===== ROLE HELPERS =====
+  function current_roles() { return (window.frappe?.boot?.user?.roles) || []; }
+  function is_privileged() {
+    const roles = current_roles();
+    if (window.frappe?.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {} }
+    return roles.includes(CONFIG.privilegedRole);
   }
-  function hasAIHubRole() {
-    const roles = getRoles();
-    return roles.some(r => CONFIG.aihubRoles.includes(r));
-  }
-  function shouldHide() { return hasAIHubRole() && !isSystemManager(); }
+  function in_restricted_group() { return current_roles().some(r => CONFIG.restrictedRoles.includes(r)); }
+  function should_hide() { return in_restricted_group() && !is_privileged(); }
 
-  /* ===== Anti-flicker ===== */
-  (function instantHide() {
+  // ===== ANTI-FLICKER CSS =====
+  (function instant_hide() {
     try {
       if (localStorage.getItem(CONFIG.lsKey) !== "1") return;
       if (document.getElementById(CONFIG.cssId)) return;
@@ -51,20 +52,18 @@
     } catch (_) {}
   })();
 
-  /* ===== DOM ops ===== */
-  function addCssOnce() {
+  // ===== DOM OPS =====
+  function add_css_once() {
     if (document.getElementById(CONFIG.cssId)) return;
     const s = document.createElement("style");
     s.id = CONFIG.cssId;
     s.textContent = CONFIG.css;
     document.documentElement.appendChild(s);
   }
-  function removeCss() {
-    const css = document.getElementById(CONFIG.cssId);
-    if (css) css.remove();
-  }
-  function hideDom() {
-    if (!shouldHide()) return;
+  function remove_css() { const css = document.getElementById(CONFIG.cssId); if (css) css.remove(); }
+
+  function hide_energy_everywhere() {
+    if (!should_hide()) return;
     document.querySelectorAll(
       ".performance-graphs, .heatmap-container, .percentage-chart-container, .line-chart-container," +
       ".user-profile-sidebar .user-stats-detail, .user-profile-sidebar .leaderboard-link," +
@@ -72,17 +71,20 @@
     ).forEach(el => { el.style.display = "none"; el.setAttribute("aria-hidden","true"); });
   }
 
-  /* ===== Observer ===== */
-  function observeDom() {
-    new MutationObserver(() => hideDom()).observe(document.documentElement, { subtree: true, childList: true });
+  // ===== OBSERVER =====
+  function observe_dom() {
+    try {
+      new MutationObserver(() => hide_energy_everywhere())
+        .observe(document.documentElement, { subtree: true, childList: true });
+    } catch (_) {}
   }
 
-  /* ===== Boot ===== */
+  // ===== BOOT =====
   function boot() {
-    const hide = shouldHide();
+    const hide = should_hide();
     try { localStorage.setItem(CONFIG.lsKey, hide ? "1" : "0"); } catch {}
-    if (hide) { addCssOnce(); hideDom(); observeDom(); }
-    else { removeCss(); }
+    if (hide) { add_css_once(); hide_energy_everywhere(); observe_dom(); }
+    else { remove_css(); }
   }
 
   if (window.frappe?.after_ajax) frappe.after_ajax(boot);

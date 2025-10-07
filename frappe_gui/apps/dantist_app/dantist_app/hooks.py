@@ -31,7 +31,7 @@ app_include_js = [
     "/assets/dantist_app/js/hide/user_profile.js",
     "/assets/dantist_app/js/hide/global_energy.js",
     "/assets/dantist_app/js/hide/global_forms.js",
-    "/assets/dantist_app/js/hide/user_form.js",
+    # "/assets/dantist_app/js/hide/user_form.js",
     "/assets/dantist_app/js/hide/toolbar_user_menu.js",
     "/assets/dantist_app/js/hide/form_actions_menu.js",
     "/assets/dantist_app/js/hide/toolbar_notifications.js",

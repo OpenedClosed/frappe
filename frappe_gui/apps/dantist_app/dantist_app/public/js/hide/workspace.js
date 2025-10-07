@@ -1,45 +1,52 @@
-/* ===== AIHub Workspace Hide (configurable) ===== */
+/* ========================================================================
+   Workspace Controls (role-based, reusable)
+   — Hides “New Workspace” and “Edit Workspace” UI for restricted roles
+   — Blocks programmatic Workspace creation via frappe APIs
+   — Route guard: only applies on Workspace contexts
+   — System Manager (or other privileged role) is always untouched
+   ======================================================================== */
 (function () {
+  // ===== CONFIG (rename roles here for other projects) =====
   const CONFIG = {
-    systemManagerRole: "System Manager",
-    aihubRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
-    lsKey: "aihub_hide_workspace",
-    cssId: "aihub-hide-workspace-css",
+    privilegedRole: "System Manager",
+    restrictedRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
+    lsKey: "rbac_hide_workspace",
+    cssId: "rbac-hide-workspace-css",
     css: `
       .workspace-footer .btn-new-workspace,
       .workspace-footer .btn-edit-workspace { display: none !important; }
     `
   };
 
-  /* ===== Role checks ===== */
-  function getRoles() {
-    return (frappe.boot?.user?.roles) || [];
+  // ===== ROLE HELPERS =====
+  function current_roles() {
+    return (window.frappe?.boot?.user?.roles) || [];
   }
-  function isSystemManager() {
-    const roles = getRoles();
-    if (frappe.user && typeof frappe.user.has_role === "function") {
-      try { return !!frappe.user.has_role(CONFIG.systemManagerRole); } catch {}
+  function is_privileged() {
+    const roles = current_roles();
+    if (window.frappe?.user && typeof frappe.user.has_role === "function") {
+      try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {}
     }
-    return roles.includes(CONFIG.systemManagerRole);
+    return roles.includes(CONFIG.privilegedRole);
   }
-  function hasAIHubRole() {
-    const roles = getRoles();
-    return roles.some(r => CONFIG.aihubRoles.includes(r));
+  function in_restricted_group() {
+    const roles = current_roles();
+    return roles.some(r => CONFIG.restrictedRoles.includes(r));
   }
-  function shouldHide() {
-    return hasAIHubRole() && !isSystemManager();
+  function should_hide() {
+    return in_restricted_group() && !is_privileged();
   }
 
-  /* ===== Context ===== */
-  function inWorkspaceContext() {
-    const r = (frappe.get_route && frappe.get_route()) || [];
-    return (r[0] && r[0].toLowerCase() === "workspaces") ||
+  // ===== CONTEXT GUARD =====
+  function in_workspace_context() {
+    const r = (window.frappe?.get_route && frappe.get_route()) || [];
+    return (r[0] && String(r[0]).toLowerCase() === "workspaces") ||
            (r[0] === "List" && r[1] === "Workspace") ||
            (r[0] === "Form" && r[1] === "Workspace");
   }
 
-  /* ===== Anti-flicker ===== */
-  (function instantHide() {
+  // ===== ANTI-FLICKER CSS =====
+  (function instant_hide() {
     try {
       if (localStorage.getItem(CONFIG.lsKey) !== "1") return;
       if (document.getElementById(CONFIG.cssId)) return;
@@ -50,57 +57,76 @@
     } catch (_) {}
   })();
 
-  /* ===== DOM ops ===== */
-  function addCssOnce() {
+  // ===== DOM OPS =====
+  function add_css_once() {
     if (document.getElementById(CONFIG.cssId)) return;
     const style = document.createElement("style");
     style.id = CONFIG.cssId;
     style.textContent = CONFIG.css;
     document.documentElement.appendChild(style);
   }
-  function removeCss() {
+  function remove_css() {
     const css = document.getElementById(CONFIG.cssId);
     if (css) css.remove();
   }
-  function hideDom() {
-    if (!inWorkspaceContext()) return;
-    document.querySelectorAll(".workspace-footer .btn-new-workspace, .workspace-footer .btn-edit-workspace")
-      .forEach(b => { b.style.display = "none"; b.setAttribute("aria-hidden", "true"); });
+  function hide_workspace_buttons() {
+    if (!in_workspace_context()) return;
+    document
+      .querySelectorAll(".workspace-footer .btn-new-workspace, .workspace-footer .btn-edit-workspace")
+      .forEach(btn => { btn.style.display = "none"; btn.setAttribute("aria-hidden", "true"); });
   }
 
-  /* ===== Block programmatic creation/edit ===== */
-  function blockProgrammatic() {
-    if (!shouldHide()) return;
+  // ===== BLOCK PROGRAMMATIC CREATION/EDIT =====
+  function block_programmatic_api() {
+    if (!should_hide()) return;
 
-    const orig_new = frappe.new_doc;
-    frappe.new_doc = function (doctype, ...rest) {
-      if (doctype === "Workspace") return;
-      return orig_new ? orig_new.call(this, doctype, ...rest) : undefined;
-    };
-
-    if (frappe.ui?.form?.make_quick_entry) {
-      const orig_quick = frappe.ui.form.make_quick_entry;
+    // Block quick creation
+    if (window.frappe?.ui?.form?.make_quick_entry) {
+      const original_quick = frappe.ui.form.make_quick_entry;
       frappe.ui.form.make_quick_entry = function (doctype, ...rest) {
-        if (doctype === "Workspace") return;
-        return orig_quick.call(this, doctype, ...rest);
+        if (doctype === "Workspace") return; // swallow
+        return original_quick.call(this, doctype, ...rest);
+      };
+    }
+
+    // Block standard new_doc
+    if (window.frappe?.new_doc) {
+      const original_new = frappe.new_doc;
+      frappe.new_doc = function (doctype, ...rest) {
+        if (doctype === "Workspace") return; // swallow
+        return typeof original_new === "function" ? original_new.call(this, doctype, ...rest) : undefined;
       };
     }
   }
 
-  /* ===== Observers / Router ===== */
-  function observeDom() {
-    new MutationObserver(() => hideDom()).observe(document.documentElement, { subtree: true, childList: true });
+  // ===== OBSERVERS / ROUTER =====
+  function observe_dom() {
+    try {
+      new MutationObserver(() => hide_workspace_buttons())
+        .observe(document.documentElement, { subtree: true, childList: true });
+    } catch (_) {}
   }
-  function hookRouter() {
-    if (frappe.router?.on) frappe.router.on("change", () => hideDom());
+  function hook_router() {
+    try {
+      if (window.frappe?.router?.on) {
+        frappe.router.on("change", () => hide_workspace_buttons());
+      }
+    } catch (_) {}
   }
 
-  /* ===== Boot ===== */
+  // ===== BOOTSTRAP =====
   function boot() {
-    const hide = shouldHide();
+    const hide = should_hide();
     try { localStorage.setItem(CONFIG.lsKey, hide ? "1" : "0"); } catch {}
-    if (hide) { addCssOnce(); hideDom(); observeDom(); hookRouter(); blockProgrammatic(); }
-    else { removeCss(); }
+    if (hide) {
+      add_css_once();
+      hide_workspace_buttons();
+      observe_dom();
+      hook_router();
+      block_programmatic_api();
+    } else {
+      remove_css();
+    }
   }
 
   if (window.frappe?.after_ajax) frappe.after_ajax(boot);

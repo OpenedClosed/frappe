@@ -1,87 +1,96 @@
-/* ===== AIHub List View Hide / Prune (instant + robust) ===== */
+/* ========================================================================
+   List View Prune (instant + robust, role-based)
+   — Hides: "⋯ Menu", view switcher (List/Report/Kanban), header Filter selector
+   — For restricted roles: remove sidebar entirely (Admin/Demo)
+   — For super role: keep sidebar but prune to Assigned To / Created By
+   — Rows: hide comment/like counters for restricted & super roles
+   — Privileged role is always (almost) untouched
+   ======================================================================== */
 (function () {
+  // ===== CONFIG (rename for other projects) =====
   const CONFIG = {
-    systemManagerRole: "System Manager",
-    aihubRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
+    privilegedRole: "System Manager",
+    restrictedRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
     superRole: "AIHub Super Admin",
 
-    cssId: "aihub-list-view-css",
-    cssInstantId: "aihub-list-view-INSTANT-css",
-    htmlClassRestricted: "aihub-list-restricted",
-    htmlClassSuper: "aihub-list-super",
+    cssId: "rbac-list-view-css",
+    cssInstantId: "rbac-list-view-INSTANT-css",
+    htmlClassRestricted: "rbac-list-restricted",
+    htmlClassSuper: "rbac-list-super",
 
     keepGroupByFieldnamesForSuper: ["assigned_to", "owner"],
   };
 
-  /* ---------- roles ---------- */
-  function roles() { return (frappe?.boot?.user?.roles) || []; }
-  function isSystemManager() {
+  // ===== ROLES =====
+  function roles() { return (window.frappe?.boot?.user?.roles) || []; }
+  function is_privileged() {
     const r = roles();
-    if (frappe.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.systemManagerRole); } catch {} }
-    return r.includes(CONFIG.systemManagerRole);
+    if (window.frappe?.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {} }
+    return r.includes(CONFIG.privilegedRole);
   }
-  function hasAIHubRole() { return roles().some(r => CONFIG.aihubRoles.includes(r)); }
-  function isSuperAdmin() { return roles().includes(CONFIG.superRole); }
+  function in_restricted_group() { return roles().some(r => CONFIG.restrictedRoles.includes(r)); }
+  function is_super() { return roles().includes(CONFIG.superRole); }
+  function has_any_restriction() { return in_restricted_group() && !is_privileged(); }
 
-  /* ---------- route guard ---------- */
-  function onListRoute() {
-    const rt = (frappe.get_route && frappe.get_route()) || [];
+  // ===== ROUTE GUARD =====
+  function on_list_route() {
+    const rt = (window.frappe?.get_route && frappe.get_route()) || [];
     if (rt[0] === "List") return true;
     const dr = document.body?.getAttribute("data-route") || "";
     return /^List\//i.test(dr);
   }
 
-  /* ---------- INSTANT CSS (анти-фликер, работает до любых хукoв) ---------- */
+  // ===== INSTANT CSS (anti-flicker) =====
   const INSTANT_CSS = `
-    /* Прячем переключатель вида для всех (включая System Manager) */
+    /* Hide view switcher button early */
     .page-actions button:has(.custom-btn-group-label) { display: none !important; }
-    /* Фолбэк на случай отсутствия :has() — убираем хотя бы контент, JS добьёт сам <button> */
+    /* Fallback when :has() unsupported */
     .page-actions .custom-btn-group-label { display: none !important; }
 
-    /* Глобально для всех — убираем «сердце» в правой части заголовка листа */
+    /* Always hide the "liked-by-me" heart in the right header area */
     .level-right .list-liked-by-me { display: none !important; }
   `;
 
-  /* ---------- base CSS (по классам на <html>) ---------- */
+  // ===== BASE CSS (scoped by html classes) =====
   const BASE_CSS = `
-    html.aihub-list-restricted ._hide,
-    html.aihub-list-super ._hide { display: none !important; }
+    html.${CONFIG.htmlClassRestricted} ._hide,
+    html.${CONFIG.htmlClassSuper} ._hide { display: none !important; }
 
-    /* «⋯ Menu» (вся группа) в хедере списка — скрыть у всех AIHub */
-    html.aihub-list-restricted .page-actions .menu-btn-group,
-    html.aihub-list-super .page-actions .menu-btn-group { display: none !important; }
+    /* "⋯ Menu" group in list header — hide for restricted & super */
+    html.${CONFIG.htmlClassRestricted} .page-actions .menu-btn-group,
+    html.${CONFIG.htmlClassSuper} .page-actions .menu-btn-group { display: none !important; }
 
-    /* Header-фильтры (Filter selector) — скрыть у всех AIHub */
-    html.aihub-list-restricted .filter-selector,
-    html.aihub-list-super .filter-selector { display: none !important; }
+    /* Header filter selector — hide for restricted & super */
+    html.${CONFIG.htmlClassRestricted} .filter-selector,
+    html.${CONFIG.htmlClassSuper} .filter-selector { display: none !important; }
 
-    /* Боковая колонка — целиком скрыта только у Admin/Demo */
-    html.aihub-list-restricted .layout-side-section,
-    html.aihub-list-restricted .page-title .sidebar-toggle-btn { display: none !important; }
+    /* Sidebar — hidden entirely for restricted (Admin/Demo) */
+    html.${CONFIG.htmlClassRestricted} .layout-side-section,
+    html.${CONFIG.htmlClassRestricted} .page-title .sidebar-toggle-btn { display: none !important; }
 
-    /* Для SuperAdmin боковая есть, но «обрезаем» лишнее */
-    html.aihub-list-super .list-sidebar .views-section,
-    html.aihub-list-super .list-sidebar .save-filter-section,
-    html.aihub-list-super .list-sidebar .user-actions { display: none !important; }
+    /* For super: sidebar present but pruned */
+    html.${CONFIG.htmlClassSuper} .list-sidebar .views-section,
+    html.${CONFIG.htmlClassSuper} .list-sidebar .save-filter-section,
+    html.${CONFIG.htmlClassSuper} .list-sidebar .user-actions { display: none !Important; }
 
-    /* В блоке Tags оставить только dropdown "Tags" */
-    html.aihub-list-super .list-sidebar .list-tags > :not(.list-stats) { display: none !important; }
+    /* In Tags block keep only the stats list; drop extras */
+    html.${CONFIG.htmlClassSuper} .list-sidebar .list-tags > :not(.list-stats) { display: none !important; }
 
-    /* В Filter By скрыть "Edit Filters" и прочие sidebar-action */
-    html.aihub-list-super .list-sidebar .filter-section .sidebar-action,
-    html.aihub-list-super .list-sidebar .filter-section .add-list-group-by,
-    html.aihub-list-super .list-sidebar .filter-section .add-group-by,
-    html.aihub-list-super .list-sidebar .filter-section .view-action { display: none !important; }
+    /* In Filter By hide extra sidebar-actions */
+    html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .sidebar-action,
+    html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .add-list-group-by,
+    html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .add-group-by,
+    html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .view-action { display: none !important; }
 
-    /* В строках списка у всех AIHub скрыть комменты и лайки, оставить только "modified" */
-    html.aihub-list-restricted .list-row-activity .comment-count,
-    html.aihub-list-restricted .list-row-activity .list-row-like,
-    html.aihub-list-super .list-row-activity .comment-count,
-    html.aihub-list-super .list-row-activity .list-row-like { display: none !important; }
+    /* In list rows: hide comment & like counters for restricted & super */
+    html.${CONFIG.htmlClassRestricted} .list-row-activity .comment-count,
+    html.${CONFIG.htmlClassRestricted} .list-row-activity .list-row-like,
+    html.${CONFIG.htmlClassSuper} .list-row-activity .comment-count,
+    html.${CONFIG.htmlClassSuper} .list-row-activity .list-row-like { display: none !important; }
   `;
 
-  /* ---------- helpers ---------- */
-  function addCssOnce(id, css) {
+  // ===== HELPERS =====
+  function add_css_once(id, css) {
     if (document.getElementById(id)) return;
     const s = document.createElement("style");
     s.id = id;
@@ -89,14 +98,14 @@
     document.documentElement.appendChild(s);
   }
 
-  function setHtmlModeNone() {
+  function set_html_mode_none() {
     document.documentElement.classList.remove(CONFIG.htmlClassRestricted, CONFIG.htmlClassSuper);
   }
-  function setHtmlModeRestricted() {
+  function set_html_mode_restricted() {
     document.documentElement.classList.add(CONFIG.htmlClassRestricted);
     document.documentElement.classList.remove(CONFIG.htmlClassSuper);
   }
-  function setHtmlModeSuper() {
+  function set_html_mode_super() {
     document.documentElement.classList.add(CONFIG.htmlClassSuper);
     document.documentElement.classList.remove(CONFIG.htmlClassRestricted);
   }
@@ -104,16 +113,16 @@
   const show = el => { if (!el) return; el.style.removeProperty("display"); el.removeAttribute("aria-hidden"); el.classList.remove("hidden","hide"); };
   const hide = el => { if (!el) return; el.style.display = "none"; el.setAttribute("aria-hidden","true"); };
 
-  // Прячем сам <button> переключателя вида — жёсткий фолбэк на старые браузеры без :has()
-  function hideViewSwitcherButtonNow() {
+  // Hide the view switcher <button> (JS fallback when :has not supported)
+  function hide_view_switcher_button_now() {
     const label = document.querySelector(".page-actions .custom-btn-group-label");
     if (!label) return;
     const btn = label.closest("button");
     if (btn && btn.style.display !== "none") hide(btn);
   }
 
-  // Суперадмину в Filter By оставляем только Assigned To / Created By
-  function pruneGroupByForSuper() {
+  // For super role: in "Filter By" keep only Assigned To / Created By
+  function prune_group_by_for_super() {
     const sidebar = document.querySelector(".layout-side-section .list-sidebar");
     if (!sidebar) return;
     const filterSection = sidebar.querySelector(".filter-section");
@@ -129,23 +138,23 @@
     });
   }
 
-  // «веер» повторных применений — ловим отложенный рендер
-  function scheduleApply() { [0, 30, 120, 300, 800].forEach(ms => setTimeout(apply, ms)); }
+  // wave of re-applies to catch delayed rendering
+  function schedule_apply() { [0, 30, 120, 300, 800].forEach(ms => setTimeout(apply, ms)); }
 
-  /* ---------- core ---------- */
+  // ===== CORE =====
   function apply() {
-    if (!onListRoute()) { setHtmlModeNone(); return; }
+    if (!on_list_route()) { set_html_mode_none(); return; }
 
-    // базовый CSS (по классам)
-    addCssOnce(CONFIG.cssId, BASE_CSS);
+    // base CSS (scoped)
+    add_css_once(CONFIG.cssId, BASE_CSS);
 
-    // переключатель вида: фолбэк-хайд на случай отсутствия :has()
-    hideViewSwitcherButtonNow();
+    // switcher fallback (prevents flash)
+    hide_view_switcher_button_now();
 
-    if (isSystemManager()) {
-      // SM — максимально нетронут (кроме того, что глобально скрываем свитчер и «сердце»)
-      setHtmlModeNone();
-      // вернуть видимость остальному на случай инлайн-стилей от прошлых версий
+    if (is_privileged()) {
+      // SM: untouched aside from global instant CSS things
+      set_html_mode_none();
+      // restore visibility (in case of inline styles from earlier passes)
       const grp = document.querySelector(".page-actions .menu-btn-group");
       const filt = document.querySelector(".filter-selector");
       const side = document.querySelector(".layout-side-section");
@@ -154,51 +163,48 @@
       return;
     }
 
-    if (!hasAIHubRole()) { setHtmlModeNone(); return; }
+    if (!has_any_restriction()) { set_html_mode_none(); return; }
 
-    if (isSuperAdmin()) {
-      setHtmlModeSuper();
-      pruneGroupByForSuper();
+    if (is_super()) {
+      set_html_mode_super();
+      prune_group_by_for_super();
       return;
     }
 
-    // AIHub Admin / Demo
-    setHtmlModeRestricted();
+    // restricted (Admin/Demo)
+    set_html_mode_restricted();
   }
 
-  /* ---------- observers & hooks ---------- */
+  // ===== OBSERVERS & HOOKS =====
   function observe() {
-    const mo = new MutationObserver(() => {
-      // моментально скрываем свитчер при любых мутациях (появился — сразу спрятали)
-      hideViewSwitcherButtonNow();
-      if (onListRoute()) scheduleApply();
-    });
-    mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    try {
+      new MutationObserver(() => {
+        hide_view_switcher_button_now();
+        if (on_list_route()) schedule_apply();
+      }).observe(document.body || document.documentElement, { childList: true, subtree: true });
+    } catch (_) {}
   }
-  function hookRouter() {
-    if (frappe?.router?.on) {
+  function hook_router() {
+    if (window.frappe?.router?.on) {
       frappe.router.on("change", () => {
-        // ещё до отрисовки — включаем анти-фликер свитчера
-        hideViewSwitcherButtonNow();
-        scheduleApply();
+        hide_view_switcher_button_now();
+        schedule_apply();
       });
     }
   }
 
-  /* ---------- boot ---------- */
+  // ===== BOOT =====
   (function instant() {
-    // 1) кидаем мгновенный CSS (анти-фликер и «сердце»)
-    addCssOnce(CONFIG.cssInstantId, INSTANT_CSS);
-    // 2) пробуем прямо сейчас прибить кнопку свитчера (JS-фолбэк)
-    hideViewSwitcherButtonNow();
+    add_css_once(CONFIG.cssInstantId, INSTANT_CSS);  // anti-flicker CSS
+    hide_view_switcher_button_now();                 // JS fallback immediately
   })();
 
   function boot() {
-    setHtmlModeNone();
+    set_html_mode_none();
     apply();
-    scheduleApply();
+    schedule_apply();
     observe();
-    hookRouter();
+    hook_router();
   }
 
   if (window.frappe?.after_ajax) frappe.after_ajax(boot);

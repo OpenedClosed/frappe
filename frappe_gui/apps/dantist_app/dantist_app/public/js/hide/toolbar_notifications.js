@@ -1,37 +1,42 @@
-/* ===== AIHub Toolbar Notifications Hide (same style as others) ===== */
+/* ========================================================================
+   Toolbar Notifications Cleanup (role-based)
+   — Leaves only the "Notifications" tab
+   — Hides Events, What's New, and the "settings" gear
+   — Privileged role is always untouched
+   ======================================================================== */
 (function () {
+  // ===== CONFIG (rename for other projects) =====
   const CONFIG = {
-    systemManagerRole: "System Manager",
-    aihubRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
-    lsKey: "aihub_hide_toolbar_notifications"
+    privilegedRole: "System Manager",
+    restrictedRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
+    lsKey: "rbac_hide_toolbar_notifications"
   };
 
-  /* ===== Role checks ===== */
-  function roles() { return (frappe?.boot?.user?.roles) || []; }
-  function isSystemManager() {
+  // ===== ROLE HELPERS =====
+  function roles() { return (window.frappe?.boot?.user?.roles) || []; }
+  function is_privileged() {
     const r = roles();
-    if (frappe.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.systemManagerRole); } catch {} }
-    return r.includes(CONFIG.systemManagerRole);
+    if (window.frappe?.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {} }
+    return r.includes(CONFIG.privilegedRole);
   }
-  function hasAIHubRole() { return roles().some(r => CONFIG.aihubRoles.includes(r)); }
-  function shouldFilter() { return hasAIHubRole() && !isSystemManager(); }
+  function in_restricted_group() { return roles().some(r => CONFIG.restrictedRoles.includes(r)); }
+  function should_filter() { return in_restricted_group() && !is_privileged(); }
 
-  /* ===== Helpers ===== */
+  // ===== HELPERS =====
   function hide(el){ if (!el) return; el.style.display="none"; el.setAttribute("aria-hidden","true"); }
   function show(el){ if (!el) return; el.style.removeProperty("display"); el.removeAttribute("aria-hidden"); el.classList.remove("hidden","hide"); }
   const q = (root, sel) => root.querySelector(sel);
   const qa = (root, sel) => Array.from(root.querySelectorAll(sel));
 
-  function filterOneMenu(menu) {
-    if (!menu || !shouldFilter()) return;
+  function filter_one_menu(menu) {
+    if (!menu || !should_filter()) return;
 
-    // Убрать "Notification Settings" (шестерёнка)
+    // remove "Notification Settings" (gear)
     qa(menu, '.notification-settings[data-action="go_to_settings"]').forEach(hide);
 
-    // Tabs header
+    // Tabs header: keep only the Notifications tab
     const tabsUl = q(menu, ".notification-item-tabs");
     if (tabsUl) {
-      // оставить только li#notifications
       qa(tabsUl, "li.notifications-category").forEach(li => {
         const id = li.id || "";
         if (id === "notifications") {
@@ -53,59 +58,60 @@
     hide(panelEvents);
     hide(panelChangelog);
 
-    // На всякий — скрыть любые body-блоки, которые не notifications
+    // extra safety: show only the notifications body
     qa(menu, ".notification-list-body > div").forEach(div => {
       const cls = div.className || "";
-      if (/\bpanel-notifications\b/.test(cls)) show(div);
-      else hide(div);
+      if (/\bpanel-notifications\b/.test(cls)) show(div); else hide(div);
     });
   }
 
-  function scanAll() {
-    if (!shouldFilter()) return;
-    document
-      .querySelectorAll(".dropdown-menu.notifications-list")
-      .forEach(filterOneMenu);
+  function scan_all() {
+    if (!should_filter()) return;
+    document.querySelectorAll(".dropdown-menu.notifications-list").forEach(filter_one_menu);
   }
 
-  // подстраховка на момент открытия выпадашки (дорисовка DOM)
-  function armOpenHook() {
+  // try multiple times right after opening the dropdown (DOM renders in waves)
+  function arm_open_hook() {
     document.addEventListener("click", () => {
-      if (!shouldFilter()) return;
+      if (!should_filter()) return;
       let tries = 0;
       const t = setInterval(() => {
         tries++;
-        scanAll();
+        scan_all();
         if (tries > 10) clearInterval(t);
       }, 30);
     }, true);
   }
 
   function observe() {
-    new MutationObserver(muts => {
-      for (const m of muts) {
-        (m.addedNodes || []).forEach(n => {
-          if (n.nodeType !== 1) return;
-          if (n.matches?.(".dropdown-menu.notifications-list") || n.querySelector?.(".dropdown-menu.notifications-list")) {
-            filterOneMenu(n.matches?.(".dropdown-menu.notifications-list") ? n : n.querySelector(".dropdown-menu.notifications-list"));
+    try {
+      new MutationObserver(muts => {
+        for (const m of muts) {
+          (m.addedNodes || []).forEach(n => {
+            if (n.nodeType !== 1) return;
+            if (n.matches?.(".dropdown-menu.notifications-list")) {
+              filter_one_menu(n);
+            } else if (n.querySelector?.(".dropdown-menu.notifications-list")) {
+              filter_one_menu(n.querySelector(".dropdown-menu.notifications-list"));
+            }
+          });
+          if (m.type === "attributes" && m.target?.matches?.(".dropdown-menu.notifications-list")) {
+            filter_one_menu(m.target);
           }
-        });
-        if (m.type === "attributes" && m.target?.matches?.(".dropdown-menu.notifications-list")) {
-          filterOneMenu(m.target);
         }
-      }
-    }).observe(document.body || document.documentElement, {
-      childList:true, subtree:true, attributes:true, attributeFilter:["class","style"]
-    });
+      }).observe(document.body || document.documentElement, {
+        childList:true, subtree:true, attributes:true, attributeFilter:["class","style"]
+      });
+    } catch (_) {}
   }
 
-  function hookRouter(){ if (frappe.router?.on) frappe.router.on("change", scanAll); }
+  function hook_router(){ if (window.frappe?.router?.on) frappe.router.on("change", scan_all); }
 
-  /* ===== Boot ===== */
+  // ===== BOOT =====
   function boot() {
-    const need = shouldFilter();
+    const need = should_filter();
     try { localStorage.setItem(CONFIG.lsKey, need ? "1" : "0"); } catch {}
-    if (need) { scanAll(); armOpenHook(); observe(); hookRouter(); }
+    if (need) { scan_all(); arm_open_hook(); observe(); hook_router(); }
   }
 
   if (window.frappe?.after_ajax) frappe.after_ajax(boot);
