@@ -1,14 +1,19 @@
-/* ===== AIHub List View Hide / Prune (safe, scoped to List/* only) ===== */
+/* ===== AIHub List View Hide / Prune (instant + robust) ===== */
 (function () {
   const CONFIG = {
     systemManagerRole: "System Manager",
     aihubRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
     superRole: "AIHub Super Admin",
-    lsKey: "aihub_hide_list_view",
-    keepGroupByFieldnamesForSuper: ["assigned_to", "owner"], // Assigned To, Created By
+
+    cssId: "aihub-list-view-css",
+    cssInstantId: "aihub-list-view-INSTANT-css",
+    htmlClassRestricted: "aihub-list-restricted",
+    htmlClassSuper: "aihub-list-super",
+
+    keepGroupByFieldnamesForSuper: ["assigned_to", "owner"],
   };
 
-  /* ---- roles ---- */
+  /* ---------- roles ---------- */
   function roles() { return (frappe?.boot?.user?.roles) || []; }
   function isSystemManager() {
     const r = roles();
@@ -17,9 +22,8 @@
   }
   function hasAIHubRole() { return roles().some(r => CONFIG.aihubRoles.includes(r)); }
   function isSuperAdmin() { return roles().includes(CONFIG.superRole); }
-  function isRestrictedAIHub() { return hasAIHubRole() && !isSystemManager() && !isSuperAdmin(); }
 
-  /* ---- route guards ---- */
+  /* ---------- route guard ---------- */
   function onListRoute() {
     const rt = (frappe.get_route && frappe.get_route()) || [];
     if (rt[0] === "List") return true;
@@ -27,126 +31,172 @@
     return /^List\//i.test(dr);
   }
 
-  /* ---- helpers ---- */
-  function hide(el){ if (!el) return; el.style.display = "none"; el.setAttribute("aria-hidden","true"); }
-  function show(el){ if (!el) return; el.style.removeProperty("display"); el.removeAttribute("aria-hidden"); el.classList.remove("hidden","hide"); }
+  /* ---------- INSTANT CSS (анти-фликер, работает до любых хукoв) ---------- */
+  const INSTANT_CSS = `
+    /* Прячем переключатель вида для всех (включая System Manager) */
+    .page-actions button:has(.custom-btn-group-label) { display: none !important; }
+    /* Фолбэк на случай отсутствия :has() — убираем хотя бы контент, JS добьёт сам <button> */
+    .page-actions .custom-btn-group-label { display: none !important; }
 
-  function pickNodes() {
-    const listSidebar = document.querySelector(".layout-side-section .list-sidebar");
-    const sidebarCol  = listSidebar ? listSidebar.closest(".layout-side-section") : null;
-    const toggleBtn   = document.querySelector(".page-title .sidebar-toggle-btn");
+    /* Глобально для всех — убираем «сердце» в правой части заголовка листа */
+    .level-right .list-liked-by-me { display: none !important; }
+  `;
 
-    // переключатель вида (List / Report / Kanban)
-    const viewSwitcherBtn = (function(){
-      const label = document.querySelector(".page-actions .custom-btn-group-label");
-      return label ? label.closest("button") : null;
-    })();
+  /* ---------- base CSS (по классам на <html>) ---------- */
+  const BASE_CSS = `
+    html.aihub-list-restricted ._hide,
+    html.aihub-list-super ._hide { display: none !important; }
 
-    // кнопка «⋯ Menu»
-    const threeDotsBtn = (function(){
-      const label = document.querySelector(".page-actions .menu-btn-group-label");
-      return label ? label.closest("button") : null;
-    })();
+    /* «⋯ Menu» (вся группа) в хедере списка — скрыть у всех AIHub */
+    html.aihub-list-restricted .page-actions .menu-btn-group,
+    html.aihub-list-super .page-actions .menu-btn-group { display: none !important; }
 
-    // header-фильтры рядом с заголовком списка
-    const filterSelector = document.querySelector(".filter-selector");
+    /* Header-фильтры (Filter selector) — скрыть у всех AIHub */
+    html.aihub-list-restricted .filter-selector,
+    html.aihub-list-super .filter-selector { display: none !important; }
 
-    const listRows = document.querySelector(".list-view-container, .result, .list-row-container");
-    return { listSidebar, sidebarCol, toggleBtn, viewSwitcherBtn, threeDotsBtn, filterSelector, listRows };
+    /* Боковая колонка — целиком скрыта только у Admin/Demo */
+    html.aihub-list-restricted .layout-side-section,
+    html.aihub-list-restricted .page-title .sidebar-toggle-btn { display: none !important; }
+
+    /* Для SuperAdmin боковая есть, но «обрезаем» лишнее */
+    html.aihub-list-super .list-sidebar .views-section,
+    html.aihub-list-super .list-sidebar .save-filter-section,
+    html.aihub-list-super .list-sidebar .user-actions { display: none !important; }
+
+    /* В блоке Tags оставить только dropdown "Tags" */
+    html.aihub-list-super .list-sidebar .list-tags > :not(.list-stats) { display: none !important; }
+
+    /* В Filter By скрыть "Edit Filters" и прочие sidebar-action */
+    html.aihub-list-super .list-sidebar .filter-section .sidebar-action,
+    html.aihub-list-super .list-sidebar .filter-section .add-list-group-by,
+    html.aihub-list-super .list-sidebar .filter-section .add-group-by,
+    html.aihub-list-super .list-sidebar .filter-section .view-action { display: none !important; }
+
+    /* В строках списка у всех AIHub скрыть комменты и лайки, оставить только "modified" */
+    html.aihub-list-restricted .list-row-activity .comment-count,
+    html.aihub-list-restricted .list-row-activity .list-row-like,
+    html.aihub-list-super .list-row-activity .comment-count,
+    html.aihub-list-super .list-row-activity .list-row-like { display: none !important; }
+  `;
+
+  /* ---------- helpers ---------- */
+  function addCssOnce(id, css) {
+    if (document.getElementById(id)) return;
+    const s = document.createElement("style");
+    s.id = id;
+    s.textContent = css;
+    document.documentElement.appendChild(s);
   }
 
-  /* ---- prune sidebar just for AIHub Super Admin ---- */
-  function pruneSidebarForSuperAdmin(sidebar) {
+  function setHtmlModeNone() {
+    document.documentElement.classList.remove(CONFIG.htmlClassRestricted, CONFIG.htmlClassSuper);
+  }
+  function setHtmlModeRestricted() {
+    document.documentElement.classList.add(CONFIG.htmlClassRestricted);
+    document.documentElement.classList.remove(CONFIG.htmlClassSuper);
+  }
+  function setHtmlModeSuper() {
+    document.documentElement.classList.add(CONFIG.htmlClassSuper);
+    document.documentElement.classList.remove(CONFIG.htmlClassRestricted);
+  }
+
+  const show = el => { if (!el) return; el.style.removeProperty("display"); el.removeAttribute("aria-hidden"); el.classList.remove("hidden","hide"); };
+  const hide = el => { if (!el) return; el.style.display = "none"; el.setAttribute("aria-hidden","true"); };
+
+  // Прячем сам <button> переключателя вида — жёсткий фолбэк на старые браузеры без :has()
+  function hideViewSwitcherButtonNow() {
+    const label = document.querySelector(".page-actions .custom-btn-group-label");
+    if (!label) return;
+    const btn = label.closest("button");
+    if (btn && btn.style.display !== "none") hide(btn);
+  }
+
+  // Суперадмину в Filter By оставляем только Assigned To / Created By
+  function pruneGroupByForSuper() {
+    const sidebar = document.querySelector(".layout-side-section .list-sidebar");
     if (!sidebar) return;
-
-    // 0) Удаляем/скрываем блок Views (если есть)
-    hide(sidebar.querySelector(".views-section"));
-
-    // 1) Оставляем только Filter By → Assigned To / Created By
     const filterSection = sidebar.querySelector(".filter-section");
-    if (filterSection) {
-      // кнопка "Edit Filters" и прочие действия
-      filterSection.querySelectorAll(".add-list-group-by, .add-group-by, .sidebar-action .view-action, .sidebar-action a")
-        .forEach(hide);
+    if (!filterSection) return;
+    const wrap = filterSection.querySelector(".list-group-by, .list-group-by-fields") || filterSection;
 
-      const groupWrap = filterSection.querySelector(".list-group-by, .list-group-by-fields") || filterSection;
-      groupWrap.querySelectorAll(".group-by-field.list-link").forEach(li => {
-        const fieldname = li.getAttribute("data-fieldname")
-          || li.querySelector("a.list-sidebar-button")?.getAttribute("data-fieldname")
-          || "";
-        if (!CONFIG.keepGroupByFieldnamesForSuper.includes((fieldname || "").trim())) hide(li);
-        else show(li);
-      });
-    }
-
-    // 2) Блок Tags: оставить только «Tags» (dropdown), убрать «Show Tags» и др.
-    const listTags = sidebar.querySelector(".list-tags");
-    if (listTags) {
-      listTags.querySelectorAll(":scope > *").forEach(el => {
-        if (el.classList.contains("list-stats")) show(el); // кнопка Tags
-        else hide(el); // .show-tags и прочее
-      });
-    }
-
-    // 3) Полностью убрать "Save Filter" секцию и пустые user-actions
-    hide(sidebar.querySelector(".save-filter-section"));
-    sidebar.querySelectorAll(".user-actions").forEach(hide);
+    wrap.querySelectorAll(".group-by-field.list-link").forEach(li => hide(li));
+    wrap.querySelectorAll(".group-by-field.list-link").forEach(li => {
+      const fieldname = li.getAttribute("data-fieldname")
+        || li.querySelector("a.list-sidebar-button")?.getAttribute("data-fieldname")
+        || "";
+      if (CONFIG.keepGroupByFieldnamesForSuper.includes((fieldname || "").trim())) show(li);
+    });
   }
 
-  /* ---- core ---- */
+  // «веер» повторных применений — ловим отложенный рендер
+  function scheduleApply() { [0, 30, 120, 300, 800].forEach(ms => setTimeout(apply, ms)); }
+
+  /* ---------- core ---------- */
   function apply() {
-    if (!onListRoute()) return;
+    if (!onListRoute()) { setHtmlModeNone(); return; }
 
-    const restricted = isRestrictedAIHub();
-    const aihubButNotSM = hasAIHubRole() && !isSystemManager(); // скрыть switcher/filters у всех AIHub
-    try { localStorage.setItem(CONFIG.lsKey, restricted ? "1" : "0"); } catch {}
+    // базовый CSS (по классам)
+    addCssOnce(CONFIG.cssId, BASE_CSS);
 
-    const {
-      listSidebar, sidebarCol, toggleBtn, viewSwitcherBtn, threeDotsBtn, filterSelector, listRows
-    } = pickNodes();
+    // переключатель вида: фолбэк-хайд на случай отсутствия :has()
+    hideViewSwitcherButtonNow();
 
-    if (!listRows) return;
-
-    // 1) «⋯ Menu» — скрыт у всех
-    if (threeDotsBtn) hide(threeDotsBtn);
-
-    // 2) Переключатель вида — скрыт у всех AIHub (Admin/Demo/Super Admin), но не у System Manager
-    if (viewSwitcherBtn) {
-      if (aihubButNotSM) hide(viewSwitcherBtn);
-      else show(viewSwitcherBtn);
+    if (isSystemManager()) {
+      // SM — максимально нетронут (кроме того, что глобально скрываем свитчер и «сердце»)
+      setHtmlModeNone();
+      // вернуть видимость остальному на случай инлайн-стилей от прошлых версий
+      const grp = document.querySelector(".page-actions .menu-btn-group");
+      const filt = document.querySelector(".filter-selector");
+      const side = document.querySelector(".layout-side-section");
+      const tog  = document.querySelector(".page-title .sidebar-toggle-btn");
+      [grp, filt, side, tog].forEach(show);
+      return;
     }
 
-    // 3) Header-фильтры (filter selector) — скрыть у всех AIHub, System Manager видит
-    if (filterSelector) {
-      if (aihubButNotSM) hide(filterSelector);
-      else show(filterSelector);
+    if (!hasAIHubRole()) { setHtmlModeNone(); return; }
+
+    if (isSuperAdmin()) {
+      setHtmlModeSuper();
+      pruneGroupByForSuper();
+      return;
     }
 
-    // 4) Боковая панель и тоггл
-    if (restricted) {
-      // Admin/Demo: скрыть боковую и тоггл
-      if (sidebarCol) hide(sidebarCol);
-      if (toggleBtn) hide(toggleBtn);
-    } else {
-      // Super Admin / System Manager: показываем колонку и тоггл
-      if (sidebarCol) show(sidebarCol);
-      if (toggleBtn) show(toggleBtn);
-
-      // Доп. обрезка только для AIHub Super Admin
-      if (isSuperAdmin()) pruneSidebarForSuperAdmin(listSidebar);
-    }
+    // AIHub Admin / Demo
+    setHtmlModeRestricted();
   }
 
-  /* ---- observe/router ---- */
+  /* ---------- observers & hooks ---------- */
   function observe() {
-    const mo = new MutationObserver(() => { if (onListRoute()) apply(); });
-    mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
+    const mo = new MutationObserver(() => {
+      // моментально скрываем свитчер при любых мутациях (появился — сразу спрятали)
+      hideViewSwitcherButtonNow();
+      if (onListRoute()) scheduleApply();
+    });
+    mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
   }
-  function hookRouter(){ if (frappe?.router?.on) frappe.router.on("change", apply); }
+  function hookRouter() {
+    if (frappe?.router?.on) {
+      frappe.router.on("change", () => {
+        // ещё до отрисовки — включаем анти-фликер свитчера
+        hideViewSwitcherButtonNow();
+        scheduleApply();
+      });
+    }
+  }
 
-  /* ---- boot ---- */
+  /* ---------- boot ---------- */
+  (function instant() {
+    // 1) кидаем мгновенный CSS (анти-фликер и «сердце»)
+    addCssOnce(CONFIG.cssInstantId, INSTANT_CSS);
+    // 2) пробуем прямо сейчас прибить кнопку свитчера (JS-фолбэк)
+    hideViewSwitcherButtonNow();
+  })();
+
   function boot() {
+    setHtmlModeNone();
     apply();
+    scheduleApply();
     observe();
     hookRouter();
   }
