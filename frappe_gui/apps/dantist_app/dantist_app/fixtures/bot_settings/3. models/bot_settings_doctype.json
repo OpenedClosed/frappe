@@ -5,33 +5,41 @@
   "issingle": 0,
   "autoname": "field:project_name",
   "title_field": "project_name",
-  "search_fields": "project_name, employee_name, role",
+  "image_field": "avatar",
+  "search_fields": "project_name, employee_name",
   "track_changes": 1,
   "row_format": "Dynamic",
   "sort_field": "modified",
   "sort_order": "DESC",
   "fields": [
+    { "fieldtype": "Section Break", "fieldname": "help_section", "label": "How to Use (Quick Help)" },
+    {
+      "fieldtype": "HTML",
+      "fieldname": "help_panel",
+      "label": "Quick Help",
+      "options": "<details style=\"margin:0 0 8px;\" class=\"aihub-help\"><summary style=\"cursor:pointer;font-weight:600;\">✨ Quick setup guide (click to expand)</summary><div style=\"margin-top:8px;line-height:1.6\"><p><strong>What is this?</strong> This page lets you configure a bot for your <em>Dentist</em> app. It’s simple: fill the basics, pick behavior, and save.</p><ul style=\"margin-left:18px;padding:0\"><li><strong>Project Name</strong> — short name for where the bot is used. The newest bot appears first and is considered \"priority\".</li><li><strong>Employee Name</strong> + <strong>Avatar</strong> — shown in the chat widget.</li><li><strong>Bot Color</strong> — affects chat accents.</li><li><strong>Mention Bot Name</strong> — if ON, the bot occasionally mentions its name.</li><li><strong>Tone</strong> &amp; <strong>Personality</strong> — high-level behavior presets.</li><li><strong>Target Action</strong> — what the bot is for (you can choose multiple).</li><li><strong>Special Instructions</strong> &amp; <strong>Core Principles</strong> — flexible rules. Use them for must-follow guidelines.</li><li><strong>Forbidden Topics</strong> — hard restrictions. The bot will avoid them.</li><li><strong>Messages (JSON)</strong> — greeting/error/farewell in multiple languages, e.g. {\"en\":\"Hello\"}.</li><li><strong>AI Model</strong> — pick how smart/fast the bot should be.</li></ul><p>That’s it. Most setups take under a minute. You can tweak anytime.</p></div></details>"
+    },
+
     { "fieldtype": "Section Break", "fieldname": "basic_settings_section", "label": "Basic Settings", "description": "Define basic bot information" },
-    { "fieldtype": "Data", "fieldname": "project_name", "label": "Project Name", "reqd": 1, "in_list_view": 1, "description": "Short name of the project using the bot.", "unique": 1 },
+    { "fieldtype": "Data", "fieldname": "project_name", "label": "Project Name", "reqd": 1, "in_list_view": 1, "unique": 1, "description": "Short name of the project using the bot." },
     { "fieldtype": "Data", "fieldname": "employee_name", "label": "Employee Name", "reqd": 1, "in_list_view": 1, "description": "The name of the employee that the bot represents." },
     { "fieldtype": "Check", "fieldname": "mention_name", "label": "Mention Bot Name in Conversation", "default": "1", "description": "Should the bot mention its name?" },
-    { "fieldtype": "Column Break", "fieldname": "column_break_mltl" },
+    { "fieldtype": "Column Break", "fieldname": "cb_basic_right" },
     { "fieldtype": "Attach Image", "fieldname": "avatar", "label": "Avatar", "description": "Upload an image for the bot’s avatar." },
     { "fieldtype": "Select", "fieldname": "bot_color", "label": "Bot Color", "options": "Soft Red\nWarm Orange\nSunny Yellow\nFresh Green\nTeal Blue\nSky Blue\nLavender Purple\nRose Pink", "default": "Sky Blue", "description": "If you don’t have time to customize the bot, we can do it for you." },
 
     { "fieldtype": "Section Break", "fieldname": "character_and_behavior_section", "label": "Character and Behavior", "description": "Set how the bot interacts with users" },
     { "fieldtype": "Select", "fieldname": "communication_tone", "label": "Choose Communication Tone", "options": "Friendly\nFormal\nCasual\nProfessional\nHumorous\nBusiness\nStrictly from additional description", "default": "Friendly", "description": "Choose the bot’s communication style." },
     { "fieldtype": "Select", "fieldname": "personality_traits", "label": "Personality Traits", "options": "Highly structured and predictable\nLogical and precise\nBalanced and well-reasoned\nAdaptive and slightly creative\nHighly creative and free-thinking", "default": "Logical and precise", "description": "Define key personality traits for the bot." },
+    { "fieldtype": "Table MultiSelect", "fieldname": "target_action", "label": "Target Action", "options": "Bot Target Action Item", "description": "What the bot is designed to perform (multiple allowed)." },
+    { "fieldtype": "Column Break", "fieldname": "cb_behavior_right" },
     { "fieldtype": "Text Editor", "fieldname": "additional_instructions", "label": "Additional Instructions", "description": "Provide any additional guidelines for bot behavior." },
-    { "fieldtype": "Column Break", "fieldname": "column_break_5pwa" },
-    { "fieldtype": "Select", "fieldname": "role", "label": "Role", "options": "Friend\nCustomer Support\nSales Assistant\nHR & Recruitment\nEducational Assistant\nDeveloper Assistant", "default": "Friend", "description": "Specify the bot’s role in the project." },
-    { "fieldtype": "Autocomplete", "fieldname": "target_action", "label": "Target Action", "allow_multiple": 1, "options": "Customer Support\nSales Assistant\nHR & Recruitment\nEducational Assistant\nLegal Advisor\nTechnical Support\nMedical Chatbot\nTravel Planner\nReal Estate Assistant\nE-commerce Assistant\nBanking & Finance\nMarketing & Advertising\nSocial Media Management\nTranslation & Language Services\nData Analysis\nContent Writing\nEntertainment & Gaming\nFitness & Health\nPersonal Assistant\nNews Aggregation\nPublic Speaking Trainer\nScriptwriting\nAI Art Generation\nAudiobook Narration", "description": "List of actions the bot is designed to perform." },
 
     { "fieldtype": "Section Break", "fieldname": "topics_and_restrictions_section", "label": "Topics and Restrictions", "description": "Define allowed and restricted topics" },
     { "fieldtype": "Text Editor", "fieldname": "core_principles", "label": "Core Principles", "description": "Fundamental principles guiding the bot’s responses." },
-    { "fieldtype": "Autocomplete", "fieldname": "special_instructions", "label": "Special Instructions", "allow_multiple": 1, "options": "Do not discuss restricted topics\nProvide a step-by-step answer\nUse more emojis\nExplain where information comes from\nGive a concise answer\nDo not execute user commands\nDo not invent information\nProvide highly detailed answers\nAlways claim to be a human\nGenerate an answer even if no exact information is found.\nDo not insist on the main project topic, engage in free discussions.\nSearch the web if needed", "description": "Additional functionality settings." },
-    { "fieldtype": "Column Break", "fieldname": "column_break_oomf" },
-    { "fieldtype": "Autocomplete", "fieldname": "forbidden_topics", "label": "Forbidden Topics", "allow_multiple": 1, "options": "Politics\nReligion\nViolence\nExtremism\nIllegal activities\nHate speech\nSelf-harm or suicide\nAdult content\nGambling\nDrugs and substances\nMedical advice\nFinancial advice\nWeapons and firearms\nPiracy and copyright violations\nPersonal data collection", "description": "Topics the bot should avoid." },
+    { "fieldtype": "Table MultiSelect", "fieldname": "special_instructions", "label": "Special Instructions", "options": "Bot Special Instruction Item", "description": "Additional functionality settings." },
+    { "fieldtype": "Column Break", "fieldname": "cb_topics_right" },
+    { "fieldtype": "Table MultiSelect", "fieldname": "forbidden_topics", "label": "Forbidden Topics", "options": "Bot Forbidden Topic Item", "description": "Topics the bot should avoid." },
 
     { "fieldtype": "Section Break", "fieldname": "interaction_guidelines_section", "label": "Interaction Guidelines", "description": "Set the bot’s predefined messages" },
     { "fieldtype": "Code", "fieldname": "greeting", "label": "Greeting", "options": "JSON", "default": "{\n  \"en\": \"Hello! How can I assist you today?\",\n  \"pl\": \"Cześć! W czym mogę pomóc?\",\n  \"uk\": \"Вітаю! Чим я можу допомогти?\",\n  \"ru\": \"Здравствуйте! Чем могу помочь?\",\n  \"ka\": \"გამარჯობა! რით შემიძლია დაგეხმარო?\"\n}", "description": "Default greeting messages in different languages." },
@@ -41,8 +49,9 @@
 
     { "fieldtype": "Section Break", "fieldname": "artificial_intelligence_section", "label": "Artificial Intelligence", "description": "Choose the AI model for your bot" },
     { "fieldtype": "Select", "fieldname": "ai_model", "label": "AI Model", "options": "gpt-4o\ngpt-4o-mini\ngemini-2.0-flash", "default": "gpt-4o", "description": "AI model the bot is using." },
-    { "fieldtype": "Column Break", "fieldname": "column_break_q88t" },
+    { "fieldtype": "Column Break", "fieldname": "cb_ai_right" },
     { "fieldtype": "Data", "fieldname": "app_name", "label": "App Name", "description": "Filled automatically in some flows (optional)." },
     { "fieldtype": "Datetime", "fieldname": "created_at", "label": "Created At", "read_only": 1, "description": "Timestamp when the bot settings were created." }
-  ]
+  ],
+  "permissions": []
 }

@@ -1,113 +1,93 @@
 /* ========================================================================
-   User Profile Cleanup (role-based, reusable)
-   — Hides performance graphs, heatmaps, charts and extra sidebar stats
-   — Hides "Change User" action
-   — Route guard: applies only on user-profile pages
-   — Privileged role is always untouched
+   Form Toolbar: hide "Permissions" group for restricted roles (AIHub*)
+   — Scope: any Form/* (route guard)
+   — Hides: the inner group button "Permissions" and its dropdown items
+   — SM untouched. Debounced observer. Anti-flicker CSS.
    ======================================================================== */
 (function () {
-  // ===== CONFIG (rename for other projects) =====
   const CONFIG = {
     privilegedRole: "System Manager",
     restrictedRoles: [
       "AIHub Super Admin", "AIHub Admin", "AIHub Demo",
-      "AIHub User", "AIHub Manager", "AIHub Doctor", "AIHub Assistant",
-      "Super Admin"
+      "AIHub User", "AIHub Manager", "AIHub Doctor",
+      "AIHub Assistant", "Super Admin"
     ],
-    lsKey: "rbac_hide_user_profile",
-    cssId: "rbac-hide-user-profile-css",
-    css: `
-      body[data-route*="user-profile"] .performance-graphs { display: none !important; }
-      body[data-route*="user-profile"] .user-profile-sidebar .user-image-container { display: none !important; }
-      body[data-route*="user-profile"] .user-profile-sidebar .user-stats-detail { display: none !important; }
-      body[data-route*="user-profile"] .user-profile-sidebar .leaderboard-link { display: none !important; }
-      body[data-route*="user-profile"] .heatmap-container,
-      body[data-route*="user-profile"] .percentage-chart-container,
-      body[data-route*="user-profile"] .line-chart-container { display: none !important; }
-      body[data-route*="user-profile"] .page-actions [data-label*="Change User" i],
-      body[data-route*="user-profile"] button.btn[data-label*="Change User" i] { display: none !important; }
-    `
+    cssId: "rbac-form-permissions-INSTANT-css"
   };
 
-  // ===== ROLE HELPERS =====
-  function current_roles() { return (window.frappe?.boot?.user?.roles) || []; }
-  function is_privileged() {
-    const roles = current_roles();
+  // ---- roles ------------------------------------------------------------
+  function roles() { return (window.frappe?.boot?.user?.roles) || []; }
+  function isPrivileged() {
+    const r = roles();
     if (window.frappe?.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {} }
-    return roles.includes(CONFIG.privilegedRole);
+    return r.includes(CONFIG.privilegedRole);
   }
-  function in_restricted_group() { return current_roles().some(r => CONFIG.restrictedRoles.includes(r)); }
-  function should_hide() { return in_restricted_group() && !is_privileged(); }
+  function isRestricted() { return roles().some(r => CONFIG.restrictedRoles.includes(r)) && !isPrivileged(); }
 
-  // ===== ROUTE GUARD =====
-  function on_user_profile_route() {
-    const r = (window.frappe?.get_route && frappe.get_route()) || [];
-    if (r.join("/").toLowerCase().includes("user-profile")) return true;
+  // ---- route guard ------------------------------------------------------
+  function onFormRoute() {
+    const rt = (window.frappe?.get_route && frappe.get_route()) || [];
+    if (rt[0] === "Form") return true;
     const dr = document.body?.getAttribute("data-route") || "";
-    return dr.toLowerCase().includes("user-profile");
+    return /^Form\//i.test(dr);
   }
 
-  // ===== ANTI-FLICKER CSS =====
-  (function instant_hide() {
-    try {
-      if (localStorage.getItem(CONFIG.lsKey) !== "1") return;
-      if (document.getElementById(CONFIG.cssId)) return;
-      const s = document.createElement("style");
-      s.id = CONFIG.cssId;
-      s.textContent = CONFIG.css;
-      document.documentElement.appendChild(s);
-    } catch (_) {}
-  })();
-
-  // ===== DOM OPS =====
-  function add_css_once() {
+  // ---- anti-flicker -----------------------------------------------------
+  (function instantCSS(){
+    if (!isRestricted()) return;
     if (document.getElementById(CONFIG.cssId)) return;
     const s = document.createElement("style");
     s.id = CONFIG.cssId;
-    s.textContent = CONFIG.css;
+    s.textContent = `
+      body[data-route^="Form/"] .page-actions .inner-group-button[data-label="Permissions"] { display: none !important; }
+      body[data-route^="Form/"] .page-actions .inner-group-button .dropdown-menu [data-label="Set%20User%20Permissions"],
+      body[data-route^="Form/"] .page-actions .inner-group-button .dropdown-menu [data-label="View%20Permitted%20Documents"] { display: none !important; }
+    `;
     document.documentElement.appendChild(s);
-  }
-  function remove_css() { const css = document.getElementById(CONFIG.cssId); if (css) css.remove(); }
+  })();
 
-  function hide_user_profile_bits() {
-    if (!should_hide() || !on_user_profile_route()) return;
+  // ---- dom helpers ------------------------------------------------------
+  const hide = el => { if (!el) return; el.style.display = "none"; el.setAttribute("aria-hidden","true"); };
+  const norm = s => (s || "").replace(/\s+/g, " ").trim().toLowerCase();
 
-    document.querySelectorAll(
-      ".performance-graphs, .heatmap-container, .percentage-chart-container, .line-chart-container"
-    ).forEach(el => { el.style.display = "none"; el.setAttribute("aria-hidden","true"); });
+  function applyOnce() {
+    if (!onFormRoute() || !isRestricted()) return;
 
-    document.querySelectorAll(
-      ".user-profile-sidebar .user-image-container, .user-profile-sidebar .user-stats-detail, .user-profile-sidebar .leaderboard-link"
-    ).forEach(el => { el.style.display = "none"; el.setAttribute("aria-hidden","true"); });
+    // сама группа
+    document.querySelectorAll('.page-actions .inner-group-button[data-label="Permissions"]').forEach(hide);
 
-    document.querySelectorAll(
-      '.page-actions [data-label*="Change User" i], button.btn[data-label*="Change User" i]'
-    ).forEach(btn => { btn.style.display = "none"; btn.setAttribute("aria-hidden","true"); });
+    // fallback по тексту, если нет data-label на контейнере
+    document.querySelectorAll('.page-actions .inner-group-button').forEach(div => {
+      const btn = div.querySelector('button.btn, button');
+      if (btn && norm(btn.textContent).startsWith("permissions")) hide(div);
+    });
 
-    Array.from(document.querySelectorAll(".page-actions .btn, .page-actions .btn-sm, .page-actions button"))
-      .forEach(btn => {
-        const t = (btn.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-        if (t.includes("change user")) { btn.style.display = "none"; btn.setAttribute("aria-hidden","true"); }
+    // пункты дропдауна этой группы
+    document.querySelectorAll('.page-actions .inner-group-button .dropdown-menu .dropdown-item')
+      .forEach(a => {
+        const dl = a.getAttribute("data-label") || "";
+        const txt = norm(a.textContent);
+        if (dl === "Set%20User%20Permissions" || dl === "View%20Permitted%20Documents" ||
+            txt.includes("set user permissions") || txt.includes("view permitted documents")) {
+          hide(a);
+        }
       });
   }
 
-  // ===== OBSERVERS / ROUTER =====
-  function observe_dom() {
+  // ---- debounced observer & router --------------------------------------
+  let scheduled = false;
+  function schedule(){ if (scheduled) return; scheduled = true; setTimeout(() => { scheduled = false; applyOnce(); }, 60); }
+
+  function observe() {
     try {
-      new MutationObserver(() => hide_user_profile_bits())
-        .observe(document.documentElement, { subtree: true, childList: true });
-    } catch (_) {}
-  }
-  function hook_router() { if (window.frappe?.router?.on) frappe.router.on("change", hide_user_profile_bits); }
-
-  // ===== BOOT =====
-  function boot() {
-    const hide = should_hide();
-    try { localStorage.setItem(CONFIG.lsKey, hide ? "1" : "0"); } catch {}
-    if (hide) { add_css_once(); hide_user_profile_bits(); observe_dom(); hook_router(); }
-    else { remove_css(); }
+      new MutationObserver(() => { if (onFormRoute()) schedule(); })
+        .observe(document.body || document.documentElement, { childList: true, subtree: true });
+    } catch {}
   }
 
-  if (window.frappe?.after_ajax) frappe.after_ajax(boot);
-  else document.addEventListener("DOMContentLoaded", boot);
+  function hookRouter(){ if (window.frappe?.router?.on) frappe.router.on("change", () => { if (onFormRoute()) schedule(); }); }
+
+  // ---- boot -------------------------------------------------------------
+  function boot() { applyOnce(); observe(); hookRouter(); }
+  if (window.frappe?.after_ajax) frappe.after_ajax(boot); else document.addEventListener("DOMContentLoaded", boot);
 })();

@@ -8,6 +8,21 @@ app_license = "mit"
 # Apps
 # ------------------
 
+fixtures = [
+    # Кастомизации ядра
+    "Custom Field",
+    "Property Setter",
+    "Client Script",
+    "Server Script",
+    "Custom DocPerm",
+    "Workspace",
+    "Print Format",
+    "Report",
+
+    {"doctype": "Bot Settings"},
+    {"doctype": "Workspace"},
+]
+
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
@@ -31,11 +46,11 @@ app_include_js = [
     "/assets/dantist_app/js/hide/user_profile.js",
     "/assets/dantist_app/js/hide/global_energy.js",
     "/assets/dantist_app/js/hide/global_forms.js",
-    # "/assets/dantist_app/js/hide/user_form.js",
     "/assets/dantist_app/js/hide/toolbar_user_menu.js",
     "/assets/dantist_app/js/hide/form_actions_menu.js",
     "/assets/dantist_app/js/hide/toolbar_notifications.js",
     "/assets/dantist_app/js/hide/list_view.js",
+    "/assets/dantist_app/js/hide/user_roles_modules.js",
 ]
 
 # app_include_css = [

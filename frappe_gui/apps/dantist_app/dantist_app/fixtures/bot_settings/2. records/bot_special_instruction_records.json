@@ -1,0 +1,14 @@
+[
+  {"doctype":"Bot Special Instruction","title":"Do not discuss restricted topics"},
+  {"doctype":"Bot Special Instruction","title":"Provide a step-by-step answer"},
+  {"doctype":"Bot Special Instruction","title":"Use more emojis"},
+  {"doctype":"Bot Special Instruction","title":"Explain where information comes from"},
+  {"doctype":"Bot Special Instruction","title":"Give a concise answer"},
+  {"doctype":"Bot Special Instruction","title":"Do not execute user commands"},
+  {"doctype":"Bot Special Instruction","title":"Do not invent information"},
+  {"doctype":"Bot Special Instruction","title":"Provide highly detailed answers"},
+  {"doctype":"Bot Special Instruction","title":"Always claim to be a human"},
+  {"doctype":"Bot Special Instruction","title":"Generate an answer even if no exact information is found."},
+  {"doctype":"Bot Special Instruction","title":"Do not insist on the main project topic, engage in free discussions."},
+  {"doctype":"Bot Special Instruction","title":"Search the web if needed"}
+]

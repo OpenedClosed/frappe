@@ -1,30 +1,30 @@
 {
  "actions": [],
  "autoname": "field:project_name",
- "creation": "2025-10-02 09:43:25.987835",
- "default_view": "Image",
+ "creation": "2025-10-07 18:43:21.419601",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "help_section",
+  "help_panel",
   "basic_settings_section",
   "project_name",
   "employee_name",
   "mention_name",
-  "column_break_mltl",
+  "cb_basic_right",
   "avatar",
   "bot_color",
   "character_and_behavior_section",
   "communication_tone",
   "personality_traits",
-  "additional_instructions",
-  "column_break_5pwa",
-  "role",
   "target_action",
+  "cb_behavior_right",
+  "additional_instructions",
   "topics_and_restrictions_section",
-  "core_principles",
   "special_instructions",
-  "column_break_oomf",
   "forbidden_topics",
+  "cb_topics_right",
+  "core_principles",
   "interaction_guidelines_section",
   "greeting",
   "error_message",
@@ -32,11 +32,23 @@
   "fallback_ai_error_message",
   "artificial_intelligence_section",
   "ai_model",
-  "column_break_q88t",
+  "cb_ai_right",
   "app_name",
   "created_at"
  ],
  "fields": [
+  {
+   "collapsible": 1,
+   "fieldname": "help_section",
+   "fieldtype": "Section Break",
+   "label": "How to Use (Quick Help)"
+  },
+  {
+   "fieldname": "help_panel",
+   "fieldtype": "HTML",
+   "label": "Quick Help",
+   "options": "<!-- Dentist \u2022 Bot Settings inline help (static, no collapse) -->\n<div style=\"margin:8px 0 0; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;\">\n  <div style=\"font-weight:600; margin:0 0 8px;\">\ud83d\udca1 Quick guide to Bot Settings</div>\n\n  <ul style=\"margin:0 0 10px 18px; padding:0; line-height:1.6;\">\n    <li><strong>Project Name</strong> \u2014 internal name for lists and search.</li>\n    <li><strong>Employee Name</strong> \u2014 the public display name in chat.</li>\n    <li><strong>Avatar</strong> &amp; <strong>Bot Color</strong> \u2014 visual look of the widget.</li>\n    <li><strong>Communication Tone</strong> &amp; <strong>Personality Traits</strong> \u2014 how the bot speaks.</li>\n    <li><strong>Core Principles</strong> \u2014 always-on guardrails and boundaries.</li>\n    <li><strong>Additional Instructions</strong> \u2014 step-by-step behavior for preparing, answering, finishing.</li>\n    <li><strong>Special Instructions</strong> \u2014 quick presets (e.g., be concise, don\u2019t invent info).</li>\n    <li><strong>Forbidden Topics</strong> \u2014 subjects the bot must avoid.</li>\n    <li><strong>Target Actions</strong> \u2014 what the bot helps with (can be multiple).</li>\n  </ul>\n\n  <p style=\"margin:0 0 6px; line-height:1.6;\"><strong>Messages (JSON)</strong> use a simple language\u2192text map. Example:</p>\n  <pre style=\"margin:0 0 10px; background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:10px; overflow:auto;\">{\n  \"en\": \"Hello! How can I help you?\"\n}</pre>\n\n  <ul style=\"margin:0; padding:0 0 0 18px; line-height:1.6;\">\n    <li>Use standard language codes (e.g., <code>en</code>) and only those you actually need.</li>\n    <li>The most recently created bot is prioritized and shown first by default.</li>\n  </ul>\n</div>\n<!-- /Dentist \u2022 Bot Settings inline help -->\n"
+  },
   {
    "description": "Define basic bot information",
    "fieldname": "basic_settings_section",
@@ -68,7 +80,7 @@
    "label": "Mention Bot Name in Conversation"
   },
   {
-   "fieldname": "column_break_mltl",
+   "fieldname": "cb_basic_right",
    "fieldtype": "Column Break"
   },
   {
@@ -108,29 +120,21 @@
    "options": "Highly structured and predictable\nLogical and precise\nBalanced and well-reasoned\nAdaptive and slightly creative\nHighly creative and free-thinking"
   },
   {
+   "description": "What the bot is designed to perform (multiple allowed).",
+   "fieldname": "target_action",
+   "fieldtype": "Table MultiSelect",
+   "label": "Target Action",
+   "options": "Bot Target Action Item"
+  },
+  {
+   "fieldname": "cb_behavior_right",
+   "fieldtype": "Column Break"
+  },
+  {
    "description": "Provide any additional guidelines for bot behavior.",
    "fieldname": "additional_instructions",
    "fieldtype": "Text Editor",
    "label": "Additional Instructions"
-  },
-  {
-   "fieldname": "column_break_5pwa",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "Friend",
-   "description": "Specify the bot\u2019s role in the project.",
-   "fieldname": "role",
-   "fieldtype": "Select",
-   "label": "Role",
-   "options": "Friend\nCustomer Support\nSales Assistant\nHR & Recruitment\nEducational Assistant\nDeveloper Assistant"
-  },
-  {
-   "description": "List of actions the bot is designed to perform.",
-   "fieldname": "target_action",
-   "fieldtype": "Autocomplete",
-   "label": "Target Action",
-   "options": "Customer Support\nSales Assistant\nHR & Recruitment\nEducational Assistant\nLegal Advisor\nTechnical Support\nMedical Chatbot\nTravel Planner\nReal Estate Assistant\nE-commerce Assistant\nBanking & Finance\nMarketing & Advertising\nSocial Media Management\nTranslation & Language Services\nData Analysis\nContent Writing\nEntertainment & Gaming\nFitness & Health\nPersonal Assistant\nNews Aggregation\nPublic Speaking Trainer\nScriptwriting\nAI Art Generation\nAudiobook Narration"
   },
   {
    "description": "Define allowed and restricted topics",
@@ -147,22 +151,23 @@
   {
    "description": "Additional functionality settings.",
    "fieldname": "special_instructions",
-   "fieldtype": "Autocomplete",
+   "fieldtype": "Table MultiSelect",
    "label": "Special Instructions",
-   "options": "Do not discuss restricted topics\nProvide a step-by-step answer\nUse more emojis\nExplain where information comes from\nGive a concise answer\nDo not execute user commands\nDo not invent information\nProvide highly detailed answers\nAlways claim to be a human\nGenerate an answer even if no exact information is found.\nDo not insist on the main project topic, engage in free discussions.\nSearch the web if needed"
+   "options": "Bot Special Instruction Item"
   },
   {
-   "fieldname": "column_break_oomf",
+   "fieldname": "cb_topics_right",
    "fieldtype": "Column Break"
   },
   {
    "description": "Topics the bot should avoid.",
    "fieldname": "forbidden_topics",
-   "fieldtype": "Autocomplete",
+   "fieldtype": "Table MultiSelect",
    "label": "Forbidden Topics",
-   "options": "Politics\nReligion\nViolence\nExtremism\nIllegal activities\nHate speech\nSelf-harm or suicide\nAdult content\nGambling\nDrugs and substances\nMedical advice\nFinancial advice\nWeapons and firearms\nPiracy and copyright violations\nPersonal data collection"
+   "options": "Bot Forbidden Topic Item"
   },
   {
+   "collapsible": 1,
    "description": "Set the bot\u2019s predefined messages",
    "fieldname": "interaction_guidelines_section",
    "fieldtype": "Section Break",
@@ -215,13 +220,14 @@
    "options": "gpt-4o\ngpt-4o-mini\ngemini-2.0-flash"
   },
   {
-   "fieldname": "column_break_q88t",
+   "fieldname": "cb_ai_right",
    "fieldtype": "Column Break"
   },
   {
    "description": "Filled automatically in some flows (optional).",
    "fieldname": "app_name",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "App Name"
   },
   {
@@ -236,7 +242,7 @@
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-02 16:27:24.545067",
+ "modified": "2025-10-07 19:21:24.850257",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Bot Settings",
@@ -245,7 +251,7 @@
  "permissions": [],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "project_name, employee_name, role",
+ "search_fields": "project_name, employee_name",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

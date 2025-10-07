@@ -1,0 +1,17 @@
+[
+  {"doctype":"Bot Forbidden Topic","title":"Politics"},
+  {"doctype":"Bot Forbidden Topic","title":"Religion"},
+  {"doctype":"Bot Forbidden Topic","title":"Violence"},
+  {"doctype":"Bot Forbidden Topic","title":"Extremism"},
+  {"doctype":"Bot Forbidden Topic","title":"Illegal activities"},
+  {"doctype":"Bot Forbidden Topic","title":"Hate speech"},
+  {"doctype":"Bot Forbidden Topic","title":"Self-harm or suicide"},
+  {"doctype":"Bot Forbidden Topic","title":"Adult content"},
+  {"doctype":"Bot Forbidden Topic","title":"Gambling"},
+  {"doctype":"Bot Forbidden Topic","title":"Drugs and substances"},
+  {"doctype":"Bot Forbidden Topic","title":"Medical advice"},
+  {"doctype":"Bot Forbidden Topic","title":"Financial advice"},
+  {"doctype":"Bot Forbidden Topic","title":"Weapons and firearms"},
+  {"doctype":"Bot Forbidden Topic","title":"Piracy and copyright violations"},
+  {"doctype":"Bot Forbidden Topic","title":"Personal data collection"}
+]
