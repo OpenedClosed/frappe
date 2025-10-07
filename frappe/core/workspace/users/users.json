@@ -1,6 +1,11 @@
 {
- "charts": [],
- "content": "[{\"id\":\"pLfgQNHhzn\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>List of Users</b></span>\",\"col\":12}},{\"id\":\"Kp3SrZsaYp\",\"type\":\"quick_list\",\"data\":{\"quick_list_name\":\"User\",\"col\":12}},{\"id\":\"YpGCeLfign\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"b7abeqw4NZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User\",\"col\":3}},{\"id\":\"8mifiRC9hV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Create user\",\"col\":3}},{\"id\":\"eghSJPhZRC\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Role\",\"col\":3}},{\"id\":\"EpBz2lplSt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Profile\",\"col\":3}}]",
+ "charts": [
+  {
+   "chart_name": "Users By Day",
+   "label": "Users By Day"
+  }
+ ],
+ "content": "[{\"id\":\"pLfgQNHhzn\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>List of Users</b></span>\",\"col\":12}},{\"id\":\"Kp3SrZsaYp\",\"type\":\"quick_list\",\"data\":{\"quick_list_name\":\"User\",\"col\":12}},{\"id\":\"YpGCeLfign\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"b7abeqw4NZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User\",\"col\":3}},{\"id\":\"8mifiRC9hV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Create user\",\"col\":3}},{\"id\":\"eghSJPhZRC\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Role\",\"col\":3}},{\"id\":\"EpBz2lplSt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Profile\",\"col\":3}},{\"id\":\"V0k2J4zu24\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Dashboard Chart<b></b></span>\",\"col\":12}},{\"id\":\"G_G2wv1NYj\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Users By Day\",\"col\":12}}]",
  "creation": "2020-03-02 15:12:16.754449",
  "custom_blocks": [],
  "docstatus": 0,
@@ -91,7 +96,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-10-02 19:25:12.952938",
+ "modified": "2025-10-07 17:33:18.621109",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "Users",
@@ -107,7 +112,14 @@
   }
  ],
  "restrict_to_domain": "",
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "AIHub Super Admin"
+  }
+ ],
  "sequence_id": 2.0,
  "shortcuts": [
   {
