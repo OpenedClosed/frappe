@@ -193,7 +193,13 @@
     "phoneImportantInfo": "Wymagane do uwierzytelniania dwuskładnikowego SMS i komunikacji operacyjnej.",
     "phoneOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby.",
     "emailOptional": "Opcjonalne:",
-    "emailOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby."
+    "emailOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby.",
+    "firstNameInvalid": "Imię musi zawierać tylko litery łacińskie",
+    "lastNameInvalid": "Nazwisko musi zawierać tylko litery łacińskie",
+    "firstNameTooShort": "Imię musi zawierać co najmniej 2 znaki",
+    "lastNameTooShort": "Nazwisko musi zawierać co najmniej 2 znaki",
+    "firstNameTooLong": "Imię nie może być dłuższe niż 50 znaków",
+    "lastNameTooLong": "Nazwisko nie może być dłuższe niż 50 znaków"
   },
 
   "DynamicForm": {

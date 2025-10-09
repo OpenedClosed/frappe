@@ -171,7 +171,13 @@
     "phoneImportantInfo": "Erforderlich für SMS-Zwei-Faktor-Authentifizierung und operative Kommunikation.",
     "phoneOptionalInfo": "Für operative Kommunikation bei Bedarf.",
     "emailOptional": "Optional:",
-    "emailOptionalInfo": "Für operative Kommunikation bei Bedarf."
+    "emailOptionalInfo": "Für operative Kommunikation bei Bedarf.",
+    "firstNameInvalid": "Vorname darf nur lateinische Buchstaben enthalten",
+    "lastNameInvalid": "Nachname darf nur lateinische Buchstaben enthalten",
+    "firstNameTooShort": "Vorname muss mindestens 2 Zeichen enthalten",
+    "lastNameTooShort": "Nachname muss mindestens 2 Zeichen enthalten",
+    "firstNameTooLong": "Vorname darf nicht länger als 50 Zeichen sein",
+    "lastNameTooLong": "Nachname darf nicht länger als 50 Zeichen sein"
   },
 
   "DynamicForm": {

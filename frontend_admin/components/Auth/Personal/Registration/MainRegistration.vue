@@ -30,6 +30,8 @@
                 :placeholder="t('PersonalMainRegistration.firstNamePlaceholder')"
                 required
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+                @input="onFirstNameInput"
+                @blur="onFirstNameBlur"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -50,6 +52,8 @@
                 :placeholder="t('PersonalMainRegistration.lastNamePlaceholder')"
                 required
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+                @input="onLastNameInput"
+                @blur="onLastNameBlur"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -320,10 +324,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onUnmounted } from "vue";
 import { useRoute, navigateTo, reloadNuxtApp } from "#imports";
 import { useI18n } from "vue-i18n";
+import { debounce } from "lodash";
+import { useNameValidation } from "~/composables/useNameValidation.js";
+
 const { t } = useI18n();
+const { validateName, formatName } = useNameValidation();
 const is_loading = ref(false);
 const loading_text_displayed = ref(false);
 const hasReferralCode = ref(false);
@@ -451,12 +459,66 @@ function onReferralCheckboxClick(event) {
   }
 }
 
+// Функции валидации
+function validateFirstName() {
+  const errorKey = validateName(regForm.value.first_name, 'firstName');
+  if (errorKey) {
+    regError.value.first_name = t(errorKey);
+  } else {
+    regError.value.first_name = '';
+  }
+}
+
+function validateLastName() {
+  const errorKey = validateName(regForm.value.last_name, 'lastName');
+  if (errorKey) {
+    regError.value.last_name = t(errorKey);
+  } else {
+    regError.value.last_name = '';
+  }
+}
+
+// Debounced валидация с lodash
+const debouncedValidateFirstName = debounce(validateFirstName, 300);
+const debouncedValidateLastName = debounce(validateLastName, 300);
+
+// Обработчики валидации имени
+function onFirstNameInput() {
+  // Форматирование имени
+  regForm.value.first_name = formatName(regForm.value.first_name);
+  
+  // Валидация с debounce
+  debouncedValidateFirstName();
+}
+
+function onFirstNameBlur() {
+  // Отменяем debounced валидацию и выполняем немедленно
+  debouncedValidateFirstName.cancel();
+  validateFirstName();
+}
+
+// Обработчики валидации фамилии
+function onLastNameInput() {
+  // Форматирование фамилии
+  regForm.value.last_name = formatName(regForm.value.last_name);
+  
+  // Валидация с debounce
+  debouncedValidateLastName();
+}
+
+function onLastNameBlur() {
+  // Отменяем debounced валидацию и выполняем немедленно
+  debouncedValidateLastName.cancel();
+  validateLastName();
+}
+
 function sendReg() {
   if (!CheckboxValue.value) {
     regError.value.terms = "You must agree to the Terms of Service.";
     return;
   }
 
+  // Очистка предыдущих ошибок
   regError.value = {
     phone: "",
     email: "",
@@ -470,6 +532,27 @@ function sendReg() {
     accept_terms: "",
     code: "",
   };
+
+  // Валидация имени и фамилии перед отправкой
+  let hasValidationErrors = false;
+  
+  const firstNameError = validateName(regForm.value.first_name, 'firstName');
+  if (firstNameError) {
+    regError.value.first_name = t(firstNameError);
+    hasValidationErrors = true;
+  }
+  
+  const lastNameError = validateName(regForm.value.last_name, 'lastName');
+  if (lastNameError) {
+    regError.value.last_name = t(lastNameError);
+    hasValidationErrors = true;
+  }
+  
+  // Если есть ошибки валидации, прерываем отправку
+  if (hasValidationErrors) {
+    return;
+  }
+
   const { currentPageName } = usePageState();
   is_loading.value = true;
   loading_text_displayed.value = false;
@@ -524,6 +607,10 @@ function resetForm() {
     regError.value[field] = "";
   });
   isCode.value = false;
+  
+  // Отмена debounced валидации
+  debouncedValidateFirstName.cancel();
+  debouncedValidateLastName.cancel();
 }
 
 watch(hasReferralCode, (newValue) => {
@@ -549,6 +636,12 @@ onMounted(() => {
   if (currentPageName.value != "personal_account") {
     reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
   }
+});
+
+onUnmounted(() => {
+  // Отмена debounced функций при размонтировании компонента
+  debouncedValidateFirstName.cancel();
+  debouncedValidateLastName.cancel();
 });
 </script>
 <style scoped>

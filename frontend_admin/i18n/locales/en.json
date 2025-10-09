@@ -189,7 +189,13 @@
     "phoneImportantInfo": "Required for SMS two-factor authentication and operational communication.",
     "phoneOptionalInfo": "For operational communication if necessary.",
     "emailOptional": "Optional:",
-    "emailOptionalInfo": "For operational communication if necessary."
+    "emailOptionalInfo": "For operational communication if necessary.",
+    "firstNameInvalid": "First name must contain only Latin letters",
+    "lastNameInvalid": "Last name must contain only Latin letters",
+    "firstNameTooShort": "First name must contain at least 2 characters",
+    "lastNameTooShort": "Last name must contain at least 2 characters",
+    "firstNameTooLong": "First name cannot be longer than 50 characters",
+    "lastNameTooLong": "Last name cannot be longer than 50 characters"
   },
   "DynamicForm": {
     "upload": "Upload",
