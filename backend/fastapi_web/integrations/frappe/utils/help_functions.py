@@ -1,9 +1,10 @@
 # dantist/integration/frappe/help_functions.py
+import hashlib
 import hmac
 import time
 from hashlib import sha256
 from fastapi import HTTPException
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from db.redis.db_init import redis_db
 from infra import settings
@@ -44,40 +45,38 @@ async def verify_hmac_request(
 
 
 
-# -*- coding: utf-8 -*-
-from typing import Any, Dict, Optional
-
 def build_frappe_notification_payload(
     *,
     kind: str,
     html: str,
-    title: Dict[str, str],
-    entity_type: str,
-    entity_id: str,
-    route: Optional[str],
-    link_url: Optional[str],
-    account_id: Optional[str] = None,
+    title: Optional[Dict[str, str]] = None,
+    entity_type: Optional[str] = None,
+    entity_id: Optional[str] = None,
+    route: Optional[str] = None,          # зарезервировано
+    link_url: Optional[str] = None,
+    account_id: Optional[str] = None,     # зарезервировано
     idempotency_key: Optional[str] = None,
+    recipient_email: Optional[str] = None
 ) -> Dict[str, Any]:
-    entity = {
-        "entity_type": entity_type,
-        "entity_id": entity_id,
-        "route": route,
-        "extra": {},
-    }
-    if account_id:
-        entity["extra"]["account_id"] = account_id
+    """
+    Готовит payload для dantist_app.api.integration.create_notification_from_upstream.
+    Без document_type/document_name (никаких LinkValidationError).
+    """
+    title_dict = title or {}
 
-    return {
-        "kind": kind,
-        "priority": "CRITICAL",
-        "title": title,
-        "message": html,
-        "entity": entity,
-        "link_url": link_url,
-        "popup": True,
-        "sound": True,
-        "meta": {},
+    if not idempotency_key:
+        # «минутный» устойчивый ключ, чтобы одинаковые события за минуту не дублировались
+        minute_slot = int(time.time() // 60)
+        raw = f"{kind}|{(entity_type or '').strip()}|{(entity_id or '').strip()}|{minute_slot}"
+        idempotency_key = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+    payload: Dict[str, Any] = {
+        "title": title_dict,          # {"en": "...", "ru": "..."}
+        "message": html,              # HTML или текст
+        "link_url": link_url or "",
         "idempotency_key": idempotency_key,
-        "recipient_email": None,
     }
+    if recipient_email:
+        payload["recipient_email"] = recipient_email
+
+    return payload

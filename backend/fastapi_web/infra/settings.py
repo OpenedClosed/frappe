@@ -139,4 +139,9 @@ CRM_CLIENT_ID = os.getenv("CRM_CLIENT_ID", "change_me")
 CRM_CLIENT_SECRET = os.getenv("CRM_CLIENT_SECRET", "change_me")
 
 # Frappe
+FRAPPE_API_BASE=os.getenv("FRAPPE_API_BASE", "change_me")
+FRAPPE_API_KEY=os.getenv("FRAPPE_API_KEY", "change_me")
+FRAPPE_API_SECRET=os.getenv("FRAPPE_API_SECRET", "change_me")
+DANTIST_BASE_URL=os.getenv("DANTIST_BASE_URL", "change_me")
+
 FRAPPE_SHARED_SECRET = os.getenv("FRAPPE_SHARED_SECRET", "change_me")

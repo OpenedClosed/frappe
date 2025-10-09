@@ -121,37 +121,124 @@ def get_token() -> dict:
     return {"ok": True}
 
 
+# @frappe.whitelist(methods=["POST"])
+# def create_notification_from_upstream():
+#     payload = frappe.local.form_dict or {}
+#     if "payload" in payload and isinstance(payload["payload"], dict):
+#         payload = payload["payload"]
+
+#     idem = (payload.get("idempotency_key") or "").strip()
+#     if idem and frappe.db.exists("Notification Log", {"idempotency_key": idem}):
+#         return {"ok": True, "skipped": "duplicate"}
+
+#     title = payload.get("title") or {}
+#     subject = title.get("en") or title.get("ru") or "Notification"
+#     message = payload.get("message") or ""
+#     link_url = payload.get("link_url") or ""
+#     recipient_email = payload.get("recipient_email") or "Administrator"
+
+#     doc = frappe.get_doc({
+#         "doctype": "Notification Log",
+#         "subject": subject,
+#         "email_content": message,
+#         "for_user": recipient_email,
+#         "type": "Alert",
+#         "document_name": (payload.get("entity") or {}).get("entity_id") or "integration",
+#         "idempotency_key": idem,
+#         "link": link_url,
+#     })
+#     doc.insert(ignore_permissions=True)
+#     frappe.db.commit()
+#     frappe.publish_realtime("notification_update")
+#     return {"ok": True, "name": doc.name}
+
+
 @frappe.whitelist(methods=["POST"])
 def create_notification_from_upstream():
+    """
+    Базовое уведомление в Frappe.
+    Если payload.recipient_email задан → шлём ОДНО уведомление этому пользователю.
+    Если НЕ задан → бродкаст: создаём уведомления для ВСЕХ enabled-пользователей.
+    Без document_type/document_name (никаких LinkValidationError).
+    Идемпотентность используется только если в Notification Log есть поле idempotency_key.
+    """
     payload = frappe.local.form_dict or {}
     if "payload" in payload and isinstance(payload["payload"], dict):
         payload = payload["payload"]
 
-    idem = (payload.get("idempotency_key") or "").strip()
-    if idem and frappe.db.exists("Notification Log", {"idempotency_key": idem}):
-        return {"ok": True, "skipped": "duplicate"}
-
+    # Контент
     title = payload.get("title") or {}
     subject = title.get("en") or title.get("ru") or "Notification"
     message = payload.get("message") or ""
     link_url = payload.get("link_url") or ""
-    recipient_email = payload.get("recipient_email") or "Administrator"
 
-    doc = frappe.get_doc({
-        "doctype": "Notification Log",
-        "subject": subject,
-        "email_content": message,
-        "for_user": recipient_email,
-        "type": "Alert",
-        "document_type": "Integration",
-        "document_name": (payload.get("entity") or {}).get("entity_id") or "integration",
-        "idempotency_key": idem,
-        "link": link_url,
-    })
-    doc.insert(ignore_permissions=True)
+    # Адресат(ы)
+    recipient_email = (payload.get("recipient_email") or "").strip()
+
+    # Идемпотентность (опционально)
+    base_idem = (payload.get("idempotency_key") or "").strip()
+    has_idem = frappe.db.has_column("Notification Log", "idempotency_key")
+
+    def _insert_one(for_user: str, idem_suffix: str | None = None) -> str:
+        doc_fields = {
+            "doctype": "Notification Log",
+            "subject": subject,
+            "email_content": message,
+            "type": "Alert",
+            "for_user": for_user,   # Link → User (email / name)
+        }
+        # Временно уберу, не удалять!
+        # if link_url:
+        #     doc_fields["link"] = link_url
+        if has_idem and base_idem:
+            # для бродкаста делаем пер-юзерный ключ, чтобы не «слиплось»
+            doc_fields["idempotency_key"] = f"{base_idem}:{idem_suffix or for_user}"
+
+            # если уже есть — пропускаем
+            if frappe.db.exists("Notification Log", {"idempotency_key": doc_fields["idempotency_key"]}):
+                return "SKIPPED"
+
+        doc = frappe.get_doc(doc_fields)
+        doc.insert(ignore_permissions=True)
+        return doc.name
+
+    created = []
+    skipped = 0
+
+    if recipient_email:
+        name = _insert_one(recipient_email, None)
+        if name == "SKIPPED":
+            skipped += 1
+        else:
+            created.append(name)
+    else:
+        # Бродкаст всем включённым, кроме Guest
+        # (Administrator включаем; если не нужно — отфильтруй ниже)
+        users = frappe.get_all(
+            "User",
+            filters={"enabled": 1},
+            pluck="name",      # name = email
+            limit_page_length=100000
+        )
+        users = [u for u in users if u and u != "Guest"]
+
+        for u in users:
+            name = _insert_one(u, u)
+            if name == "SKIPPED":
+                skipped += 1
+            else:
+                created.append(name)
+
     frappe.db.commit()
-    frappe.publish_realtime("notification_update")
-    return {"ok": True, "name": doc.name}
+    try:
+        frappe.publish_realtime("notification_update")
+    except Exception:
+        pass
+
+    return {"ok": True, "created": len(created), "skipped": skipped, "ids": created}
+
+
+
 
 def get_user_id() -> str:
     email = (frappe.session.user or "").strip()

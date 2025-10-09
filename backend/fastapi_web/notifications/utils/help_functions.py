@@ -2,9 +2,12 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
 
 
+from integrations.frappe.client import get_frappe_client
+from integrations.frappe.utils.help_functions import build_frappe_notification_payload
 from infra import settings
 from telegram_bot.infra import settings as bot_settings
 import httpx
@@ -165,7 +168,7 @@ async def create_notifications(items: List[Dict[str, Any]]) -> Dict[str, Any]:
     tg_sent = 0
     tg_errors: List[str] = []
 
-    BOT_WEBHOOK_URL = "http://bot:9999/webhook/send_message"
+    BOT_WEBHOOK_URL = getattr(settings, "BOT_WEBHOOK_URL", "http://bot:9999/webhook/send_message")
 
     for item in items:
         try:
@@ -197,37 +200,44 @@ async def create_notifications(items: List[Dict[str, Any]]) -> Dict[str, Any]:
             created += 1
             created_ids.append(str(res.inserted_id))
 
-            # === Пролив в Frappe (идемпотентно, один в один контент) ===
-            try:
-                entity_id = (notif.entity.entity_id if notif.entity else "") or "-"
-                idem = (
-                    item.get("idempotency_key")
-                    or (item.get("meta") or {}).get("idem")
-                    or f"{notif.kind}:{entity_id}"
-                )
-                frappe_payload = build_frappe_notification_payload(
-                    kind=notif.kind,
-                    html=notif.message,
-                    title=notif.title or {},
-                    entity_type=(notif.entity.entity_type if notif.entity else "generic"),
-                    entity_id=entity_id,
-                    route=(notif.entity.route if notif.entity else None),
-                    link_url=notif.link_url,
-                    account_id=(notif.entity.extra.get("account_id") if (notif.entity and notif.entity.extra) else None),
-                    idempotency_key=idem,
-                )
-                await get_frappe_client().create_notification_from_upstream(frappe_payload)
-            except Exception:
-                logger.exception("Frappe notification proxy failed")
+            # === ТОЛЬКО WEB → Frappe ===
+            if channel == NotificationChannel.WEB:
+                try:
+                    entity_id = (notif.entity.entity_id if notif.entity else "") or "-"
+                    idem = (
+                        item.get("idempotency_key")
+                        or (item.get("meta") or {}).get("idem")
+                        or f"{notif.kind}:{entity_id}"
+                    )
+                    frappe_payload = build_frappe_notification_payload(
+                        kind=notif.kind,
+                        html=notif.message,
+                        title=notif.title or {},
+                        entity_type=(notif.entity.entity_type if notif.entity else "generic"),
+                        entity_id=entity_id,
+                        route=(notif.entity.route if notif.entity else None),
+                        link_url=notif.link_url,
+                        account_id=(notif.entity.extra.get("account_id") if (notif.entity and notif.entity.extra) else None),
+                        idempotency_key=idem,
+                        recipient_email=item.get("recipient_email"),  # опционально адресная доставка
+                    )
+                    await get_frappe_client().create_notification_from_upstream(frappe_payload)
+                except Exception:
+                    logger.exception("Frappe notification proxy failed")
 
-            # --- отправка в Telegram как раньше ---
+            # --- Telegram: только локально, без Frappe ---
             if channel == NotificationChannel.TELEGRAM:
-                if "localhost" in BOT_WEBHOOK_URL:
+                parsed = urlparse(BOT_WEBHOOK_URL or "")
+                host = (parsed.hostname or "").lower()
+                if not parsed.scheme or not parsed.netloc or host in {"localhost", "127.0.0.1"}:
+                    # локалка: не шлём
                     continue
+
                 tg_opts = item.get("telegram") or {}
-                admin_chat_id = tg_opts.get("chat_id") or bot_settings.ADMIN_CHAT_ID
+                admin_chat_id = tg_opts.get("chat_id") or getattr(settings, "TELEGRAM_ADMIN_CHAT_ID", None)
                 message_thread_id = tg_opts.get("message_thread_id")
 
+                # поддержка "CHATID/THREADID"
                 if isinstance(admin_chat_id, str) and "/" in admin_chat_id:
                     parts = admin_chat_id.split("/")
                     if len(parts) >= 2:
@@ -247,9 +257,9 @@ async def create_notifications(items: List[Dict[str, Any]]) -> Dict[str, Any]:
                         }
                         if message_thread_id:
                             payload["message_thread_id"] = message_thread_id
-
-                        resp = await client_http.post(BOT_WEBHOOK_URL, json=payload, timeout=10.0)
-                        resp.raise_for_status()
+                        # включишь, когда вебхук будет доступен:
+                        # resp = await client_http.post(BOT_WEBHOOK_URL, json=payload, timeout=10.0)
+                        # resp.raise_for_status()
                     tg_sent += 1
                 except httpx.HTTPStatusError as exc:
                     err = f"Ошибка от бота ({exc.response.status_code}): {exc.response.text}"
@@ -265,7 +275,6 @@ async def create_notifications(items: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     ok = (created > 0) and (not tg_errors)
     return {"ok": ok, "created": created, "ids": created_ids, "telegram": {"sent": tg_sent, "errors": tg_errors}}
-
 
 async def create_simple_notifications(resources: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Упрощённый алиас: [{"resource_en": "Web (in-app)", "message": "..."}, ...]"""
