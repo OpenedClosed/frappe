@@ -31,6 +31,7 @@ from personal_account.routes_generator import generate_base_account_routes
 from users.routers import user_router
 from utils.errors import (general_exception_handler,
                           validation_exception_handler)
+from integrations.frappe.routers import frappe_router
 
 
 logging.basicConfig(
@@ -50,6 +51,7 @@ app = FastAPI()
 app.router.redirect_slashes = False
 
 base_api_router = APIRouter(prefix="/api")
+integrations_router = APIRouter(prefix="/integrations")
 
 
 async def print_routes():
@@ -96,6 +98,8 @@ base_api_router.include_router(chat_router, prefix="/chats")
 base_api_router.include_router(user_router, prefix="/users")
 base_api_router.include_router(knowledge_base_router, prefix="/knowledge")
 base_api_router.include_router(basic_router, prefix="/basic")
+integrations_router.include_router(frappe_router, prefix="/frappe")
+base_api_router.include_router(integrations_router)
 app.include_router(base_api_router)
 
 app.add_middleware(BasicAuthMiddleware, username="admin", password="admin")

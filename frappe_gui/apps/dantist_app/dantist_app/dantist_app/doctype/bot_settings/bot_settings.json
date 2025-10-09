@@ -2,6 +2,7 @@
  "actions": [],
  "autoname": "field:project_name",
  "creation": "2025-10-07 18:43:21.419601",
+ "default_view": "Image",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -242,7 +243,7 @@
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-07 19:21:24.850257",
+ "modified": "2025-10-09 14:34:16.487832",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Bot Settings",

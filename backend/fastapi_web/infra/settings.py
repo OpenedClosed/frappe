@@ -55,10 +55,12 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:4000",
     "http://localhost:3001",
+    "http://localhost:8001",
     "http://127.0.0.1",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
     "http://127.0.0.1:8000",
+    "http://127.0.0.1:8001",
 ]
 
 # Остальные
@@ -135,3 +137,6 @@ SMTP_TIMEOUT = 10.0
 CRM_API_URL = os.getenv("CRM_API_URL", "change_me")
 CRM_CLIENT_ID = os.getenv("CRM_CLIENT_ID", "change_me")
 CRM_CLIENT_SECRET = os.getenv("CRM_CLIENT_SECRET", "change_me")
+
+# Frappe
+FRAPPE_SHARED_SECRET = os.getenv("FRAPPE_SHARED_SECRET", "change_me")
