@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 class SessionRequest(BaseModel):
@@ -12,3 +13,10 @@ class SessionResponse(BaseModel):
     """Ответ с access-токеном."""
     token: str
     exp: int
+
+
+class EnsureMongoAdminUserRequest(BaseModel):
+    email: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None  # RoleEnum.value

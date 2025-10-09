@@ -14,8 +14,8 @@ def make_sig(user_id: str, ts: int, nonce: str, secret: str) -> str:
     payload = f"{user_id}|{ts}|{nonce}".encode("utf-8")
     return hmac.new(secret.encode("utf-8"), payload, sha256).hexdigest()
 
-def get_user_id() -> str:
-    return "689518945c753e6272c4f174"  # временно
+# def get_user_id() -> str:
+#     return "689518945c753e6272c4f174"  # временно
 
 @frappe.whitelist()
 def get_iframe_origin() -> dict:
@@ -119,3 +119,78 @@ def get_token() -> dict:
         headers.append(("Set-Cookie", cookie_header))
 
     return {"ok": True}
+
+
+@frappe.whitelist(methods=["POST"])
+def create_notification_from_upstream():
+    payload = frappe.local.form_dict or {}
+    if "payload" in payload and isinstance(payload["payload"], dict):
+        payload = payload["payload"]
+
+    idem = (payload.get("idempotency_key") or "").strip()
+    if idem and frappe.db.exists("Notification Log", {"idempotency_key": idem}):
+        return {"ok": True, "skipped": "duplicate"}
+
+    title = payload.get("title") or {}
+    subject = title.get("en") or title.get("ru") or "Notification"
+    message = payload.get("message") or ""
+    link_url = payload.get("link_url") or ""
+    recipient_email = payload.get("recipient_email") or "Administrator"
+
+    doc = frappe.get_doc({
+        "doctype": "Notification Log",
+        "subject": subject,
+        "email_content": message,
+        "for_user": recipient_email,
+        "type": "Alert",
+        "document_type": "Integration",
+        "document_name": (payload.get("entity") or {}).get("entity_id") or "integration",
+        "idempotency_key": idem,
+        "link": link_url,
+    })
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+    frappe.publish_realtime("notification_update")
+    return {"ok": True, "name": doc.name}
+
+def get_user_id() -> str:
+    email = (frappe.session.user or "").strip()
+    if not email or email == "Guest":
+        frappe.throw("User is not authenticated", exc=frappe.ValidationError)
+
+    base_url = frappe.conf.get("dantist_base_url")
+    if not base_url:
+        frappe.throw("Dantist base URL not configured", exc=frappe.ValidationError)
+
+    try:
+        r = requests.get(f"{base_url.rstrip('/')}{BASE_PATH}/users/lookup", params={"email": email}, timeout=6)
+    except Exception as e:
+        frappe.throw(f"Upstream error: {e}", exc=frappe.ValidationError)
+
+    if r.status_code != 200:
+        frappe.throw(f"Lookup failed: {r.text}", exc=frappe.ValidationError)
+
+    data = r.json() or {}
+    if not data.get("ok"):
+        frappe.throw("User not linked in Mongo", exc=frappe.ValidationError)
+
+    return (data.get("user_id") or "").strip()
+
+@frappe.whitelist()
+def on_user_created(doc, method=None):
+    email = (doc.email or "").strip()
+    if not email:
+        return
+    base_url = frappe.conf.get("dantist_base_url")
+    if not base_url:
+        return
+    payload = {
+        "email": email,
+        "username": (doc.username or doc.name or email.split("@")[0]),
+        "full_name": (doc.full_name or doc.first_name or doc.name),
+        "role": None,
+    }
+    try:
+        requests.post(f"{base_url.rstrip('/')}{BASE_PATH}/users/ensure_mongoadmin", json=payload, timeout=8)
+    except Exception:
+        pass

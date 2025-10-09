@@ -187,6 +187,13 @@ has_permission = {
 # 	}
 # }
 
+doc_events = {
+    "User": {
+        "after_insert": "dantist_app.api.integration.on_user_created",
+    }
+}
+
+
 # Scheduled Tasks
 # ---------------
 

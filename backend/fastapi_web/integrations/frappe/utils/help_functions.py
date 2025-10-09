@@ -41,3 +41,43 @@ async def verify_hmac_request(
     configured_aud = getattr(settings, "FRAPPE_AUD", "")
     if configured_aud and aud and aud != configured_aud:
         raise HTTPException(401, "Invalid audience")
+
+
+
+# -*- coding: utf-8 -*-
+from typing import Any, Dict, Optional
+
+def build_frappe_notification_payload(
+    *,
+    kind: str,
+    html: str,
+    title: Dict[str, str],
+    entity_type: str,
+    entity_id: str,
+    route: Optional[str],
+    link_url: Optional[str],
+    account_id: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
+) -> Dict[str, Any]:
+    entity = {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "route": route,
+        "extra": {},
+    }
+    if account_id:
+        entity["extra"]["account_id"] = account_id
+
+    return {
+        "kind": kind,
+        "priority": "CRITICAL",
+        "title": title,
+        "message": html,
+        "entity": entity,
+        "link_url": link_url,
+        "popup": True,
+        "sound": True,
+        "meta": {},
+        "idempotency_key": idempotency_key,
+        "recipient_email": None,
+    }
