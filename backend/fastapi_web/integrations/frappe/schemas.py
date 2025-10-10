@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 class SessionRequest(BaseModel):
@@ -20,3 +20,4 @@ class EnsureMongoAdminUserRequest(BaseModel):
     username: Optional[str] = None
     full_name: Optional[str] = None
     role: Optional[str] = None  # RoleEnum.value
+    frappe_roles: Optional[List[str]] = None

@@ -264,20 +264,45 @@ def get_user_id() -> str:
     return (data.get("user_id") or "").strip()
 
 @frappe.whitelist()
-def on_user_created(doc, method=None):
-    email = (doc.email or "").strip()
-    if not email:
-        return
-    base_url = frappe.conf.get("dantist_base_url")
-    if not base_url:
-        return
-    payload = {
-        "email": email,
-        "username": (doc.username or doc.name or email.split("@")[0]),
-        "full_name": (doc.full_name or doc.first_name or doc.name),
-        "role": None,
-    }
+def on_user_changed(doc, method=None):
+    """
+    Универсальный хук на создание/изменение User.
+    Отправляет в твой FastAPI актуальные данные + список ролей Frappe,
+    чтобы endpoint /users/ensure_mongoadmin маппил и «апгрейдил» роль в Mongo.
+    """
     try:
-        requests.post(f"{base_url.rstrip('/')}{BASE_PATH}/users/ensure_mongoadmin", json=payload, timeout=8)
+        email = (doc.email or "").strip().lower()
+        if not email:
+            return
+
+        base_url = frappe.conf.get("dantist_base_url")
+        if not base_url:
+            return
+
+        # соберём роли пользователя из дочерней таблицы
+        roles = []
+        try:
+            roles = [ (r.role or "").strip() for r in (getattr(doc, "roles", []) or []) if (r.role or "").strip() ]
+        except Exception:
+            roles = []
+
+        payload = {
+            "email": email,
+            "username": (getattr(doc, "username", None) or doc.name or email.split("@")[0]),
+            "full_name": (getattr(doc, "full_name", None) or getattr(doc, "first_name", None) or doc.name),
+            "role": None,                    # локальную роль здесь не навязываем — маппинг из frappe_roles
+            "frappe_roles": roles,           # <- ключевое: отдаём список ролей Frappe
+        }
+
+        try:
+            requests.post(
+                f"{base_url.rstrip('/')}{BASE_PATH}/users/ensure_mongoadmin",
+                json=payload,
+                timeout=8,
+            )
+        except Exception:
+            # не валим транзакцию Frappe — просто логируем
+            logger.exception("Failed to sync user to MongoAdmin")
+
     except Exception:
-        pass
+        logger.exception("on_user_changed failed")

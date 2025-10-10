@@ -189,7 +189,8 @@ has_permission = {
 
 doc_events = {
     "User": {
-        "after_insert": "dantist_app.api.integration.on_user_created",
+        "after_insert": "dantist_app.api.integration.on_user_changed",
+        "on_update":    "dantist_app.api.integration.on_user_changed",
     }
 }
 

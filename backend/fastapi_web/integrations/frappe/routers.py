@@ -1,5 +1,6 @@
 # dantist/integration/frappe/router.py
 from datetime import datetime, timedelta
+from typing import List, Optional
 from users.db.mongo.enums import RoleEnum
 from fastapi import APIRouter, Depends, Response, HTTPException, Request
 from fastapi_jwt_auth import AuthJWT
@@ -77,16 +78,72 @@ async def frappe_users_lookup(email: str = Query(...)):
         return {"ok": False}
     return {"ok": True, "user_id": str(u["_id"])}
 
+
+FRAPPE_TO_LOCAL = {
+    "AIHub Super Admin": RoleEnum.SUPERADMIN,
+    "System Manager":    RoleEnum.SUPERADMIN,
+    "Integration":       RoleEnum.SUPERADMIN,
+    "AIHub Admin":       RoleEnum.ADMIN,
+    "AIHub Demo":        RoleEnum.DEMO_ADMIN,
+}
+
+ROLE_PRIORITY = [
+    RoleEnum.SUPERADMIN,
+    RoleEnum.ADMIN,
+    RoleEnum.DEMO_ADMIN,
+    RoleEnum.MAIN_OPERATOR,
+    RoleEnum.STAFF,
+    RoleEnum.CLIENT,
+]
+
+
+def pick_highest_role(candidates: List[RoleEnum]) -> RoleEnum:
+    if not candidates:
+        return RoleEnum.CLIENT
+    for r in ROLE_PRIORITY:
+        if r in candidates:
+            return r
+    return RoleEnum.CLIENT
+
+def map_roles(inline_role: Optional[str], frappe_roles: Optional[List[str]]) -> RoleEnum:
+    # 1) если пришла корректная локальная роль строкой — используем её
+    if inline_role:
+        try:
+            return RoleEnum(inline_role)
+        except Exception:
+            pass
+    # 2) иначе маппим роли из Frappe и берём «самую сильную»
+    mapped: List[RoleEnum] = []
+    for fr in (frappe_roles or []):
+        loc = FRAPPE_TO_LOCAL.get(fr)
+        if loc:
+            mapped.append(loc)
+    if mapped:
+        return pick_highest_role(mapped)
+    # 3) дефолт
+    return RoleEnum.CLIENT
+
+# ──────────────────────────────────────────────────────────────
+# Хендлер: создать/актуализировать пользователя в MongoAdmin
+#   • email — ключ
+#   • роль маппим; существующему пользователю роль только «апгрейдим»
+#   • остальное — как у тебя: пароль="", поля как раньше
+# ──────────────────────────────────────────────────────────────
 @frappe_router.post("/users/ensure_mongoadmin")
 async def frappe_users_ensure_mongoadmin(data: EnsureMongoAdminUserRequest):
     col = mongo_db.users
-    u = await col.find_one({"email": data.email})
+    email = data.email.strip().lower()
+
+    # целевая роль по нашим правилам
+    target_role = map_roles(data.role, data.frappe_roles)
+
+    u = await col.find_one({"email": email})
     if not u:
         doc = {
-            "email": data.email,
-            "username": data.username or data.email.split("@")[0],
-            "password": "",
-            "role": (data.role or RoleEnum.CLIENT.value),
+            "email": email,
+            "username": (data.username or email.split("@")[0]).strip(),
+            "password": "",  # как у тебя было
+            "role": target_role.value,
             "is_active": True,
             "created_at": datetime.utcnow(),
             "full_name": data.full_name,
@@ -95,13 +152,24 @@ async def frappe_users_ensure_mongoadmin(data: EnsureMongoAdminUserRequest):
         res = await col.insert_one(doc)
         return {"ok": True, "created": True, "user_id": str(res.inserted_id)}
 
+    # существующий пользователь: апгрейдим роль только если стала «сильнее»
     updates = {}
+    try:
+        current_role = RoleEnum(u.get("role"))
+    except Exception:
+        current_role = RoleEnum.CLIENT
+
+    # индекс меньше — роль сильнее (см. ROLE_PRIORITY)
+    if ROLE_PRIORITY.index(target_role) < ROLE_PRIORITY.index(current_role):
+        updates["role"] = target_role.value
+
+    # дольём пустые поля
     if not u.get("full_name") and data.full_name:
         updates["full_name"] = data.full_name
     if not u.get("username") and data.username:
         updates["username"] = data.username
-    if data.role and data.role != u.get("role"):
-        updates["role"] = data.role
+
     if updates:
         await col.update_one({"_id": u["_id"]}, {"$set": updates})
+
     return {"ok": True, "created": False, "user_id": str(u["_id"])}
