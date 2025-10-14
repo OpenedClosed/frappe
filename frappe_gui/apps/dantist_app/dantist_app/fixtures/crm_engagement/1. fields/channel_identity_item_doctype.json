@@ -1,0 +1,28 @@
+{
+  "doctype": "DocType",
+  "name": "Channel Identity Item",
+  "module": "Dantist App",
+  "istable": 1,
+  "track_changes": 1,
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldtype": "Select",
+      "fieldname": "platform",
+      "label": "Platform",
+      "reqd": 1,
+      "options": "Internal\nInstagram\nFacebook\nWhatsApp\nTelegram\nTelegram Mini-App\nSMS\nEmail\nTelephony"
+    },
+    { "fieldtype": "Data", "fieldname": "external_id", "label": "External ID", "in_list_view": 1 },
+    { "fieldtype": "Data", "fieldname": "username", "label": "Username / Handle", "in_list_view": 1 },
+    { "fieldtype": "Data", "fieldname": "profile_url", "label": "Profile URL" },
+    { "fieldtype": "Section Break", "fieldname": "meta_sb" },
+    {
+      "fieldtype": "Small Text",
+      "fieldname": "metadata",
+      "label": "Metadata (JSON)",
+      "description": "Free-form channel-specific metadata"
+    }
+  ],
+  "permissions": []
+}

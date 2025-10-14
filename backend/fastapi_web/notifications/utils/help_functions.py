@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 
 from integrations.frappe.client import get_frappe_client
-from integrations.frappe.utils.help_functions import build_frappe_notification_payload
+from integrations.frappe.notifications.utils.help_functions import build_frappe_notification_payload
 from infra import settings
 from telegram_bot.infra import settings as bot_settings
 import httpx

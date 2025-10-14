@@ -32,6 +32,10 @@ from users.routers import user_router
 from utils.errors import (general_exception_handler,
                           validation_exception_handler)
 from integrations.frappe.routers import frappe_router
+from integrations.frappe.users.routers import frappe_users_router
+from integrations.frappe.auth.routers import frappe_auth_router
+from integrations.frappe.engagement.routers import engagement_router
+# from integrations.frappe.notifications.routers import frappe_notifications_router
 
 
 logging.basicConfig(
@@ -98,6 +102,11 @@ base_api_router.include_router(chat_router, prefix="/chats")
 base_api_router.include_router(user_router, prefix="/users")
 base_api_router.include_router(knowledge_base_router, prefix="/knowledge")
 base_api_router.include_router(basic_router, prefix="/basic")
+
+frappe_router.include_router(frappe_auth_router)
+frappe_router.include_router(frappe_users_router, prefix="/users")
+frappe_router.include_router(engagement_router, prefix="/engagement")
+# frappe_router.include_router(frappe_notifications_router, prefix="/notifications")
 integrations_router.include_router(frappe_router, prefix="/frappe")
 base_api_router.include_router(integrations_router)
 app.include_router(base_api_router)

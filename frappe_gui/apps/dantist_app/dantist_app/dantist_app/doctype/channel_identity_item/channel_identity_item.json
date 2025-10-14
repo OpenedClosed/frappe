@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2025-10-14 17:12:35.688648",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "platform",
+  "external_id",
+  "username",
+  "profile_url",
+  "meta_sb",
+  "metadata"
+ ],
+ "fields": [
+  {
+   "__unsaved": 1,
+   "fieldname": "platform",
+   "fieldtype": "Select",
+   "label": "Platform",
+   "options": "Internal\nInstagram\nFacebook\nWhatsApp\nTelegram\nTelegram Mini-App\nSMS\nEmail\nTelephony",
+   "reqd": 1
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "external_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "External ID"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Username / Handle"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "profile_url",
+   "fieldtype": "Data",
+   "label": "Profile URL"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "meta_sb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Free-form channel-specific metadata",
+   "fieldname": "metadata",
+   "fieldtype": "Small Text",
+   "label": "Metadata (JSON)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-14 17:12:35.688648",
+ "modified_by": "Administrator",
+ "module": "Dantist App",
+ "name": "Channel Identity Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

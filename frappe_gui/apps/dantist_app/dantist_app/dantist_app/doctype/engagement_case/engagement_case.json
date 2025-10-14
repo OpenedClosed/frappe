@@ -1,0 +1,311 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2025-10-14 17:12:35.911645",
+ "default_view": "Kanban",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "title",
+  "channel_section",
+  "channel_type",
+  "channel_platform",
+  "cb_channel_right",
+  "identities",
+  "linkage_section",
+  "mongo_chat_id",
+  "mongo_client_id",
+  "external_user_id",
+  "identity_section",
+  "avatar",
+  "display_name",
+  "cb_identity_right",
+  "phone",
+  "email",
+  "preferred_language",
+  "timezone",
+  "country",
+  "crm_section",
+  "crm_status",
+  "priority",
+  "owner_user",
+  "next_action",
+  "next_action_at",
+  "signals_section",
+  "first_event_at",
+  "last_event_at",
+  "events_count",
+  "unanswered_count",
+  "last_actor_role",
+  "runtime_status",
+  "sync_section",
+  "sync_enabled",
+  "last_synced_at",
+  "do_not_sync_fields",
+  "notes_section",
+  "internal_notes"
+ ],
+ "fields": [
+  {
+   "default": "IE-.YYYY.-.#####",
+   "description": "Internal identifier",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "IE Series",
+   "options": "IE-.YYYY.-.#####",
+   "read_only": 1,
+   "set_only_once": 1
+  },
+  {
+   "description": "Short human-readable title (e.g. name/channel/context)",
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title"
+  },
+  {
+   "fieldname": "channel_section",
+   "fieldtype": "Section Break",
+   "label": "Primary Channel"
+  },
+  {
+   "default": "Chat",
+   "description": "Main engagement transport",
+   "fieldname": "channel_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Channel Type",
+   "options": "Chat\nCall\nSMS\nEmail\nWeb Form",
+   "reqd": 1
+  },
+  {
+   "fieldname": "channel_platform",
+   "fieldtype": "Select",
+   "label": "Channel Platform",
+   "options": "Internal\nInstagram\nFacebook\nWhatsApp\nTelegram\nTelegram Mini-App\nTelephony\nSMS\nEmail"
+  },
+  {
+   "fieldname": "cb_channel_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "identities",
+   "fieldtype": "Table",
+   "label": "Known Identities",
+   "options": "Channel Identity Item"
+  },
+  {
+   "fieldname": "linkage_section",
+   "fieldtype": "Section Break",
+   "label": "Linkage (Hidden)"
+  },
+  {
+   "description": "Chat session ID in Chat Service (if channel is Chat)",
+   "fieldname": "mongo_chat_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Mongo Chat ID"
+  },
+  {
+   "fieldname": "mongo_client_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Mongo Client ID"
+  },
+  {
+   "fieldname": "external_user_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "External User ID"
+  },
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Contact Identity"
+  },
+  {
+   "fieldname": "avatar",
+   "fieldtype": "Attach Image",
+   "label": "Avatar"
+  },
+  {
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Display Name"
+  },
+  {
+   "fieldname": "cb_identity_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "default": "ru",
+   "fieldname": "preferred_language",
+   "fieldtype": "Select",
+   "label": "Preferred Language",
+   "options": "ru\nen\npl\nuk\nka\nbe"
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "Timezone"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Data",
+   "label": "Country"
+  },
+  {
+   "fieldname": "crm_section",
+   "fieldtype": "Section Break",
+   "label": "CRM & Kanban"
+  },
+  {
+   "default": "New",
+   "description": "Pipeline status used for Kanban columns",
+   "fieldname": "crm_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "CRM Status",
+   "options": "New\nQualification\nBriefing\nIn Work\nOn Hold\nWon\nLost\nArchived",
+   "reqd": 1
+  },
+  {
+   "default": "Normal",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Low\nNormal\nHigh\nUrgent"
+  },
+  {
+   "fieldname": "owner_user",
+   "fieldtype": "Link",
+   "label": "Owner / Assignee",
+   "options": "User"
+  },
+  {
+   "description": "Optional short instruction for the assignee",
+   "fieldname": "next_action",
+   "fieldtype": "Small Text",
+   "label": "Next Action"
+  },
+  {
+   "description": "When the next action should happen",
+   "fieldname": "next_action_at",
+   "fieldtype": "Datetime",
+   "label": "Next Action At"
+  },
+  {
+   "fieldname": "signals_section",
+   "fieldtype": "Section Break",
+   "label": "Runtime Signals (Read-only)"
+  },
+  {
+   "fieldname": "first_event_at",
+   "fieldtype": "Datetime",
+   "label": "First Event At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_event_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Last Event At",
+   "read_only": 1
+  },
+  {
+   "description": "Messages for Chat, etc.",
+   "fieldname": "events_count",
+   "fieldtype": "Int",
+   "label": "Events Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unanswered_count",
+   "fieldtype": "Int",
+   "label": "Unanswered Tail Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_actor_role",
+   "fieldtype": "Select",
+   "label": "Last Actor Role",
+   "options": "Client\nAI Assistant\nConsultant\nAgent",
+   "read_only": 1
+  },
+  {
+   "description": "Computed by backend from source systems",
+   "fieldname": "runtime_status",
+   "fieldtype": "Select",
+   "label": "Runtime Status",
+   "options": "New Session\nBrief In Progress\nBrief Completed\nWaiting for AI\nWaiting for Client (AI)\nWaiting for Consultant\nRead by Consultant\nWaiting for Client\nClosed \u2013 No Messages\nClosed by Timeout\nClosed by Operator",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_section",
+   "fieldtype": "Section Break",
+   "label": "Sync Control"
+  },
+  {
+   "default": "0",
+   "description": "Disable to take full manual control in Frappe",
+   "fieldname": "sync_enabled",
+   "fieldtype": "Check",
+   "label": "Sync Enabled"
+  },
+  {
+   "fieldname": "last_synced_at",
+   "fieldtype": "Datetime",
+   "label": "Last Synced At",
+   "read_only": 1
+  },
+  {
+   "default": "[]",
+   "description": "Fields never overwritten by sync, e.g. [\"display_name\",\"phone\"]",
+   "fieldname": "do_not_sync_fields",
+   "fieldtype": "Code",
+   "label": "Do Not Sync Fields (JSON)",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "internal_notes",
+   "fieldtype": "Text Editor",
+   "label": "Internal Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-14 17:13:05.240993",
+ "modified_by": "Administrator",
+ "module": "Dantist App",
+ "name": "Engagement Case",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "title, display_name, phone, email, mongo_client_id, mongo_chat_id, external_user_id",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

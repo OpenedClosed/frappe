@@ -1,0 +1,66 @@
+{
+  "doctype": "DocType",
+  "name": "Engagement Case",
+  "module": "Dantist App",
+  "issingle": 0,
+  "autoname": "naming_series:",
+  "default_view": "Kanban",
+  "force_re_route_to_default_view": 0,
+  "title_field": "title",
+  "image_field": "avatar",
+  "search_fields": "title, display_name, phone, email, mongo_client_id, mongo_chat_id, external_user_id",
+  "track_changes": 1,
+  "row_format": "Dynamic",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "fields": [
+    { "fieldtype": "Select", "fieldname": "naming_series", "label": "IE Series", "options": "IE-.YYYY.-.#####", "default": "IE-.YYYY.-.#####", "hidden": 1, "set_only_once": 1, "read_only": 1, "description": "Internal identifier" },
+
+    { "fieldtype": "Data", "fieldname": "title", "label": "Title", "in_list_view": 1, "unique": 0, "description": "Short human-readable title (e.g. name/channel/context)" },
+
+    { "fieldtype": "Section Break", "fieldname": "channel_section", "label": "Primary Channel" },
+    { "fieldtype": "Select", "fieldname": "channel_type", "label": "Channel Type", "reqd": 1, "in_list_view": 1, "options": "Chat\nCall\nSMS\nEmail\nWeb Form", "default": "Chat", "description": "Main engagement transport" },
+    { "fieldtype": "Select", "fieldname": "channel_platform", "label": "Channel Platform", "options": "Internal\nInstagram\nFacebook\nWhatsApp\nTelegram\nTelegram Mini-App\nTelephony\nSMS\nEmail" },
+    { "fieldtype": "Column Break", "fieldname": "cb_channel_right" },
+    { "fieldtype": "Table", "fieldname": "identities", "label": "Known Identities", "options": "Channel Identity Item" },
+
+    { "fieldtype": "Section Break", "fieldname": "linkage_section", "label": "Linkage (Hidden)" },
+    { "fieldtype": "Data", "fieldname": "mongo_chat_id", "label": "Mongo Chat ID", "hidden": 1, "description": "Chat session ID in Chat Service (if channel is Chat)" },
+    { "fieldtype": "Data", "fieldname": "mongo_client_id", "label": "Mongo Client ID", "hidden": 1 },
+    { "fieldtype": "Data", "fieldname": "external_user_id", "label": "External User ID", "hidden": 1 },
+
+    { "fieldtype": "Section Break", "fieldname": "identity_section", "label": "Contact Identity" },
+    { "fieldtype": "Attach Image", "fieldname": "avatar", "label": "Avatar" },
+    { "fieldtype": "Data", "fieldname": "display_name", "label": "Display Name", "in_list_view": 1 },
+    { "fieldtype": "Column Break", "fieldname": "cb_identity_right" },
+    { "fieldtype": "Data", "fieldname": "phone", "label": "Phone" },
+    { "fieldtype": "Data", "fieldname": "email", "label": "Email" },
+    { "fieldtype": "Select", "fieldname": "preferred_language", "label": "Preferred Language", "options": "ru\nen\npl\nuk\nka\nbe", "default": "ru" },
+    { "fieldtype": "Data", "fieldname": "timezone", "label": "Timezone" },
+    { "fieldtype": "Data", "fieldname": "country", "label": "Country" },
+
+    { "fieldtype": "Section Break", "fieldname": "crm_section", "label": "CRM & Kanban" },
+    { "fieldtype": "Select", "fieldname": "crm_status", "label": "CRM Status", "reqd": 1, "in_list_view": 1, "options": "New\nQualification\nBriefing\nIn Work\nOn Hold\nWon\nLost\nArchived", "default": "New", "description": "Pipeline status used for Kanban columns" },
+    { "fieldtype": "Select", "fieldname": "priority", "label": "Priority", "options": "Low\nNormal\nHigh\nUrgent", "default": "Normal" },
+    { "fieldtype": "Link", "fieldname": "owner_user", "label": "Owner / Assignee", "options": "User" },
+    { "fieldtype": "Small Text", "fieldname": "next_action", "label": "Next Action", "description": "Optional short instruction for the assignee" },
+    { "fieldtype": "Datetime", "fieldname": "next_action_at", "label": "Next Action At", "description": "When the next action should happen" },
+
+    { "fieldtype": "Section Break", "fieldname": "signals_section", "label": "Runtime Signals (Read-only)" },
+    { "fieldtype": "Datetime", "fieldname": "first_event_at", "label": "First Event At", "read_only": 1 },
+    { "fieldtype": "Datetime", "fieldname": "last_event_at", "label": "Last Event At", "read_only": 1, "in_list_view": 1 },
+    { "fieldtype": "Int", "fieldname": "events_count", "label": "Events Count", "read_only": 1, "description": "Messages for Chat, etc." },
+    { "fieldtype": "Int", "fieldname": "unanswered_count", "label": "Unanswered Tail Count", "read_only": 1 },
+    { "fieldtype": "Select", "fieldname": "last_actor_role", "label": "Last Actor Role", "read_only": 1, "options": "Client\nAI Assistant\nConsultant\nAgent" },
+    { "fieldtype": "Select", "fieldname": "runtime_status", "label": "Runtime Status", "read_only": 1, "options": "New Session\nBrief In Progress\nBrief Completed\nWaiting for AI\nWaiting for Client (AI)\nWaiting for Consultant\nRead by Consultant\nWaiting for Client\nClosed – No Messages\nClosed by Timeout\nClosed by Operator", "description": "Computed by backend from source systems" },
+
+    { "fieldtype": "Section Break", "fieldname": "sync_section", "label": "Sync Control" },
+    { "fieldtype": "Check", "fieldname": "sync_enabled", "label": "Sync Enabled", "default": "0", "description": "Disable to take full manual control in Frappe" },
+    { "fieldtype": "Datetime", "fieldname": "last_synced_at", "label": "Last Synced At", "read_only": 1 },
+    { "fieldtype": "Code", "fieldname": "do_not_sync_fields", "label": "Do Not Sync Fields (JSON)", "options": "JSON", "default": "[]", "description": "Fields never overwritten by sync, e.g. [\"display_name\",\"phone\"]" },
+
+    { "fieldtype": "Section Break", "fieldname": "notes_section", "label": "Notes" },
+    { "fieldtype": "Text Editor", "fieldname": "internal_notes", "label": "Internal Notes" }
+  ],
+  "permissions": []
+}

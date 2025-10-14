@@ -189,8 +189,8 @@ has_permission = {
 
 doc_events = {
     "User": {
-        "after_insert": "dantist_app.api.integration.on_user_changed",
-        "on_update":    "dantist_app.api.integration.on_user_changed",
+        "after_insert": "dantist_app.api.users_and_notifications.handlers.on_user_changed",
+        "on_update":    "dantist_app.api.users_and_notifications.handlers.on_user_changed",
     }
 }
 
@@ -227,6 +227,12 @@ doc_events = {
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "dantist_app.event.get_events"
 # }
+
+override_whitelisted_methods = {
+    "frappe.client.get_list": "dantist_app.api.engagement.handlers.get_list",
+    "frappe.client.get":      "dantist_app.api.engagement.handlers.get",
+}
+
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

@@ -12,6 +12,13 @@
   "Administrator",
   "test@mail.ru",
   "test", 
-  "demo@example.com"
- ]
+  "demo@example.com",
+  "Integration",
+  "integrations@admin.ru"
+ ],
+
+  "dantist_base_url": "http://localhost:8000/api",
+  "dantist_shared_secret": "very_secret_frappe_key",
+  "dantist_integration_aud": "frappe",
+  "dantist_iframe_origin": "http://localhost:3000"
 }

@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 import json
 import logging
 from typing import Any, Optional, Dict
+
 import aiohttp
 from infra import settings
 
@@ -16,18 +16,25 @@ class FrappeClient:
     """Async Frappe REST wrapper."""
 
     def api_base(self) -> str:
-        return (settings.FRAPPE_API_BASE or "").rstrip("/")
+        # форсим IPv4, чтобы не улетать на ::1 и не ловить ConnectionRefused
+        base = (settings.FRAPPE_API_BASE or "")
+        return base.replace("localhost", "127.0.0.1").rstrip("/")
 
     def auth_headers(self) -> Dict[str, str]:
+        # X-AIHub-No-Sync => Frappe обёртки пропускают предсинк (нет рекурсии)
+        # Connection: close => меньше висящих keep-alive (и 'Too many connections')
         return {
             "Authorization": f"token {settings.FRAPPE_API_KEY}:{settings.FRAPPE_API_SECRET}",
+            "X-AIHub-No-Sync": "1",
+            "Connection": "close",
+            "Accept": "application/json",
         }
 
     def default_fields_for_doctype(self, doctype: str) -> list[str]:
         if doctype == "User":
             return [
                 "name", "email", "full_name", "first_name", "last_name",
-                "username", "user_image", "enabled", "roles", "creation", "modified",
+                "username", "user_image", "enabled", "creation", "modified",
             ]
         return ["name"]
 
@@ -77,7 +84,9 @@ class FrappeClient:
             raise FrappeError(str(exc)) from exc
 
     async def create_notification_from_upstream(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        url = f"{self.api_base()}/api/method/dantist_app.api.integration.create_notification_from_upstream"
+        # модуль фактически расположен здесь:
+        # dantist_app.api.users_and_notifications.handlers.create_notification_from_upstream
+        url = f"{self.api_base()}/api/method/dantist_app.api.users_and_notifications.handlers.create_notification_from_upstream"
         headers = self.auth_headers() | {"Content-Type": "application/json"}
         async with aiohttp.ClientSession() as s:
             async with s.post(url, json=payload, headers=headers, timeout=10) as resp:
