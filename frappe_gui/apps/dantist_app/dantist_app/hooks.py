@@ -42,10 +42,12 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 app_include_js = [
+    "/assets/dantist_app/js/other/ec_colors.js",  
 
-    "/assets/dantist_app/js/other/ec_colors.js",
     "/assets/dantist_app/js/add/engagement_case_form.js",
     "/assets/dantist_app/js/add/engagement_case_list.js",
+
+    "/assets/dantist_app/js/edit/kanban_skin.js",
 
     "/assets/dantist_app/js/hide/topbar.js",
     "/assets/dantist_app/js/hide/workspace.js",
@@ -56,7 +58,7 @@ app_include_js = [
     "/assets/dantist_app/js/hide/form_actions_menu.js",
     "/assets/dantist_app/js/hide/toolbar_notifications.js",
     "/assets/dantist_app/js/hide/list_view.js",
-    "/assets/dantist_app/js/hide/user_roles_modules.js",
+    "/assets/dantist_app/js/hide/user_roles_modules.js",  
 ]
 
 # app_include_css = [

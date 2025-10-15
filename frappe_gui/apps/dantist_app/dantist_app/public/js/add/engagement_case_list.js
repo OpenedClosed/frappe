@@ -11,12 +11,12 @@
   }
 
   frappe.listview_settings["Engagement Case"] = {
-    hide_name_column: true,
-    add_fields: [
-      "crm_status", "priority", "runtime_status",
-      "channel_platform", "channel_type",
-      "last_event_at", "events_count", "unanswered_count"
-    ],
+    // hide_name_column: true,
+    // add_fields: [
+    //   "crm_status", "priority", "runtime_status",
+    //   "channel_platform", "channel_type",
+    //   "last_event_at", "events_count", "unanswered_count"
+    // ],
 
     // левый индикатор рядом с названием — оставляем как есть
     get_indicator(doc) {
