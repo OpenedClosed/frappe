@@ -47,16 +47,16 @@ app_include_js = [
     "/assets/dantist_app/js/add/engagement_case_form.js",
     "/assets/dantist_app/js/add/engagement_case_list.js",
 
-    # "/assets/dantist_app/js/hide/topbar.js",
-    # "/assets/dantist_app/js/hide/workspace.js",
-    # "/assets/dantist_app/js/hide/user_profile.js",
-    # "/assets/dantist_app/js/hide/global_energy.js",
-    # "/assets/dantist_app/js/hide/global_forms.js",
-    # "/assets/dantist_app/js/hide/toolbar_user_menu.js",
-    # "/assets/dantist_app/js/hide/form_actions_menu.js",
-    # "/assets/dantist_app/js/hide/toolbar_notifications.js",
-    # "/assets/dantist_app/js/hide/list_view.js",
-    # "/assets/dantist_app/js/hide/user_roles_modules.js",
+    "/assets/dantist_app/js/hide/topbar.js",
+    "/assets/dantist_app/js/hide/workspace.js",
+    "/assets/dantist_app/js/hide/user_profile.js",
+    "/assets/dantist_app/js/hide/global_energy.js",
+    "/assets/dantist_app/js/hide/global_forms.js",
+    "/assets/dantist_app/js/hide/toolbar_user_menu.js",
+    "/assets/dantist_app/js/hide/form_actions_menu.js",
+    "/assets/dantist_app/js/hide/toolbar_notifications.js",
+    "/assets/dantist_app/js/hide/list_view.js",
+    "/assets/dantist_app/js/hide/user_roles_modules.js",
 ]
 
 # app_include_css = [

@@ -99,7 +99,7 @@
   {
    "fieldname": "linkage_section",
    "fieldtype": "Section Break",
-   "label": "Linkage (Hidden)"
+   "label": "Linkage"
   },
   {
    "description": "Chat session ID in Chat Service (if channel is Chat)",
@@ -210,7 +210,7 @@
   {
    "fieldname": "signals_section",
    "fieldtype": "Section Break",
-   "label": "Runtime Signals (Read-only)"
+   "label": "Signals"
   },
   {
    "fieldname": "first_event_at",
@@ -295,8 +295,8 @@
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-15 13:27:08.361789",
- "modified_by": "Administrator",
+ "modified": "2025-10-15 15:26:08.181521",
+ "modified_by": "opendoor200179@gmail.com",
  "module": "Dantist App",
  "name": "Engagement Case",
  "naming_rule": "By \"Naming Series\" field",
@@ -305,7 +305,7 @@
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "title, display_name, phone, email, mongo_client_id, mongo_chat_id, external_user_id",
- "sort_field": "modified",
+ "sort_field": "last_event_at",
  "sort_order": "DESC",
  "states": [],
  "title_field": "title",

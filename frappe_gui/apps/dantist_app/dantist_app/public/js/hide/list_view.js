@@ -1,16 +1,13 @@
 /* ========================================================================
-   List View Prune (instant + robust, role-based)
-   — Hides: "⋯ Menu", view switcher (List/Report/Kanban), header Filter selector
-   — For restricted roles: remove sidebar entirely (Admin/Demo)
-   — For super role: keep sidebar but prune to Assigned To / Created By
-   — Rows: hide comment/like counters for restricted & super roles
-   — Privileged role is always (almost) untouched
+   List View Prune (role-based, без побочек для System Manager)
+   — Super Admin: sidebar работает, сайдбар пруним
+   — Admin/Demo: sidebar скрыта, кнопка sidebar выключена
+   — System Manager: вообще не трогаем (никаких CSS/обработчиков/хуков)
    ======================================================================== */
 (function () {
-  // ===== CONFIG (rename for other projects) =====
   const CONFIG = {
     privilegedRole: "System Manager",
-    restrictedRoles: ["AIHub Super Admin", "AIHub Admin", "AIHub Demo"],
+    restrictedRoles: ["AIHub Admin", "AIHub Demo"],
     superRole: "AIHub Super Admin",
 
     cssId: "rbac-list-view-css",
@@ -21,18 +18,20 @@
     keepGroupByFieldnamesForSuper: ["assigned_to", "owner"],
   };
 
-  // ===== ROLES =====
-  function roles() { return (window.frappe?.boot?.user?.roles) || []; }
+  // ----- utils -----
+  function roles_ready() {
+    const rr = window.frappe?.boot?.user?.roles;
+    return Array.isArray(rr) && rr.length > 0;
+  }
+  function roles() { return window.frappe?.boot?.user?.roles || []; }
   function is_privileged() {
     const r = roles();
     if (window.frappe?.user?.has_role) { try { return !!frappe.user.has_role(CONFIG.privilegedRole); } catch {} }
     return r.includes(CONFIG.privilegedRole);
   }
-  function in_restricted_group() { return roles().some(r => CONFIG.restrictedRoles.includes(r)); }
   function is_super() { return roles().includes(CONFIG.superRole); }
-  function has_any_restriction() { return in_restricted_group() && !is_privileged(); }
+  function is_restricted() { return roles().some(r => CONFIG.restrictedRoles.includes(r)); }
 
-  // ===== ROUTE GUARD =====
   function on_list_route() {
     const rt = (window.frappe?.get_route && frappe.get_route()) || [];
     if (rt[0] === "List") return true;
@@ -40,56 +39,41 @@
     return /^List\//i.test(dr);
   }
 
-  // ===== INSTANT CSS (anti-flicker) =====
   const INSTANT_CSS = `
-    /* Hide view switcher button early */
     .page-actions button:has(.custom-btn-group-label) { display: none !important; }
-    /* Fallback when :has() unsupported */
     .page-actions .custom-btn-group-label { display: none !important; }
-
-    /* Always hide the "liked-by-me" heart in the right header area */
     .level-right .list-liked-by-me { display: none !important; }
   `;
-
-  // ===== BASE CSS (scoped by html classes) =====
   const BASE_CSS = `
     html.${CONFIG.htmlClassRestricted} ._hide,
     html.${CONFIG.htmlClassSuper} ._hide { display: none !important; }
 
-    /* "⋯ Menu" group in list header — hide for restricted & super */
     html.${CONFIG.htmlClassRestricted} .page-actions .menu-btn-group,
     html.${CONFIG.htmlClassSuper} .page-actions .menu-btn-group { display: none !important; }
 
-    /* Header filter selector — hide for restricted & super */
     html.${CONFIG.htmlClassRestricted} .filter-selector,
     html.${CONFIG.htmlClassSuper} .filter-selector { display: none !important; }
 
-    /* Sidebar — hidden entirely for restricted (Admin/Demo) */
     html.${CONFIG.htmlClassRestricted} .layout-side-section,
     html.${CONFIG.htmlClassRestricted} .page-title .sidebar-toggle-btn { display: none !important; }
 
-    /* For super: sidebar present but pruned */
     html.${CONFIG.htmlClassSuper} .list-sidebar .views-section,
     html.${CONFIG.htmlClassSuper} .list-sidebar .save-filter-section,
-    html.${CONFIG.htmlClassSuper} .list-sidebar .user-actions { display: none !Important; }
+    html.${CONFIG.htmlClassSuper} .list-sidebar .user-actions { display: none !important; }
 
-    /* In Tags block keep only the stats list; drop extras */
     html.${CONFIG.htmlClassSuper} .list-sidebar .list-tags > :not(.list-stats) { display: none !important; }
 
-    /* In Filter By hide extra sidebar-actions */
     html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .sidebar-action,
     html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .add-list-group-by,
     html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .add-group-by,
     html.${CONFIG.htmlClassSuper} .list-sidebar .filter-section .view-action { display: none !important; }
 
-    /* In list rows: hide comment & like counters for restricted & super */
     html.${CONFIG.htmlClassRestricted} .list-row-activity .comment-count,
     html.${CONFIG.htmlClassRestricted} .list-row-activity .list-row-like,
     html.${CONFIG.htmlClassSuper} .list-row-activity .comment-count,
     html.${CONFIG.htmlClassSuper} .list-row-activity .list-row-like { display: none !important; }
   `;
 
-  // ===== HELPERS =====
   function add_css_once(id, css) {
     if (document.getElementById(id)) return;
     const s = document.createElement("style");
@@ -97,7 +81,6 @@
     s.textContent = css;
     document.documentElement.appendChild(s);
   }
-
   function set_html_mode_none() {
     document.documentElement.classList.remove(CONFIG.htmlClassRestricted, CONFIG.htmlClassSuper);
   }
@@ -110,18 +93,47 @@
     document.documentElement.classList.remove(CONFIG.htmlClassRestricted);
   }
 
-  const show = el => { if (!el) return; el.style.removeProperty("display"); el.removeAttribute("aria-hidden"); el.classList.remove("hidden","hide"); };
+  const show = el => { if (!el) return; el.style.removeProperty("display"); el.removeAttribute("aria-hidden"); el.classList.remove("hidden","hide","disabled"); el.style.pointerEvents = ""; el.removeAttribute("aria-disabled"); };
   const hide = el => { if (!el) return; el.style.display = "none"; el.setAttribute("aria-hidden","true"); };
 
-  // Hide the view switcher <button> (JS fallback when :has not supported)
+  function get_sidebar_toggle_btn() { return document.querySelector(".page-title .sidebar-toggle-btn"); }
+  function get_view_switcher_label() { return document.querySelector(".page-actions .custom-btn-group-label"); }
+  function show_view_switcher_button_now() {
+    const label = get_view_switcher_label();
+    if (!label) return;
+    const btn = label.closest("button");
+    if (btn) show(btn);
+  }
   function hide_view_switcher_button_now() {
-    const label = document.querySelector(".page-actions .custom-btn-group-label");
+    const label = get_view_switcher_label();
     if (!label) return;
     const btn = label.closest("button");
     if (btn && btn.style.display !== "none") hide(btn);
   }
 
-  // For super role: in "Filter By" keep only Assigned To / Created By
+  // ----- блокировка/разблокировка sidebar-тоггла только для restricted -----
+  const TOGGLE_NS = "rbac_list_toggle_block";
+  function block_sidebar_toggle() {
+    const btn = get_sidebar_toggle_btn();
+    if (!btn) return;
+    if (!btn[TOGGLE_NS]) {
+      btn[TOGGLE_NS] = e => { e.preventDefault(); e.stopImmediatePropagation(); };
+      btn.addEventListener("click", btn[TOGGLE_NS], true);
+    }
+    btn.classList.add("disabled");
+    btn.setAttribute("aria-disabled","true");
+    btn.style.pointerEvents = "none";
+  }
+  function unblock_sidebar_toggle() {
+    const btn = get_sidebar_toggle_btn();
+    if (!btn) return;
+    if (btn[TOGGLE_NS]) {
+      btn.removeEventListener("click", btn[TOGGLE_NS], true);
+      delete btn[TOGGLE_NS];
+    }
+    show(btn);
+  }
+
   function prune_group_by_for_super() {
     const sidebar = document.querySelector(".layout-side-section .list-sidebar");
     if (!sidebar) return;
@@ -138,75 +150,71 @@
     });
   }
 
-  // wave of re-applies to catch delayed rendering
-  function schedule_apply() { [0, 30, 120, 300, 800].forEach(ms => setTimeout(apply, ms)); }
+  function schedule_apply() { [0, 50, 180, 400, 900].forEach(ms => setTimeout(apply, ms)); }
 
-  // ===== CORE =====
   function apply() {
     if (!on_list_route()) { set_html_mode_none(); return; }
 
-    // base CSS (scoped)
-    add_css_once(CONFIG.cssId, BASE_CSS);
-
-    // switcher fallback (prevents flash)
-    hide_view_switcher_button_now();
-
+    // System Manager: вообще не трогаем
     if (is_privileged()) {
-      // SM: untouched aside from global instant CSS things
       set_html_mode_none();
-      // restore visibility (in case of inline styles from earlier passes)
+      // на всякий случай почистим возможные следы, если пользователь сменил роль без перезагрузки
+      unblock_sidebar_toggle();
       const grp = document.querySelector(".page-actions .menu-btn-group");
       const filt = document.querySelector(".filter-selector");
       const side = document.querySelector(".layout-side-section");
-      const tog  = document.querySelector(".page-title .sidebar-toggle-btn");
+      const tog  = get_sidebar_toggle_btn();
       [grp, filt, side, tog].forEach(show);
+      show_view_switcher_button_now();
       return;
     }
 
-    if (!has_any_restriction()) { set_html_mode_none(); return; }
+    add_css_once(CONFIG.cssId, BASE_CSS);
 
     if (is_super()) {
       set_html_mode_super();
+      unblock_sidebar_toggle();
+      hide_view_switcher_button_now();
       prune_group_by_for_super();
       return;
     }
 
-    // restricted (Admin/Demo)
-    set_html_mode_restricted();
+    if (is_restricted()) {
+      set_html_mode_restricted();
+      block_sidebar_toggle();
+      hide_view_switcher_button_now();
+      return;
+    }
+
+    set_html_mode_none();
   }
 
-  // ===== OBSERVERS & HOOKS =====
-  function observe() {
+  // ----- старт без побочек для SM: ждём роли, потом решаемся -----
+  function safe_boot() {
+    if (!roles_ready()) { setTimeout(safe_boot, 60); return; }
+
+    if (is_privileged()) {
+      // ничего не инъектим: ни INSTANT_CSS, ни BASE_CSS, ни наблюдателей/хуков
+      set_html_mode_none();
+      apply();
+      return;
+    }
+
+    // не-SM: можно антифликер и инфраструктуру
+    add_css_once(CONFIG.cssInstantId, INSTANT_CSS);
+    apply();
+    schedule_apply();
+
     try {
-      new MutationObserver(() => {
-        hide_view_switcher_button_now();
-        if (on_list_route()) schedule_apply();
-      }).observe(document.body || document.documentElement, { childList: true, subtree: true });
-    } catch (_) {}
-  }
-  function hook_router() {
+      new MutationObserver(() => { if (on_list_route()) schedule_apply(); })
+        .observe(document.body || document.documentElement, { childList: true, subtree: true });
+    } catch {}
+
     if (window.frappe?.router?.on) {
-      frappe.router.on("change", () => {
-        hide_view_switcher_button_now();
-        schedule_apply();
-      });
+      frappe.router.on("change", () => schedule_apply());
     }
   }
 
-  // ===== BOOT =====
-  (function instant() {
-    add_css_once(CONFIG.cssInstantId, INSTANT_CSS);  // anti-flicker CSS
-    hide_view_switcher_button_now();                 // JS fallback immediately
-  })();
-
-  function boot() {
-    set_html_mode_none();
-    apply();
-    schedule_apply();
-    observe();
-    hook_router();
-  }
-
-  if (window.frappe?.after_ajax) frappe.after_ajax(boot);
-  else document.addEventListener("DOMContentLoaded", boot);
+  if (window.frappe?.after_ajax) frappe.after_ajax(safe_boot);
+  else document.addEventListener("DOMContentLoaded", safe_boot);
 })();
