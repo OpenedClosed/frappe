@@ -512,7 +512,7 @@ class ChatSessionAdmin(BaseAdmin):
         master_name = (master.name or "") if master else ""
         result = ""
         if not master_name:
-            if master.user_id:
+            if master and master.user_id:
                 user_doc = await mongo_db.users.find_one({"_id": ObjectId(master.user_id)})
                 if user_doc:
                     result = user_doc["full_name"] or master_name or ""

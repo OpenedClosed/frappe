@@ -93,20 +93,44 @@ def create_notification_from_upstream():
 
     return {"ok": True, "created": len(created), "skipped": skipped, "ids": created}
 
+import logging
+
+logger = frappe.logger()
 
 
+def _current_user_email() -> str:
+    user = (frappe.session.user or "").strip()
+    if not user or user == "Guest":
+        frappe.throw("User is not authenticated", exc=frappe.ValidationError)
+
+    # docname "Administrator" → берём настоящее поле email
+    email = (frappe.db.get_value("User", user, "email") or "").strip().lower()
+
+    # на случай, если у системного пользователя email не заполнен
+    if not email and "@" in user:
+        email = user.lower()
+
+    if not email:
+        # можно подложить дефолт из site_config, если хочешь
+        fallback = (frappe.conf.get("dantist_super_admin_email") or "").strip().lower()
+        if fallback:
+            email = fallback
+
+    if not email:
+        frappe.throw("User has no email", exc=frappe.ValidationError)
+
+    return email
 
 def get_user_id() -> str:
-    email = (frappe.session.user or "").strip()
-    if not email or email == "Guest":
-        frappe.throw("User is not authenticated", exc=frappe.ValidationError)
+    email = _current_user_email()
 
     base_url = frappe.conf.get("dantist_base_url")
     if not base_url:
         frappe.throw("Dantist base URL not configured", exc=frappe.ValidationError)
 
     try:
-        r = requests.get(f"{base_url.rstrip('/')}{BASE_PATH}/users/lookup", params={"email": email}, timeout=6)
+        r = requests.get(f"{base_url.rstrip('/')}{BASE_PATH}/users/lookup",
+                         params={"email": email}, timeout=6)
     except Exception as e:
         frappe.throw(f"Upstream error: {e}", exc=frappe.ValidationError)
 
@@ -115,7 +139,7 @@ def get_user_id() -> str:
 
     data = r.json() or {}
     if not data.get("ok"):
-        frappe.throw("User not linked in Mongo", exc=frappe.ValidationError)
+        frappe.throw(f"User not linked in Mongo for {email}", exc=frappe.ValidationError)
 
     return (data.get("user_id") or "").strip()
 

@@ -28,7 +28,14 @@ async def engagement_sync_by_chat_id(payload: SyncByChatIdRequest):
 
 @engagement_router.post("/sync_recent")
 async def engagement_sync_recent(payload: SyncRecentRequest):
-    print(f"[engagement_sync_recent] start minutes={payload.minutes} limit={'NO_LIMIT' if payload.limit is None else payload.limit}")
+    # лимит внутри sync_recent временно форсится на 50 — см. реализацию
+    print(
+        f"[engagement_sync_recent] start minutes={payload.minutes} "
+        f"limit={'NO_LIMIT' if payload.limit is None else payload.limit}"
+    )
     res = await sync_recent(minutes=payload.minutes, limit=payload.limit)
-    print(f"[engagement_sync_recent] done result=created:{res.get('created',0)} updated:{res.get('updated',0)} scanned:{res.get('scanned',0)}")
+    print(
+        f"[engagement_sync_recent] done result=created:{res.get('created',0)} "
+        f"updated:{res.get('updated',0)} scanned:{res.get('scanned',0)}"
+    )
     return res

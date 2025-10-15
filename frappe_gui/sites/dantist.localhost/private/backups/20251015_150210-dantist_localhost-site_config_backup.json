@@ -1,0 +1,24 @@
+{
+ "db_name": "dantist_db",
+ "db_password": "VZiXWIZdxq7RVbaT",
+ "db_type": "mariadb",
+ "developer_mode": 1,
+ "encryption_key": "s31szVT37Ej5masmpLuw8BUzl7R_mFsV3YLVjYXPlKY=",
+ "server_script_enabled": true,
+
+
+ "dantist_excluded_users": [
+  "Guest",
+  "Administrator",
+  "test@mail.ru",
+  "test", 
+  "demo@example.com",
+  "Integration",
+  "integrations@admin.ru"
+ ],
+
+  "dantist_base_url": "http://localhost:8000/api",
+  "dantist_shared_secret": "very_secret_frappe_key",
+  "dantist_integration_aud": "frappe",
+  "dantist_iframe_origin": "http://localhost:3000"
+}

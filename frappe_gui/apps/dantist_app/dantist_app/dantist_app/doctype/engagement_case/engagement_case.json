@@ -2,7 +2,7 @@
  "actions": [],
  "autoname": "naming_series:",
  "creation": "2025-10-14 17:12:35.911645",
- "default_view": "Kanban",
+ "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -105,8 +105,8 @@
    "description": "Chat session ID in Chat Service (if channel is Chat)",
    "fieldname": "mongo_chat_id",
    "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Mongo Chat ID"
+   "label": "Mongo Chat ID",
+   "read_only": 1
   },
   {
    "fieldname": "mongo_client_id",
@@ -117,8 +117,8 @@
   {
    "fieldname": "external_user_id",
    "fieldtype": "Data",
-   "hidden": 1,
-   "label": "External User ID"
+   "label": "External User ID",
+   "read_only": 1
   },
   {
    "fieldname": "identity_section",
@@ -276,6 +276,7 @@
    "description": "Fields never overwritten by sync, e.g. [\"display_name\",\"phone\"]",
    "fieldname": "do_not_sync_fields",
    "fieldtype": "Code",
+   "hidden": 1,
    "label": "Do Not Sync Fields (JSON)",
    "options": "JSON"
   },
@@ -291,9 +292,10 @@
   }
  ],
  "grid_page_length": 50,
+ "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-14 17:13:05.240993",
+ "modified": "2025-10-15 13:27:08.361789",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",

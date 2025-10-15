@@ -43,7 +43,7 @@ def need_sync(kind: str, seconds: int) -> bool:
 
 
 def sync_recent_upstream(minutes: int = 5) -> Dict[str, Any]:
-    """Без limit → FastAPI трактует как «без лимита»."""
+    """Без limit → FastAPI трактует как «без лимита» (но внутри сейчас форсим 50 для тестов)."""
     url = f"{base_url()}{BASE_PATH}/engagement/sync_recent"
     payload = {"minutes": int(minutes)}
     try:

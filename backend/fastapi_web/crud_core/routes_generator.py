@@ -91,6 +91,23 @@ async def _revoke_cookie_token(
     except Exception:
         return
 
+from starlette.requests import Request as StarletteRequest
+
+def get_auth_for_login(request: Request) -> AuthJWT:
+    """
+    Возвращает AuthJWT, не падая, если в заголовке Authorization мусор.
+    """
+    try:
+        return AuthJWT(request)  # если заголовок валидный или его нет — ок
+    except Exception:
+        # выкинем только Authorization и создадим «чистый» request
+        scope = dict(request.scope)
+        scope["headers"] = [
+            (k, v) for (k, v) in scope.get("headers", [])
+            if k.lower() != b"authorization"
+        ]
+        clean_req = StarletteRequest(scope, receive=request.receive)
+        return AuthJWT(clean_req)
 
 # =========================
 # Генератор маршрутов
@@ -99,33 +116,58 @@ def generate_base_routes(registry: BaseRegistry) -> APIRouter:
     """Создаёт APIRouter для всех зарегистрированных админ-моделей."""
     router = APIRouter()
 
+    # @router.post("/login")
+    # async def login(
+    #     request: Request,
+    #     response: Response,
+    #     login_data: LoginSchema,
+    #     # Authorize: AuthJWT = Depends(),
+    # ) -> Dict[str, Any]:
+    #     user_doc = await mongo_db["users"].find_one({"username": login_data.username})
+    #     print('='*100)
+    #     print('мы тут')
+    #     if not user_doc:
+    #         raise HTTPException(status_code=401, detail="Invalid credentials.")
+    #     if not user_doc.get("is_active", True):
+    #         raise HTTPException(403, "User is blocked.")
+
+    #     user = User(**user_doc)
+    #     if not user.check_password(login_data.password):
+    #         raise HTTPException(status_code=401, detail="Invalid credentials.")
+
+    #     await _revoke_cookie_token(request, Authorize, "access_token", "access", str(user_doc["_id"]))
+    #     await _revoke_cookie_token(
+    #         request, Authorize, "refresh_token", "refresh", str(user_doc["_id"]), check_refresh=True
+    #     )
+
+    #     access_token = Authorize.create_access_token(subject=str(user_doc["_id"]))
+    #     refresh_token = Authorize.create_refresh_token(subject=str(user_doc["_id"]))
+
+    #     response.set_cookie(key="access_token", value=access_token, httponly=False, secure=True, samesite="None")
+    #     response.set_cookie(key="refresh_token", value=refresh_token, httponly=False, secure=True, samesite="None")
+    #     return {"message": "Logged in", "access_token": access_token}
+
     @router.post("/login")
-    async def login(
-        request: Request,
-        response: Response,
-        login_data: LoginSchema,
-        Authorize: AuthJWT = Depends(),
-    ) -> Dict[str, Any]:
+    async def login(request: Request, response: Response, login_data: LoginSchema):
         user_doc = await mongo_db["users"].find_one({"username": login_data.username})
-        if not user_doc:
+        if not user_doc or not user_doc.get("is_active", True):
             raise HTTPException(status_code=401, detail="Invalid credentials.")
-        if not user_doc.get("is_active", True):
-            raise HTTPException(403, "User is blocked.")
 
         user = User(**user_doc)
         if not user.check_password(login_data.password):
             raise HTTPException(status_code=401, detail="Invalid credentials.")
 
-        await _revoke_cookie_token(request, Authorize, "access_token", "access", str(user_doc["_id"]))
-        await _revoke_cookie_token(
-            request, Authorize, "refresh_token", "refresh", str(user_doc["_id"]), check_refresh=True
-        )
+        Authorize = get_auth_for_login(request)
 
-        access_token = Authorize.create_access_token(subject=str(user_doc["_id"]))
+        # отозвать старые cookie-токены, если были
+        await _revoke_cookie_token(request, Authorize, "access_token", "access", str(user_doc["_id"]))
+        await _revoke_cookie_token(request, Authorize, "refresh_token", "refresh", str(user_doc["_id"]), check_refresh=True)
+
+        access_token  = Authorize.create_access_token(subject=str(user_doc["_id"]))
         refresh_token = Authorize.create_refresh_token(subject=str(user_doc["_id"]))
 
-        response.set_cookie(key="access_token", value=access_token, httponly=False, secure=True, samesite="None")
-        response.set_cookie(key="refresh_token", value=refresh_token, httponly=False, secure=True, samesite="None")
+        response.set_cookie("access_token",  access_token,  httponly=False, secure=True, samesite="None")
+        response.set_cookie("refresh_token", refresh_token, httponly=False, secure=True, samesite="None")
         return {"message": "Logged in", "access_token": access_token}
 
     @router.post("/refresh")

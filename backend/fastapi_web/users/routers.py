@@ -6,7 +6,7 @@ from fastapi_jwt_auth import AuthJWT
 from auth.utils.help_functions import jwt_required
 from db.mongo.db_init import mongo_db
 
-from .db.mongo.schemas import User
+from .db.mongo.schemas import User, UserOut
 
 user_router = APIRouter()
 
@@ -33,5 +33,5 @@ async def get_my_info(
     if not user_doc:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    user = User(**user_doc)
+    user = UserOut(**user_doc)
     return user.dict(exclude={"password"})

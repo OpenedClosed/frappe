@@ -24,10 +24,8 @@ class Settings(BaseModel):
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
-class User(BaseValidatedModel):
-    """Пользователь."""
+class UserOut(BaseValidatedModel):
     username: Optional[str] = Field(None)
-    password: str = Field("", min_length=5)
     role: RoleEnum = RoleEnum.CLIENT
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -36,6 +34,11 @@ class User(BaseValidatedModel):
     # НОВОЕ:
     email: Optional[str] = Field(default=None)
     avatar: Optional[Photo] = None
+
+class User(UserOut):
+    """Пользователь."""
+    password: str = Field("", min_length=5)
+
 
     @field_validator("username")
     def validate_username(cls, v):

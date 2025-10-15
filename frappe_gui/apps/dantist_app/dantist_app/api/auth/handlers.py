@@ -5,6 +5,8 @@ from http.cookies import SimpleCookie
 import frappe
 import requests
 
+from ..users_and_notifications.handlers import get_user_id
+
 logger = logging.getLogger(__name__)
 
 BASE_PATH = "/integrations/frappe"  # ← как ты сказал
