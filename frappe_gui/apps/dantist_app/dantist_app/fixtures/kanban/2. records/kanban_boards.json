@@ -1,0 +1,76 @@
+[
+  {
+    "doctype": "Kanban Board",
+    "kanban_board_name": "CRM Board",
+    "reference_doctype": "Engagement Case",
+    "field_name": "status_crm_board",
+    "private": 0,
+    "show_labels": 0,
+    "fields": "[\"channel_type\",\"last_event_at\",\"channel_platform\",\"modified\"]",
+    "columns": [
+      {"doctype":"Kanban Board Column","column_name":"New","status":"Active","indicator":"Pink"},
+      {"doctype":"Kanban Board Column","column_name":"Qualification","status":"Active","indicator":"Yellow"},
+      {"doctype":"Kanban Board Column","column_name":"Briefing","status":"Active","indicator":"Orange"},
+      {"doctype":"Kanban Board Column","column_name":"Scheduled","status":"Active","indicator":"Light Blue"},
+      {"doctype":"Kanban Board Column","column_name":"In Work","status":"Active","indicator":"Blue"},
+      {"doctype":"Kanban Board Column","column_name":"On Hold","status":"Active","indicator":"Purple"},
+      {"doctype":"Kanban Board Column","column_name":"Won","status":"Active","indicator":"Green"},
+      {"doctype":"Kanban Board Column","column_name":"Lost","status":"Active","indicator":"Red"},
+      {"doctype":"Kanban Board Column","column_name":"Archived","status":"Active","indicator":"Gray"}
+    ]
+  },
+  {
+    "doctype": "Kanban Board",
+    "kanban_board_name": "Leads – Contact Center",
+    "reference_doctype": "Engagement Case",
+    "field_name": "status_leads",
+    "private": 0,
+    "show_labels": 0,
+    "fields": "[]",
+    "columns": [
+      {"doctype":"Kanban Board Column","column_name":"Bot Active / New Inquiry","status":"Active","indicator":"Pink"},
+      {"doctype":"Kanban Board Column","column_name":"In Progress","status":"Active","indicator":"Yellow"},
+      {"doctype":"Kanban Board Column","column_name":"Waiting List","status":"Active","indicator":"Purple"},
+      {"doctype":"Kanban Board Column","column_name":"Call Later","status":"Active","indicator":"Orange"},
+      {"doctype":"Kanban Board Column","column_name":"Failed / No Show (lead)","status":"Active","indicator":"Red"},
+      {"doctype":"Kanban Board Column","column_name":"Closed – Not Converted","status":"Active","indicator":"Gray"},
+      {"doctype":"Kanban Board Column","column_name":"Converted to Deal","status":"Active","indicator":"Green"}
+    ]
+  },
+  {
+    "doctype": "Kanban Board",
+    "kanban_board_name": "Deals – Contact Center",
+    "reference_doctype": "Engagement Case",
+    "field_name": "status_deals",
+    "private": 0,
+    "show_labels": 0,
+    "fields": "[]",
+    "columns": [
+      {"doctype":"Kanban Board Column","column_name":"Appointment Scheduled","status":"Active","indicator":"Light Blue"},
+      {"doctype":"Kanban Board Column","column_name":"Post-Visit Check","status":"Active","indicator":"Yellow"},
+      {"doctype":"Kanban Board Column","column_name":"Recommended Recall Added","status":"Active","indicator":"Purple"},
+      {"doctype":"Kanban Board Column","column_name":"Transferred to Care","status":"Active","indicator":"Blue"},
+      {"doctype":"Kanban Board Column","column_name":"Deal Completed","status":"Active","indicator":"Green"},
+      {"doctype":"Kanban Board Column","column_name":"No-show (deal)","status":"Active","indicator":"Red"}
+    ]
+  },
+  {
+    "doctype": "Kanban Board",
+    "kanban_board_name": "Patients – Care Department",
+    "reference_doctype": "Engagement Case",
+    "field_name": "status_patients",
+    "private": 0,
+    "show_labels": 0,
+    "fields": "[]",
+    "columns": [
+      {"doctype":"Kanban Board Column","column_name":"New Patient","status":"Active","indicator":"Pink"},
+      {"doctype":"Kanban Board Column","column_name":"Returning Patient","status":"Active","indicator":"Orange"},
+      {"doctype":"Kanban Board Column","column_name":"Stage Appointment Scheduled","status":"Active","indicator":"Light Blue"},
+      {"doctype":"Kanban Board Column","column_name":"In Treatment","status":"Active","indicator":"Blue"},
+      {"doctype":"Kanban Board Column","column_name":"Stage Checked","status":"Active","indicator":"Yellow"},
+      {"doctype":"Kanban Board Column","column_name":"Control X-ray","status":"Active","indicator":"Purple"},
+      {"doctype":"Kanban Board Column","column_name":"Treatment Completed","status":"Active","indicator":"Green"},
+      {"doctype":"Kanban Board Column","column_name":"No-show (patient)","status":"Active","indicator":"Red"}
+    ]
+  }
+]

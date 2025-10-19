@@ -1,8 +1,10 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "hash",
- "creation": "2025-10-14 17:12:35.688648",
+ "creation": "2025-10-18 20:26:08.220459",
  "doctype": "DocType",
+ "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "platform",
@@ -14,7 +16,6 @@
  ],
  "fields": [
   {
-   "__unsaved": 1,
    "fieldname": "platform",
    "fieldtype": "Select",
    "label": "Platform",
@@ -22,32 +23,27 @@
    "reqd": 1
   },
   {
-   "__unsaved": 1,
    "fieldname": "external_id",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "External ID"
   },
   {
-   "__unsaved": 1,
    "fieldname": "username",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Username / Handle"
   },
   {
-   "__unsaved": 1,
    "fieldname": "profile_url",
    "fieldtype": "Data",
    "label": "Profile URL"
   },
   {
-   "__unsaved": 1,
    "fieldname": "meta_sb",
    "fieldtype": "Section Break"
   },
   {
-   "__unsaved": 1,
    "description": "Free-form channel-specific metadata",
    "fieldname": "metadata",
    "fieldtype": "Small Text",
@@ -58,7 +54,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-10-14 17:12:35.688648",
+ "modified": "2025-10-18 20:53:20.439748",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Channel Identity Item",

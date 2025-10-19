@@ -2,32 +2,32 @@
   "doctype": "DocType",
   "name": "Engagement Case",
   "module": "Dantist App",
-  "issingle": 0,
+  "track_changes": 1,
   "autoname": "naming_series:",
-  "default_view": "Kanban",
-  "force_re_route_to_default_view": 0,
   "title_field": "title",
   "image_field": "avatar",
   "search_fields": "title, display_name, phone, email, mongo_client_id, mongo_chat_id, external_user_id",
-  "track_changes": 1,
-  "row_format": "Dynamic",
-  "sort_field": "modified",
+  "sort_field": "last_event_at",
   "sort_order": "DESC",
+  "issingle": 0,
+  "istable": 0,
+  "engine": "InnoDB",
+  "default_view": "List",
   "fields": [
-    { "fieldtype": "Select", "fieldname": "naming_series", "label": "IE Series", "options": "IE-.YYYY.-.#####", "default": "IE-.YYYY.-.#####", "hidden": 1, "set_only_once": 1, "read_only": 1, "description": "Internal identifier" },
-
-    { "fieldtype": "Data", "fieldname": "title", "label": "Title", "in_list_view": 1, "unique": 0, "description": "Short human-readable title (e.g. name/channel/context)" },
+    { "fieldtype": "Select", "fieldname": "naming_series", "label": "IE Series", "options": "IE-.YYYY.-.#####", "hidden": 1, "set_only_once": 1, "read_only": 1, "default": "IE-.YYYY.-.#####" },
+    { "fieldtype": "Data", "fieldname": "title", "label": "Title", "in_list_view": 1, "description": "Short human-readable title (e.g. name/channel/context)" },
 
     { "fieldtype": "Section Break", "fieldname": "channel_section", "label": "Primary Channel" },
-    { "fieldtype": "Select", "fieldname": "channel_type", "label": "Channel Type", "reqd": 1, "in_list_view": 1, "options": "Chat\nCall\nSMS\nEmail\nWeb Form", "default": "Chat", "description": "Main engagement transport" },
+    { "fieldtype": "Select", "fieldname": "channel_type", "label": "Channel Type", "options": "Chat\nCall\nSMS\nEmail\nWeb Form", "reqd": 1, "default": "Chat", "in_list_view": 1 },
     { "fieldtype": "Select", "fieldname": "channel_platform", "label": "Channel Platform", "options": "Internal\nInstagram\nFacebook\nWhatsApp\nTelegram\nTelegram Mini-App\nTelephony\nSMS\nEmail" },
     { "fieldtype": "Column Break", "fieldname": "cb_channel_right" },
-    { "fieldtype": "Table", "fieldname": "identities", "label": "Known Identities", "options": "Channel Identity Item" },
 
-    { "fieldtype": "Section Break", "fieldname": "linkage_section", "label": "Linkage (Hidden)" },
-    { "fieldtype": "Data", "fieldname": "mongo_chat_id", "label": "Mongo Chat ID", "hidden": 1, "description": "Chat session ID in Chat Service (if channel is Chat)" },
+    { "fieldtype": "Section Break", "fieldname": "link_section", "label": "Linked Cases" },
+    { "fieldtype": "Table", "fieldname": "linked_engagements", "label": "Linked Engagements", "options": "Engagement Link Item", "description": "Related cases. Optionally hide attached cases from general lists." },
+
+    { "fieldtype": "Data", "fieldname": "mongo_chat_id", "label": "Mongo ID", "read_only": 1, "description": "Session ID in Service" },
     { "fieldtype": "Data", "fieldname": "mongo_client_id", "label": "Mongo Client ID", "hidden": 1 },
-    { "fieldtype": "Data", "fieldname": "external_user_id", "label": "External User ID", "hidden": 1 },
+    { "fieldtype": "Data", "fieldname": "external_user_id", "label": "External User ID", "read_only": 1 },
 
     { "fieldtype": "Section Break", "fieldname": "identity_section", "label": "Contact Identity" },
     { "fieldtype": "Attach Image", "fieldname": "avatar", "label": "Avatar" },
@@ -39,28 +39,76 @@
     { "fieldtype": "Data", "fieldname": "timezone", "label": "Timezone" },
     { "fieldtype": "Data", "fieldname": "country", "label": "Country" },
 
-    { "fieldtype": "Section Break", "fieldname": "crm_section", "label": "CRM & Kanban" },
-    { "fieldtype": "Select", "fieldname": "crm_status", "label": "CRM Status", "reqd": 1, "in_list_view": 1, "options": "New\nQualification\nBriefing\nIn Work\nOn Hold\nWon\nLost\nArchived", "default": "New", "description": "Pipeline status used for Kanban columns" },
-    { "fieldtype": "Select", "fieldname": "priority", "label": "Priority", "options": "Low\nNormal\nHigh\nUrgent", "default": "Normal" },
-    { "fieldtype": "Link", "fieldname": "owner_user", "label": "Owner / Assignee", "options": "User" },
+    { "fieldtype": "Section Break", "fieldname": "crm_section", "label": "CRM" },
     { "fieldtype": "Small Text", "fieldname": "next_action", "label": "Next Action", "description": "Optional short instruction for the assignee" },
     { "fieldtype": "Datetime", "fieldname": "next_action_at", "label": "Next Action At", "description": "When the next action should happen" },
+    { "fieldtype": "Select", "fieldname": "priority", "label": "Priority", "options": "Low\nNormal\nHigh\nUrgent", "default": "Normal" },
+    { "fieldtype": "Link", "fieldname": "owner_user", "label": "Owner / Assignee", "options": "User" },
 
-    { "fieldtype": "Section Break", "fieldname": "signals_section", "label": "Runtime Signals (Read-only)" },
+    { "fieldtype": "Section Break", "fieldname": "boards_status_section", "label": "Boards & Status" },
+
+    { "fieldtype": "Check", "fieldname": "show_board_crm", "label": "Show on: CRM Board", "default": "0" },
+    {
+      "fieldtype": "Select",
+      "fieldname": "status_crm_board",
+      "label": "CRM Board — Status",
+      "depends_on": "show_board_crm",
+      "mandatory_depends_on": "show_board_crm",
+      "options": "New\nQualification\nBriefing\nScheduled\nIn Work\nOn Hold\nWon\nLost\nArchived",
+      "description": "Used by Kanban «CRM Board»"
+    },
+
+    { "fieldtype": "Check", "fieldname": "show_board_leads", "label": "Show on: Leads – Contact Center", "default": "0" },
+    {
+      "fieldtype": "Select",
+      "fieldname": "status_leads",
+      "label": "Leads – Contact Center — Status",
+      "depends_on": "show_board_leads",
+      "mandatory_depends_on": "show_board_leads",
+      "options": "Bot Active / New Inquiry\nIn Progress\nWaiting List\nCall Later\nFailed / No Show (lead)\nClosed – Not Converted\nConverted to Deal",
+      "description": "Used by Kanban «Leads – Contact Center»"
+    },
+
+    { "fieldtype": "Check", "fieldname": "show_board_deals", "label": "Show on: Deals – Contact Center", "default": "0" },
+    {
+      "fieldtype": "Select",
+      "fieldname": "status_deals",
+      "label": "Deals – Contact Center — Status",
+      "depends_on": "show_board_deals",
+      "mandatory_depends_on": "show_board_deals",
+      "options": "Appointment Scheduled\nPost-Visit Check\nRecommended Recall Added\nTransferred to Care\nDeal Completed\nNo-show (deal)",
+      "description": "Used by Kanban «Deals – Contact Center»"
+    },
+
+    { "fieldtype": "Check", "fieldname": "show_board_patients", "label": "Show on: Patients – Care Department", "default": "0" },
+    {
+      "fieldtype": "Select",
+      "fieldname": "status_patients",
+      "label": "Patients – Care Dept. — Status",
+      "depends_on": "show_board_patients",
+      "mandatory_depends_on": "show_board_patients",
+      "options": "New Patient\nReturning Patient\nStage Appointment Scheduled\nIn Treatment\nStage Checked\nControl X-ray\nTreatment Completed\nNo-show (patient)",
+      "description": "Used by Kanban «Patients – Care Department»"
+    },
+
+    { "fieldtype": "Section Break", "fieldname": "signals_section", "label": "Signals" },
     { "fieldtype": "Datetime", "fieldname": "first_event_at", "label": "First Event At", "read_only": 1 },
-    { "fieldtype": "Datetime", "fieldname": "last_event_at", "label": "Last Event At", "read_only": 1, "in_list_view": 1 },
+    { "fieldtype": "Datetime", "fieldname": "last_event_at", "label": "Last Event At", "in_list_view": 1, "read_only": 1 },
     { "fieldtype": "Int", "fieldname": "events_count", "label": "Events Count", "read_only": 1, "description": "Messages for Chat, etc." },
     { "fieldtype": "Int", "fieldname": "unanswered_count", "label": "Unanswered Tail Count", "read_only": 1 },
-    { "fieldtype": "Select", "fieldname": "last_actor_role", "label": "Last Actor Role", "read_only": 1, "options": "Client\nAI Assistant\nConsultant\nAgent" },
-    { "fieldtype": "Select", "fieldname": "runtime_status", "label": "Runtime Status", "read_only": 1, "options": "New Session\nBrief In Progress\nBrief Completed\nWaiting for AI\nWaiting for Client (AI)\nWaiting for Consultant\nRead by Consultant\nWaiting for Client\nClosed – No Messages\nClosed by Timeout\nClosed by Operator", "description": "Computed by backend from source systems" },
+    { "fieldtype": "Select", "fieldname": "last_actor_role", "label": "Last Actor Role", "options": "Client\nAI Assistant\nConsultant\nAgent", "read_only": 1 },
+    { "fieldtype": "Select", "fieldname": "runtime_status", "label": "Runtime Status", "options": "New Session\nBrief In Progress\nBrief Completed\nWaiting for AI\nWaiting for Client (AI)\nWaiting for Consultant\nRead by Consultant\nWaiting for Client\nClosed – No Messages\nClosed by Timeout\nClosed by Operator", "read_only": 1, "description": "Computed by backend from source systems" },
 
-    { "fieldtype": "Section Break", "fieldname": "sync_section", "label": "Sync Control" },
+    { "fieldtype": "Section Break", "fieldname": "sync_section", "label": "Sync" },
     { "fieldtype": "Check", "fieldname": "sync_enabled", "label": "Sync Enabled", "default": "0", "description": "Disable to take full manual control in Frappe" },
     { "fieldtype": "Datetime", "fieldname": "last_synced_at", "label": "Last Synced At", "read_only": 1 },
-    { "fieldtype": "Code", "fieldname": "do_not_sync_fields", "label": "Do Not Sync Fields (JSON)", "options": "JSON", "default": "[]", "description": "Fields never overwritten by sync, e.g. [\"display_name\",\"phone\"]" },
+    { "fieldtype": "Code", "fieldname": "do_not_sync_fields", "label": "Do Not Sync Fields (JSON)", "options": "JSON", "hidden": 1, "default": "[]" },
 
     { "fieldtype": "Section Break", "fieldname": "notes_section", "label": "Notes" },
     { "fieldtype": "Text Editor", "fieldname": "internal_notes", "label": "Internal Notes" }
   ],
-  "permissions": []
+  "permissions": [],
+  "links": [],
+  "actions": [],
+  "states": []
 }

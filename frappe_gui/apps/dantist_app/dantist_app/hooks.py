@@ -48,6 +48,7 @@ app_include_js = [
     "/assets/dantist_app/js/add/engagement_case_list.js",
 
     "/assets/dantist_app/js/edit/kanban_skin.js",
+    "/assets/dantist_app/js/edit/kanban_filter.js",
 
     "/assets/dantist_app/js/hide/topbar.js",
     "/assets/dantist_app/js/hide/workspace.js",
@@ -198,7 +199,7 @@ doc_events = {
     "User": {
         "after_insert": "dantist_app.api.users_and_notifications.handlers.on_user_changed",
         "on_update":    "dantist_app.api.users_and_notifications.handlers.on_user_changed",
-    }
+    },
 }
 
 
@@ -238,6 +239,10 @@ doc_events = {
 override_whitelisted_methods = {
     "frappe.client.get_list": "dantist_app.api.engagement.handlers.get_list",
     "frappe.client.get":      "dantist_app.api.engagement.handlers.get",
+
+
+    "frappe.desk.reportview.get": "dantist_app.api.engagement.handlers.reportview_get",
+
 }
 
 #

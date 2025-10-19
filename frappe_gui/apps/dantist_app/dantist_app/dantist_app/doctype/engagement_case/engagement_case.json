@@ -1,9 +1,11 @@
 {
  "actions": [],
+ "allow_rename": 1,
  "autoname": "naming_series:",
- "creation": "2025-10-14 17:12:35.911645",
+ "creation": "2025-10-18 20:44:34.466856",
  "default_view": "List",
  "doctype": "DocType",
+ "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
@@ -12,8 +14,8 @@
   "channel_type",
   "channel_platform",
   "cb_channel_right",
-  "identities",
-  "linkage_section",
+  "link_section",
+  "linked_engagements",
   "mongo_chat_id",
   "mongo_client_id",
   "external_user_id",
@@ -27,11 +29,19 @@
   "timezone",
   "country",
   "crm_section",
-  "crm_status",
-  "priority",
-  "owner_user",
   "next_action",
   "next_action_at",
+  "priority",
+  "owner_user",
+  "boards_status_section",
+  "show_board_crm",
+  "status_crm_board",
+  "show_board_leads",
+  "status_leads",
+  "show_board_deals",
+  "status_deals",
+  "show_board_patients",
+  "status_patients",
   "signals_section",
   "first_event_at",
   "last_event_at",
@@ -49,7 +59,6 @@
  "fields": [
   {
    "default": "IE-.YYYY.-.#####",
-   "description": "Internal identifier",
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "hidden": 1,
@@ -72,7 +81,6 @@
   },
   {
    "default": "Chat",
-   "description": "Main engagement transport",
    "fieldname": "channel_type",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -91,21 +99,10 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "identities",
-   "fieldtype": "Table",
-   "label": "Known Identities",
-   "options": "Channel Identity Item"
-  },
-  {
-   "fieldname": "linkage_section",
-   "fieldtype": "Section Break",
-   "label": "Linkage"
-  },
-  {
-   "description": "Chat session ID in Chat Service (if channel is Chat)",
+   "description": "Session ID in Service",
    "fieldname": "mongo_chat_id",
    "fieldtype": "Data",
-   "label": "Mongo Chat ID",
+   "label": "Mongo ID",
    "read_only": 1
   },
   {
@@ -170,17 +167,19 @@
   {
    "fieldname": "crm_section",
    "fieldtype": "Section Break",
-   "label": "CRM & Kanban"
+   "label": "CRM"
   },
   {
-   "default": "New",
-   "description": "Pipeline status used for Kanban columns",
-   "fieldname": "crm_status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "CRM Status",
-   "options": "New\nQualification\nBriefing\nIn Work\nOn Hold\nWon\nLost\nArchived",
-   "reqd": 1
+   "description": "Optional short instruction for the assignee",
+   "fieldname": "next_action",
+   "fieldtype": "Small Text",
+   "label": "Next Action"
+  },
+  {
+   "description": "When the next action should happen",
+   "fieldname": "next_action_at",
+   "fieldtype": "Datetime",
+   "label": "Next Action At"
   },
   {
    "default": "Normal",
@@ -196,16 +195,69 @@
    "options": "User"
   },
   {
-   "description": "Optional short instruction for the assignee",
-   "fieldname": "next_action",
-   "fieldtype": "Small Text",
-   "label": "Next Action"
+   "fieldname": "boards_status_section",
+   "fieldtype": "Section Break",
+   "label": "Boards & Status"
   },
   {
-   "description": "When the next action should happen",
-   "fieldname": "next_action_at",
-   "fieldtype": "Datetime",
-   "label": "Next Action At"
+   "default": "0",
+   "fieldname": "show_board_crm",
+   "fieldtype": "Check",
+   "label": "Show on: CRM Board"
+  },
+  {
+   "depends_on": "show_board_crm",
+   "description": "Used by Kanban \u00abCRM Board\u00bb",
+   "fieldname": "status_crm_board",
+   "fieldtype": "Select",
+   "label": "CRM Board \u2014 Status",
+   "mandatory_depends_on": "show_board_crm",
+   "options": "New\nQualification\nBriefing\nScheduled\nIn Work\nOn Hold\nWon\nLost\nArchived"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_board_leads",
+   "fieldtype": "Check",
+   "label": "Show on: Leads \u2013 Contact Center"
+  },
+  {
+   "depends_on": "show_board_leads",
+   "description": "Used by Kanban \u00abLeads \u2013 Contact Center\u00bb",
+   "fieldname": "status_leads",
+   "fieldtype": "Select",
+   "label": "Leads \u2013 Contact Center \u2014 Status",
+   "mandatory_depends_on": "show_board_leads",
+   "options": "Bot Active / New Inquiry\nIn Progress\nWaiting List\nCall Later\nFailed / No Show (lead)\nClosed \u2013 Not Converted\nConverted to Deal"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_board_deals",
+   "fieldtype": "Check",
+   "label": "Show on: Deals \u2013 Contact Center"
+  },
+  {
+   "depends_on": "show_board_deals",
+   "description": "Used by Kanban \u00abDeals \u2013 Contact Center\u00bb",
+   "fieldname": "status_deals",
+   "fieldtype": "Select",
+   "label": "Deals \u2013 Contact Center \u2014 Status",
+   "mandatory_depends_on": "show_board_deals",
+   "options": "Appointment Scheduled\nPost-Visit Check\nRecommended Recall Added\nTransferred to Care\nDeal Completed\nNo-show (deal)"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_board_patients",
+   "fieldtype": "Check",
+   "label": "Show on: Patients \u2013 Care Department"
+  },
+  {
+   "depends_on": "show_board_patients",
+   "description": "Used by Kanban \u00abPatients \u2013 Care Department\u00bb",
+   "fieldname": "status_patients",
+   "fieldtype": "Select",
+   "label": "Patients \u2013 Care Dept. \u2014 Status",
+   "mandatory_depends_on": "show_board_patients",
+   "options": "New Patient\nReturning Patient\nStage Appointment Scheduled\nIn Treatment\nStage Checked\nControl X-ray\nTreatment Completed\nNo-show (patient)"
   },
   {
    "fieldname": "signals_section",
@@ -256,7 +308,7 @@
   {
    "fieldname": "sync_section",
    "fieldtype": "Section Break",
-   "label": "Sync Control"
+   "label": "Sync"
   },
   {
    "default": "0",
@@ -273,7 +325,6 @@
   },
   {
    "default": "[]",
-   "description": "Fields never overwritten by sync, e.g. [\"display_name\",\"phone\"]",
    "fieldname": "do_not_sync_fields",
    "fieldtype": "Code",
    "hidden": 1,
@@ -289,17 +340,30 @@
    "fieldname": "internal_notes",
    "fieldtype": "Text Editor",
    "label": "Internal Notes"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "link_section",
+   "fieldtype": "Section Break",
+   "label": "Linked Cases"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Related cases. Optionally hide attached cases from general lists.",
+   "fieldname": "linked_engagements",
+   "fieldtype": "Table",
+   "label": "Linked Engagements",
+   "options": "Engagement Link Item"
   }
  ],
  "grid_page_length": 50,
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-15 15:26:08.181521",
- "modified_by": "opendoor200179@gmail.com",
+ "modified": "2025-10-18 20:53:20.620566",
+ "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",
- "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",
