@@ -1,55 +1,67 @@
-// Global palette for Engagement Case UI
-// Will define window.EC_COLORS only once.
+// EC_TAG_COLORS + tagChip: различимая палитра для не-канбанных "тегов"
 (function (w) {
-  if (w.EC_COLORS) return;
+  const PALETTE = {
+    gray:   {bg:"#f3f4f6", bd:"#e5e7eb"},
+    blue:   {bg:"#eff6ff", bd:"#dbeafe"},
+    lightb: {bg:"#f0f9ff", bd:"#bae6fd"},
+    purple: {bg:"#f5f3ff", bd:"#e9d5ff"},
+    green:  {bg:"#ecfdf5", bd:"#d1fae5"},
+    yellow: {bg:"#fffbeb", bd:"#fef3c7"},
+    orange: {bg:"#fff7ed", bd:"#fed7aa"},
+    red:    {bg:"#fef2f2", bd:"#fecaca"},
+    pink:   {bg:"#fdf2f8", bd:"#fbcfe8"},
+    teal:   {bg:"#f0fdfa", bd:"#99f6e4"},
+    indigo: {bg:"#eef2ff", bd:"#c7d2fe"},
+  };
 
-  w.EC_COLORS = {
-    crm_status: {
-      "New": "blue",
-      "Qualification": "purple",
-      "Briefing": "light-blue",
-      "In Work": "green",
-      "On Hold": "orange",
-      "Won": "green",
-      "Lost": "red",
-      "Archived": "gray",
-    },
-    priority: {
-      "Low": "gray",
-      "Normal": "blue",
-      "High": "orange",
-      "Urgent": "red",
-    },
-    runtime_status: {
-      "New Session": "blue",
-      "Brief In Progress": "purple",
-      "Brief Completed": "green",
-      "Waiting for AI": "yellow",
-      "Waiting for Client (AI)": "yellow",
-      "Waiting for Consultant": "orange",
-      "Read by Consultant": "light-blue",
-      "Waiting for Client": "orange",
-      "Closed – No Messages": "gray",
-      "Closed by Timeout": "gray",
-      "Closed by Operator": "green",
-    },
-    platform: {
-      "Internal": "gray",
-      "Instagram": "purple",
-      "Facebook": "blue",
-      "WhatsApp": "green",
-      "Telegram": "light-blue",
-      "Telegram Mini-App": "light-blue",
-      "Telephony": "blue",
-      "SMS": "yellow",
-      "Email": "purple",
-    },
-    channel_type: {
-      "Chat": "blue",
-      "Call": "green",
-      "SMS": "yellow",
-      "Email": "purple",
-      "Web Form": "light-blue",
-    }
+  // максимально разные цвета источников:
+  const platform = {
+    "Internal": PALETTE.gray,
+    "Instagram": PALETTE.purple,
+    "Facebook": PALETTE.blue,
+    "WhatsApp": PALETTE.green,
+    "Telegram": PALETTE.indigo,
+    "Telegram Mini-App": PALETTE.lightb,
+    "Telephony": PALETTE.teal,
+    "SMS": PALETTE.yellow,
+    "Email": PALETTE.orange,
+  };
+
+  const channel_type = {
+    "Chat": PALETTE.blue,
+    "Call": PALETTE.green,
+    "SMS": PALETTE.yellow,
+    "Email": PALETTE.orange,
+    "Web Form": PALETTE.lightb,
+  };
+
+  const priority = {
+    "Low": PALETTE.gray,
+    "Normal": PALETTE.blue,
+    "High": PALETTE.orange,
+    "Urgent": PALETTE.red,
+  };
+
+  const runtime_status = {
+    "New Session": PALETTE.lightb,
+    "Brief In Progress": PALETTE.purple,
+    "Brief Completed": PALETTE.green,
+    "Waiting for AI": PALETTE.yellow,
+    "Waiting for Client (AI)": PALETTE.yellow,
+    "Waiting for Consultant": PALETTE.orange,
+    "Read by Consultant": PALETTE.indigo,
+    "Waiting for Client": PALETTE.orange,
+    "Closed – No Messages": PALETTE.gray,
+    "Closed by Timeout": PALETTE.gray,
+    "Closed by Operator": PALETTE.green,
+  };
+
+  w.EC_TAG_COLORS = { platform, channel_type, priority, runtime_status };
+
+  w.tagChip = function (bucket, key, dashed=false) {
+    const c = (w.EC_TAG_COLORS[bucket] && w.EC_TAG_COLORS[bucket][key]) || PALETTE.gray;
+    const esc = frappe.utils.escape_html;
+    const extra = dashed ? "border-style:dashed;" : "";
+    return `<span class="crm-chip" style="background:${c.bg};border-color:${c.bd};${extra}">${esc(key||"")}</span>`;
   };
 })(window);

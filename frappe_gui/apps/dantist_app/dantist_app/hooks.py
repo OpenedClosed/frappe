@@ -42,6 +42,7 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 app_include_js = [
+    "/assets/dantist_app/js/other/ec_board_colors.js",
     "/assets/dantist_app/js/other/ec_colors.js",  
 
     "/assets/dantist_app/js/add/engagement_case_form.js",

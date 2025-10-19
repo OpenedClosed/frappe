@@ -200,12 +200,16 @@ def parents_of_engagement(name: str) -> List[dict]:
     parent_names = sorted({p for p in parent_names if p})
     if not parent_names:
         return []
+    # ВОЗВРАЩАЕМ ВСЕ статусы и ВСЕ флаги show_board_*
+    fields = [
+        "name","title","display_name","avatar","channel_platform","priority",
+        "status_crm_board","status_leads","status_deals","status_patients",
+        "show_board_crm","show_board_leads","show_board_deals","show_board_patients",
+        "first_event_at","last_event_at"
+    ]
     return frappe.get_all(
         ENGAGEMENT_DOCTYPE,
-        filters=[["name", "in", parent_names]],
-        fields=[
-            "name","title","display_name","avatar","channel_platform",
-            "priority","status_crm_board","first_event_at","last_event_at"
-        ],
+        filters=[["name","in", parent_names]],
+        fields=fields,
         limit_page_length=len(parent_names),
     )

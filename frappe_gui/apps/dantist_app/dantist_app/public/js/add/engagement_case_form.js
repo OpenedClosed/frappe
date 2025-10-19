@@ -1,67 +1,167 @@
-// Engagement Case — header indicators + link-existing UX + pretty previews (linked & parents)
+// Engagement Case — form UX:
+// - title badges (all boards: solid if Show-on=1, dashed w/o fill if Show-on=0)
+// - linked preview (hide native grid, only "Search & Link"), no duplicates, unlink with confirm
+// - ✎ opens child-row editor
+// - children & parents mini-cards: show ALL board statuses with proper colors
+// - vertical dotted separator before board chips
 (function () {
-  const C = window.EC_COLORS || {};
   const esc = frappe.utils.escape_html;
 
-  // ---------- small utils ----------
-  function color(bucket, key) { return bucket && bucket[key]; }
-  function addIndicator(frm, label, val, colr) {
-    if (!val || !frm.dashboard || !frm.dashboard.add_indicator) return;
-    frm.dashboard.add_indicator(__("{0}: {1}", [label, val]), colr || "gray");
-  }
-  function fullPath(p) { if (!p) return ""; return p.startsWith("/") ? p : `/${p}`; }
+  const BOARDS = [
+    { name: "CRM Board",                  flag: "show_board_crm",      field: "status_crm_board" },
+    { name: "Leads – Contact Center",     flag: "show_board_leads",    field: "status_leads" },
+    { name: "Deals – Contact Center",     flag: "show_board_deals",    field: "status_deals" },
+    { name: "Patients – Care Department", flag: "show_board_patients", field: "status_patients" },
+  ];
 
-  // ---------- pills / chips ----------
-  function chip(txt) { return `<span class="indicator-pill gray">${esc(txt||"")}</span>`; }
+  const fullPath  = (p)=> p ? (p.startsWith("/") ? p : `/${p}`) : "";
+  const pickAvatar= (row)=> fullPath(row.avatar || "/assets/frappe/images/ui/user-avatar.svg");
 
-  // ВАЖНО: не экранируем innerHTML из comment_when, чтобы .frappe-timestamp корректно отрисовывался
-  function timeChip(label, dt) {
-    if (!dt) return "";
-    return `<span class="indicator-pill light"><span class="lbl">${esc(label)}:</span> ${frappe.datetime.comment_when(dt)}</span>`;
-  }
-
-  // только личный аватар; если нет — дефолтный плейсхолдер
-  function pickAvatar(row) {
-    const fallback = "/assets/frappe/images/ui/user-avatar.svg";
-    return fullPath(row.avatar || fallback);
+  // ---- chips ----
+  // platform/priority/etc — нейтральные таблетки (без цветной заливки, только серый контур)
+  function tagChip(bucket, val) {
+    if (!val) return "";
+    // если когда-нибудь захочешь вернуть расцветку как в старом EC_COLORS — можно подменить тут
+    return `<span class="crm-chip -neutral">${esc(val)}</span>`;
   }
 
-  // ---------- pretty mini card ----------
-  function renderMiniCard(row, opts = {}) {
-    const title = row.title || row.display_name || row.name;
+  // КАНБАН-статусы — ТОЛЬКО через boardChip из ec_board_colors.js (там инлайн-стили с !important)
+  function boardChip(boardName, status, dashed=false) {
+    if (!status) return "";
+    if (typeof window.boardChip === "function") {
+      return window.boardChip(boardName, status, dashed); // solid/dashed + цвета из Kanban
+    }
+    // редкий фолбэк (если ec_board_colors.js не загружен)
+    const extra = dashed ? "border-style:dashed;background:transparent" : "";
+    return `<span class="crm-chip" style="${extra}">${esc(status)}</span>`;
+  }
+
+  // Время — «прозрачная» таблетка
+  const timeChip  = (label, dt)=> dt ? `<span class="crm-chip -ghost"><span class="lbl">${esc(label)}:</span> ${frappe.datetime.comment_when(dt)}</span>` : "";
+
+  // Вертикальный пунктир-разделитель между обычными чипами и канбан-чипами
+  const sepChip = `<span class="crm-vsep" aria-hidden="true"></span>`;
+
+  async function ensureAllBoardColors() {
+    // заранее вытянем цвета всех 4-х досок
+    if (typeof window.getBoardColors === "function") {
+      await Promise.all(BOARDS.map(b => window.getBoardColors(b.name)));
+    }
+  }
+
+  // ---------- title badges в шапке документа ----------
+  function updateTitleBadges(frm) {
+    try {
+      const titleArea = document.querySelector(".page-head .title-area .flex");
+      if (!titleArea) return;
+
+      let wrap = titleArea.querySelector(".ec-title-badges");
+      if (!wrap) {
+        wrap = document.createElement("div");
+        wrap.className = "ec-title-badges";
+        titleArea.appendChild(wrap);
+      }
+
+      const chips = [];
+      for (const b of BOARDS) {
+        const st = frm.doc[b.field];
+        if (!st) continue;
+        const dashed = !frm.doc[b.flag]; // нет галочки Show-on → пунктир без заливки
+        chips.push(boardChip(b.name, st, dashed));
+      }
+      wrap.innerHTML = chips.join("");
+
+      // прячем стандартный одиночный индикатор
+      const std = titleArea.querySelector(".indicator-pill");
+      if (std) std.style.display = "none";
+    } catch (e) { console.warn("updateTitleBadges failed", e); }
+  }
+
+  // ---------- открыть редактирование строки child table по ✎ ----------
+  function openLinkRowEditor(frm, engagementName) {
+    const grid = frm.get_field("linked_engagements")?.grid;
+    if (!grid) return;
+    const row = (grid.grid_rows || []).find(r => (r.doc && r.doc.engagement === engagementName));
+    if (row && row.toggle_view) { row.toggle_view(true); return; }
+    const docRow = (frm.doc.linked_engagements || []).find(r => r.engagement === engagementName);
+    if (docRow && typeof grid.row_open === "function") grid.row_open((docRow.idx || 1) - 1);
+  }
+
+  // ---------- linked preview ----------
+  function ensureLinkedContainer(frm) {
+    const fld = frm.get_field("linked_engagements");
+    if (!fld?.wrapper) return null;
+
+    // скрываем стандартную grid (DOM остаётся для редакторов строк)
+    fld.wrapper.classList.add("ec-grid-hidden");
+
+    let wrap = fld.wrapper.querySelector(".ec-linked-preview");
+    if (!wrap) {
+      const div = document.createElement("div");
+      div.className = "ec-linked-preview";
+      div.innerHTML = `
+        <div class="ec-linked-header">
+          Linked engagements
+          <span class="ec-actions">
+            <button class="btn btn-xs btn-default" data-ec-act="search-link">Search & Link</button>
+          </span>
+        </div>
+        <div class="ec-linked-list"></div>`;
+      fld.wrapper.appendChild(div);
+      wrap = div;
+
+      wrap.querySelector("[data-ec-act='search-link']")?.addEventListener("click", ()=> addLinkExistingDialog(frm));
+    }
+    return wrap.querySelector(".ec-linked-list");
+  }
+
+  // Все статус-чипы из 4 досок: пунктир, если соответствующий show_board_* = 0
+  function kanbanChipsAll(row) {
+    const out = [];
+    for (const b of BOARDS) {
+      const st = row[b.field];
+      if (!st) continue;
+      const dashed = !row[b.flag];
+      out.push(boardChip(b.name, st, dashed));
+    }
+    return out.join("");
+  }
+
+  function renderMiniCard(row, opts={}) {
+    const title  = row.title || row.display_name || row.name;
     const avatar = pickAvatar(row);
-    const statusChip =
-      row.status_crm_board ? chip(row.status_crm_board) : "";
-    const chips = [
-      row.channel_platform ? chip(row.channel_platform) : "",
-      row.priority ? chip(`P: ${row.priority}`) : "",
-      statusChip,
-    ].join("");
 
-    const times = [
+    // обычные чипы
+    const common = [
+      row.channel_platform ? tagChip("platform", row.channel_platform) : "",
+      row.priority         ? tagChip("priority", row.priority) : "",
+    ].filter(Boolean).join("");
+
+    // разделитель + канбан-чипы
+    const kchips = kanbanChipsAll(row);
+    const chips = [common, kchips ? sepChip + kchips : ""].join("");
+
+    const times  = [
       timeChip("Last", row.last_event_at),
       timeChip("First", row.first_event_at)
-    ].join(" ");
+    ].filter(Boolean).join(" ");
 
-    const rightParts = [];
-    if (opts.showUnlink) {
-      rightParts.push(`<button class="btn btn-xs btn-danger" data-act="unlink" data-name="${esc(row.name)}">Unlink</button>`);
-    }
-    rightParts.push(`<button class="btn btn-xs btn-default" data-act="open" data-name="${esc(row.name)}">Open</button>`);
-    const right = rightParts.join(" ");
+    const badges = [];
+    if (opts.is_parent) badges.push(`<span class="crm-chip -ghost">Parent</span>`);
+    if (opts.hidden)    badges.push(`<span class="crm-chip -ghost">Hidden</span>`);
 
-    // визуальный маркер «родитель»
-    const parentBadge = opts.parent ? `<span class="ec-badge -parent">Parent</span>` : "";
+    const right = [
+      `<button class="btn btn-xs btn-default" data-act="open"   data-name="${esc(row.name)}">Open</button>`,
+      opts.show_unlink   ? `<button class="btn btn-xs btn-danger"  data-act="unlink" data-name="${esc(row.name)}">Unlink</button>` : "",
+      opts.can_edit_link ? `<button class="btn btn-xs btn-primary" data-act="edit-link" data-name="${esc(row.name)}" title="Edit link row">✎</button>` : ""
+    ].filter(Boolean).join(" ");
 
     return `
-      <div class="ec-card${opts.parent ? " -parent" : ""}" data-name="${esc(row.name)}">
+      <div class="ec-card${opts.is_parent ? " -parent" : ""}" data-name="${esc(row.name)}">
         <div class="ec-left">
           <div class="ec-avatar"><img src="${esc(avatar)}" alt=""></div>
           <div class="ec-body">
-            <div class="ec-title">
-              ${esc(title)}
-              ${parentBadge}
-            </div>
+            <div class="ec-title">${esc(title)} ${badges.join(" ")}</div>
             <div class="ec-meta">${chips}</div>
             <div class="ec-meta -time">${times}</div>
           </div>
@@ -71,34 +171,17 @@
     `;
   }
 
-  // ---------- linked preview (children this case links to) ----------
-  function ensureLinkedContainer(frm) {
-    const fld = frm.get_field("linked_engagements");
-    if (!fld || !fld.wrapper) return null;
-    let wrap = fld.wrapper.querySelector(".ec-linked-preview");
-    if (!wrap) {
-      const div = document.createElement("div");
-      div.className = "ec-linked-preview";
-      div.innerHTML = `<div class="ec-linked-header">Linked engagements</div><div class="ec-linked-list"></div>`;
-      fld.wrapper.appendChild(div);
-      wrap = div;
-    }
-    return wrap.querySelector(".ec-linked-list");
-  }
-
   async function loadLinkedPreviews(frm) {
     const listWrap = ensureLinkedContainer(frm);
     if (!listWrap) return;
     listWrap.innerHTML = `<div class="text-muted small">Loading…</div>`;
 
-    const names = (frm.doc.linked_engagements || [])
-      .map(r => r.engagement)
-      .filter(Boolean);
+    const linkRows = (frm.doc.linked_engagements || []).filter(r => r.engagement);
+    const names = linkRows.map(r => r.engagement);
+    const hiddenByName = {};
+    linkRows.forEach(r => { hiddenByName[r.engagement] = !!r.hide_in_lists; });
 
-    if (!names.length) {
-      listWrap.innerHTML = `<div class="text-muted small">No linked engagements yet.</div>`;
-      return;
-    }
+    if (!names.length) { listWrap.innerHTML = `<div class="text-muted small">No linked engagements yet.</div>`; return; }
 
     try {
       const { message: rows = [] } = await frappe.call({
@@ -107,36 +190,41 @@
           doctype: "Engagement Case",
           fields: [
             "name","title","display_name","avatar","channel_platform","priority",
-            "status_crm_board","first_event_at","last_event_at"
+            "status_crm_board","status_leads","status_deals","status_patients",
+            "show_board_crm","show_board_leads","show_board_deals","show_board_patients",
+            "first_event_at","last_event_at"
           ],
           filters: [["name","in",names]],
           limit_page_length: names.length
         }
       });
 
-      if (!rows.length) {
-        listWrap.innerHTML = `<div class="text-muted small">No data.</div>`;
-        return;
-      }
+      listWrap.innerHTML = (rows||[]).map(r => renderMiniCard(r, {
+        show_unlink: true,
+        can_edit_link: true,
+        hidden: !!hiddenByName[r.name]
+      })).join("") || `<div class="text-muted small">No data.</div>`;
 
-      listWrap.innerHTML = rows.map(r => renderMiniCard(r, { showUnlink: true })).join("");
-
-      // actions
       listWrap.querySelectorAll("[data-act]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const act = btn.getAttribute("data-act");
+        btn.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          const act  = btn.getAttribute("data-act");
           const name = btn.getAttribute("data-name");
           if (act === "open") {
             frappe.set_route("Form", "Engagement Case", name);
           } else if (act === "unlink") {
-            const idx = (frm.doc.linked_engagements || []).findIndex(r => r.engagement === name);
-            if (idx >= 0) {
-              frm.doc.linked_engagements.splice(idx, 1);
-              frm.refresh_field("linked_engagements");
-              loadLinkedPreviews(frm);
-              loadParentPreviews(frm); // родители могли измениться
-              frappe.show_alert({ message: `Unlinked ${name}`, indicator: "orange" });
-            }
+            frappe.confirm(__("Unlink this case?"), () => {
+              const idx = (frm.doc.linked_engagements || []).findIndex(r => r.engagement === name);
+              if (idx >= 0) {
+                frm.doc.linked_engagements.splice(idx, 1);
+                frm.refresh_field("linked_engagements");
+                loadLinkedPreviews(frm);
+                loadParentPreviews(frm);
+                frappe.show_alert({ message: `Unlinked ${name}`, indicator: "orange" });
+              }
+            });
+          } else if (act === "edit-link") {
+            openLinkRowEditor(frm, name);
           }
         });
       });
@@ -146,10 +234,10 @@
     }
   }
 
-  // ---------- parents preview (where this case is linked) ----------
+  // ---------- parents ----------
   function ensureParentsContainer(frm) {
     const fld = frm.get_field("linked_engagements");
-    if (!fld || !fld.wrapper) return null;
+    if (!fld?.wrapper) return null;
     let wrap = fld.wrapper.querySelector(".ec-parents-preview");
     if (!wrap) {
       const div = document.createElement("div");
@@ -165,95 +253,87 @@
     const listWrap = ensureParentsContainer(frm);
     if (!listWrap || frm.is_new()) { if (listWrap) listWrap.innerHTML = ""; return; }
     listWrap.innerHTML = `<div class="text-muted small">Loading…</div>`;
-
     try {
       const { message: rows = [] } = await frappe.call({
         method: "dantist_app.api.engagement.handlers.parents_of_engagement",
         args: { name: frm.doc.name }
       });
-
-      if (!rows.length) {
-        listWrap.innerHTML = `<div class="text-muted small">No parents.</div>`;
-        return;
-      }
-
-      listWrap.innerHTML = rows.map(r => renderMiniCard(r, { parent: true, showUnlink: false })).join("");
-
-      listWrap.querySelectorAll("[data-act='open']").forEach(btn => {
-        btn.addEventListener("click", () =>
-          frappe.set_route("Form", "Engagement Case", btn.getAttribute("data-name"))
-        );
-      });
+      listWrap.innerHTML = (rows||[]).map(r => renderMiniCard(r, { is_parent:true })).join("") || `<div class="text-muted small">No parents.</div>`;
+      listWrap.querySelectorAll("[data-act='open']").forEach(btn =>
+        btn.addEventListener("click", ()=> frappe.set_route("Form", "Engagement Case", btn.getAttribute("data-name")))
+      );
     } catch (e) {
       console.error(e);
       listWrap.innerHTML = `<div class="text-danger small">Failed to load parent previews.</div>`;
     }
   }
 
-  // ---------- search & link dialog ----------
-  function addLinkExistingButton(frm) {
-    frm.add_custom_button("Link existing case", async () => {
-      const d = new frappe.ui.Dialog({
-        title: "Link existing case",
-        fields: [
-          { fieldtype: "Data", fieldname: "q", label: "Search", description: "name, title, display name, phone, email" },
-          { fieldtype: "Section Break" },
-          { fieldtype: "HTML", fieldname: "results" },
-        ],
-        primary_action_label: "Close",
-        primary_action() { d.hide(); }
-      });
+  // ---------- диалог поиска/линковки (без дублей) ----------
+  function addLinkExistingDialog(frm) {
+    const already = new Set((frm.doc.linked_engagements || []).map(r => r.engagement).filter(Boolean));
 
-      const $res = () => d.get_field("results").$wrapper;
+    const d = new frappe.ui.Dialog({
+      title: "Link existing case",
+      fields: [
+        { fieldtype: "Data", fieldname: "q", label: "Search", description: "name, title, display name, phone, email" },
+        { fieldtype: "Section Break" },
+        { fieldtype: "HTML", fieldname: "results" },
+      ],
+      primary_action_label: "Close",
+      primary_action() { d.hide(); }
+    });
+    const $res = ()=> d.get_field("results").$wrapper;
 
-      async function runSearch() {
-        const q = (d.get_value("q") || "").trim();
-        $res().html(`<div class="text-muted small">Searching…</div>`);
+    async function runSearch() {
+      const q = (d.get_value("q") || "").trim();
+      $res().html(`<div class="text-muted small">Searching…</div>`);
+      const like = `%${q}%`;
+      const or_filters = q ? [
+        ["Engagement Case","name","like",like],
+        ["Engagement Case","title","like",like],
+        ["Engagement Case","display_name","like",like],
+        ["Engagement Case","phone","like",like],
+        ["Engagement Case","email","like",like],
+      ] : null;
 
-        const like = `%${q}%`;
-        const or_filters = q ? [
-          ["Engagement Case", "name", "like", like],
-          ["Engagement Case", "title", "like", like],
-          ["Engagement Case", "display_name", "like", like],
-          ["Engagement Case", "phone", "like", like],
-          ["Engagement Case", "email", "like", like],
-        ] : null;
-
-        try {
-          const { message: items = [] } = await frappe.call({
-            method: "frappe.client.get_list",
-            args: {
-              doctype: "Engagement Case",
-              fields: [
-                "name","title","display_name","avatar","channel_platform","priority",
-                "status_crm_board","first_event_at","last_event_at"
-              ],
-              filters: [["name","!=", frm.doc.name]],
-              or_filters,
-              order_by: "ifnull(last_event_at, modified) desc, modified desc",
-              limit_page_length: 20
-            }
-          });
-
-          if (!items.length) {
-            $res().html(`<div class="text-muted small">Nothing found</div>`);
-            return;
+      try {
+        const { message: items = [] } = await frappe.call({
+          method: "frappe.client.get_list",
+          args: {
+            doctype: "Engagement Case",
+            fields: [
+              "name","title","display_name","avatar","channel_platform","priority",
+              "status_crm_board","status_leads","status_deals","status_patients",
+              "show_board_crm","show_board_leads","show_board_deals","show_board_patients",
+              "first_event_at","last_event_at"
+            ],
+            filters: [["name","!=", frm.doc.name]],
+            or_filters,
+            order_by: "ifnull(last_event_at, modified) desc, modified desc",
+            limit_page_length: 20
           }
+        });
 
-          const html = items.map(r => `
+        const filtered = (items || []).filter(it => !already.has(it.name));
+        if (!filtered.length) { $res().html(`<div class="text-muted small">Nothing found</div>`); return; }
+
+        const html = filtered.map(r => {
+          const common = [
+            r.channel_platform ? tagChip("platform", r.channel_platform) : "",
+            r.priority         ? tagChip("priority", r.priority) : "",
+          ].filter(Boolean).join("");
+          const kchips = kanbanChipsAll(r);
+          const chips  = [common, kchips ? sepChip + kchips : ""].join("");
+
+          return `
             <div class="ec-card" data-name="${esc(r.name)}">
               <div class="ec-left">
                 <div class="ec-avatar"><img src="${esc(pickAvatar(r))}" alt=""></div>
                 <div class="ec-body">
                   <div class="ec-title">${esc(r.title || r.display_name || r.name)}</div>
-                  <div class="ec-meta">
-                    ${r.channel_platform ? chip(r.channel_platform) : ""}
-                    ${r.priority ? chip("P: " + r.priority) : ""}
-                    ${r.status_crm_board ? chip(r.status_crm_board) : ""}
-                  </div>
+                  <div class="ec-meta">${chips}</div>
                   <div class="ec-meta -time">
-                    ${timeChip("Last", r.last_event_at)}
-                    ${timeChip("First", r.first_event_at)}
+                    ${timeChip("Last", r.last_event_at)} ${timeChip("First", r.first_event_at)}
                   </div>
                 </div>
               </div>
@@ -262,88 +342,85 @@
                 <button class="btn btn-xs btn-primary" data-act="link" data-name="${esc(r.name)}">Link</button>
               </div>
             </div>
-          `).join("");
+          `;
+        }).join("");
 
-          $res().html(html);
-
-          $res().find("[data-act]").on("click", (e) => {
-            const btn = e.target.closest("[data-act]");
-            if (!btn) return;
-            const act = btn.getAttribute("data-act");
-            const name = btn.getAttribute("data-name");
-            if (act === "open") {
-              frappe.set_route("Form", "Engagement Case", name);
-            } else if (act === "link") {
-              frm.add_child("linked_engagements", { engagement: name, hide_in_lists: 1 });
-              frm.refresh_field("linked_engagements");
-              loadLinkedPreviews(frm);
-              loadParentPreviews(frm);
-              frappe.show_alert({ message: `Linked ${name}`, indicator: "green" });
+        $res().html(html);
+        $res().find("[data-act]").on("click", (e)=>{
+          const btn = e.target.closest("[data-act]");
+          if (!btn) return;
+          const act = btn.getAttribute("data-act");
+          const name = btn.getAttribute("data-name");
+          if (act === "open") {
+            frappe.set_route("Form", "Engagement Case", name);
+          } else if (act === "link") {
+            if (already.has(name)) {
+              frappe.msgprint(__("This case is already linked."), __("Duplicate link"));
+              return;
             }
-          });
-        } catch (e) {
-          console.error(e);
-          $res().html(`<div class="text-danger small">Search failed</div>`);
-        }
+            frm.add_child("linked_engagements", { engagement: name, hide_in_lists: 1 });
+            already.add(name);
+            frm.refresh_field("linked_engagements");
+            loadLinkedPreviews(frm);
+            loadParentPreviews(frm);
+            frappe.show_alert({ message: `Linked ${name}`, indicator: "green" });
+          }
+        });
+      } catch (e) {
+        console.error(e);
+        $res().html(`<div class="text-danger small">Search failed</div>`);
       }
+    }
 
-      d.get_field("q").$input.on("input", frappe.utils.debounce(runSearch, 250));
-      d.show();
-      runSearch();
-    }, "Actions");
+    d.get_field("q").$input.on("input", frappe.utils.debounce(runSearch, 250));
+    d.show();
+    runSearch();
   }
 
-  // ---------- decorate child-table row actions ----------
-  function decorateChildTableActions(frm) {
-    const grid = frm.get_field("linked_engagements") && frm.get_field("linked_engagements").grid;
-    if (!grid) return;
-    grid.wrapper.find(".grid-body .rows .grid-row").each((_, el) => {
-      const row = $(el).data("grid_row");
-      if (!row || !row.doc) return;
-      if (row.$custom_open_btn) return;
-      row.$custom_open_btn = $('<button class="btn btn-xs btn-default" style="margin-left:6px">Open</button>')
-        .on("click", () => {
-          const dst = row.doc.engagement;
-          if (dst) frappe.set_route("Form", "Engagement Case", dst);
-        });
-      $(el).find(".row-actions").append(row.$custom_open_btn);
+  // ---------- кнопки Open Kanban (только текст) ----------
+  function addOpenKanbanButtons(frm) {
+    BOARDS.forEach(meta => {
+      const fld = frm.get_field(meta.field);
+      if (!fld || !fld.$wrapper || fld.$wrapper[0]?.$open_kb_btn) return;
+      const btn = $(`
+        <button class="btn btn-xs btn-default ec-open-kanban" type="button">
+          Open Kanban
+        </button>
+      `).on("click", () => frappe.set_route("List", "Engagement Case", "Kanban", meta.name));
+      fld.$wrapper.find(".control-input").append(btn);
+      fld.$wrapper[0].$open_kb_btn = btn;
     });
   }
 
   // ---------- hooks ----------
   frappe.ui.form.on("Engagement Case", {
-    refresh(frm) {
-      if (frm.dashboard && frm.dashboard.clear_headline) frm.dashboard.clear_headline();
-
-      // борды
-      if (frm.doc.show_board_crm)      addIndicator(frm, "CRM Board",       frm.doc.status_crm_board, color(C.crm_status, frm.doc.status_crm_board));
-      if (frm.doc.show_board_leads)    addIndicator(frm, "Leads – CC",      frm.doc.status_leads,     color(C.crm_status, frm.doc.status_leads));
-      if (frm.doc.show_board_deals)    addIndicator(frm, "Deals – CC",      frm.doc.status_deals,     color(C.crm_status, frm.doc.status_deals));
-      if (frm.doc.show_board_patients) addIndicator(frm, "Patients – Care", frm.doc.status_patients,  color(C.crm_status, frm.doc.status_patients));
-
-      // прочее
-      addIndicator(frm, "Runtime",  frm.doc.runtime_status, color(C.runtime_status, frm.doc.runtime_status));
-      addIndicator(frm, "Priority", frm.doc.priority,       color(C.priority,       frm.doc.priority));
-      addIndicator(frm, "Channel",  frm.doc.channel_platform, color(C.platform,     frm.doc.channel_platform));
-      addIndicator(frm, "Transport",frm.doc.channel_type,   color(C.channel_type,   frm.doc.channel_type));
-
-      if (!frm.is_new()) addLinkExistingButton(frm);
-      decorateChildTableActions(frm);
-
+    async refresh(frm) {
+      await ensureAllBoardColors();   // важно: цвета колонок Kanban загружаются до рендеринга чипов
+      updateTitleBadges(frm);
+      addOpenKanbanButtons(frm);
       loadLinkedPreviews(frm);
       loadParentPreviews(frm);
     },
-
-    linked_engagements_add(frm)    { loadLinkedPreviews(frm); loadParentPreviews(frm); },
+    linked_engagements_add(frm)    { loadLinkedPreviews(frm); },
     linked_engagements_remove(frm) { loadLinkedPreviews(frm); loadParentPreviews(frm); }
   });
 
   // ---------- styles ----------
   const style = document.createElement("style");
   style.innerHTML = `
+  .ec-title-badges{display:flex;gap:6px;align-items:center;margin-left:8px}
+
+  /* База для всех чипов */
+  .crm-chip{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:transparent}
+  .crm-chip.-ghost{background:#f8fafc}
+  .crm-chip.-neutral{background:#f3f4f6;border-color:#e5e7eb}
+
+  /* Узкая вертикальная пунктирная черта (разделитель перед канбан-чипами) */
+  .crm-vsep{display:inline-block;width:0;border-left:1px dashed #d1d5db;margin:0 6px;align-self:stretch}
+
   .ec-linked-preview{margin-top:8px;border-top:1px solid #eef2f7;padding-top:6px}
   .ec-parents-preview{margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:6px}
-  .ec-linked-header{font-size:12px;color:#6b7280;margin-bottom:4px}
+  .ec-linked-header{font-size:12px;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
   .ec-card{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px;border:1px solid #eef2f7;border-radius:10px;margin-top:8px;transition:background .15s}
   .ec-card:hover{background:#fafafa}
   .ec-card.-parent{border-style:dashed}
@@ -352,12 +429,18 @@
   .ec-avatar img{width:100%;height:100%;object-fit:cover;display:block}
   .ec-body{min-width:0}
   .ec-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-  .ec-badge{-parent}{}
-  .ec-badge{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:#f3f4f6;color:#374151}
-  .ec-badge.-parent{border-color:#c7d2fe;background:#eef2ff}
-  .ec-meta{color:#6b7280;font-size:11px;margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
+  .ec-meta{color:#6b7280;font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
   .ec-meta.-time .frappe-timestamp{opacity:.9}
   .ec-right{display:flex;align-items:center;gap:6px}
+  .ec-open-kanban{margin-left:6px}
+
+  /* Полностью скрыть стандартную grid Linked Engagements */
+  .ec-grid-hidden .control-label,
+  .ec-grid-hidden .grid-description,
+  .ec-grid-hidden .grid-custom-buttons,
+  .ec-grid-hidden .form-grid-container,
+  .ec-grid-hidden .grid-heading-row,
+  .ec-grid-hidden .grid-footer { display:none !important; }
   `;
   document.head.appendChild(style);
 })();

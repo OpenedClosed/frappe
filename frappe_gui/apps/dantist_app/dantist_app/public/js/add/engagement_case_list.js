@@ -1,47 +1,59 @@
-// List View customizations for DocType: Engagement Case
+// List View — статусы по цветам Kanban, прочие теги из EC_TAG_COLORS
 (function () {
-  const C = window.EC_COLORS || {};
   const esc = frappe.utils.escape_html;
 
-  // рисуем именно "таблетку", а не просто точку
-  function pill(value, color) {
-    const safe = esc(value || "-");
-    const c = color || "gray";
-    return `<span class="indicator-pill ${c}">${safe}</span>`;
+  const BOARDS = [
+    { board: "CRM Board",                  flag: "show_board_crm",      field: "status_crm_board" },
+    { board: "Leads – Contact Center",     flag: "show_board_leads",    field: "status_leads" },
+    { board: "Deals – Contact Center",     flag: "show_board_deals",    field: "status_deals" },
+    { board: "Patients – Care Department", flag: "show_board_patients", field: "status_patients" },
+  ];
+
+  function statusToIndicator(cbd) {
+    const m = {
+      "#fbcfe8":"pink","#fef3c7":"yellow","#fed7aa":"orange","#bae6fd":"light-blue",
+      "#dbeafe":"blue","#e9d5ff":"purple","#d1fae5":"green","#fecaca":"red","#e5e7eb":"gray"
+    };
+    return m[(cbd||"").toLowerCase()] || "gray";
+  }
+
+  async function ensureBoards() {
+    if (!window.getBoardColors) return;
+    await Promise.all(BOARDS.map(b => getBoardColors(b.board)));
+  }
+
+  function indicatorFor(doc) {
+    for (const meta of BOARDS) {
+      const st = doc[meta.field];
+      if (st) {
+        const map = (window.EC_BOARD_COLORS && window.EC_BOARD_COLORS[meta.board]) || {};
+        const col = map[st] || { bd:"#e5e7eb" };
+        return [__(st), statusToIndicator(col.bd), `${meta.field},=,${st}`];
+      }
+    }
+    return [__("New"), "gray", ``];
+  }
+
+  function chipBoard(board, text, dashed=false) {
+    return window.boardChip ? window.boardChip(board, text, dashed) : `<span class="crm-chip">${esc(text||"")}</span>`;
+  }
+  function chipTag(bucket, val) {
+    return window.tagChip ? window.tagChip(bucket, val) : `<span class="crm-chip">${esc(val||"")}</span>`;
   }
 
   frappe.listview_settings["Engagement Case"] = {
-    // hide_name_column: true,
-    // add_fields: [
-    //   "crm_status", "priority", "runtime_status",
-    //   "channel_platform", "channel_type",
-    //   "last_event_at", "events_count", "unanswered_count"
-    // ],
-
-    // левый индикатор рядом с названием — оставляем как есть
-    get_indicator(doc) {
-      const st = doc.crm_status || "New";
-      const color = (C.crm_status && C.crm_status[st]) || "gray";
-      return [__(st), color, `crm_status,=,${st}`];
-    },
-
-    // «таблетки» в ячейках
+    async onload() { await ensureBoards(); },
+    get_indicator(doc) { return indicatorFor(doc); },
     formatters: {
-      crm_status(val) {
-        return pill(val, C.crm_status && C.crm_status[val]);
-      },
-      priority(val) {
-        return pill(val, C.priority && C.priority[val]);
-      },
-      runtime_status(val) {
-        return pill(val, C.runtime_status && C.runtime_status[val]);
-      },
-      channel_platform(val) {
-        return pill(val, C.platform && C.platform[val]);
-      },
-      channel_type(val) {
-        return pill(val, C.channel_type && C.channel_type[val]);
-      },
+      status_crm_board: (v)=>chipBoard("CRM Board", v),
+      status_leads:     (v)=>chipBoard("Leads – Contact Center", v),
+      status_deals:     (v)=>chipBoard("Deals – Contact Center", v),
+      status_patients:  (v)=>chipBoard("Patients – Care Department", v),
+
+      priority:         (v)=>chipTag("priority", v),
+      runtime_status:   (v)=>chipTag("runtime_status", v),
+      channel_platform: (v)=>chipTag("platform", v),
+      channel_type:     (v)=>chipTag("channel_type", v),
     },
   };
 })();
