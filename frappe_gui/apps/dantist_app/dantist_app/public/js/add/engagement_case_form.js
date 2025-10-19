@@ -1,9 +1,9 @@
-// Engagement Case — form UX:
-// - title badges (all boards: solid if Show-on=1, dashed w/o fill if Show-on=0)
-// - linked preview (hide native grid, only "Search & Link"), no duplicates, unlink with confirm
-// - ✎ opens child-row editor
-// - children & parents mini-cards: show ALL board statuses with proper colors
-// - vertical dotted separator before board chips
+// Engagement Case — form UX
+// - Шапка: все статусы по 4 доскам (Show-on=1 → сплошной, Show-on=0 → пунктир БЕЗ заливки)
+//   + справа от статусов при необходимости отдельный чип "Hidden" (СПЛОШНОЙ, как в карточках)
+// - Linked preview: скрываем нативную grid, только "Search & Link", без дублей; unlink — с подтверждением
+// - ✎ открывает child-row; мини-карточки детей и родителей показывают ВСЕ доски (цвета из Kanban)
+// - Между обычными тегами (platform/priority/…) и канбан-статусами — узкий вертикальный пунктир
 (function () {
   const esc = frappe.utils.escape_html;
 
@@ -17,40 +17,50 @@
   const fullPath  = (p)=> p ? (p.startsWith("/") ? p : `/${p}`) : "";
   const pickAvatar= (row)=> fullPath(row.avatar || "/assets/frappe/images/ui/user-avatar.svg");
 
-  // ---- chips ----
-  // platform/priority/etc — нейтральные таблетки (без цветной заливки, только серый контур)
-  function tagChip(bucket, val) {
+  // ----- helpers: chips -----
+  function chipTag(bucket, val, dashed=false) {
     if (!val) return "";
-    // если когда-нибудь захочешь вернуть расцветку как в старом EC_COLORS — можно подменить тут
-    return `<span class="crm-chip -neutral">${esc(val)}</span>`;
+    if (typeof window.tagChip === "function") return window.tagChip(bucket, val, dashed);
+    const cls = "crm-chip" + (dashed ? " -dashed" : "");
+    return `<span class="${cls}">${esc(val)}</span>`;
   }
 
-  // КАНБАН-статусы — ТОЛЬКО через boardChip из ec_board_colors.js (там инлайн-стили с !important)
-  function boardChip(boardName, status, dashed=false) {
+  function chipBoard(boardName, status, dashed=false) {
     if (!status) return "";
-    if (typeof window.boardChip === "function") {
-      return window.boardChip(boardName, status, dashed); // solid/dashed + цвета из Kanban
-    }
-    // редкий фолбэк (если ec_board_colors.js не загружен)
+    if (typeof window.boardChip === "function") return window.boardChip(boardName, status, dashed);
     const extra = dashed ? "border-style:dashed;background:transparent" : "";
     return `<span class="crm-chip" style="${extra}">${esc(status)}</span>`;
   }
 
-  // Время — «прозрачная» таблетка
   const timeChip  = (label, dt)=> dt ? `<span class="crm-chip -ghost"><span class="lbl">${esc(label)}:</span> ${frappe.datetime.comment_when(dt)}</span>` : "";
-
-  // Вертикальный пунктир-разделитель между обычными чипами и канбан-чипами
-  const sepChip = `<span class="crm-vsep" aria-hidden="true"></span>`;
+  const sepChip   = `<span class="crm-vsep" aria-hidden="true"></span>`;
 
   async function ensureAllBoardColors() {
-    // заранее вытянем цвета всех 4-х досок
     if (typeof window.getBoardColors === "function") {
       await Promise.all(BOARDS.map(b => window.getBoardColors(b.name)));
     }
   }
 
-  // ---------- title badges в шапке документа ----------
-  function updateTitleBadges(frm) {
+  // ----- hidden-mark for current doc (если он скрыт где-то как child) -----
+  let HIDDEN_SET = null;
+  async function isCurrentHidden(name) {
+    try {
+      if (!name) return false;
+      if (!HIDDEN_SET) {
+        const { message: hiddenList = [] } = await frappe.call({
+          method: "dantist_app.api.engagement.handlers.engagement_hidden_children"
+        });
+        HIDDEN_SET = new Set(hiddenList || []);
+      }
+      return HIDDEN_SET.has(name);
+    } catch (e) {
+      console.warn("[EC Form] hidden check failed", e);
+      return false;
+    }
+  }
+
+  // ---------- title badges ----------
+  async function updateTitleBadges(frm) {
     try {
       const titleArea = document.querySelector(".page-head .title-area .flex");
       if (!titleArea) return;
@@ -66,12 +76,17 @@
       for (const b of BOARDS) {
         const st = frm.doc[b.field];
         if (!st) continue;
-        const dashed = !frm.doc[b.flag]; // нет галочки Show-on → пунктир без заливки
-        chips.push(boardChip(b.name, st, dashed));
+        const dashed = !frm.doc[b.flag];
+        chips.push(chipBoard(b.name, st, dashed));
       }
-      wrap.innerHTML = chips.join("");
 
-      // прячем стандартный одиночный индикатор
+      // если текущий кейс скрыт в каком-то родителе — покажем чип "Hidden" (СПЛОШНОЙ!)
+      const hiddenNow = await isCurrentHidden(frm.doc.name);
+      const hiddenChip = hiddenNow ? chipTag("badge", "Hidden", /*dashed*/ false) : "";
+
+      wrap.innerHTML = chips.join("") + (hiddenChip ? sepChip + hiddenChip : "");
+
+      // спрячем стандартный одинокий индикатор
       const std = titleArea.querySelector(".indicator-pill");
       if (std) std.style.display = "none";
     } catch (e) { console.warn("updateTitleBadges failed", e); }
@@ -115,14 +130,13 @@
     return wrap.querySelector(".ec-linked-list");
   }
 
-  // Все статус-чипы из 4 досок: пунктир, если соответствующий show_board_* = 0
   function kanbanChipsAll(row) {
     const out = [];
     for (const b of BOARDS) {
       const st = row[b.field];
       if (!st) continue;
       const dashed = !row[b.flag];
-      out.push(boardChip(b.name, st, dashed));
+      out.push(chipBoard(b.name, st, dashed));
     }
     return out.join("");
   }
@@ -131,15 +145,14 @@
     const title  = row.title || row.display_name || row.name;
     const avatar = pickAvatar(row);
 
-    // обычные чипы
+    // обычные теги (цветные из EC_TAG_COLORS)
     const common = [
-      row.channel_platform ? tagChip("platform", row.channel_platform) : "",
-      row.priority         ? tagChip("priority", row.priority) : "",
+      row.channel_platform ? chipTag("platform", row.channel_platform) : "",
+      row.priority         ? chipTag("priority", row.priority) : "",
     ].filter(Boolean).join("");
 
-    // разделитель + канбан-чипы
     const kchips = kanbanChipsAll(row);
-    const chips = [common, kchips ? sepChip + kchips : ""].join("");
+    const chips  = [common, kchips ? sepChip + kchips : ""].join("");
 
     const times  = [
       timeChip("Last", row.last_event_at),
@@ -147,8 +160,8 @@
     ].filter(Boolean).join(" ");
 
     const badges = [];
-    if (opts.is_parent) badges.push(`<span class="crm-chip -ghost">Parent</span>`);
-    if (opts.hidden)    badges.push(`<span class="crm-chip -ghost">Hidden</span>`);
+    if (opts.is_parent) badges.push(chipTag("badge", "Parent"));
+    if (opts.hidden)    badges.push(chipTag("badge", "Hidden"));
 
     const right = [
       `<button class="btn btn-xs btn-default" data-act="open"   data-name="${esc(row.name)}">Open</button>`,
@@ -319,8 +332,8 @@
 
         const html = filtered.map(r => {
           const common = [
-            r.channel_platform ? tagChip("platform", r.channel_platform) : "",
-            r.priority         ? tagChip("priority", r.priority) : "",
+            r.channel_platform ? chipTag("platform", r.channel_platform) : "",
+            r.priority         ? chipTag("priority", r.priority) : "",
           ].filter(Boolean).join("");
           const kchips = kanbanChipsAll(r);
           const chips  = [common, kchips ? sepChip + kchips : ""].join("");
@@ -395,8 +408,8 @@
   // ---------- hooks ----------
   frappe.ui.form.on("Engagement Case", {
     async refresh(frm) {
-      await ensureAllBoardColors();   // важно: цвета колонок Kanban загружаются до рендеринга чипов
-      updateTitleBadges(frm);
+      await ensureAllBoardColors();
+      await updateTitleBadges(frm);
       addOpenKanbanButtons(frm);
       loadLinkedPreviews(frm);
       loadParentPreviews(frm);
@@ -413,9 +426,9 @@
   /* База для всех чипов */
   .crm-chip{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:transparent}
   .crm-chip.-ghost{background:#f8fafc}
-  .crm-chip.-neutral{background:#f3f4f6;border-color:#e5e7eb}
+  .crm-chip.-dashed{border-style:dashed;background:transparent}
 
-  /* Узкая вертикальная пунктирная черта (разделитель перед канбан-чипами) */
+  /* Узкая вертикальная пунктирная черта (разделитель) */
   .crm-vsep{display:inline-block;width:0;border-left:1px dashed #d1d5db;margin:0 6px;align-self:stretch}
 
   .ec-linked-preview{margin-top:8px;border-top:1px solid #eef2f7;padding-top:6px}
@@ -434,7 +447,7 @@
   .ec-right{display:flex;align-items:center;gap:6px}
   .ec-open-kanban{margin-left:6px}
 
-  /* Полностью скрыть стандартную grid Linked Engagements */
+  /* Скрыть стандартную grid Linked Engagements целиком */
   .ec-grid-hidden .control-label,
   .ec-grid-hidden .grid-description,
   .ec-grid-hidden .grid-custom-buttons,
