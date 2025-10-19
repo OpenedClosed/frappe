@@ -45,12 +45,6 @@ app_include_js = [
     "/assets/dantist_app/js/other/ec_board_colors.js",
     "/assets/dantist_app/js/other/ec_colors.js",  
 
-    "/assets/dantist_app/js/add/engagement_case_form.js",
-    "/assets/dantist_app/js/add/engagement_case_list.js",
-
-    "/assets/dantist_app/js/edit/kanban_skin.js",
-    "/assets/dantist_app/js/edit/kanban_filter.js",
-
     "/assets/dantist_app/js/hide/topbar.js",
     "/assets/dantist_app/js/hide/workspace.js",
     "/assets/dantist_app/js/hide/user_profile.js",
@@ -61,6 +55,13 @@ app_include_js = [
     "/assets/dantist_app/js/hide/toolbar_notifications.js",
     "/assets/dantist_app/js/hide/list_view.js",
     "/assets/dantist_app/js/hide/user_roles_modules.js",  
+    "/assets/dantist_app/js/hide/kanban_filter.js",
+
+    "/assets/dantist_app/js/add/engagement_case_form.js",
+    "/assets/dantist_app/js/add/engagement_case_list.js",
+
+    "/assets/dantist_app/js/edit/kanban_skin.js",
+    "/assets/dantist_app/js/edit/kanban_filters_and_search.js",
 ]
 
 # app_include_css = [
