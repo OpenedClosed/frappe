@@ -240,9 +240,6 @@ override_whitelisted_methods = {
     "frappe.client.get_list": "dantist_app.api.engagement.handlers.get_list",
     "frappe.client.get":      "dantist_app.api.engagement.handlers.get",
 
-
-    "frappe.desk.reportview.get": "dantist_app.api.engagement.handlers.reportview_get",
-
 }
 
 #
