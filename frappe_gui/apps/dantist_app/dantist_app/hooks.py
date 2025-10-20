@@ -58,6 +58,7 @@ app_include_js = [
     "/assets/dantist_app/js/hide/kanban_filter.js",
 
     "/assets/dantist_app/js/add/engagement_case_form.js",
+    "/assets/dantist_app/js/add/engagement_case_tasks.js",
     "/assets/dantist_app/js/add/engagement_case_list.js",
 
     "/assets/dantist_app/js/edit/kanban_skin.js",
@@ -201,6 +202,9 @@ doc_events = {
     "User": {
         "after_insert": "dantist_app.api.users_and_notifications.handlers.on_user_changed",
         "on_update":    "dantist_app.api.users_and_notifications.handlers.on_user_changed",
+    },
+    "Engagement Case": {
+        "before_save": "dantist_app.api.tasks.handlers.maybe_autotasks_on_status_change",
     },
 }
 

@@ -40,10 +40,7 @@
     { "fieldtype": "Data", "fieldname": "country", "label": "Country" },
 
     { "fieldtype": "Section Break", "fieldname": "crm_section", "label": "CRM" },
-    { "fieldtype": "Small Text", "fieldname": "next_action", "label": "Next Action", "description": "Optional short instruction for the assignee" },
-    { "fieldtype": "Datetime", "fieldname": "next_action_at", "label": "Next Action At", "description": "When the next action should happen" },
     { "fieldtype": "Select", "fieldname": "priority", "label": "Priority", "options": "Low\nNormal\nHigh\nUrgent", "default": "Normal" },
-    { "fieldtype": "Link", "fieldname": "owner_user", "label": "Owner / Assignee", "options": "User" },
 
     { "fieldtype": "Section Break", "fieldname": "boards_status_section", "label": "Boards & Status" },
 

@@ -26,11 +26,6 @@
   "preferred_language",
   "timezone",
   "country",
-  "crm_section",
-  "next_action",
-  "next_action_at",
-  "priority",
-  "owner_user",
   "boards_status_section",
   "show_board_crm",
   "status_crm_board",
@@ -47,14 +42,16 @@
   "unanswered_count",
   "last_actor_role",
   "runtime_status",
+  "link_section",
+  "linked_engagements",
+  "crm_section",
+  "priority",
   "sync_section",
   "sync_enabled",
   "last_synced_at",
   "do_not_sync_fields",
   "notes_section",
-  "internal_notes",
-  "link_section",
-  "linked_engagements"
+  "internal_notes"
  ],
  "fields": [
   {
@@ -170,29 +167,11 @@
    "label": "CRM"
   },
   {
-   "description": "Optional short instruction for the assignee",
-   "fieldname": "next_action",
-   "fieldtype": "Small Text",
-   "label": "Next Action"
-  },
-  {
-   "description": "When the next action should happen",
-   "fieldname": "next_action_at",
-   "fieldtype": "Datetime",
-   "label": "Next Action At"
-  },
-  {
    "default": "Normal",
    "fieldname": "priority",
    "fieldtype": "Select",
    "label": "Priority",
    "options": "Low\nNormal\nHigh\nUrgent"
-  },
-  {
-   "fieldname": "owner_user",
-   "fieldtype": "Link",
-   "label": "Owner / Assignee",
-   "options": "User"
   },
   {
    "fieldname": "boards_status_section",
@@ -358,7 +337,7 @@
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-19 10:56:26.122960",
+ "modified": "2025-10-19 21:49:15.927632",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",
