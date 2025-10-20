@@ -1,3 +1,4 @@
+# apps/dantist_app/dantist_app/api/tasks/handlers.py
 from __future__ import annotations
 import json
 from typing import Any, List, Optional, Tuple
@@ -5,13 +6,13 @@ from typing import Any, List, Optional, Tuple
 import frappe
 from frappe.utils import now_datetime, nowdate, get_datetime
 
-# Пишем и в файлы логов, и в консоль — для консоли используем print(..., flush=True)
+# Логгер в файл + принты в консоль
 LOGGER = frappe.logger("dantist.tasks", allow_site=True)
 
 VALID_PRIORITIES = {"High", "Medium", "Low"}
 
 def _todo_fieldname(base: str) -> str:
-    """Вернёт кастомное имя поля, если стандартного нет (напр. 'custom_due_datetime')."""
+    """Вернём кастомное имя поля, если стандартного нет (например, 'custom_due_datetime')."""
     meta = frappe.get_meta("ToDo")
     if meta and meta.get_field(base):
         return base
@@ -72,7 +73,7 @@ def _assign_users_to_doc(doctype: str, name: str, users: List[str]):
                 "doctype": doctype,
                 "name": name,
                 "description": None,
-                "notify": 0,  # email сейчас не шлём из этого места
+                "notify": 0,  # email не шлём из этого места
             })
             print(f"[ASSIGN] {doctype} {name} -> {u}", flush=True)
         except Exception as e:
@@ -120,9 +121,9 @@ def _mk_todo_doc(v: frappe._dict, ref_type: str, ref_name: str, source: str = "a
         data[F_DUE_DT] = due_dt
     data[F_SEND] = send_on
 
-    # allocated_to не используем (оставляем пустым), работаем только через Assign To
+    # allocated_to не трогаем — работаем через Assign To
     eff = _effective_user()
-    if eff:
+    if eff and source in ("manual", "auto"):
         data["assigned_by"] = eff
 
     doc = frappe.get_doc(data)
@@ -130,8 +131,10 @@ def _mk_todo_doc(v: frappe._dict, ref_type: str, ref_name: str, source: str = "a
 
     # Assign To (мульти)
     assignees = _norm_assignees(v.get("assignees"))
-    if not assignees and source == "manual" and eff:
-        assignees = [eff]
+    if not assignees:
+        # дефолт: если manual/kanban/auto и есть активный пользователь — назначаем на него
+        if eff:
+            assignees = [eff]
     if assignees:
         _assign_users_to_doc("ToDo", doc.name, assignees)
 
@@ -143,13 +146,13 @@ def _mk_todo_doc(v: frappe._dict, ref_type: str, ref_name: str, source: str = "a
 def ec_tasks_for_case(name: str, status: Optional[str] = None, limit_start: int = 0, limit_page_length: int = 10):
     """
     Возвращает страницы задач с опциональным фильтром по статусу.
-    Совместимо с твоей v4.2: { rows: [...], total: N }
+    Совместимо с UI: { rows: [...], total: N }
     """
     flt = {"reference_type": "Engagement Case", "reference_name": name}
     if status:
         flt["status"] = status
 
-    fields = ["name","description","status","date","priority", F_DUE_DT, F_SEND, F_SENT_AT, F_ERR, "assigned_by"]
+    fields = ["name","description","status","date","priority","allocated_to","assigned_by", F_DUE_DT, F_SEND, F_SENT_AT, F_ERR]
     total = frappe.db.count("ToDo", filters=flt)
 
     rows = frappe.get_all(
@@ -171,7 +174,7 @@ def ec_tasks_for_case(name: str, status: Optional[str] = None, limit_start: int 
         d["reminder_error"]    = d.pop(F_ERR, None)
         out.append(d)
 
-    print(f"[EC_TASKS] fetch {name} status={status} {limit_start}+{limit_page_length} -> {len(out)}/{total}", flush=True)
+    print(f"[EC_TASKS] fetch {name} status={status or 'All'} {limit_start}+{limit_page_length} -> {len(out)}/{total}", flush=True)
     return {"rows": out, "total": total}
 
 @frappe.whitelist()
@@ -190,8 +193,10 @@ def update_task_status(name: str, status: str):
     print(f"[TODO][STATUS] {name} -> {status}", flush=True)
     return {"ok": True}
 
+# ----------------------- Автозадачи по смене статусов кейса -----------------------
+
 def maybe_autotasks_on_status_change(doc, method=None):
-    """Server-side before_save — ловим смены статусов и создаём автозадачи."""
+    """Server-side before_save — ловим смены статусов и создаём автозадачи (с Assign To на активного пользователя)."""
     prev = getattr(doc, "_doc_before_save", None) or doc.get_doc_before_save()
     if not prev:
         return
@@ -201,7 +206,13 @@ def maybe_autotasks_on_status_change(doc, method=None):
         dt = (now_datetime() + frappe.utils.time_delta(days=days)).replace(hour=10, minute=0, second=0, microsecond=0)
         create_task_for_case(
             name=doc.name,
-            values={"description": desc, "priority": prio, "due_datetime": dt, "send_reminder": 1, "assignees": [eff] if eff else []},
+            values={
+                "description": desc,
+                "priority": prio,
+                "due_datetime": dt,
+                "send_reminder": 1,
+                "assignees": [eff] if eff else []
+            },
             source="auto",
         )
         print(f"[AUTO] {desc} for {doc.name}", flush=True)

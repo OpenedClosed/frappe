@@ -204,6 +204,7 @@ doc_events = {
         "on_update":    "dantist_app.api.users_and_notifications.handlers.on_user_changed",
     },
     "Engagement Case": {
+        "on_update": "dantist_app.api.tasks.handlers.maybe_autotasks_on_status_change",
         "before_save": "dantist_app.api.tasks.handlers.maybe_autotasks_on_status_change",
     },
 }

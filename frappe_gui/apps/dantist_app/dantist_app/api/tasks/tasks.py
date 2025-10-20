@@ -1,100 +1,82 @@
 # apps/dantist_app/dantist_app/api/tasks/tasks.py
-from __future__ import annotations
+from datetime import timedelta
 import frappe
 from frappe.utils import now_datetime
 
-LOGGER = frappe.logger("dantist.reminders", allow_site=True)
+# Флаги:
+# - custom_send_reminder (Check) — включить ли напоминание (по умолчанию 1)
+# - custom_reminder_sent (Check) — уже отправляли?
+# - custom_due_datetime (Datetime) — когда напомнить
 
-def _todo_fieldname(base: str) -> str:
-    meta = frappe.get_meta("ToDo")
-    if meta and meta.get_field(base):
-        return base
-    custom = f"custom_{base}"
-    return custom if (meta and meta.get_field(custom)) else base
-
-F_DUE_DT   = _todo_fieldname("due_datetime")
-F_SEND     = _todo_fieldname("send_reminder")
-F_SENT_AT  = _todo_fieldname("reminder_sent_at")
-F_ERR      = _todo_fieldname("reminder_error")
-
-def _notify_user(user: str, todo_name: str, desc: str):
+def _notify(users: list[str], title: str, message: str, ref_type: str, ref_name: str):
+    if not users:
+        return
     try:
-        frappe.get_doc({
-            "doctype": "Notification Log",
-            "subject": "ToDo Reminder",
-            "email_content": desc,
-            "for_user": user,
-            "document_type": "ToDo",
-            "document_name": todo_name,
-            "type": "Alert",
-        }).insert(ignore_permissions=True)
-        print(f"[REMIND] {todo_name} -> {user}", flush=True)
+        from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+        enqueue_create_notification(users=users, subject=title, email_content=message, reference_doctype=ref_type, reference_name=ref_name)
     except Exception as e:
-        print(f"[REMIND][ERR] {todo_name} -> {user}: {e}", flush=True)
+        print("[REMINDER][NOTIFY][ERROR]", e, flush=True)
 
-def _assigned_users_for_todo(todo_name: str):
-    # Assignments хранятся в ToDo как отдельные строки ToDo со ссылкой? Нет.
-    # В Frappe назначение — в таблице ToDo Assignment (используется API assign_to).
-    # Упростим: возьмём из assign_to API представление:
-    rows = frappe.get_all("ToDo",  # это безопасный fallback на случай использования allocated_to
+
+def _get_assignees(todo_name: str) -> list[str]:
+    # читаем стандартные Assignments
+    rows = frappe.get_all("ToDo",
                           filters={"name": todo_name},
                           fields=["allocated_to"])
-    out = []
-    if rows and rows[0].get("allocated_to"):
-        out.append(rows[0]["allocated_to"])
+    users = set()
+    for r in rows:
+        if r.get("allocated_to"):
+            users.add(r["allocated_to"])
 
-    # дополнительно вытащим assign_log (узлы Assign To)
-    alog = frappe.get_all("Assignment Rule", fields=["name"], limit=0)  # заглушка, если нет — ок
-    # Прямого API для чтения «Assign To» нет в ORM — пойдём через таблицу `ToDo`? В 15-ке
-    # назначенные пользователи хранятся в `ToDo`-assignements через `Assignment` doctype:
-    assignees = frappe.get_all(
-        "Assignment",
-        filters={"reference_doctype": "ToDo", "reference_name": todo_name, "status": "Open"},
-        fields=["owner"]
-    )
-    for a in assignees:
-        u = a.get("owner")
-        if u and u not in out:
-            out.append(u)
-    return out
+    # дополнительно из Assignment Doc (если используется)
+    try:
+        ass = frappe.get_all("Assignment",
+                             filters={"reference_type": "ToDo", "reference_name": todo_name, "status": ["!=", "Cancelled"]},
+                             fields=["owner", "assigned_to"])
+        for a in ass:
+            if a.get("assigned_to"):
+                users.add(a["assigned_to"])
+            if a.get("owner"):
+                users.add(a["owner"])
+    except Exception:
+        pass
+
+    return [u for u in users if u and u != "Guest"]
+
 
 def scan_todo_reminders():
     now = now_datetime()
-    # Ищем открытые с включённым флагом и НЕ отправленные
-    todos = frappe.get_all(
+    print(f"[REMINDER][SCAN] {now}", flush=True)
+
+    rows = frappe.get_all(
         "ToDo",
         filters={
             "status": "Open",
-            F_SEND: 1,
-            F_SENT_AT: ["is", "not set"],
-            F_DUE_DT: ["<=", now],
+            "custom_send_reminder": 1,
+            "custom_reminder_sent": 0,
+            "custom_due_datetime": ["<=", now + timedelta(seconds=1)]
         },
-        fields=["name","description","allocated_to"],
-        order_by=f"{F_DUE_DT} asc",
-        limit=200
+        fields=["name", "description", "reference_type", "reference_name", "custom_due_datetime"]
     )
-    if not todos:
-        return
 
-    for row in todos:
-        try:
-            # Кого пинговать:
-            users = _assigned_users_for_todo(row.name)
-            if not users and row.allocated_to:
-                users = [row.allocated_to]
-            if not users:
-                frappe.db.set_value("ToDo", row.name, F_ERR, "No assignees")
-                print(f"[REMIND][SKIP] {row.name} no users", flush=True)
-                continue
+    print(f"[REMINDER][FOUND] {len(rows)}", flush=True)
 
-            for u in users:
-                _notify_user(u, row.name, row.description or row.name)
+    for r in rows:
+        users = _get_assignees(r.name)
+        print(f"[REMINDER][ITEM] {r.name} -> users={users}", flush=True)
+        _notify(
+            users=users,
+            title=f"ToDo reminder",
+            message=f"{r.description or r.name}",
+            ref_type=r.reference_type,
+            ref_name=r.reference_name
+        )
+        # помечаем отправленным
+        frappe.db.set_value("ToDo", r.name, {"custom_reminder_sent": 1})
 
-            frappe.db.set_value("ToDo", row.name, {
-                F_SENT_AT: now,
-                F_ERR: None
-            })
-        except Exception as e:
-            frappe.db.set_value("ToDo", row.name, F_ERR, str(e))
-            print(f"[REMIND][ERR] {row.name}: {e}", flush=True)
-            frappe.log_error(title="scan_todo_reminders", message=frappe.get_traceback())
+
+@frappe.whitelist()
+def run_scan_now():
+    print("[REMINDER][RUN_SCAN_NOW] called", flush=True)
+    scan_todo_reminders()
+    return {"ok": True}
