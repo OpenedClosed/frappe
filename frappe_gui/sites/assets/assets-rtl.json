@@ -1,16 +1,16 @@
 {
-    "rtl_desk.bundle.css": "/assets/frappe/dist/css-rtl/desk.bundle.MUPFMWBE.css",
-    "rtl_email.bundle.css": "/assets/frappe/dist/css-rtl/email.bundle.BFWSTU7T.css",
-    "rtl_login.bundle.css": "/assets/frappe/dist/css-rtl/login.bundle.UAKETY33.css",
-    "rtl_print.bundle.css": "/assets/frappe/dist/css-rtl/print.bundle.Z3SWTTU3.css",
-    "rtl_print_format.bundle.css": "/assets/frappe/dist/css-rtl/print_format.bundle.ZIPPIFJT.css",
-    "rtl_report.bundle.css": "/assets/frappe/dist/css-rtl/report.bundle.6XSOSAUQ.css",
-    "rtl_web_form.bundle.css": "/assets/frappe/dist/css-rtl/web_form.bundle.X6IAAQZS.css",
-    "rtl_website.bundle.css": "/assets/frappe/dist/css-rtl/website.bundle.O46XDSW7.css",
-    "rtl_erpnext-web.bundle.css": "/assets/erpnext/dist/css-rtl/erpnext-web.bundle.L3MKZGNT.css",
-    "rtl_erpnext.bundle.css": "/assets/erpnext/dist/css-rtl/erpnext.bundle.I25IRCHF.css",
-    "rtl_erpnext_email.bundle.css": "/assets/erpnext/dist/css-rtl/erpnext_email.bundle.YII4ZZIP.css",
+    "rtl_desk.bundle.css": "/assets/frappe/dist/css-rtl/desk.bundle.KWFO4AGT.css",
+    "rtl_email.bundle.css": "/assets/frappe/dist/css-rtl/email.bundle.JHGTR5VY.css",
+    "rtl_login.bundle.css": "/assets/frappe/dist/css-rtl/login.bundle.ALP3CDWV.css",
+    "rtl_print.bundle.css": "/assets/frappe/dist/css-rtl/print.bundle.YYFB5NYT.css",
+    "rtl_print_format.bundle.css": "/assets/frappe/dist/css-rtl/print_format.bundle.DPOH7N7V.css",
+    "rtl_report.bundle.css": "/assets/frappe/dist/css-rtl/report.bundle.N3XGV3GP.css",
+    "rtl_web_form.bundle.css": "/assets/frappe/dist/css-rtl/web_form.bundle.DQ2QEG6V.css",
+    "rtl_website.bundle.css": "/assets/frappe/dist/css-rtl/website.bundle.SLDXCEDX.css",
+    "rtl_erpnext-web.bundle.css": "/assets/erpnext/dist/css-rtl/erpnext-web.bundle.S4CM3XF3.css",
+    "rtl_erpnext.bundle.css": "/assets/erpnext/dist/css-rtl/erpnext.bundle.RGPBXOM7.css",
+    "rtl_erpnext_email.bundle.css": "/assets/erpnext/dist/css-rtl/erpnext_email.bundle.GXUZEQRJ.css",
     "rtl_telegram_theme.bundle.css": "/assets/task_tracker/dist/css-rtl/telegram_theme.bundle.5N4TQLOT.css",
     "rtl_telegram_dark.bundle.css": "/assets/task_tracker/dist/css-rtl/telegram_dark.bundle.OBYLPSXN.css",
-    "rtl_theme.bundle.css": "/assets/dantist_app/dist/css-rtl/theme.bundle.YCP3C7HF.css"
+    "rtl_theme.bundle.css": "/assets/dantist_app/dist/css-rtl/theme.bundle.TGGWB7Y7.css"
 }

@@ -214,9 +214,10 @@ scheduler_events = {
         "*/1 * * * *": [
             "dantist_app.api.tasks.tasks.scheduler_heartbeat",
             "dantist_app.api.tasks.tasks.process_due_todos",
+            # "dantist_app.api.tasks.tasks.test_broadcast_todo_notifications",
         ]
     },
-    "all": ["dantist_app.api.tasks.tasks.scheduler_heartbeat"]
+    # "all": ["dantist_app.api.tasks.tasks.scheduler_heartbeat"]
 }
 
 # scheduler_events = {

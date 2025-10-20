@@ -81,9 +81,10 @@ def _mk_todo_doc(v: frappe._dict, ref_type: str, ref_name: str, source: str = "m
     prio = prio_in if prio_in in VALID_PRIORITIES else None
     due_dt, date_iso = _extract_due(v)
 
+    # <-- ВАЖНО: больше не задаём 0 по умолчанию.
     send_raw = v.get("send_reminder")
-    if send_raw is None: send_raw = v.get(F_SEND)
-    send_on = 1 if str(send_raw).lower() in ("1","true","yes","on") else 0
+    if send_raw is None:
+        send_raw = v.get(F_SEND)  # вдруг клиент прислал по custom-имени
 
     data = {
         "doctype": "ToDo",
@@ -93,20 +94,30 @@ def _mk_todo_doc(v: frappe._dict, ref_type: str, ref_name: str, source: str = "m
         "reference_type": ref_type,
         "reference_name": ref_name,
     }
-    if prio: data["priority"] = prio
-    if due_dt: data[F_DUE_DT] = due_dt
-    data[F_SEND] = send_on
+    if prio:
+        data["priority"] = prio
+    if due_dt:
+        data[F_DUE_DT] = due_dt
+
+    # Ключевая логика:
+    # - Если флаг пришёл явным значением -> мы его выставляем (1/0).
+    # - Если НЕ пришёл -> НЕ кладём поле вообще, и сработает стандартный дефолт DocField.
+    if send_raw is not None:
+        send_on = 1 if str(send_raw).lower() in ("1", "true", "yes", "on") else 0
+        data[F_SEND] = send_on
 
     eff = _effective_user()
-    if eff: data["assigned_by"] = eff
+    if eff:
+        data["assigned_by"] = eff
 
     doc = frappe.get_doc(data)
     doc.insert(ignore_permissions=True)
 
     assignees = _norm_assignees(v.get("assignees")) or ([eff] if eff else [])
-    if assignees: _assign_users_to_doc("ToDo", doc.name, assignees)
+    if assignees:
+        _assign_users_to_doc("ToDo", doc.name, assignees)
 
-    print(f"[TODO][OK] created {doc.name} ({F_SEND}={send_on})", flush=True)
+    print(f"[TODO][OK] created {doc.name} ({F_SEND}={'<omitted>' if send_raw is None else send_on})", flush=True)
     LOGGER.info("ToDo created %s for %s/%s", doc.name, ref_type, ref_name)
     return doc
 
