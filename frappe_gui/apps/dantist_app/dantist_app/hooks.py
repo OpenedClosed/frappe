@@ -211,10 +211,12 @@ doc_events = {
 
 scheduler_events = {
     "cron": {
-        "* * * * *": [
-            "dantist_app.api.tasks.tasks.scan_todo_reminders"
+        "*/1 * * * *": [
+            "dantist_app.api.tasks.tasks.scheduler_heartbeat",
+            "dantist_app.api.tasks.tasks.process_due_todos",
         ]
-    }
+    },
+    "all": ["dantist_app.api.tasks.tasks.scheduler_heartbeat"]
 }
 
 # scheduler_events = {
