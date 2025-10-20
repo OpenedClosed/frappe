@@ -1,10 +1,17 @@
-// Engagement Case — Tasks UI (ToDo + Kanban “Call Later”) — v4.7
+// Engagement Case — Tasks UI (ToDo + Kanban “Call Later”) — v4.10
 (function () {
   const DOCTYPE = "Engagement Case";
   const PAGE_LEN = 10;
 
-  const UI = { statusTab: "Open", page: 1, total: 0, frm: null };
+  const UI = {
+    statusTab: "Open",
+    page: 1,
+    total: 0,
+    frm: null,
+    callLaterDone: false,   // уже создали ToDo в этой сессии редактирования
+  };
 
+  // ---------- helpers ----------
   function domOf(w) {
     if (!w) return null;
     if (w instanceof HTMLElement) return w;
@@ -15,27 +22,45 @@
     return null;
   }
 
-  // ==== Дата/время: корректное отображение в часовой зоне пользователя ====
   function fmtUserDT(dtStr) {
     if (!dtStr) return "-";
     try {
-      const userTzISO = frappe.datetime.convert_to_user_tz(dtStr); // -> ISO в зоне пользователя
-      // формат: YYYY-MM-DD HH:mm (понятно и явно)
+      const userTzISO = frappe.datetime.convert_to_user_tz(dtStr);
       return moment(userTzISO).format("YYYY-MM-DD HH:mm");
-    } catch (e) {
-      return String(dtStr);
-    }
+    } catch { return String(dtStr); }
   }
 
+  // --- Диалог due: bootstrap hidden.bs.modal вместо d.on('hide') ---
   function openDueDialog(label, onOk, onCancel) {
+    const me = frappe.session.user || "";
     const d = new frappe.ui.Dialog({
       title: label || "Set follow-up time",
-      fields: [{ fieldtype: "Datetime", fieldname: "due", label: "Due At", reqd: 1 }],
-      primary_action_label: "OK",
-      primary_action(values) { onOk && onOk(values.due); d.hide(); }
+      fields: [
+        { fieldtype: "Datetime", fieldname: "due", label: "Due At", reqd: 1 },
+        { fieldtype: "MultiSelectList", fieldname: "assignees", label: "Assign To (multiple)", options:"User",
+          // Важно: без filters=null — иначе /search_link падает в Frappe 15
+          get_data: function (txt) { return frappe.db.get_link_options("User", txt || ""); }
+        },
+        { fieldtype: "Check", fieldname: "assign_me", label:`Assign to me (${me})`, default:1 },
+        { fieldtype: "Select", fieldname: "priority", label: "Priority", options: "Low\nMedium\nHigh", default:"Medium" },
+      ],
     });
+
+    // ручка Primary Action: ставим так, чтобы успеть пометить «не отмена» и закрыть
+    let confirmed = false;
+    d.set_primary_action(__("OK"), (values) => {
+      confirmed = true;
+      try { onOk && onOk(values); } finally { d.hide(); }
+    });
+
+    // если закрыли крестиком/вне модалки — считаем отменой
+    const onHidden = () => {
+      d.$wrapper.off("hidden.bs.modal", onHidden);
+      if (!confirmed && onCancel) onCancel();
+    };
+    d.$wrapper.on("hidden.bs.modal", onHidden);
+
     d.$wrapper.addClass("ec-task-dialog");
-    d.on("hide", () => { if (d.get_value("due") == null && onCancel) onCancel(); });
     d.show();
   }
 
@@ -50,6 +75,7 @@
     const anchorEl = domOf(anchorField) || domOf(frm.wrapper);
     if (!anchorEl) return null;
 
+    // внутрь стандартной колонки формы (наследуем отступы ERPNext) + свой верхний бордер
     const column = anchorEl.closest(".form-section")?.querySelector(".section-body .form-column") || anchorEl.parentNode;
 
     const existed = column.querySelectorAll(".ec-tasks-wrap");
@@ -60,9 +86,7 @@
       wrap = document.createElement("div");
       wrap.className = "ec-tasks-wrap";
       wrap.innerHTML = `
-        <div class="ec-tasks-head">
-          <div class="t">Tasks</div>
-        </div>
+        <div class="ec-tasks-head"><div class="t">Tasks</div></div>
 
         <div class="ec-tabs-row">
           ${tabsHtml(UI.statusTab)}
@@ -104,16 +128,13 @@
           UI.statusTab = a.getAttribute("data-val") || "Open";
           UI.page = 1;
           const row = wrap.querySelector(".ec-tabs-row");
-          const actionsHtml = row.querySelector(".actions").outerHTML;
-          row.innerHTML = tabsHtml(UI.statusTab) + actionsHtml;
+          const actions = row.querySelector(".actions").outerHTML;
+          row.innerHTML = tabsHtml(UI.statusTab) + actions;
           return loadTasks(frm);
         }
 
         if (act === "add") return openCreateDialog(frm);
-
-        if (act === "open-list") {
-          return frappe.set_route("List", "ToDo", { reference_type: DOCTYPE, reference_name: frm.doc.name });
-        }
+        if (act === "open-list") return frappe.set_route("List","ToDo",{ reference_type: DOCTYPE, reference_name: frm.doc.name });
 
         if (act === "done" || act === "cancel") {
           const name = a.getAttribute("data-name");
@@ -130,16 +151,11 @@
     return wrap.querySelector(".ec-tasks-list");
   }
 
-  function priorityClass(p) {
-    if (p === "High") return "-p-high";
-    if (p === "Low")  return "-p-low";
-    return "-p-med";
-  }
+  function priorityClass(p){ if (p==="High") return "-p-high"; if (p==="Low") return "-p-low"; return "-p-med"; }
 
   function taskRow(t) {
     const due_dt = t.due_datetime || t.custom_due_datetime;
-    const due = due_dt ? fmtUserDT(due_dt) :
-                (t.date ? moment(t.date).format("YYYY-MM-DD") : "-");
+    const due = due_dt ? fmtUserDT(due_dt) : (t.date ? moment(t.date).format("YYYY-MM-DD") : "-");
     const who = t.allocated_to || t.owner || "";
     const st  = t.status || "Open";
     const cls = st === "Open" ? "" : " -muted";
@@ -158,11 +174,10 @@
         </div>
         <div class="r">
           <button class="btn btn-xs btn-default" onclick="frappe.set_route('Form','ToDo','${frappe.utils.escape_html(t.name)}')">Open</button>
-          ${st === "Open"
-            ? `<button class="btn btn-xs btn-success ml-1" data-act="done" data-name="${frappe.utils.escape_html(t.name)}">Complete</button>
-               <button class="btn btn-xs btn-default ml-1" data-act="cancel" data-name="${frappe.utils.escape_html(t.name)}">Cancel</button>`
-            : ``
-          }
+          ${st==="Open" ? `
+            <button class="btn btn-xs btn-success ml-1" data-act="done" data-name="${frappe.utils.escape_html(t.name)}">Complete</button>
+            <button class="btn btn-xs btn-default ml-1" data-act="cancel" data-name="${frappe.utils.escape_html(t.name)}">Cancel</button>
+          ` : ``}
         </div>
       </div>`;
   }
@@ -171,11 +186,10 @@
     const pager = container.parentElement.querySelector(".ec-tasks-pager");
     if (!pager) return;
     const totalPages = Math.max(1, Math.ceil(UI.total / PAGE_LEN));
+    pager.querySelector(".nav").style.display = (totalPages <= 1) ? "none" : "inline-flex";
     const prevBtn = pager.querySelector('[data-act="prev"]');
     const nextBtn = pager.querySelector('[data-act="next"]');
     const info = pager.querySelector(".info");
-
-    pager.querySelector(".nav").style.display = (totalPages <= 1) ? "none" : "inline-flex";
     if (prevBtn) prevBtn.disabled = (UI.page <= 1);
     if (nextBtn) nextBtn.disabled = (UI.page >= totalPages);
     if (info) info.textContent = `Page ${UI.page} / ${totalPages} • ${UI.total} total • ${PAGE_LEN} per page`;
@@ -185,18 +199,15 @@
     const listEl = ensureTasksContainer(frm);
     if (!listEl) return;
     listEl.innerHTML = `<div class="text-muted small">Loading…</div>`;
-
     try {
       const status = UI.statusTab === "All" ? null : UI.statusTab;
       const start = (UI.page - 1) * PAGE_LEN;
-
       const { message } = await frappe.call({
         method: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
         args: { name: frm.doc.name, status, limit_start: start, limit_page_length: PAGE_LEN }
       });
       const rows = (message && message.rows) || [];
       UI.total = (message && message.total) || rows.length;
-
       listEl.innerHTML = rows.length ? rows.map(taskRow).join("") : `<div class="text-muted small">No tasks.</div>`;
       updatePagerVisibility(listEl);
     } catch (e) {
@@ -212,14 +223,9 @@
       fields: [
         { fieldtype:"Small Text", fieldname:"description", label:"Description", reqd:1 },
         { fieldtype:"Datetime", fieldname:"due", label:"Due At", reqd:1 },
-
-        // ВАЖНО: без filters=null → иначе /search_link падает
         { fieldtype:"MultiSelectList", fieldname:"assignees", label:"Assign To (multiple)", options:"User",
-          get_data: function(txt) {
-            return frappe.db.get_link_options("User", txt || "");
-          }
+          get_data: function(txt){ return frappe.db.get_link_options("User", txt || ""); }
         },
-
         { fieldtype:"Check", fieldname:"assign_me", label:`Assign to me (${me})`, default:1 },
         { fieldtype:"Select", fieldname:"priority", label:"Priority", options:"Low\nMedium\nHigh", default:"Medium" },
       ],
@@ -228,10 +234,8 @@
         try {
           let assignees = Array.isArray(v.assignees) ? v.assignees.slice() : (v.assignees || []);
           if (v.assign_me && me && !assignees.includes(me)) assignees.push(me);
-
           const payload = { description: v.description, due: v.due, priority: v.priority };
           if (assignees.length) payload.assignees = assignees;
-
           await frappe.call({
             method: "dantist_app.api.tasks.handlers.create_task_for_case",
             args: { name: frm.doc.name, values: payload, source: "manual" }
@@ -251,104 +255,128 @@
   }
 
   async function updateTaskStatus(name, status) {
-    await frappe.call({
-      method: "dantist_app.api.tasks.handlers.update_task_status",
-      args: { name, status }
-    });
+    await frappe.call({ method: "dantist_app.api.tasks.handlers.update_task_status", args: { name, status } });
     frappe.show_alert({ message: status==="Closed"?"Completed":"Cancelled", indicator:"green" });
   }
 
-  // Форма: Call Later → due + assignees=[me]
-  frappe.ui.form.on(DOCTYPE, {
-    refresh(frm){ loadTasks(frm); },
-    after_save(frm){ loadTasks(frm); },
+  // ---------- ФОРМА: показываем диалог ПЕРЕД СЕЙВОМ, если выбран Call Later ----------
+  function patchFormSave(frm){
+    if (frm.__ecSavePatched) return;
+    frm.__ecSavePatched = true;
 
-    status_leads(frm) {
+    const origSave = frm.save.bind(frm);
+    frm.save = function(...args){
+      if (frm.doc.status_leads !== "Call Later" || UI.callLaterDone) {
+        return origSave(...args);
+      }
+
+      const me = frappe.session.user || "";
+      openDueDialog(__("Call Later at"),
+        async (vals) => {
+          try {
+            let assignees = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
+            if (vals.assign_me && me && !assignees.includes(me)) assignees.push(me);
+            await frappe.call({
+              method: "dantist_app.api.tasks.handlers.create_task_for_case",
+              args: { name: frm.doc.name,
+                      values: { description:"Manual Callback", due: vals.due, priority: vals.priority || "Medium", assignees },
+                      source: "manual" }
+            });
+            UI.callLaterDone = true;
+            frappe.show_alert({ message:"Callback scheduled", indicator:"green" });
+            return origSave(...args);
+          } catch(e){
+            console.warn("[EC Form Save] create failed", e);
+          }
+        },
+        () => { /* отмена — не сохраняем */ }
+      );
+
+      return Promise.resolve();
+    };
+  }
+
+  frappe.ui.form.on(DOCTYPE, {
+    refresh(frm){
+      UI.callLaterDone = false;
       if (frm.doc.status_leads === "Call Later") {
-        const me = frappe.session.user || "";
-        openDueDialog(__("Call Later at"), async (due) => {
-          await frappe.call({
-            method: "dantist_app.api.tasks.handlers.create_task_for_case",
-            args: { name: frm.doc.name,
-                    values: { description:"Manual Callback", due, priority:"Medium", assignees: me ? [me] : [] },
-                    source:"manual" }
-          });
-          frappe.show_alert({ message:"Callback scheduled", indicator:"green" });
-          loadTasks(frm);
-        });
+        frappe.show_alert({ message: __("Due time will be requested on Save"), indicator:"blue" });
+      }
+      patchFormSave(frm);
+      loadTasks(frm);
+    },
+    after_save(frm){
+      loadTasks(frm);
+      UI.callLaterDone = false; // новая сессия правок
+    },
+    status_leads(frm){
+      if (frm.doc.status_leads === "Call Later") {
+        frappe.show_alert({ message: __("Due time will be requested on Save"), indicator:"blue" });
       }
     }
   });
 
-  // === KANBAN: диалог ПЕРЕД сохранением статуса ===
-  (function patchKanbanBeforeSave(){
-    const KV = frappe.views && frappe.views.KanbanView && frappe.views.KanbanView.prototype;
-    if (!KV || KV.__ecPatched_v47) return;
+  // ---------- КАНБАН: как в твоей «рабочей» версии — перехватываем frappe.call после ответа ----------
+  (function patchKanbanViaCall(){
+    if (frappe.__ec_call_patched_v410) return;
+    const orig = frappe.call;
 
-    const origSingle = KV.update_order_for_single_card;
+    frappe.call = function(opts){
+      const isObj  = opts && typeof opts === "object";
+      const method = isObj ? (opts.method || "") : "";
+      const args   = isObj ? (opts.args   || {}) : {};
 
-    KV.update_order_for_single_card = function(args) {
-      // args: { card, from_colname, to_colname, old_index, new_index, ... }
-      const to = String(args?.to_colname || "").trim();
-      if ((this.board?.reference_doctype === DOCTYPE) && to === "Call Later" && args?.card) {
-        const self = this;
-        const me = frappe.session.user || "";
-        openDueDialog(__("Call Later at"),
-          async (due) => {
+      const isKanban =
+        method === "frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card" ||
+        method === "frappe.desk.doctype.kanban_board.kanban_board.update_order";
+
+      if (!isKanban) return orig.apply(this, arguments);
+
+      // ЛОГИ ДЛЯ ТЕБЯ
+      console.log("[EC Kanban][PATCH] call →", method, JSON.parse(JSON.stringify(args)));
+
+      const p = orig.apply(this, arguments);
+      Promise.resolve(p).then(() => {
+        const toCol = args.to_colname || args.to_column || args.column || args.column_name;
+        const cardName =
+          args.docname || args.card || args.name || (Array.isArray(args.cards) ? args.cards[0] : null);
+
+        console.log("[EC Kanban][AFTER] to=", toCol, "card(s)=", args.cards || cardName);
+
+        if (String(toCol || "").trim() === "Call Later" && cardName) {
+          const me = frappe.session.user || "";
+          openDueDialog(__("Call Later at"), async (vals) => {
             try {
-              // 1) создаём ToDo
+              let assignees = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
+              if (vals.assign_me && me && !assignees.includes(me)) assignees.push(me);
+
+              console.log("[EC Kanban][CREATE] for", cardName, "due=", vals.due, "assignees=", assignees);
+
               await frappe.call({
                 method: "dantist_app.api.tasks.handlers.create_task_for_case",
-                args: { name: args.card,
-                        values: { description:"Manual Callback", due, priority:"Medium", assignees: me ? [me] : [] },
-                        source: "manual" }
+                args: { name: cardName,
+                        values: { description:"Manual Callback", due: vals.due, priority: vals.priority || "Medium", assignees },
+                        source:"manual" }
               });
-              // 2) меняем статус карточки (теперь уже можно)
-              origSingle.call(self, args);
+
               frappe.show_alert({ message:"Callback scheduled", indicator:"green" });
-            } catch(e){ console.warn("[EC Kanban] create failed", e); }
-          },
-          () => {
-            // Отмена → откатываем визуально
-            try { self.refresh(); } catch(e){}
-          }
-        );
-        // прерываем изменение статуса до подтверждения
-        return Promise.resolve();
-      }
-      return origSingle.call(this, args);
+            } catch(e){
+              console.warn("[EC Kanban] create failed", e);
+            }
+          }, () => {
+            console.log("[EC Kanban][CANCEL]");
+          });
+        }
+      }).catch((e)=>{ console.warn("[EC Kanban][AFTER][ERR]", e); });
+
+      return p;
     };
 
-    // Пакетное перемещение — аналогичный подход
-    const origBatch = KV.update_order;
-    KV.update_order = function(args) {
-      const to = String(args?.to_column || args?.column || args?.column_name || "").trim();
-      if ((this.board?.reference_doctype === DOCTYPE) && to === "Call Later" && Array.isArray(args?.cards) && args.cards.length) {
-        const self = this;
-        const me = frappe.session.user || "";
-        openDueDialog(__("Call Later at"),
-          async (due) => {
-            try {
-              await Promise.all(args.cards.map(n => frappe.call({
-                method: "dantist_app.api.tasks.handlers.create_task_for_case",
-                args: { name: n, values: { description:"Manual Callback", due, priority:"Medium", assignees: me ? [me] : [] }, source:"manual" }
-              })));
-              origBatch.call(self, args);
-              frappe.show_alert({ message:"Callback scheduled", indicator:"green" });
-            } catch(e){ console.warn("[EC Kanban] batch create failed", e); }
-          },
-          () => { try { self.refresh(); } catch(e){} }
-        );
-        return Promise.resolve();
-      }
-      return origBatch.call(this, args);
-    };
-
-    KV.__ecPatched_v47 = true;
-    console.log("[EC Kanban] patched v4.7 (pre-save dialog)");
+    frappe.__ec_call_patched_v410 = true;
+    console.log("[EC Kanban] frappe.call patched v4.10");
   })();
 
-  // ==== Стили ====
+  // ---------- стили ----------
   const css = document.createElement("style");
   css.textContent = `
   /* отделяем блок задач тонкой линией, как соседние секции */
