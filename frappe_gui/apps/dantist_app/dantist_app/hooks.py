@@ -212,6 +212,14 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
+scheduler_events = {
+    "cron": {
+        "* * * * *": [
+            "dantist_app.api.tasks.tasks.scan_todo_reminders"
+        ]
+    }
+}
+
 # scheduler_events = {
 # 	"all": [
 # 		"dantist_app.tasks.all"

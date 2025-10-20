@@ -1,5 +1,5 @@
 // apps/dantist_app/dantist_app/public/js/add/engagement_case_tasks.js
-// Engagement Case — Tasks UI (ToDo + Kanban “Call Later”) — v4.2
+// Engagement Case — Tasks UI (ToDo + Kanban “Call Later”) — v4.2.3
 (function () {
   const DOCTYPE = "Engagement Case";
   const PAGE_LEN = 10;
@@ -39,7 +39,7 @@
 
     if (!anchorEl) return null;
 
-    // садимся именно в .section-body > .form-column, чтобы унаследовать стандартные отступы
+    // садимся в .section-body > .form-column → унаследуем стандартные отступы
     const column = anchorEl.closest(".form-section")?.querySelector(".section-body .form-column") || anchorEl.parentNode;
 
     const existed = column.querySelectorAll(".ec-tasks-wrap");
@@ -122,7 +122,9 @@
   }
 
   function taskRow(t) {
-    const due = t.date ? frappe.datetime.global_date_format(t.date) : "-";
+    const due = t.due_datetime
+      ? frappe.datetime.global_date_format(t.due_datetime)
+      : (t.date ? frappe.datetime.global_date_format(t.date) : "-");
     const who = t.allocated_to || t.owner || "";
     const st  = t.status || "Open";
     const cls = st === "Open" ? "" : " -muted";
@@ -150,13 +152,28 @@
       </div>`;
   }
 
+  function updatePagerVisibility(container, total) {
+    const pager = container.parentElement.querySelector(".ec-tasks-pager");
+    const prev  = pager.querySelector('[data-act="prev"]');
+    const next  = pager.querySelector('[data-act="next"]');
+    const info  = pager.querySelector('.info');
+
+    if (total <= PAGE_LEN) {
+      pager.style.display = "none";
+      return;
+    }
+    pager.style.display = "";
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_LEN));
+    info.textContent = `Page ${UI.page} / ${totalPages} • ${total} total`;
+    prev.style.visibility = (UI.page > 1) ? "visible" : "hidden";
+    next.style.visibility = (UI.page < totalPages) ? "visible" : "hidden";
+  }
+
   async function loadTasks(frm) {
     const listEl = ensureTasksContainer(frm);
     if (!listEl) return;
 
     listEl.innerHTML = `<div class="text-muted small">Loading…</div>`;
-    const pagerInfo = listEl.parentElement.querySelector(".ec-tasks-pager .info");
-    if (pagerInfo) pagerInfo.textContent = "";
 
     try {
       const status = UI.statusTab === "All" ? null : UI.statusTab;
@@ -166,13 +183,12 @@
         method: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
         args: { name: frm.doc.name, status, limit_start: start, limit_page_length: PAGE_LEN }
       });
+
       const rows = (message && message.rows) || [];
-      UI.total = (message && message.total) || rows.length;
+      UI.total   = (message && message.total) || rows.length;
 
       listEl.innerHTML = rows.length ? rows.map(taskRow).join("") : `<div class="text-muted small">No tasks.</div>`;
-
-      const totalPages = Math.max(1, Math.ceil(UI.total / PAGE_LEN));
-      if (pagerInfo) pagerInfo.textContent = `Page ${UI.page} / ${totalPages} • ${UI.total} total`;
+      updatePagerVisibility(listEl, UI.total);
     } catch (e) {
       console.error(e);
       listEl.innerHTML = `<div class="text-danger small">Failed to load tasks.</div>`;
@@ -185,12 +201,12 @@
       title: "New Task",
       fields: [
         { fieldtype:"Small Text", fieldname:"description", label:"Description", reqd:1 },
-        { fieldtype:"Datetime", fieldname:"due", label:"Due At", reqd:1 },
+        { fieldtype:"Datetime",   fieldname:"due",         label:"Due At", reqd:1 },
 
-        // MULTI: корректный get_data (filters=null, limit=20)
+        // MULTI: корректный get_data без кривых filters=20
         { fieldtype:"MultiSelectList", fieldname:"assignees", label:"Assign To (multiple)", options:"User",
           get_data: function(txt) {
-            return frappe.db.get_link_options("User", txt || "", null, 20);
+            return frappe.db.get_link_options("User", txt || "");
           }
         },
 
@@ -200,7 +216,6 @@
       primary_action_label: "Create",
       primary_action: async (v) => {
         try {
-          // нормализуем список
           let assignees = Array.isArray(v.assignees) ? v.assignees.slice() : (v.assignees || []);
           if (v.assign_me && me && !assignees.includes(me)) assignees.push(me);
 
@@ -233,6 +248,7 @@
     frappe.show_alert({ message: status==="Closed"?"Completed":"Cancelled", indicator:"green" });
   }
 
+  // Форма: если вручную выбрали Call Later — спросим due
   frappe.ui.form.on(DOCTYPE, {
     refresh(frm){ loadTasks(frm); },
     after_save(frm){ loadTasks(frm); },
@@ -251,36 +267,58 @@
     }
   });
 
-  // --- Канбан: аккуратно патчим метод, а не frappe.call ---
-  (function patchKanbanSingleMove(){
-    const KV = frappe.views && frappe.views.KanbanView;
-    if (!KV || !KV.prototype || KV.__ecPatched_v42) return;
+  // --- KANBAN: перехватываем ОДИНОЧНОЕ и ПАКЕТНОЕ перемещение ---
+  (function patchKanbanMoves(){
+    const KV = frappe.views && frappe.views.KanbanView && frappe.views.KanbanView.prototype;
+    if (!KV || KV.__ecPatched_v423) return;
 
-    const orig = KV.prototype.update_order_for_single_card;
-    KV.prototype.update_order_for_single_card = async function(args) {
-      // args: { card, from_column, to_column, ... }
-      const res = await orig.apply(this, arguments);
+    function afterMove(self, args){
       try {
-        const isEC = (this.board && this.board.reference_doctype === DOCTYPE) || (this.doctype === DOCTYPE);
-        if (isEC && String(args?.to_column || "").trim() === "Call Later" && args?.card) {
-          openDueDialog(__("Call Later at"), async (due) => {
-            await frappe.call({
+        const isEC = (self.board && self.board.reference_doctype === DOCTYPE) || (self.doctype === DOCTYPE);
+        if (!isEC) return;
+
+        // Одинарный: args.to_column, args.card
+        // Пакетный:  args.to_column / args.column, args.cards (массив)
+        const toCol = (args && (args.to_column || args.column || args.column_name)) || "";
+        const label = (typeof toCol === "string") ? toCol.trim() : String(toCol || "").trim();
+        if (label !== "Call Later") return;
+
+        const names = [];
+        if (args && args.card) names.push(args.card);
+        if (Array.isArray(args?.cards)) args.cards.forEach(c => c && names.push(c));
+
+        if (!names.length) return;
+
+        openDueDialog(__("Call Later at"), async (due) => {
+          try {
+            await Promise.all(names.map(n => frappe.call({
               method: "dantist_app.api.tasks.handlers.create_task_for_case",
-              args: { name: args.card, values: { description:"Manual Callback", due, priority:"Medium" }, source:"manual" }
-            });
+              args: { name: n, values: { description:"Manual Callback", due, priority:"Medium" }, source:"manual" }
+            })));
             frappe.show_alert({ message:"Callback scheduled", indicator:"green" });
-          });
-        }
-      } catch(e){ console.warn("[EC Kanban post-move] failed", e); }
-      return res;
+          } catch(e){ console.warn("[EC Kanban] create failed", e); }
+        });
+      } catch(e){ console.warn("[EC Kanban] afterMove failed", e); }
+    }
+
+    const wrap = (proto, fn) => {
+      const orig = proto[fn];
+      if (typeof orig !== "function") return;
+      proto[fn] = async function(){
+        const res = await orig.apply(this, arguments);
+        try { afterMove(this, arguments[0] || {}); } catch(e){}
+        return res;
+      };
     };
-    KV.__ecPatched_v42 = true;
+
+    wrap(KV, "update_order_for_single_card");
+    wrap(KV, "update_order");
+    KV.__ecPatched_v423 = true;
   })();
 
-  // --- Стили: плотные, но с «жёстким» внутренним паддингом контейнера ---
+  // --- Стили (как у тебя, с паддингами и чипами, + скрытие pager) ---
   const css = document.createElement("style");
   css.textContent = `
-  /* внутри стандартной секции формы даём свои паддинги, чтобы не липло */
   .form-section .section-body .form-column .ec-tasks-wrap{ padding:12px 14px 0 14px; }
   .ec-tasks-wrap{ margin:12px 0 0; }
 

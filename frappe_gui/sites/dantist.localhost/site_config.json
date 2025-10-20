@@ -3,6 +3,7 @@
  "db_password": "VZiXWIZdxq7RVbaT",
  "db_type": "mariadb",
  "developer_mode": 1,
+ "log_level": "DEBUG",
  "encryption_key": "s31szVT37Ej5masmpLuw8BUzl7R_mFsV3YLVjYXPlKY=",
  "server_script_enabled": true,
 

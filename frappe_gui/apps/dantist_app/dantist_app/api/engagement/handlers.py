@@ -8,7 +8,7 @@ import requests
 from frappe.client import get_list as frappe_get_list
 from frappe.client import get as frappe_get
 
-logger = logging.getLogger(__name__)
+logger = frappe.logger("dantist", allow_site=True)
 
 ENGAGEMENT_DOCTYPE = "Engagement Case"
 BASE_PATH = "/integrations/frappe"
@@ -96,6 +96,7 @@ def sync_by_chat_id_upstream(chat_id: str) -> Dict[str, Any]:
 # ---------- PROXIES (если нужны) ----------
 @frappe.whitelist()
 def get_list(doctype: str, **kwargs):
+    print("Тестик", flush=True)
     if doctype == ENGAGEMENT_DOCTYPE and not should_skip_sync():
         if need_sync("recent", 5):
             print("[frappe.engagement.get_list] pre-sync recent (cooldown 5s, NO LIMIT)")
@@ -144,6 +145,10 @@ def engagement_allowed_for_board(flag_field: str) -> List[str]:
 
 @frappe.whitelist()
 def engagement_board_counts(flag_field: str, status_field: str) -> Dict[str, object]:
+
+    logger.info("my message %s", "="*100)
+    print("Тестик", flush=True)
+    frappe.log_error("check point", "DEBUG")
     hidden = set(engagement_hidden_children())
     shown  = set(engagement_allowed_for_board(flag_field))
     visible = list(shown - hidden)
