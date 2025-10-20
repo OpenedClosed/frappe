@@ -1,4 +1,4 @@
-// Engagement Case — Tasks UI (ToDo + configurable auto-rules) — v4.14.1
+// Engagement Case — Tasks UI (ToDo + configurable auto-rules) — v4.15
 (function () {
   const DOCTYPE = "Engagement Case";
   const PAGE_LEN = 10;
@@ -58,10 +58,19 @@
           return { description: "Schedule control X-ray" + note, due, priority: vals.priority || "High", assignees: a };
         },
       },
+      // NEW: автозадача при завершении этапов в patients-фанне
+      "Treatment Completed": {
+        showDialog: false,
+        shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
+        makePayload: (_vals, me) => {
+          const due = moment().add(5, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          return { description: "Recall: schedule prophylaxis", due, priority: "Medium", assignees: me ? [me] : [] };
+        },
+      },
     },
   };
 
-  // ========= Затем правила ДЛЯ КАНБАНА (ссылаемся на FORM_RULES при необходимости) =========
+  // ========= Затем правила ДЛЯ КАНБАНА =========
   const KANBAN_RULES = {
     "Call Later": {
       showDialog: true,
@@ -107,9 +116,9 @@
     total: 0,
     frm: null,
     baseline: { status_leads: null, status_deals: null, status_patients: null },
-    pendingRule: null,
+    pendingRule: null, // { df, rule }
     saveGuard: false,
-    kanbanSeen: new Set(),
+    kanbanSeen: new Set(), // антидубль по (card::col)
   };
 
   // ========= helpers =========
@@ -228,7 +237,7 @@
         <div class="ec-tasks-hint">
           <div class="h-title">Auto-tasks for this case</div>
           <ul class="h-list">
-            <li><b>Next-Day Feedback</b> — on “Appointment Scheduled / Stage Checked / Treatment Completed”.</li>
+            <li><b>Next-Day Feedback</b> — on “Appointment Scheduled / Treatment Completed”.</li>
             <li><b>Control X-ray</b> — on “Stage Checked” (3–6 months by treatment type).</li>
             <li><b>Manual Callback</b> — on “Call Later” (due time required; alert −2h).</li>
           </ul>
@@ -431,16 +440,23 @@
     },
     status_patients(frm){
       const prev = UI.baseline.status_patients, cur = frm.doc.status_patients || null;
-      const rule = FORM_RULES.status_patients["Stage Checked"];
+      const r1 = FORM_RULES.status_patients["Stage Checked"];
+      const r2 = FORM_RULES.status_patients["Treatment Completed"];
+      const rule = (cur==="Stage Checked") ? r1 : (cur==="Treatment Completed" ? r2 : null);
       const need = rule && rule.shouldTrigger({ prev, cur, frm });
       UI.pendingRule = need ? { df:"status_patients", rule } : null;
-      if (need) frappe.show_alert({ message: __("Control task details will be requested on Save"), indicator:"blue" });
+      if (!need) return;
+      if (rule.showDialog) {
+        frappe.show_alert({ message: __("Control task details will be requested on Save"), indicator:"blue" });
+      } else {
+        frappe.show_alert({ message: __("An auto task will be created on Save"), indicator:"blue" });
+      }
     },
   });
 
   // ========= КАНБАН: перехват frappe.call (с логами и антидублем) =========
   (function patchKanban(){
-    if (frappe.__ec_call_patched_v4141) return;
+    if (frappe.__ec_call_patched_v415) return;
     const orig = frappe.call;
 
     frappe.call = function(opts){
@@ -492,8 +508,8 @@
       return p;
     };
 
-    frappe.__ec_call_patched_v4141 = true;
-    console.log("[EC Kanban] frappe.call patched v4.14.1 (config, split rules)");
+    frappe.__ec_call_patched_v415 = true;
+    console.log("[EC Kanban] frappe.call patched v4.15 (config, split rules)");
   })();
 
   // ========= Стили =========
