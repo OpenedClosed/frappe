@@ -1,14 +1,55 @@
-// Engagement Case — Tasks UI (ToDo + Kanban “Call Later”) — v4.10
+// Engagement Case — Tasks UI (ToDo + Kanban “Call Later”) — v4.12
 (function () {
   const DOCTYPE = "Engagement Case";
   const PAGE_LEN = 10;
+
+  // На будущее — сюда добавим универсальные правила автозадач
+  // Пример структуры (пока используем только Call Later):
+  const AUTO_RULES = {
+    form: {
+      status_leads: {
+        "Call Later": {
+          title: __("Call Later at"),
+          makePayload: (vals, me) => ({
+            description: "Manual Callback",
+            due: vals.due,
+            priority: vals.priority || "Medium",
+            assignees: (() => {
+              let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
+              if (vals.assign_me && me && !a.includes(me)) a.push(me);
+              return a;
+            })()
+          })
+        }
+      }
+    },
+    kanban: {
+      "Call Later": {
+        title: __("Call Later at"),
+        makePayload: (vals, me) => ({
+          description: "Manual Callback",
+          due: vals.due,
+          priority: vals.priority || "Medium",
+          assignees: (() => {
+            let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
+            if (vals.assign_me && me && !a.includes(me)) a.push(me);
+            return a;
+          })()
+        })
+      }
+    }
+  };
 
   const UI = {
     statusTab: "Open",
     page: 1,
     total: 0,
     frm: null,
-    callLaterDone: false,   // уже создали ToDo в этой сессии редактирования
+
+    // форма: отслеживание смены статуса именно в текущей сессии
+    statusAtLoad: null,     // значение поля на момент загрузки формы
+    lastStatus: null,       // предыдущее значение (для последовательных смен)
+    callLaterPending: false // нужно ли показывать диалог при сохранении (сменили на Call Later сейчас)
   };
 
   // ---------- helpers ----------
@@ -30,7 +71,7 @@
     } catch { return String(dtStr); }
   }
 
-  // --- Диалог due: bootstrap hidden.bs.modal вместо d.on('hide') ---
+  // Диалог due: используем bootstrap hidden.bs.modal
   function openDueDialog(label, onOk, onCancel) {
     const me = frappe.session.user || "";
     const d = new frappe.ui.Dialog({
@@ -38,7 +79,6 @@
       fields: [
         { fieldtype: "Datetime", fieldname: "due", label: "Due At", reqd: 1 },
         { fieldtype: "MultiSelectList", fieldname: "assignees", label: "Assign To (multiple)", options:"User",
-          // Важно: без filters=null — иначе /search_link падает в Frappe 15
           get_data: function (txt) { return frappe.db.get_link_options("User", txt || ""); }
         },
         { fieldtype: "Check", fieldname: "assign_me", label:`Assign to me (${me})`, default:1 },
@@ -46,14 +86,12 @@
       ],
     });
 
-    // ручка Primary Action: ставим так, чтобы успеть пометить «не отмена» и закрыть
     let confirmed = false;
     d.set_primary_action(__("OK"), (values) => {
       confirmed = true;
       try { onOk && onOk(values); } finally { d.hide(); }
     });
 
-    // если закрыли крестиком/вне модалки — считаем отменой
     const onHidden = () => {
       d.$wrapper.off("hidden.bs.modal", onHidden);
       if (!confirmed && onCancel) onCancel();
@@ -75,7 +113,6 @@
     const anchorEl = domOf(anchorField) || domOf(frm.wrapper);
     if (!anchorEl) return null;
 
-    // внутрь стандартной колонки формы (наследуем отступы ERPNext) + свой верхний бордер
     const column = anchorEl.closest(".form-section")?.querySelector(".section-body .form-column") || anchorEl.parentNode;
 
     const existed = column.querySelectorAll(".ec-tasks-wrap");
@@ -259,66 +296,89 @@
     frappe.show_alert({ message: status==="Closed"?"Completed":"Cancelled", indicator:"green" });
   }
 
-  // ---------- ФОРМА: показываем диалог ПЕРЕД СЕЙВОМ, если выбран Call Later ----------
+  // ---------- ФОРМА: диалог только если СЕЙЧАС сменили статус на "Call Later" ----------
   function patchFormSave(frm){
     if (frm.__ecSavePatched) return;
     frm.__ecSavePatched = true;
 
     const origSave = frm.save.bind(frm);
     frm.save = function(...args){
-      if (frm.doc.status_leads !== "Call Later" || UI.callLaterDone) {
+      // Показываем диалог только если в этой сессии произошёл переход НЕ->"Call Later"
+      if (!UI.callLaterPending) {
         return origSave(...args);
       }
 
       const me = frappe.session.user || "";
-      openDueDialog(__("Call Later at"),
+      const rule = AUTO_RULES.form?.status_leads?.["Call Later"];
+      openDueDialog(rule?.title || __("Call Later at"),
         async (vals) => {
           try {
-            let assignees = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
-            if (vals.assign_me && me && !assignees.includes(me)) assignees.push(me);
+            const payload = (rule && rule.makePayload) ? rule.makePayload(vals, me) : {
+              description: "Manual Callback",
+              due: vals.due,
+              priority: vals.priority || "Medium",
+              assignees: (() => {
+                let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
+                if (vals.assign_me && me && !a.includes(me)) a.push(me);
+                return a;
+              })()
+            };
             await frappe.call({
               method: "dantist_app.api.tasks.handlers.create_task_for_case",
-              args: { name: frm.doc.name,
-                      values: { description:"Manual Callback", due: vals.due, priority: vals.priority || "Medium", assignees },
-                      source: "manual" }
+              args: { name: frm.doc.name, values: payload, source:"manual" }
             });
-            UI.callLaterDone = true;
             frappe.show_alert({ message:"Callback scheduled", indicator:"green" });
-            return origSave(...args);
           } catch(e){
             console.warn("[EC Form Save] create failed", e);
+          } finally {
+            UI.callLaterPending = false; // задача обработана
+            return origSave(...args);
           }
         },
-        () => { /* отмена — не сохраняем */ }
+        // Отмена/крестик — НЕ создаём задачу, но документ сохраняем
+        () => {
+          UI.callLaterPending = false;
+          return origSave(...args);
+        }
       );
 
       return Promise.resolve();
     };
   }
 
+  // ---------- bind form events ----------
   frappe.ui.form.on(DOCTYPE, {
     refresh(frm){
-      UI.callLaterDone = false;
-      if (frm.doc.status_leads === "Call Later") {
-        frappe.show_alert({ message: __("Due time will be requested on Save"), indicator:"blue" });
-      }
+      UI.frm = frm;
+      UI.statusAtLoad = frm.doc.status_leads || null;
+      UI.lastStatus   = UI.statusAtLoad;
+      UI.callLaterPending = false;
+
       patchFormSave(frm);
       loadTasks(frm);
     },
     after_save(frm){
       loadTasks(frm);
-      UI.callLaterDone = false; // новая сессия правок
+      // новая сессия правок — фиксируем текущий статус как "стартовый"
+      UI.statusAtLoad = frm.doc.status_leads || null;
+      UI.lastStatus   = UI.statusAtLoad;
+      UI.callLaterPending = false;
     },
     status_leads(frm){
-      if (frm.doc.status_leads === "Call Later") {
+      const cur = frm.doc.status_leads || null;
+      const becameCallLater = (UI.lastStatus !== "Call Later") && (cur === "Call Later");
+      UI.callLaterPending = !!becameCallLater;
+      UI.lastStatus = cur;
+
+      if (becameCallLater) {
         frappe.show_alert({ message: __("Due time will be requested on Save"), indicator:"blue" });
       }
     }
   });
 
-  // ---------- КАНБАН: как в твоей «рабочей» версии — перехватываем frappe.call после ответа ----------
+  // ---------- КАНБАН: перехватываем frappe.call (как в стабильной версии) ----------
   (function patchKanbanViaCall(){
-    if (frappe.__ec_call_patched_v410) return;
+    if (frappe.__ec_call_patched_v412) return;
     const orig = frappe.call;
 
     frappe.call = function(opts){
@@ -332,48 +392,34 @@
 
       if (!isKanban) return orig.apply(this, arguments);
 
-      // ЛОГИ ДЛЯ ТЕБЯ
-      console.log("[EC Kanban][PATCH] call →", method, JSON.parse(JSON.stringify(args)));
-
       const p = orig.apply(this, arguments);
       Promise.resolve(p).then(() => {
         const toCol = args.to_colname || args.to_column || args.column || args.column_name;
         const cardName =
           args.docname || args.card || args.name || (Array.isArray(args.cards) ? args.cards[0] : null);
 
-        console.log("[EC Kanban][AFTER] to=", toCol, "card(s)=", args.cards || cardName);
-
-        if (String(toCol || "").trim() === "Call Later" && cardName) {
+        const rule = AUTO_RULES.kanban?.["Call Later"];
+        if (String(toCol || "").trim() === "Call Later" && cardName && rule) {
           const me = frappe.session.user || "";
-          openDueDialog(__("Call Later at"), async (vals) => {
+          openDueDialog(rule.title, async (vals) => {
             try {
-              let assignees = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
-              if (vals.assign_me && me && !assignees.includes(me)) assignees.push(me);
-
-              console.log("[EC Kanban][CREATE] for", cardName, "due=", vals.due, "assignees=", assignees);
-
+              const payload = rule.makePayload(vals, me);
               await frappe.call({
                 method: "dantist_app.api.tasks.handlers.create_task_for_case",
-                args: { name: cardName,
-                        values: { description:"Manual Callback", due: vals.due, priority: vals.priority || "Medium", assignees },
-                        source:"manual" }
+                args: { name: cardName, values: payload, source:"manual" }
               });
-
               frappe.show_alert({ message:"Callback scheduled", indicator:"green" });
             } catch(e){
               console.warn("[EC Kanban] create failed", e);
             }
-          }, () => {
-            console.log("[EC Kanban][CANCEL]");
-          });
+          }, () => {});
         }
-      }).catch((e)=>{ console.warn("[EC Kanban][AFTER][ERR]", e); });
-
+      }).catch(()=>{});
       return p;
     };
 
-    frappe.__ec_call_patched_v410 = true;
-    console.log("[EC Kanban] frappe.call patched v4.10");
+    frappe.__ec_call_patched_v412 = true;
+    console.log("[EC Kanban] frappe.call patched v4.12");
   })();
 
   // ---------- стили ----------
