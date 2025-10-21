@@ -16,13 +16,10 @@ class FrappeClient:
     """Async Frappe REST wrapper."""
 
     def api_base(self) -> str:
-        # форсим IPv4, чтобы не улетать на ::1 и не ловить ConnectionRefused
         base = (settings.FRAPPE_API_BASE or "")
         return base.replace("localhost", "127.0.0.1").rstrip("/")
 
     def auth_headers(self) -> Dict[str, str]:
-        # X-AIHub-No-Sync => Frappe обёртки пропускают предсинк (нет рекурсии)
-        # Connection: close => меньше висящих keep-alive (и 'Too many connections')
         return {
             "Authorization": f"token {settings.FRAPPE_API_KEY}:{settings.FRAPPE_API_SECRET}",
             "X-AIHub-No-Sync": "1",
@@ -39,12 +36,27 @@ class FrappeClient:
         return ["name"]
 
     async def request(self, fn: str, *args: Any, **kwargs: Any) -> Any:
+        """
+        Поддерживаем:
+        - call("full.python.path", {...})
+        - method({method: "full.python.path", ...})  ← совместимость со старым кодом
+        - frappe.client.get / get_list / insert / save / get_value / set_value / delete
+        """
         try:
             headers = self.auth_headers()
 
             if fn == "call":
                 method = args[0]
                 data = args[1] if len(args) > 1 else kwargs
+                url = f"{self.api_base()}/api/method/{method}"
+
+            elif fn == "method":
+                # совместимость: ожидаем словарь с ключом "method"
+                data_in = args[0] if args else kwargs
+                method = data_in.get("method")
+                if not method:
+                    raise ValueError("Missing 'method' for fn='method'")
+                data = {k: v for k, v in (data_in or {}).items() if k != "method"}
                 url = f"{self.api_base()}/api/method/{method}"
 
             elif fn in {"get", "get_list", "insert", "save", "get_value", "set_value", "delete"}:
@@ -84,8 +96,6 @@ class FrappeClient:
             raise FrappeError(str(exc)) from exc
 
     async def create_notification_from_upstream(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        # модуль фактически расположен здесь:
-        # dantist_app.api.users_and_notifications.handlers.create_notification_from_upstream
         url = f"{self.api_base()}/api/method/dantist_app.api.users_and_notifications.handlers.create_notification_from_upstream"
         headers = self.auth_headers() | {"Content-Type": "application/json"}
         async with aiohttp.ClientSession() as s:

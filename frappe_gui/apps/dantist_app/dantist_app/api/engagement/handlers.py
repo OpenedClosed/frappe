@@ -1,3 +1,4 @@
+# frappe_gui/apps/dantist_app/dantist_app/api/engagement/handlers.py
 # -*- coding: utf-8 -*-
 import json
 import logging
@@ -7,6 +8,8 @@ import frappe
 import requests
 from frappe.client import get_list as frappe_get_list
 from frappe.client import get as frappe_get
+from frappe.desk.reportview import get as rv_get
+from frappe.desk.reportview import get_count as rv_get_count
 
 logger = frappe.logger("dantist", allow_site=True)
 
@@ -66,13 +69,25 @@ def _clean_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
             kwargs.pop(k, None)
     return kwargs
 
+def _maybe_presync(tag: str, doctype: str) -> None:
+    if doctype != ENGAGEMENT_DOCTYPE:
+        return
+    if should_skip_sync():
+        return
+    if need_sync(f"{tag}:recent", 5):
+        print("-"*100, flush=True)
+        print(f"[engagement::{tag}] pre-sync recent (cooldown 5s)", flush=True)
+        res = sync_recent_upstream(minutes=5)
+        print(f"[engagement::{tag}] pre-sync result={res}", flush=True)
+        print("-"*100, flush=True)
+
 # ---------- UPSTREAM SYNC ----------
 def sync_recent_upstream(minutes: int = 5) -> Dict[str, Any]:
     url = f"{base_url()}{BASE_PATH}/engagement/sync_recent"
     try:
         r = requests.post(url, json={"minutes": int(minutes)}, timeout=30)
         data = r.json() if r.headers.get("content-type","").startswith("application/json") else {}
-        print(f"[frappe.engagement.get_list] upstream status={r.status_code} data={data}")
+        print(f"[frappe.engagement.sync_recent_upstream] status={r.status_code} data={data}", flush=True)
         if r.status_code != 200:
             return {"ok": False, "status": r.status_code}
         return data or {"ok": True}
@@ -85,7 +100,7 @@ def sync_by_chat_id_upstream(chat_id: str) -> Dict[str, Any]:
     try:
         r = requests.post(url, json={"chat_id": chat_id}, timeout=30)
         data = r.json() if r.headers.get("content-type","").startswith("application/json") else {}
-        print(f"[frappe.engagement.get] upstream status={r.status_code} data={data}")
+        print(f"[frappe.engagement.sync_by_chat_id_upstream] status={r.status_code} data={data}", flush=True)
         if r.status_code != 200:
             return {"ok": False, "status": r.status_code}
         return data or {"ok": True}
@@ -93,32 +108,61 @@ def sync_by_chat_id_upstream(chat_id: str) -> Dict[str, Any]:
         logger.exception("sync_by_chat_id_upstream failed")
         return {"ok": False, "error": str(e)}
 
-# ---------- PROXIES (если нужны) ----------
+# ---------- PROXIES: client.get_list / client.get ----------
 @frappe.whitelist()
 def get_list(doctype: str, **kwargs):
-    print("Тестик", flush=True)
-    if doctype == ENGAGEMENT_DOCTYPE and not should_skip_sync():
-        if need_sync("recent", 5):
-            print("[frappe.engagement.get_list] pre-sync recent (cooldown 5s, NO LIMIT)")
-            _ = sync_recent_upstream(minutes=5)
+    print("[engagement.get_list] ENTER", flush=True)
+    if doctype == ENGAGEMENT_DOCTYPE:
+        _maybe_presync("get_list", doctype)
     kw = _clean_kwargs(dict(kwargs))
-    return frappe_get_list(doctype=doctype, **kw)
+    out = frappe_get_list(doctype=doctype, **kw)
+    print(f"[engagement.get_list] EXIT len={len(out) if isinstance(out, list) else 'n/a'}", flush=True)
+    return out
 
 @frappe.whitelist()
 def get(doctype: str, name: str, **kwargs):
+    print(f"[engagement.get] ENTER doctype={doctype} name={name}", flush=True)
     if doctype == ENGAGEMENT_DOCTYPE and not should_skip_sync():
         chat_id = (frappe.db.get_value(doctype, name, "mongo_chat_id") or "").strip()
         if chat_id:
             key = f"bychat:{chat_id}"
             if need_sync(key, 5):
-                print(f"[frappe.engagement.get] pre-sync by chat_id={chat_id} (cooldown 5s)")
+                print(f"[engagement.get] pre-sync by chat_id={chat_id} (cooldown 5s)", flush=True)
                 _ = sync_by_chat_id_upstream(chat_id)
         else:
-            if need_sync("recent_fallback", 5):
-                print("[frappe.engagement.get] no chat_id — fallback recent (cooldown 5s)")
-                _ = sync_recent_upstream(minutes=3)
+            _maybe_presync("get_nochat", doctype)
     kw = _clean_kwargs(dict(kwargs))
-    return frappe_get(doctype=doctype, name=name, **kw)
+    out = frappe_get(doctype=doctype, name=name, **kw)
+    print("[engagement.get] EXIT", flush=True)
+    return out
+
+# ---------- NEW: PROXIES для ReportView ----------
+@frappe.whitelist()
+def reportview_get(**kwargs):
+    """
+    Обёртка для frappe.desk.reportview.get — именно её дёргает список (List View).
+    Здесь форсим sync_recent перед выдачей списка для Engagement Case.
+    """
+    doctype = (kwargs.get("doctype") or "").strip()
+    print(f"[engagement.reportview_get] ENTER doctype={doctype}", flush=True)
+    if doctype == ENGAGEMENT_DOCTYPE:
+        _maybe_presync("reportview_get", doctype)
+    out = rv_get(**kwargs)
+    print(f"[engagement.reportview_get] EXIT", flush=True)
+    return out
+
+@frappe.whitelist()
+def reportview_get_count(**kwargs):
+    """
+    Обёртка для frappe.desk.reportview.get_count — чтобы счётчик тоже запускал пресинк.
+    """
+    doctype = (kwargs.get("doctype") or "").strip()
+    print(f"[engagement.reportview_get_count] ENTER doctype={doctype}", flush=True)
+    if doctype == ENGAGEMENT_DOCTYPE:
+        _maybe_presync("reportview_get_count", doctype)
+    out = rv_get_count(**kwargs)
+    print(f"[engagement.reportview_get_count] EXIT count={out}", flush=True)
+    return out
 
 # ---------- HELPERS для виджета/предпросмотра/инжектора ----------
 @frappe.whitelist()
@@ -145,15 +189,13 @@ def engagement_allowed_for_board(flag_field: str) -> List[str]:
 
 @frappe.whitelist()
 def engagement_board_counts(flag_field: str, status_field: str) -> Dict[str, object]:
-
-    logger.info("my message %s", "="*100)
-    print("Тестик", flush=True)
-    frappe.log_error("check point", "DEBUG")
+    print("[engagement_board_counts] ENTER", flush=True)
     hidden = set(engagement_hidden_children())
     shown  = set(engagement_allowed_for_board(flag_field))
     visible = list(shown - hidden)
     out = {"__all": len(visible), "by_status": {}}
     if not visible:
+        print("[engagement_board_counts] EXIT empty", flush=True)
         return out
     rows = frappe.get_all(
         ENGAGEMENT_DOCTYPE,
@@ -166,6 +208,7 @@ def engagement_board_counts(flag_field: str, status_field: str) -> Dict[str, obj
         st = r.get(status_field) or ""
         by[st] = by.get(st, 0) + 1
     out["by_status"] = by
+    print("[engagement_board_counts] EXIT ok", flush=True)
     return out
 
 @frappe.whitelist()
@@ -205,7 +248,6 @@ def parents_of_engagement(name: str) -> List[dict]:
     parent_names = sorted({p for p in parent_names if p})
     if not parent_names:
         return []
-    # ВОЗВРАЩАЕМ ВСЕ статусы и ВСЕ флаги show_board_*
     fields = [
         "name","title","display_name","avatar","channel_platform","priority",
         "status_crm_board","status_leads","status_deals","status_patients",
