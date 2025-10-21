@@ -35,10 +35,13 @@ class UserOut(BaseValidatedModel):
     email: Optional[str] = Field(default=None)
     avatar: Optional[Photo] = None
 
+    # НОВОЕ (опционально): дата обновления (если нет — ориентируемся на created_at)
+    updated_at: Optional[datetime] = None
+
+
 class User(UserOut):
     """Пользователь."""
     password: str = Field("", min_length=5)
-
 
     @field_validator("username")
     def validate_username(cls, v):

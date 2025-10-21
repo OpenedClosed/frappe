@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import frappe
 import requests
@@ -79,6 +79,12 @@ def _maybe_presync(tag: str, doctype: str) -> None:
         print(f"[engagement::{tag}] pre-sync recent (cooldown 5s)", flush=True)
         res = sync_recent_upstream(minutes=5)
         print(f"[engagement::{tag}] pre-sync result={res}", flush=True)
+        # НОВОЕ: пресинк пользователей (клиентов → Deals)
+        try:
+            ures = sync_recent_users_upstream(minutes=5)
+            print(f"[engagement::{tag}] pre-sync USERS result={ures}", flush=True)
+        except Exception as e:
+            print(f"[engagement::{tag}] pre-sync USERS failed err={e}", flush=True)
         print("-"*100, flush=True)
 
 # ---------- UPSTREAM SYNC ----------
@@ -93,6 +99,23 @@ def sync_recent_upstream(minutes: int = 5) -> Dict[str, Any]:
         return data or {"ok": True}
     except Exception as e:
         logger.exception("sync_recent_upstream failed")
+        return {"ok": False, "error": str(e)}
+
+# НОВОЕ: users → deals
+def sync_recent_users_upstream(minutes: int = 5, limit: Optional[int] = None) -> Dict[str, Any]:
+    url = f"{base_url()}{BASE_PATH}/engagement/sync_recent_users"
+    payload: Dict[str, Any] = {"minutes": int(minutes)}
+    if limit is not None:
+        payload["limit"] = int(limit)
+    try:
+        r = requests.post(url, json=payload, timeout=30)
+        data = r.json() if r.headers.get("content-type","").startswith("application/json") else {}
+        print(f"[frappe.engagement.sync_recent_users_upstream] status={r.status_code} data={data}", flush=True)
+        if r.status_code != 200:
+            return {"ok": False, "status": r.status_code}
+        return data or {"ok": True}
+    except Exception as e:
+        logger.exception("sync_recent_users_upstream failed")
         return {"ok": False, "error": str(e)}
 
 def sync_by_chat_id_upstream(chat_id: str) -> Dict[str, Any]:
@@ -141,7 +164,7 @@ def get(doctype: str, name: str, **kwargs):
 def reportview_get(**kwargs):
     """
     Обёртка для frappe.desk.reportview.get — именно её дёргает список (List View).
-    Здесь форсим sync_recent перед выдачей списка для Engagement Case.
+    Здесь форсим sync_recent + users перед выдачей списка для Engagement Case.
     """
     doctype = (kwargs.get("doctype") or "").strip()
     print(f"[engagement.reportview_get] ENTER doctype={doctype}", flush=True)

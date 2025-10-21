@@ -504,7 +504,7 @@ async def _compute_participants_fallback(chat: Dict[str, Any]) -> List[Dict[str,
         return []
 
 
-# -------------------- main upsert --------------------
+# -------------------- main upsert (CHATS) --------------------
 async def ensure_case_from_chat(chat: Dict[str, Any]) -> Dict[str, Any]:
     client = get_frappe_client()
 
@@ -661,7 +661,7 @@ async def ensure_case_from_chat(chat: Dict[str, Any]) -> Dict[str, Any]:
         print(f"[ensure_case_from_chat] state lookup failed err={exc}", flush=True)
 
     # ---- find/create case
-    frappe_client = client
+    frappe_client = get_frappe_client()
     case_name = case_name_from_state
     if not case_name:
         try:
@@ -781,7 +781,7 @@ async def ensure_case_from_chat(chat: Dict[str, Any]) -> Dict[str, Any]:
     return {"ok": True, "case_name": case_name, "created": created, "updated_fields": list(changes.keys())}
 
 
-# -------------------- public API --------------------
+# -------------------- public API (CHATS) --------------------
 async def sync_one_by_chat_id(chat_id: str) -> Dict[str, Any]:
     print(f"[sync_one_by_chat_id] fetch chat chat_id={chat_id}", flush=True)
     chat = await load_chat(chat_id)
@@ -916,3 +916,224 @@ async def sync_recent(minutes: int, limit: Optional[int] = None) -> Dict[str, An
             print(f"[sync_recent] ensure raised chat_id={chat.get('_id') or chat.get('id') or chat.get('chat_id')} err={exc}", flush=True)
 
     return {"ok": True, "scanned": len(chats), "merged": len(merged_chats), "created": created, "updated": updated, "ids": ids}
+
+
+# =====================================================================
+#                           USERS → DEALS
+# =====================================================================
+
+def _users_collection():
+    return get_collection("users")
+
+async def _iter_recent_users(minutes: int, limit: Optional[int]) -> List[Dict[str, Any]]:
+    """
+    Берём пользователей с ролью client и (updated_at >= T) ИЛИ (created_at >= T).
+    Если updated_at/created_at отсутствуют — не попадают в выборку (как и просил).
+    """
+    col = _users_collection()
+    if col is None:
+        print("[users-sync] no `users` collection", flush=True)
+        return []
+
+    dt_limit = datetime.now(tz=timezone.utc) - timedelta(minutes=int(minutes))
+    flt = {
+        "role": {"$in": ["client", "CLIENT", "Client"]},
+        "is_active": {"$ne": False},
+        # "$or": [
+        #     {"updated_at": {"$gte": dt_limit}},
+        #     {"created_at": {"$gte": dt_limit}},
+        # ]
+    }
+
+    cursor = col.find(flt).sort([("updated_at", -1), ("created_at", -1), ("_id", -1)])
+    if limit:
+        cursor = cursor.limit(int(limit))
+
+    out: List[Dict[str, Any]] = []
+    async for u in cursor:
+        if "_id" in u:
+            u["_id"] = str(u["_id"])
+        out.append(u)
+    return out
+
+
+async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Создаём/апдейтим Engagement Case на основе Mongo-пользователя (role=client):
+      - показываем ТОЛЬКО на Deals
+      - status_deals = "Appointment Scheduled"
+      - канал: Web Form, платформа: Internal
+      - title: USER:<_id> (стабильный ключ) или email/имя как display_name
+    Никакого Assigned To и ToDo — строго по требованию.
+    """
+    fc = get_frappe_client()
+
+    user_id = str(user.get("_id") or "").strip()
+    email = (user.get("email") or "").strip().lower() or None
+    display_name = pick_first(user.get("full_name"), user.get("username"), email, f"User {user_id}") or None
+
+    # стабильный ключ для связи
+    mongo_client_id = f"USER:{user_id}" if user_id else None
+
+    first_dt = to_frappe_dt(user.get("created_at"))
+    last_dt  = to_frappe_dt(user.get("updated_at") or user.get("created_at"))
+
+    upstream_payload = {
+        "title": mongo_client_id or (email or display_name or "User"),
+        "avatar": None,
+        "channel_type": "Web Form",
+        "channel_platform": "Internal",
+        "display_name": display_name,
+        "phone": None,
+        "email": email,
+        "preferred_language": "ru",
+        "mongo_chat_id": None,                 # у пользователя нет chat_id
+        "mongo_client_id": mongo_client_id,    # ключ для поиска/мерджа
+        "external_user_id": user_id,
+        "first_event_at": first_dt,
+        "last_event_at": last_dt,
+        "events_count": 0,
+        "unanswered_count": 0,
+        "last_actor_role": None,
+        "runtime_status": None,
+        # Борды: только Deals
+        "show_board_crm": 0,
+        "show_board_leads": 0,
+        "show_board_deals": 1,
+        "show_board_patients": 0,
+        "status_deals": "Appointment Scheduled",
+    }
+    payload_hash = _stable_hash(upstream_payload)
+
+    # cache по user_id
+    state_col = get_collection("frappe_sync_state")
+    case_from_state = None
+    try:
+        state = await state_col.find_one({"user_id": user_id}) if (state_col is not None and user_id) else None
+        if state and state.get("hash") == payload_hash and state.get("case_name"):
+            return {"ok": True, "case_name": state["case_name"], "created": False, "skipped": True, "reason": "no_changes"}
+        if state:
+            case_from_state = state.get("case_name")
+    except Exception as exc:
+        print(f"[ensure_case_from_user] state lookup failed err={exc}", flush=True)
+
+    # ищем кейс по mongo_client_id (USER:<id>)
+    case_name = case_from_state
+    if not case_name:
+        try:
+            found = await fc.request("get_list", {
+                "doctype": "Engagement Case",
+                "filters": {"mongo_client_id": mongo_client_id},
+                "limit_page_length": 1,
+                "fields": ["name"]
+            })
+            if isinstance(found, list) and found:
+                case_name = (found[0] or {}).get("name")
+        except FrappeError as exc:
+            print(f"[ensure_case_from_user] frappe.get_list err={exc}", flush=True)
+            return {"ok": False, "reason": "frappe_get_list_failed"}
+
+    created = False
+    if not case_name:
+        try:
+            saved = await fc.request("insert", {
+                "doc": {
+                    "doctype": "Engagement Case",
+                    "naming_series": "IE-.YYYY.-.#####",
+                    "crm_status": "New",
+                    **upstream_payload,
+                }
+            })
+            case_name = saved.get("name") if isinstance(saved, dict) else None
+            created = True
+            print(f"[ensure_case_from_user] created case={case_name} user_id={user_id}", flush=True)
+        except FrappeError as exc:
+            print(f"[ensure_case_from_user] frappe.insert error user_id={user_id} err={exc}", flush=True)
+            return {"ok": False, "reason": "frappe_insert_failed"}
+
+    # апдейт только изменившихся полей (бережём ручные правки)
+    try:
+        existing = await fc.request("get", {"doctype": "Engagement Case", "name": case_name})
+    except FrappeError as exc:
+        print(f"[ensure_case_from_user] frappe.get error name={case_name} err={exc}", flush=True)
+        return {"ok": False, "reason": "frappe_get_failed", "case_name": case_name}
+
+    if not isinstance(existing, dict):
+        existing = {}
+
+    def non_empty(v: Any) -> bool:
+        return bool(str(v or "").strip())
+
+    locked_updates = dict(upstream_payload)
+    try:
+        if non_empty(existing.get("title")):
+            locked_updates.pop("title", None)
+        if non_empty(existing.get("display_name")):
+            locked_updates.pop("display_name", None)
+        if non_empty(existing.get("email")):
+            locked_updates.pop("email", None)
+    except Exception:
+        pass
+
+    changes = {}
+    for k, v in locked_updates.items():
+        if existing.get(k) != v:
+            changes[k] = v
+
+    if changes:
+        try:
+            existing.update(changes)
+            _ = await fc.request("save", {"doc": existing})
+            print(f"[ensure_case_from_user] saved case={case_name} fields={list(changes.keys())}", flush=True)
+        except FrappeError as exc:
+            print(f"[ensure_case_from_user] frappe.save error name={case_name} err={exc}", flush=True)
+            return {"ok": False, "reason": "frappe_save_failed"}
+
+    # cache save
+    try:
+        if state_col is not None and user_id:
+            await state_col.update_one(
+                {"user_id": user_id},
+                {"$set": {
+                    "user_id": user_id,
+                    "case_name": case_name,
+                    "hash": payload_hash,
+                    "updated_at": datetime.now(timezone.utc),
+                }},
+                upsert=True,
+            )
+    except Exception as exc:
+        print(f"[ensure_case_from_user] state upsert failed err={exc}", flush=True)
+
+    return {"ok": True, "case_name": case_name, "created": created, "updated_fields": list(changes.keys()) if changes else []}
+
+
+async def sync_recent_users(minutes: int, limit: Optional[int] = None) -> Dict[str, Any]:
+    """
+    Скан пользователей (role=client) и апсерты кейсов «в Deals».
+    Ничего не делает с чатами/ассайнами/ToDo.
+    """
+    users = await _iter_recent_users(minutes, limit)
+    print(f"[sync_recent_users] fetched users={len(users)}", flush=True)
+
+    created = 0
+    updated = 0
+    ids: List[str] = []
+
+    for u in users:
+        try:
+            res = await ensure_case_from_user(u)
+            if res.get("ok"):
+                ids.append(res.get("case_name") or "")
+                if res.get("created"):
+                    created += 1
+                elif res.get("skipped"):
+                    pass
+                else:
+                    updated += 1
+            else:
+                print(f"[sync_recent_users] ensure failed user_id={u.get('_id')} reason={res.get('reason')}", flush=True)
+        except Exception as exc:
+            print(f"[sync_recent_users] ensure raised user_id={u.get('_id')} err={exc}", flush=True)
+
+    return {"ok": True, "scanned": len(users), "created": created, "updated": updated, "ids": ids}

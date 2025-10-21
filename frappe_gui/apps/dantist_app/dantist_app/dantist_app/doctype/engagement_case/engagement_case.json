@@ -80,7 +80,9 @@
    "default": "Chat",
    "fieldname": "channel_type",
    "fieldtype": "Select",
+   "in_filter": 1,
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Channel Type",
    "options": "Chat\nCall\nSMS\nEmail\nWeb Form",
    "reqd": 1
@@ -88,6 +90,9 @@
   {
    "fieldname": "channel_platform",
    "fieldtype": "Select",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Channel Platform",
    "options": "Internal\nInstagram\nFacebook\nWhatsApp\nTelegram\nTelegram Mini-App\nTelephony\nSMS\nEmail"
   },
@@ -99,6 +104,8 @@
    "description": "Session ID in Service",
    "fieldname": "mongo_chat_id",
    "fieldtype": "Data",
+   "in_filter": 1,
+   "in_standard_filter": 1,
    "label": "Mongo ID",
    "read_only": 1
   },
@@ -337,7 +344,7 @@
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-19 21:49:15.927632",
+ "modified": "2025-10-21 16:08:39.124452",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",

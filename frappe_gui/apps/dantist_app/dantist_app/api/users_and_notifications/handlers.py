@@ -1,3 +1,4 @@
+# frappe_gui/apps/dantist_app/dantist_app/api/users_and_notifications/handlers.py
 import logging
 import json
 from typing import List, Set, Tuple, Optional
@@ -257,11 +258,50 @@ def _resolve_user(email: str, role: str) -> Optional[str]:
 
     return None
 
+def _transition_status_on_assignees(case_doc) -> None:
+    """
+    Если есть Assigned To → CRM: In Work, Leads: In Progress.
+    Никаких ToDo не создаём вручную (assign_to.add сам создаёт связку).
+    """
+    try:
+        has_assignees = bool(_current_assignees_for_case(case_doc.name))
+        if not has_assignees:
+            return
+
+        changed = False
+        # CRM board
+        try:
+            if int(getattr(case_doc, "show_board_crm", 0) or 0) == 1:
+                cur = (getattr(case_doc, "crm_status", None) or "").strip()
+                if cur != "In Work":
+                    case_doc.db_set("crm_status", "In Work", update_modified=False)
+                    changed = True
+        except Exception:
+            pass
+
+        # Leads board
+        try:
+            if int(getattr(case_doc, "show_board_leads", 0) or 0) == 1:
+                cur = (getattr(case_doc, "status_leads", None) or "").strip()
+                if cur != "In Progress":
+                    case_doc.db_set("status_leads", "In Progress", update_modified=False)
+                    changed = True
+        except Exception:
+            pass
+
+        if changed:
+            frappe.db.commit()
+            print(f"[ASSIGNEES_SYNC][STATUS] {case_doc.name} -> CRM:'In Work' / Leads:'In Progress'", flush=True)
+    except Exception as e:
+        print(f"[ASSIGNEES_SYNC][STATUS][ERR] {case_doc.name}: {e}", flush=True)
+
 @frappe.whitelist(methods=["POST"])
 def sync_case_assignees_from_chat():
     """
     Идемпотентно добавляет Assigned To на карточку Engagement Case для всех участников чата
     с НЕклиентской ролью (и не ИИ). Используем participants_json (из FastAPI).
+    + НОВОЕ: если после назначения есть исполнители — переводим статусы:
+      CRM → In Work, Leads → In Progress.
     """
     form = frappe.local.form_dict or {}
     case_name = (form.get("case_name") or "").strip()
@@ -355,6 +395,14 @@ def sync_case_assignees_from_chat():
             seen.add(email)
     _seen_save(case, seen)
     frappe.db.commit()
+
+    # НОВОЕ: переводим статусы, если есть исполнители
+    try:
+        case.reload()
+    except Exception:
+        # no-op
+        pass
+    _transition_status_on_assignees(case)
 
     print(f"[ASSIGNEES_SYNC] to_add={to_add}", flush=True)
     print(f"[ASSIGNEES_SYNC] result added={len(to_add)} skipped_no_user={skipped_no_user} skipped_seen={skipped_seen} skipped_current={skipped_current}", flush=True)
