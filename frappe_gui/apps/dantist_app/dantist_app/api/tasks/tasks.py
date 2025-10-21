@@ -83,19 +83,38 @@ def _notify_assignees(todo_name: str, subject: str, message: str) -> int:
     return sent
 
 # ========= DUE CHECK =========
+from datetime import date, datetime  # добавь импорт вверху файла
+
 def _is_due(due_dt: Optional[str], date_only: Optional[str]) -> bool:
-    now = now_datetime()
-    if due_dt:
-        try:
-            return get_datetime(due_dt) <= now
-        except Exception:
-            return False
-    if date_only:
-        try:
-            end_of_day = add_to_date(get_datetime(date_only), hours=23, minutes=59)
-            return end_of_day <= now or nowdate() >= date_only
-        except Exception:
-            return nowdate() >= (date_only or "")
+    now_dt = now_datetime()  # datetime
+    try:
+        # 1) Если есть due_datetime — сравниваем как datetime
+        if due_dt:
+            try:
+                return get_datetime(due_dt) <= now_dt
+            except Exception:
+                return False
+
+        # 2) Иначе есть только date (может быть date или str)
+        if date_only:
+            try:
+                # нормализуем к date
+                if isinstance(date_only, date) and not isinstance(date_only, datetime):
+                    date_obj = date_only
+                else:
+                    date_obj = get_datetime(date_only).date()
+                # дедлайн — конец дня
+                end_of_day = datetime.combine(date_obj, datetime.max.time().replace(hour=23, minute=59, second=0, microsecond=0))
+                return now_dt >= end_of_day or now_dt.date() >= date_obj
+            except Exception:
+                # безопасный фолбэк: сравним строковые даты через get_datetime
+                try:
+                    return get_datetime(str(date_only)).date() <= now_dt.date()
+                except Exception:
+                    return False
+    except Exception:
+        return False
+
     return False
 
 def _pick_candidates(limit: int = 200) -> List[dict]:

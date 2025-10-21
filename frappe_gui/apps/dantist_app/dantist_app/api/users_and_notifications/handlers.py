@@ -244,25 +244,21 @@ def _resolve_user(email: str, role: str) -> Optional[str]:
 
 def _transition_status_on_assignees(case_doc) -> None:
     """
-    Если есть Assigned To → CRM: In Work, Leads: In Progress.
-    Поддерживаем обе схемы поля для CRM: status_crm_board И/ИЛИ crm_status.
+    Однократный промоут в «рабочие» статусы:
+      - CRM: In Work  (оба поля — status_crm_board и crm_status)
+      - Leads: In Progress
+    Вызывается ТОЛЬКО в момент первого появления Assigned To.
     """
     try:
-        has_assignees = bool(_current_assignees_for_case(case_doc.name))
-        if not has_assignees:
-            return
-
         changed = False
 
-        # CRM board — два поля на всякий
+        # CRM board — поддерживаем оба варианта поля
         try:
             if int(getattr(case_doc, "show_board_crm", 0) or 0) == 1:
-                cur1 = (getattr(case_doc, "status_crm_board", None) or "").strip()
-                cur2 = (getattr(case_doc, "crm_status", None) or "").strip()
-                if cur1 != "In Work":
+                if (getattr(case_doc, "status_crm_board", None) or "").strip() != "In Work":
                     case_doc.db_set("status_crm_board", "In Work", update_modified=False)
                     changed = True
-                if cur2 != "In Work":
+                if (getattr(case_doc, "crm_status", None) or "").strip() != "In Work":
                     case_doc.db_set("crm_status", "In Work", update_modified=False)
                     changed = True
         except Exception:
@@ -271,8 +267,7 @@ def _transition_status_on_assignees(case_doc) -> None:
         # Leads board
         try:
             if int(getattr(case_doc, "show_board_leads", 0) or 0) == 1:
-                cur = (getattr(case_doc, "status_leads", None) or "").strip()
-                if cur != "In Progress":
+                if (getattr(case_doc, "status_leads", None) or "").strip() != "In Progress":
                     case_doc.db_set("status_leads", "In Progress", update_modified=False)
                     changed = True
         except Exception:
@@ -281,16 +276,17 @@ def _transition_status_on_assignees(case_doc) -> None:
         if changed:
             frappe.db.commit()
             print(f"[ASSIGNEES_SYNC][STATUS] {case_doc.name} -> CRM:'In Work' / Leads:'In Progress'", flush=True)
+        else:
+            print(f"[ASSIGNEES_SYNC][STATUS] {case_doc.name} -> no change (already in working statuses)", flush=True)
     except Exception as e:
         print(f"[ASSIGNEES_SYNC][STATUS][ERR] {case_doc.name}: {e}", flush=True)
 
 @frappe.whitelist(methods=["POST"])
 def sync_case_assignees_from_chat():
     """
-    Идемпотентно добавляет Assigned To (без лишних ToDo) и,
-    если исполнители есть, переводит статусы:
-      - CRM → In Work (оба поля)
-      - Leads → In Progress
+    Идемпотентно добавляет Assigned To (без лишних ToDo) и
+    ОДИН РАЗ переводит статусы в рабочие, когда исполнители появляются впервые.
+    Если исполнители уже были раньше — статусы НЕ меняем.
     """
     form = frappe.local.form_dict or {}
     case_name = (form.get("case_name") or "").strip()
@@ -298,7 +294,6 @@ def sync_case_assignees_from_chat():
         frappe.throw("case_name is required", exc=frappe.ValidationError)
 
     # participants_json может прийти строкой
-    participants = None
     if isinstance(form.get("participants"), list):
         participants = form.get("participants")
     else:
@@ -328,6 +323,7 @@ def sync_case_assignees_from_chat():
 
     case = frappe.get_doc("Engagement Case", case_name)
 
+    # кандидаты по роли
     candidates: List[Tuple[str, str]] = []
     skipped_by_role = 0
     for p in (participants or []):
@@ -339,10 +335,12 @@ def sync_case_assignees_from_chat():
 
     print(f"[ASSIGNEES_SYNC] candidates_by_role={len(candidates)} skipped_by_role={skipped_by_role}", flush=True)
 
+    # было ли что-то до добавления?
     seen = _seen_get(case)
     current = _current_assignees_for_case(case.name)
+    had_assignees_before = bool(current)
     print(f"[ASSIGNEES_SYNC] seen={sorted(seen)}", flush=True)
-    print(f"[ASSIGNEES_SYNC] current={sorted(current)}", flush=True)
+    print(f"[ASSIGNEES_SYNC] current(before)={sorted(current)}", flush=True)
 
     to_add: List[str] = []
     skipped_no_user = 0
@@ -367,20 +365,27 @@ def sync_case_assignees_from_chat():
 
         to_add.append(user_docname)
 
+    # назначаем
     for user_name in to_add:
         _assign_user_to_case(case.name, user_name)
 
+    # обновляем seen (по email)
     for email, _ in candidates:
         if email not in seen:
             seen.add(email)
     _seen_save(case, seen)
     frappe.db.commit()
 
+    # reload и однократный промоут именно когда исполнители появились впервые
     try:
         case.reload()
     except Exception:
         pass
-    _transition_status_on_assignees(case)
+
+    if (not had_assignees_before) and len(to_add) > 0:
+        _transition_status_on_assignees(case)
+    else:
+        print(f"[ASSIGNEES_SYNC] skip status transition (had_before={had_assignees_before}, added_now={len(to_add)})", flush=True)
 
     print(f"[ASSIGNEES_SYNC] to_add={to_add}", flush=True)
     print(f"[ASSIGNEES_SYNC] result added={len(to_add)} skipped_no_user={skipped_no_user} skipped_seen={skipped_seen} skipped_current={skipped_current}", flush=True)

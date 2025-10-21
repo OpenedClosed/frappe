@@ -962,10 +962,8 @@ async def _iter_recent_users(minutes: int, limit: Optional[int]) -> List[Dict[st
 
 async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Создаёт/обновляет карточку Engagement Case для пользователя с ролью 'client':
-      - Deals: show_board_deals=1, status_deals='Appointment Scheduled'
-      - CRM Board: show_board_crm=1,  (crm_status И/ИЛИ status_crm_board) = 'Scheduled'
-      - ChannelType='Web Form', Platform='Internal'
+    Создаёт/обновляет карточку Engagement Case для пользователя с ролью 'client'.
+    ВАЖНО: статусы досок выставляются ТОЛЬКО при создании. На апдейтах не трогаем.
     """
     role = str(user.get("role") or "").strip().lower()
     if role != "client":
@@ -990,32 +988,26 @@ async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
 
     avatar = (user.get("avatar") or None)
     if isinstance(avatar, dict):
-        # твоя модель Photo — берём url, если есть
         avatar = avatar.get("url") or avatar.get("path") or None
     avatar = avatar or "/files/source_avatars/internal.png"
 
     created_at = user.get("created_at")
     updated_at = user.get("updated_at") or created_at
 
-    payload = {
+    # Поля, которые мы СИНКАЕМ ВСЕГДА (без статусов и show_* — чтобы не откатывать вручную изменённое)
+    payload_base = {
         "title": display_name,
         "display_name": display_name,
         "email": email,
         "avatar": avatar,
         "channel_type": "Web Form",
         "channel_platform": "Internal",
-        "mongo_user_id": user_id,     # новое техн. поле для линка (в Doctype его должен принять Custom Field)
+        "mongo_user_id": user_id,
         "first_event_at": to_frappe_dt(created_at),
         "last_event_at": to_frappe_dt(updated_at),
-        # доски:
-        "show_board_deals": 1,
-        "status_deals": "Appointment Scheduled",
-        "show_board_crm": 1,
-        # Ставим ОДНОВРЕМЕННО оба поля CRM-статуса (какое есть — то и применится)
-        "crm_status": "Scheduled",
-        "status_crm_board": "Scheduled",
     }
-    payload_hash = _stable_hash(payload)
+    # Хеш тоже БЕЗ статусов/флагов — чтобы изменения статусов в Frappe не приводили к «обновлениям»
+    payload_hash = _stable_hash(payload_base)
 
     # state cache по user_id
     state_col = mongo_db.get_collection("frappe_sync_state")
@@ -1041,15 +1033,21 @@ async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
 
     created = False
     if not case_name:
-        # insert
+        # При СОЗДАНИИ выставляем флаги/статусы на досках ОДИН РАЗ
+        insert_doc = {
+            "doctype": "Engagement Case",
+            "naming_series": "IE-.YYYY.-.#####",
+            **payload_base,
+            # deals/CRM — первичная раскладка
+            "show_board_deals": 1,
+            "status_deals": "Appointment Scheduled",
+            "show_board_crm": 1,
+            # поддержим оба поля CRM
+            "crm_status": "Scheduled",
+            "status_crm_board": "Scheduled",
+        }
         try:
-            saved = await client.request("insert", {
-                "doc": {
-                    "doctype": "Engagement Case",
-                    "naming_series": "IE-.YYYY.-.#####",
-                    **payload,
-                }
-            })
+            saved = await client.request("insert", {"doc": insert_doc})
             case_name = saved.get("name") if isinstance(saved, dict) else None
             created = True
             print(f"[ensure_case_from_user] created case={case_name} for user={user_id}", flush=True)
@@ -1057,21 +1055,26 @@ async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
             print(f"[ensure_case_from_user][ERR insert] user={user_id} err={e}", flush=True)
             return {"ok": False, "reason": "frappe_insert_failed"}
 
-    # update only changed
+    # update only changed (НО: статусы и show_* НЕ ТРОГАЕМ)
     try:
         existing = await client.request("get", {"doctype": "Engagement Case", "name": case_name})
     except FrappeError as e:
         print(f"[ensure_case_from_user][ERR get] {case_name} {e}", flush=True)
         return {"ok": False, "reason": "frappe_get_failed", "case_name": case_name}
 
-    def _diff(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
-        out={}
-        for k,v in a.items():
-            if b.get(k) != v:
-                out[k]=v
-        return out
+    locked_updates = dict(payload_base)  # тут уже нет статусных полей
+    changes = {}
+    for k, v in locked_updates.items():
+        cur = existing.get(k)
+        if k == "avatar":
+            cur_norm = str(cur or "").lstrip("/")
+            v_norm = str(v or "").lstrip("/")
+            if cur_norm != v_norm:
+                changes[k] = v
+        else:
+            if cur != v:
+                changes[k] = v
 
-    changes = _diff(payload, existing or {})
     if changes:
         try:
             existing.update(changes)
@@ -1095,37 +1098,30 @@ async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
 
 async def sync_recent_users(minutes: Optional[int] = None, limit: Optional[int] = None) -> Dict[str, Any]:
     """
-    Синк пользователей-клиентов:
-      - Если minutes == None → БЕЗ фильтра по времени (как ты просил).
-      - Если minutes задан → фильтруем по created_at/updated_at >= now - minutes.
-      - limit опционален, без лимита берём всё.
+    Users sync:
+      - minutes == None → БЕЗ фильтра по времени (как просил).
+      - minutes задан → фильтруем по created_at/updated_at >= now - minutes.
+      - limit опционален.
     """
     col = mongo_db.get_collection("users")
     q: Dict[str, Any] = {"role": "client"}
-    # Временно отключил минуты
-    minutes = None
 
-    # опциональный фильтр по времени
     if minutes is not None:
         dt_limit = datetime.now(tz=timezone.utc) - timedelta(minutes=int(minutes))
-        or_conds = [
-            {"updated_at": {"$gte": dt_limit}},
-            {"created_at": {"$gte": dt_limit}},
-        ]
+        or_conds = [{"updated_at": {"$gte": dt_limit}}, {"created_at": {"$gte": dt_limit}}]
         q = {"$and": [q, {"$or": or_conds}]}
 
     cursor = col.find(q).sort([("updated_at", -1), ("created_at", -1), ("_id", -1)])
     if limit is not None:
         cursor = cursor.limit(int(limit))
 
-    scanned = 0
-    created = 0
-    updated = 0
+    scanned = created = updated = 0
     ids: List[str] = []
 
     async for u in cursor:
         scanned += 1
-        u["_id"] = str(u["_id"])
+        if "_id" in u and isinstance(u["_id"], ObjectId):
+            u["_id"] = str(u["_id"])
         try:
             res = await ensure_case_from_user(u)
             if res.get("ok"):
