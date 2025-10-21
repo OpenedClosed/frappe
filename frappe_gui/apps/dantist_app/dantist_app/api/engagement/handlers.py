@@ -79,9 +79,9 @@ def _maybe_presync(tag: str, doctype: str) -> None:
         print(f"[engagement::{tag}] pre-sync recent (cooldown 5s)", flush=True)
         res = sync_recent_upstream(minutes=5)
         print(f"[engagement::{tag}] pre-sync result={res}", flush=True)
-        # НОВОЕ: пресинк пользователей (клиентов → Deals)
+        # НОВОЕ: пресинк пользователей — БЕЗ минут по умолчанию
         try:
-            ures = sync_recent_users_upstream(minutes=5)
+            ures = sync_recent_users_upstream(minutes=None, limit=None)
             print(f"[engagement::{tag}] pre-sync USERS result={ures}", flush=True)
         except Exception as e:
             print(f"[engagement::{tag}] pre-sync USERS failed err={e}", flush=True)
@@ -101,10 +101,13 @@ def sync_recent_upstream(minutes: int = 5) -> Dict[str, Any]:
         logger.exception("sync_recent_upstream failed")
         return {"ok": False, "error": str(e)}
 
-# НОВОЕ: users → deals
-def sync_recent_users_upstream(minutes: int = 5, limit: Optional[int] = None) -> Dict[str, Any]:
+def sync_recent_users_upstream(minutes: Optional[int] = None, limit: Optional[int] = None) -> Dict[str, Any]:
     url = f"{base_url()}{BASE_PATH}/engagement/sync_recent_users"
-    payload: Dict[str, Any] = {"minutes": int(minutes)}
+    payload: Dict[str, Any] = {}
+    if minutes is not None:
+        # Мне пока минуты не нужно использвоать 
+        payload["minutes"] = None
+        # payload["minutes"] = int(minutes)
     if limit is not None:
         payload["limit"] = int(limit)
     try:
@@ -131,7 +134,7 @@ def sync_by_chat_id_upstream(chat_id: str) -> Dict[str, Any]:
         logger.exception("sync_by_chat_id_upstream failed")
         return {"ok": False, "error": str(e)}
 
-# ---------- PROXIES: client.get_list / client.get ----------
+# ---------- PROXIES ----------
 @frappe.whitelist()
 def get_list(doctype: str, **kwargs):
     print("[engagement.get_list] ENTER", flush=True)
@@ -159,13 +162,8 @@ def get(doctype: str, name: str, **kwargs):
     print("[engagement.get] EXIT", flush=True)
     return out
 
-# ---------- NEW: PROXIES для ReportView ----------
 @frappe.whitelist()
 def reportview_get(**kwargs):
-    """
-    Обёртка для frappe.desk.reportview.get — именно её дёргает список (List View).
-    Здесь форсим sync_recent + users перед выдачей списка для Engagement Case.
-    """
     doctype = (kwargs.get("doctype") or "").strip()
     print(f"[engagement.reportview_get] ENTER doctype={doctype}", flush=True)
     if doctype == ENGAGEMENT_DOCTYPE:
@@ -176,9 +174,6 @@ def reportview_get(**kwargs):
 
 @frappe.whitelist()
 def reportview_get_count(**kwargs):
-    """
-    Обёртка для frappe.desk.reportview.get_count — чтобы счётчик тоже запускал пресинк.
-    """
     doctype = (kwargs.get("doctype") or "").strip()
     print(f"[engagement.reportview_get_count] ENTER doctype={doctype}", flush=True)
     if doctype == ENGAGEMENT_DOCTYPE:
@@ -187,7 +182,7 @@ def reportview_get_count(**kwargs):
     print(f"[engagement.reportview_get_count] EXIT count={out}", flush=True)
     return out
 
-# ---------- HELPERS для виджета/предпросмотра/инжектора ----------
+# -------- helpers for board widgets (как в твоём варианте, без изменений) --------
 @frappe.whitelist()
 def engagement_hidden_children() -> List[str]:
     names = frappe.get_all(
@@ -204,7 +199,7 @@ def engagement_allowed_for_board(flag_field: str) -> List[str]:
     if flag_field not in {"show_board_crm", "show_board_leads", "show_board_deals", "show_board_patients"}:
         return []
     return frappe.get_all(
-        ENGAGEMENT_DOCTYPE,
+        "Engagement Case",
         filters={flag_field: 1},
         pluck="name",
         limit_page_length=100000,
@@ -221,7 +216,7 @@ def engagement_board_counts(flag_field: str, status_field: str) -> Dict[str, obj
         print("[engagement_board_counts] EXIT empty", flush=True)
         return out
     rows = frappe.get_all(
-        ENGAGEMENT_DOCTYPE,
+        "Engagement Case",
         filters=[["name", "in", visible]],
         fields=["name", status_field],
         limit_page_length=len(visible),
@@ -238,7 +233,7 @@ def engagement_board_counts(flag_field: str, status_field: str) -> Dict[str, obj
 def engagement_board_preview(flag_field: str, status_field: str, limit: int = 6) -> List[dict]:
     hidden = set(engagement_hidden_children())
     rows = frappe.get_all(
-        ENGAGEMENT_DOCTYPE,
+        "Engagement Case",
         filters={flag_field: 1},
         fields=[
             "name","title","display_name","avatar","channel_platform",
@@ -278,7 +273,7 @@ def parents_of_engagement(name: str) -> List[dict]:
         "first_event_at","last_event_at"
     ]
     return frappe.get_all(
-        ENGAGEMENT_DOCTYPE,
+        "Engagement Case",
         filters=[["name","in", parent_names]],
         fields=fields,
         limit_page_length=len(parent_names),

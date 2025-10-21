@@ -956,171 +956,176 @@ async def _iter_recent_users(minutes: int, limit: Optional[int]) -> List[Dict[st
         out.append(u)
     return out
 
+# ======================================================================
+#                         USERS → ENGAGEMENT (DEALS)
+# ======================================================================
 
 async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Создаём/апдейтим Engagement Case на основе Mongo-пользователя (role=client):
-      - показываем ТОЛЬКО на Deals
-      - status_deals = "Appointment Scheduled"
-      - канал: Web Form, платформа: Internal
-      - title: USER:<_id> (стабильный ключ) или email/имя как display_name
-    Никакого Assigned To и ToDo — строго по требованию.
+    Создаёт/обновляет карточку Engagement Case для пользователя с ролью 'client':
+      - Deals: show_board_deals=1, status_deals='Appointment Scheduled'
+      - CRM Board: show_board_crm=1,  (crm_status И/ИЛИ status_crm_board) = 'Scheduled'
+      - ChannelType='Web Form', Platform='Internal'
     """
-    fc = get_frappe_client()
+    role = str(user.get("role") or "").strip().lower()
+    if role != "client":
+        return {"ok": False, "reason": "not_client"}
 
-    user_id = str(user.get("_id") or "").strip()
+    client = get_frappe_client()
+
+    # идентификатор для связки
+    user_id = str(user.get("_id") or user.get("id") or "").strip()
+    if ObjectId.is_valid(user_id) and isinstance(user.get("_id"), ObjectId):
+        user_id = str(user["_id"])
+    if not user_id:
+        return {"ok": False, "reason": "no_user_id"}
+
     email = (user.get("email") or "").strip().lower() or None
-    display_name = pick_first(user.get("full_name"), user.get("username"), email, f"User {user_id}") or None
+    display_name = (
+        (user.get("full_name") or "").strip()
+        or (user.get("username") or "").strip()
+        or (email.split("@")[0] if email else None)
+        or f"User {user_id}"
+    )
 
-    # стабильный ключ для связи
-    mongo_client_id = f"USER:{user_id}" if user_id else None
+    avatar = (user.get("avatar") or None)
+    if isinstance(avatar, dict):
+        # твоя модель Photo — берём url, если есть
+        avatar = avatar.get("url") or avatar.get("path") or None
+    avatar = avatar or "/files/source_avatars/internal.png"
 
-    first_dt = to_frappe_dt(user.get("created_at"))
-    last_dt  = to_frappe_dt(user.get("updated_at") or user.get("created_at"))
+    created_at = user.get("created_at")
+    updated_at = user.get("updated_at") or created_at
 
-    upstream_payload = {
-        "title": mongo_client_id or (email or display_name or "User"),
-        "avatar": None,
+    payload = {
+        "title": display_name,
+        "display_name": display_name,
+        "email": email,
+        "avatar": avatar,
         "channel_type": "Web Form",
         "channel_platform": "Internal",
-        "display_name": display_name,
-        "phone": None,
-        "email": email,
-        "preferred_language": "ru",
-        "mongo_chat_id": None,                 # у пользователя нет chat_id
-        "mongo_client_id": mongo_client_id,    # ключ для поиска/мерджа
-        "external_user_id": user_id,
-        "first_event_at": first_dt,
-        "last_event_at": last_dt,
-        "events_count": 0,
-        "unanswered_count": 0,
-        "last_actor_role": None,
-        "runtime_status": None,
-        # Борды: только Deals
-        "show_board_crm": 0,
-        "show_board_leads": 0,
+        "mongo_user_id": user_id,     # новое техн. поле для линка (в Doctype его должен принять Custom Field)
+        "first_event_at": to_frappe_dt(created_at),
+        "last_event_at": to_frappe_dt(updated_at),
+        # доски:
         "show_board_deals": 1,
-        "show_board_patients": 0,
         "status_deals": "Appointment Scheduled",
+        "show_board_crm": 1,
+        # Ставим ОДНОВРЕМЕННО оба поля CRM-статуса (какое есть — то и применится)
+        "crm_status": "Scheduled",
+        "status_crm_board": "Scheduled",
     }
-    payload_hash = _stable_hash(upstream_payload)
+    payload_hash = _stable_hash(payload)
 
-    # cache по user_id
-    state_col = get_collection("frappe_sync_state")
-    case_from_state = None
+    # state cache по user_id
+    state_col = mongo_db.get_collection("frappe_sync_state")
+    cache_key = {"user_id": user_id}
     try:
-        state = await state_col.find_one({"user_id": user_id}) if (state_col is not None and user_id) else None
-        if state and state.get("hash") == payload_hash and state.get("case_name"):
-            return {"ok": True, "case_name": state["case_name"], "created": False, "skipped": True, "reason": "no_changes"}
-        if state:
-            case_from_state = state.get("case_name")
-    except Exception as exc:
-        print(f"[ensure_case_from_user] state lookup failed err={exc}", flush=True)
+        st = await state_col.find_one(cache_key)
+        if st and st.get("hash") == payload_hash and st.get("case_name"):
+            return {"ok": True, "case_name": st["case_name"], "created": False, "skipped": True, "reason": "no_changes"}
+    except Exception:
+        pass
 
-    # ищем кейс по mongo_client_id (USER:<id>)
-    case_name = case_from_state
-    if not case_name:
-        try:
-            found = await fc.request("get_list", {
-                "doctype": "Engagement Case",
-                "filters": {"mongo_client_id": mongo_client_id},
-                "limit_page_length": 1,
-                "fields": ["name"]
-            })
-            if isinstance(found, list) and found:
-                case_name = (found[0] or {}).get("name")
-        except FrappeError as exc:
-            print(f"[ensure_case_from_user] frappe.get_list err={exc}", flush=True)
-            return {"ok": False, "reason": "frappe_get_list_failed"}
+    # поиск карточки по mongo_user_id
+    case_name = None
+    try:
+        found = await client.request("get_value", {
+            "doctype": "Engagement Case",
+            "fieldname": "name",
+            "filters": {"mongo_user_id": user_id},
+        })
+        case_name = found.get("name") if isinstance(found, dict) else None
+    except FrappeError:
+        pass
 
     created = False
     if not case_name:
+        # insert
         try:
-            saved = await fc.request("insert", {
+            saved = await client.request("insert", {
                 "doc": {
                     "doctype": "Engagement Case",
                     "naming_series": "IE-.YYYY.-.#####",
-                    "crm_status": "New",
-                    **upstream_payload,
+                    **payload,
                 }
             })
             case_name = saved.get("name") if isinstance(saved, dict) else None
             created = True
-            print(f"[ensure_case_from_user] created case={case_name} user_id={user_id}", flush=True)
-        except FrappeError as exc:
-            print(f"[ensure_case_from_user] frappe.insert error user_id={user_id} err={exc}", flush=True)
+            print(f"[ensure_case_from_user] created case={case_name} for user={user_id}", flush=True)
+        except FrappeError as e:
+            print(f"[ensure_case_from_user][ERR insert] user={user_id} err={e}", flush=True)
             return {"ok": False, "reason": "frappe_insert_failed"}
 
-    # апдейт только изменившихся полей (бережём ручные правки)
+    # update only changed
     try:
-        existing = await fc.request("get", {"doctype": "Engagement Case", "name": case_name})
-    except FrappeError as exc:
-        print(f"[ensure_case_from_user] frappe.get error name={case_name} err={exc}", flush=True)
+        existing = await client.request("get", {"doctype": "Engagement Case", "name": case_name})
+    except FrappeError as e:
+        print(f"[ensure_case_from_user][ERR get] {case_name} {e}", flush=True)
         return {"ok": False, "reason": "frappe_get_failed", "case_name": case_name}
 
-    if not isinstance(existing, dict):
-        existing = {}
+    def _diff(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
+        out={}
+        for k,v in a.items():
+            if b.get(k) != v:
+                out[k]=v
+        return out
 
-    def non_empty(v: Any) -> bool:
-        return bool(str(v or "").strip())
-
-    locked_updates = dict(upstream_payload)
-    try:
-        if non_empty(existing.get("title")):
-            locked_updates.pop("title", None)
-        if non_empty(existing.get("display_name")):
-            locked_updates.pop("display_name", None)
-        if non_empty(existing.get("email")):
-            locked_updates.pop("email", None)
-    except Exception:
-        pass
-
-    changes = {}
-    for k, v in locked_updates.items():
-        if existing.get(k) != v:
-            changes[k] = v
-
+    changes = _diff(payload, existing or {})
     if changes:
         try:
             existing.update(changes)
-            _ = await fc.request("save", {"doc": existing})
-            print(f"[ensure_case_from_user] saved case={case_name} fields={list(changes.keys())}", flush=True)
-        except FrappeError as exc:
-            print(f"[ensure_case_from_user] frappe.save error name={case_name} err={exc}", flush=True)
-            return {"ok": False, "reason": "frappe_save_failed"}
+            _ = await client.request("save", {"doc": existing})
+            print(f"[ensure_case_from_user] updated {case_name} fields={list(changes.keys())}", flush=True)
+        except FrappeError as e:
+            print(f"[ensure_case_from_user][ERR save] {case_name} {e}", flush=True)
+            return {"ok": False, "reason": "frappe_save_failed", "case_name": case_name, "changes": list(changes.keys())}
 
-    # cache save
+    # обновим кеш
     try:
-        if state_col is not None and user_id:
-            await state_col.update_one(
-                {"user_id": user_id},
-                {"$set": {
-                    "user_id": user_id,
-                    "case_name": case_name,
-                    "hash": payload_hash,
-                    "updated_at": datetime.now(timezone.utc),
-                }},
-                upsert=True,
-            )
-    except Exception as exc:
-        print(f"[ensure_case_from_user] state upsert failed err={exc}", flush=True)
+        await state_col.update_one(
+            cache_key,
+            {"$set": {"case_name": case_name, "hash": payload_hash, "updated_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+    except Exception:
+        pass
 
-    return {"ok": True, "case_name": case_name, "created": created, "updated_fields": list(changes.keys()) if changes else []}
+    return {"ok": True, "case_name": case_name, "created": created, "updated_fields": list(changes.keys())}
 
-
-async def sync_recent_users(minutes: int, limit: Optional[int] = None) -> Dict[str, Any]:
+async def sync_recent_users(minutes: Optional[int] = None, limit: Optional[int] = None) -> Dict[str, Any]:
     """
-    Скан пользователей (role=client) и апсерты кейсов «в Deals».
-    Ничего не делает с чатами/ассайнами/ToDo.
+    Синк пользователей-клиентов:
+      - Если minutes == None → БЕЗ фильтра по времени (как ты просил).
+      - Если minutes задан → фильтруем по created_at/updated_at >= now - minutes.
+      - limit опционален, без лимита берём всё.
     """
-    users = await _iter_recent_users(minutes, limit)
-    print(f"[sync_recent_users] fetched users={len(users)}", flush=True)
+    col = mongo_db.get_collection("users")
+    q: Dict[str, Any] = {"role": "client"}
+    # Временно отключил минуты
+    minutes = None
 
+    # опциональный фильтр по времени
+    if minutes is not None:
+        dt_limit = datetime.now(tz=timezone.utc) - timedelta(minutes=int(minutes))
+        or_conds = [
+            {"updated_at": {"$gte": dt_limit}},
+            {"created_at": {"$gte": dt_limit}},
+        ]
+        q = {"$and": [q, {"$or": or_conds}]}
+
+    cursor = col.find(q).sort([("updated_at", -1), ("created_at", -1), ("_id", -1)])
+    if limit is not None:
+        cursor = cursor.limit(int(limit))
+
+    scanned = 0
     created = 0
     updated = 0
     ids: List[str] = []
 
-    for u in users:
+    async for u in cursor:
+        scanned += 1
+        u["_id"] = str(u["_id"])
         try:
             res = await ensure_case_from_user(u)
             if res.get("ok"):
@@ -1131,9 +1136,7 @@ async def sync_recent_users(minutes: int, limit: Optional[int] = None) -> Dict[s
                     pass
                 else:
                     updated += 1
-            else:
-                print(f"[sync_recent_users] ensure failed user_id={u.get('_id')} reason={res.get('reason')}", flush=True)
-        except Exception as exc:
-            print(f"[sync_recent_users] ensure raised user_id={u.get('_id')} err={exc}", flush=True)
+        except Exception as e:
+            print(f"[sync_recent_users][ERR] id={u.get('_id')} {e}", flush=True)
 
-    return {"ok": True, "scanned": len(users), "created": created, "updated": updated, "ids": ids}
+    return {"ok": True, "scanned": scanned, "created": created, "updated": updated, "ids": ids}

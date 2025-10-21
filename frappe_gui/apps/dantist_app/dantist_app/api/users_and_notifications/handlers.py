@@ -152,7 +152,7 @@ def on_user_changed(doc, method=None):
 #                     CHAT → CASE ASSIGНЕES (ONE-TIME)
 # =====================================================================
 
-TARGET_CHAT_ID = "68f6b260070075ebeb464eb2"  # для явной метки в логах
+TARGET_CHAT_ID = "68f6b260070075ebeb464eb2"
 
 def _seen_get(doc) -> Set[str]:
     try:
@@ -173,7 +173,6 @@ def _seen_save(doc, seen: Set[str]) -> None:
         frappe.logger("dantist.tasks").warning("Failed to save custom_chat_assignees_seen", exc_info=True)
 
 def _is_non_client_human(p: dict) -> Tuple[bool, str, str]:
-    """return (is_candidate, email, role)"""
     try:
         si = p.get("sender_info") or {}
         user = si.get("user") or {}
@@ -202,7 +201,7 @@ def _current_assignees_for_case(case_name: str) -> Set[str]:
 def _assign_user_to_case(case_name: str, user_name: str) -> None:
     try:
         frappe.desk.form.assign_to.add({
-            "assign_to": [user_name],           # ВАЖНО: сюда идёт ИМЯ пользователя (docname), не email
+            "assign_to": [user_name],
             "doctype": "Engagement Case",
             "name": case_name,
             "notify": 0,
@@ -212,46 +211,31 @@ def _assign_user_to_case(case_name: str, user_name: str) -> None:
         print(f"[CHAT->ASSIGN][ERR] {case_name} <- {user_name}: {e}", flush=True)
 
 def _resolve_user(email: str, role: str) -> Optional[str]:
-    """
-    Возвращает docname пользователя для назначения:
-      1) по полю email,
-      2) если docname == email,
-      3) если роль admin/superadmin/demo → по dantist_super_admin_email или 'Administrator'.
-    Только enabled-пользователи.
-    """
     email = (email or "").strip().lower()
     role  = (role  or "").strip().lower()
 
-    # 1) поиск по полю email
     try:
         name = frappe.db.get_value("User", {"email": email}, "name")
-        if name:
-            enabled = frappe.db.get_value("User", name, "enabled")
-            if enabled:
-                return name
+        if name and frappe.db.get_value("User", name, "enabled"):
+            return name
     except Exception:
         pass
 
-    # 2) docname == email
     try:
         if frappe.db.exists("User", email):
-            enabled = frappe.db.get_value("User", email, "enabled")
-            if enabled:
+            if frappe.db.get_value("User", email, "enabled"):
                 return email
     except Exception:
         pass
 
-    # 3) роль-маппинг на суперпользователя
     if role in {"superadmin", "admin", "demo"}:
         cfg = (frappe.conf.get("dantist_super_admin_email") or "").strip().lower()
         if cfg:
             name = frappe.db.get_value("User", {"email": cfg}, "name") or (cfg if frappe.db.exists("User", cfg) else None)
             if name and frappe.db.get_value("User", name, "enabled"):
                 return name
-        # последний шанс — Administrator
         try:
             if frappe.db.exists("User", "Administrator"):
-                # у системного пользователя enabled может быть None → считаем валидным
                 return "Administrator"
         except Exception:
             pass
@@ -261,7 +245,7 @@ def _resolve_user(email: str, role: str) -> Optional[str]:
 def _transition_status_on_assignees(case_doc) -> None:
     """
     Если есть Assigned To → CRM: In Work, Leads: In Progress.
-    Никаких ToDo не создаём вручную (assign_to.add сам создаёт связку).
+    Поддерживаем обе схемы поля для CRM: status_crm_board И/ИЛИ crm_status.
     """
     try:
         has_assignees = bool(_current_assignees_for_case(case_doc.name))
@@ -269,11 +253,16 @@ def _transition_status_on_assignees(case_doc) -> None:
             return
 
         changed = False
-        # CRM board
+
+        # CRM board — два поля на всякий
         try:
             if int(getattr(case_doc, "show_board_crm", 0) or 0) == 1:
-                cur = (getattr(case_doc, "crm_status", None) or "").strip()
-                if cur != "In Work":
+                cur1 = (getattr(case_doc, "status_crm_board", None) or "").strip()
+                cur2 = (getattr(case_doc, "crm_status", None) or "").strip()
+                if cur1 != "In Work":
+                    case_doc.db_set("status_crm_board", "In Work", update_modified=False)
+                    changed = True
+                if cur2 != "In Work":
                     case_doc.db_set("crm_status", "In Work", update_modified=False)
                     changed = True
         except Exception:
@@ -298,10 +287,10 @@ def _transition_status_on_assignees(case_doc) -> None:
 @frappe.whitelist(methods=["POST"])
 def sync_case_assignees_from_chat():
     """
-    Идемпотентно добавляет Assigned To на карточку Engagement Case для всех участников чата
-    с НЕклиентской ролью (и не ИИ). Используем participants_json (из FastAPI).
-    + НОВОЕ: если после назначения есть исполнители — переводим статусы:
-      CRM → In Work, Leads → In Progress.
+    Идемпотентно добавляет Assigned To (без лишних ToDo) и,
+    если исполнители есть, переводит статусы:
+      - CRM → In Work (оба поля)
+      - Leads → In Progress
     """
     form = frappe.local.form_dict or {}
     case_name = (form.get("case_name") or "").strip()
@@ -313,39 +302,33 @@ def sync_case_assignees_from_chat():
     if isinstance(form.get("participants"), list):
         participants = form.get("participants")
     else:
-        pj = form.get("participants_json")
-        if pj is None and isinstance(form.get("participants"), str):
-            pj = form.get("participants")
+        pj = form.get("participants_json") or (form.get("participants") if isinstance(form.get("participants"), str) else None)
         try:
             participants = json.loads(pj or "[]")
         except Exception:
             participants = []
 
-    # подтянем chat_id для логов
     chat_id = (frappe.db.get_value("Engagement Case", case_name, "mongo_chat_id") or "").strip()
 
-    # Вербоз — только если 1 участник, как просил
     if len(participants or []) == 1:
         print(f"[ASSIGNEES_SYNC][VERBOSE] case={case_name} chat_id={chat_id} raw_participants=1", flush=True)
         p0 = (participants or [])[0] or {}
         si = p0.get("sender_info") or {}
         u  = si.get("user") or {}
         print(f"[ASSIGNEES_SYNC][VERBOSE] p#0: email={(u.get('email') or '').strip().lower()} role={(u.get('role') or '').strip().lower()} source={(si.get('source') or '').strip()}", flush=True)
+        try:
+            dump = json.dumps(participants or [], ensure_ascii=False, indent=2)
+        except Exception:
+            dump = str(participants)
         if chat_id == TARGET_CHAT_ID:
-            try:
-                dump = json.dumps(participants or [], ensure_ascii=False, indent=2)
-            except Exception:
-                dump = str(participants)
             print("*** TARGET CHAT MATCHED ***", flush=True)
             print(f"[ASSIGNEES_SYNC][TARGET] participants_dump= {dump}", flush=True)
     else:
-        # сводка-коротышка для остальных случаев
         print(f"[ASSIGNEES_SYNC] case={case_name} chat_id={chat_id} raw_participants={len(participants or [])}", flush=True)
 
     case = frappe.get_doc("Engagement Case", case_name)
 
-    # кандидаты по роли
-    candidates: List[Tuple[str, str]] = []  # (email, role)
+    candidates: List[Tuple[str, str]] = []
     skipped_by_role = 0
     for p in (participants or []):
         ok, email, role = _is_non_client_human(p)
@@ -356,7 +339,6 @@ def sync_case_assignees_from_chat():
 
     print(f"[ASSIGNEES_SYNC] candidates_by_role={len(candidates)} skipped_by_role={skipped_by_role}", flush=True)
 
-    # seen / current
     seen = _seen_get(case)
     current = _current_assignees_for_case(case.name)
     print(f"[ASSIGNEES_SYNC] seen={sorted(seen)}", flush=True)
@@ -385,22 +367,18 @@ def sync_case_assignees_from_chat():
 
         to_add.append(user_docname)
 
-    # назначаем
     for user_name in to_add:
         _assign_user_to_case(case.name, user_name)
 
-    # обновляем seen (храним по email-ам для идемпотентности)
     for email, _ in candidates:
         if email not in seen:
             seen.add(email)
     _seen_save(case, seen)
     frappe.db.commit()
 
-    # НОВОЕ: переводим статусы, если есть исполнители
     try:
         case.reload()
     except Exception:
-        # no-op
         pass
     _transition_status_on_assignees(case)
 
