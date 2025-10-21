@@ -1,113 +1,235 @@
-// Engagement Case — form UX
-// - Шапка: все статусы по 4 доскам (Show-on=1 → сплошной, Show-on=0 → пунктир БЕЗ заливки)
-//   + справа от статусов при необходимости отдельный чип "Hidden" (СПЛОШНОЙ, как в карточках)
-// - Linked preview: скрываем нативную grid, только "Search & Link", без дублей; unlink — с подтверждением
-// - ✎ открывает child-row; мини-карточки детей и родителей показывают ВСЕ доски (цвета из Kanban)
-// - Между обычными тегами (platform/priority/…) и канбан-статусами — узкий вертикальный пунктир
+// Engagement Case — Form UX (stacked pipelines, dynamic steps, safe scoping)
+// - Пайплайны по одной доске в строку, шаги тянутся из df.options
+// - Скрываем title-indicator ТОЛЬКО на Engagement Case
+// - Linked Cases оставлены «как было»; ✎ надёжно открывает строку
+// - FIX: убран crm_status из server-side get_list (ломал превью)
+
 (function () {
+  const DOCTYPE = "Engagement Case";
   const esc = frappe.utils.escape_html;
 
+  // --- Boards meta (динамические шаги берём из options) ---
   const BOARDS = [
-    { name: "CRM Board",                  flag: "show_board_crm",      field: "status_crm_board" },
-    { name: "Leads – Contact Center",     flag: "show_board_leads",    field: "status_leads" },
-    { name: "Deals – Contact Center",     flag: "show_board_deals",    field: "status_deals" },
-    { name: "Patients – Care Department", flag: "show_board_patients", field: "status_patients" },
+    { name: "CRM Board",                  flag: "show_board_crm",      fields: ["status_crm_board","crm_status"], color: "#2563eb" },
+    { name: "Leads – Contact Center",     flag: "show_board_leads",    fields: ["status_leads"],                    color: "#16a34a" },
+    { name: "Deals – Contact Center",     flag: "show_board_deals",    fields: ["status_deals"],                    color: "#ea580c" },
+    { name: "Patients – Care Department", flag: "show_board_patients", fields: ["status_patients"],                 color: "#9333ea" },
   ];
 
+  // ------- CSS (строго на этой форме) -------
+  const CSS_ID = "ec-form-ux-css";
+  function ensureCss() {
+    if (document.getElementById(CSS_ID)) return;
+    const s = document.createElement("style");
+    s.id = CSS_ID;
+    s.textContent = `
+    .ec-suppress-title-indicator .page-head .indicator-pill { display:none !important; }
+
+    .form-dashboard .ec-progress-section .section-head{
+      font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);
+    }
+    .form-dashboard .ec-progress-section .section-body{ padding:12px; }
+    .ec-pipes{ display:flex; flex-direction:column; gap:12px; }
+    .ec-pipe{ border:1px solid var(--border-color,#e5e7eb); border-radius:10px; padding:10px; background:#fff; }
+    .ec-pipe.-disabled{ opacity:.9; }
+    .ec-pipe .head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .ec-pipe .dot{ width:10px; height:10px; border-radius:50%; flex:0 0 10px; }
+    .ec-pipe .title{ font-weight:600; }
+
+    .ec-steps{ display:flex; gap:6px; align-items:center; }
+    .ec-step{
+      position:relative; flex:1; height:10px; border-radius:999px; cursor:pointer;
+      background:#eef2f7; outline:1px solid rgba(0,0,0,.03);
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+    .ec-step.-past{ opacity:.95 }
+    .ec-step.-current{ transform: translateY(-1px); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .ec-step.-future{ opacity:.6 }
+    .ec-step.-disabled { background: transparent !important; border:1px dashed #d1d5db; outline:none; }
+    .ec-step:hover{ box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+
+    .ec-names{ display:flex; gap:6px; margin-top:4px; font-size:11px; color:#6b7280; }
+    .ec-name{ flex:1; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .ec-name.-current{ color:#111827; font-weight:600; }
+    .ec-names.-disabled .ec-name{ color:#9ca3af; }
+
+    /* Linked Cases — как в прежней версии */
+    .ec-title-badges{display:flex;gap:6px;align-items:center;margin-left:8px}
+    .crm-chip{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:transparent}
+    .crm-chip.-ghost{background:#f8fafc}
+    .crm-chip.-dashed{border-style:dashed;background:transparent}
+    .crm-vsep{display:inline-block;width:0;border-left:1px dashed #d1d5db;margin:0 6px;align-self:stretch}
+    .ec-linked-preview{margin-top:8px;border-top:1px solid #eef2f7;padding-top:6px}
+    .ec-parents-preview{margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:6px}
+    .ec-linked-header{font-size:12px;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+    .ec-card{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px;border:1px solid #eef2f7;border-radius:10px;margin-top:8px;transition:background .15s}
+    .ec-card:hover{background:#fafafa}
+    .ec-card.-parent{border-style:dashed}
+    .ec-left{display:flex;gap:10px;align-items:flex-start;min-width:0}
+    .ec-avatar{width:28px;height:28px;border-radius:8px;background:#e5e7eb;flex:0 0 auto;overflow:hidden}
+    .ec-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .ec-body{min-width:0}
+    .ec-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+    .ec-meta{color:#6b7280;font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+    .ec-meta.-time .frappe-timestamp{opacity:.9}
+    .ec-right{display:flex;align-items:center;gap:6px}
+    .ec-open-kanban{margin-left:6px}
+    .ec-grid-hidden .control-label,
+    .ec-grid-hidden .grid-description,
+    .ec-grid-hidden .grid-custom-buttons,
+    .ec-grid-hidden .form-grid-container,
+    .ec-grid-hidden .grid-heading-row,
+    .ec-grid-hidden .grid-footer { display:none !important; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  // ----------------- helpers -----------------
+  function pageWrap(frm) { return frm?.page?.wrapper && frm.page.wrapper[0] || null; }
+  function suppressTitleIndicator(frm, on) {
+    const root = pageWrap(frm);
+    if (!root) return;
+    root.classList.toggle("ec-suppress-title-indicator", !!on);
+  }
+  function findFirstExistingField(frm, list) {
+    for (const fn of list) if (frm.fields_dict[fn]) return fn;
+    return null;
+  }
+  function getSelectOptions(frm, fieldname) {
+    const df = frm.fields_dict[fieldname]?.df;
+    if (!df) return [];
+    return String(df.options || "").split("\n").map(s => s.trim()).filter(Boolean);
+  }
+  function getOrCreateDashSection(frm, id, title) {
+    const host = frm?.page?.wrapper?.[0];
+    if (!host) return null;
+    const dash = host.querySelector(".form-dashboard");
+    if (!dash) return null;
+    let sec = dash.querySelector(`#${id}`);
+    if (!sec) {
+      const row = document.createElement("div");
+      row.className = "row form-dashboard-section ec-progress-section";
+      row.id = id;
+      const head = document.createElement("div");
+      head.className = "section-head collapsible";
+      head.tabIndex = 0;
+      head.textContent = title;
+      const body = document.createElement("div");
+      body.className = "section-body";
+      row.appendChild(head); row.appendChild(body);
+      dash.insertBefore(row, dash.firstChild);
+      sec = row;
+    }
+    return sec;
+  }
+  function sectionBody(sec) { return sec?.querySelector(".section-body") || null; }
+  function idxOf(steps, v) {
+    const i = steps.findIndex(s => (s||"").toLowerCase() === (v||"").toLowerCase());
+    return i >= 0 ? i : -1;
+  }
+
+  function clickableStep(frm, fieldname, label, i, currentIdx, color, enabled) {
+    const div = document.createElement("div");
+    // статус шага
+    div.className = "ec-step " + (i < currentIdx ? "-past" : i === currentIdx ? "-current" : "-future");
+    if (enabled) {
+      div.style.background = i <= currentIdx ? (color + "22") : "#eef2f7";
+      div.addEventListener("click", () => frm.set_value(fieldname, label));
+    } else {
+      div.classList.add("-disabled");
+      div.style.background = "transparent";
+      div.style.border = "1px dashed #d1d5db";
+      div.style.cursor = "default";
+    }
+    div.title = label;
+    return div;
+  }
+
+  function renderOnePipeline(frm, board, doc) {
+    const fieldname = findFirstExistingField(frm, board.fields);
+    if (!fieldname) return null;
+
+    const steps = getSelectOptions(frm, fieldname);
+    const current = (doc[fieldname] || "");
+    const currentIdx = idxOf(steps, current);
+    const enabled = parseInt(doc[board.flag] || 0) === 1;
+
+    const card = document.createElement("div");
+    card.className = "ec-pipe" + (enabled ? "" : " -disabled");
+
+    const head = document.createElement("div");
+    head.className = "head";
+    const dot = document.createElement("span");
+    dot.className = "dot"; dot.style.background = board.color;
+    const ttl = document.createElement("div");
+    ttl.className = "title"; ttl.textContent = board.name;
+    head.appendChild(dot); head.appendChild(ttl);
+
+    const stepsWrap = document.createElement("div");
+    stepsWrap.className = "ec-steps";
+    steps.forEach((lbl, i) => {
+      stepsWrap.appendChild(
+        clickableStep(frm, fieldname, lbl, i, Math.max(currentIdx, -0.5), board.color, enabled)
+      );
+    });
+
+    const namesWrap = document.createElement("div");
+    namesWrap.className = "ec-names" + (enabled ? "" : " -disabled");
+    steps.forEach((lbl, i) => {
+      const n = document.createElement("div");
+      n.className = "ec-name" + (i === currentIdx && enabled ? " -current" : "");
+      n.title = lbl; n.textContent = lbl;
+      namesWrap.appendChild(n);
+    });
+
+    card.appendChild(head);
+    card.appendChild(stepsWrap);
+    card.appendChild(namesWrap);
+    return card;
+  }
+
+  function renderProgress(frm) {
+    ensureCss();
+    const sec = getOrCreateDashSection(frm, "ec-progress-area", "Workflow");
+    const body = sectionBody(sec);
+    if (!body) return;
+
+    let list = body.querySelector(".ec-pipes");
+    if (!list) {
+      list = document.createElement("div");
+      list.className = "ec-pipes";
+      body.appendChild(list);
+    }
+    list.innerHTML = "";
+
+    const doc = frm.doc || {};
+    BOARDS.forEach(b => {
+      const ui = renderOnePipeline(frm, b, doc);
+      if (ui) list.appendChild(ui);
+    });
+  }
+
+  // ---------------- Linked Cases (как было) ----------------
   const fullPath  = (p)=> p ? (p.startsWith("/") ? p : `/${p}`) : "";
   const pickAvatar= (row)=> fullPath(row.avatar || "/assets/frappe/images/ui/user-avatar.svg");
-
-  // ----- helpers: chips -----
   function chipTag(bucket, val, dashed=false) {
     if (!val) return "";
     if (typeof window.tagChip === "function") return window.tagChip(bucket, val, dashed);
     const cls = "crm-chip" + (dashed ? " -dashed" : "");
     return `<span class="${cls}">${esc(val)}</span>`;
   }
-
   function chipBoard(boardName, status, dashed=false) {
     if (!status) return "";
     if (typeof window.boardChip === "function") return window.boardChip(boardName, status, dashed);
     const extra = dashed ? "border-style:dashed;background:transparent" : "";
     return `<span class="crm-chip" style="${extra}">${esc(status)}</span>`;
   }
-
   const timeChip  = (label, dt)=> dt ? `<span class="crm-chip -ghost"><span class="lbl">${esc(label)}:</span> ${frappe.datetime.comment_when(dt)}</span>` : "";
   const sepChip   = `<span class="crm-vsep" aria-hidden="true"></span>`;
 
-  async function ensureAllBoardColors() {
-    if (typeof window.getBoardColors === "function") {
-      await Promise.all(BOARDS.map(b => window.getBoardColors(b.name)));
-    }
-  }
-
-  // ----- hidden-mark for current doc (если он скрыт где-то как child) -----
-  let HIDDEN_SET = null;
-  async function isCurrentHidden(name) {
-    try {
-      if (!name) return false;
-      if (!HIDDEN_SET) {
-        const { message: hiddenList = [] } = await frappe.call({
-          method: "dantist_app.api.engagement.handlers.engagement_hidden_children"
-        });
-        HIDDEN_SET = new Set(hiddenList || []);
-      }
-      return HIDDEN_SET.has(name);
-    } catch (e) {
-      console.warn("[EC Form] hidden check failed", e);
-      return false;
-    }
-  }
-
-  // ---------- title badges ----------
-  async function updateTitleBadges(frm) {
-    try {
-      const titleArea = document.querySelector(".page-head .title-area .flex");
-      if (!titleArea) return;
-
-      let wrap = titleArea.querySelector(".ec-title-badges");
-      if (!wrap) {
-        wrap = document.createElement("div");
-        wrap.className = "ec-title-badges";
-        titleArea.appendChild(wrap);
-      }
-
-      const chips = [];
-      for (const b of BOARDS) {
-        const st = frm.doc[b.field];
-        if (!st) continue;
-        const dashed = !frm.doc[b.flag];
-        chips.push(chipBoard(b.name, st, dashed));
-      }
-
-      // если текущий кейс скрыт в каком-то родителе — покажем чип "Hidden" (СПЛОШНОЙ!)
-      const hiddenNow = await isCurrentHidden(frm.doc.name);
-      const hiddenChip = hiddenNow ? chipTag("badge", "Hidden", /*dashed*/ false) : "";
-
-      wrap.innerHTML = chips.join("") + (hiddenChip ? sepChip + hiddenChip : "");
-
-      // спрячем стандартный одинокий индикатор
-      const std = titleArea.querySelector(".indicator-pill");
-      if (std) std.style.display = "none";
-    } catch (e) { console.warn("updateTitleBadges failed", e); }
-  }
-
-  // ---------- открыть редактирование строки child table по ✎ ----------
-  function openLinkRowEditor(frm, engagementName) {
-    const grid = frm.get_field("linked_engagements")?.grid;
-    if (!grid) return;
-    const row = (grid.grid_rows || []).find(r => (r.doc && r.doc.engagement === engagementName));
-    if (row && row.toggle_view) { row.toggle_view(true); return; }
-    const docRow = (frm.doc.linked_engagements || []).find(r => r.engagement === engagementName);
-    if (docRow && typeof grid.row_open === "function") grid.row_open((docRow.idx || 1) - 1);
-  }
-
-  // ---------- linked preview ----------
   function ensureLinkedContainer(frm) {
     const fld = frm.get_field("linked_engagements");
     if (!fld?.wrapper) return null;
-
-    // скрываем стандартную grid (DOM остаётся для редакторов строк)
     fld.wrapper.classList.add("ec-grid-hidden");
 
     let wrap = fld.wrapper.querySelector(".ec-linked-preview");
@@ -131,38 +253,30 @@
   }
 
   function kanbanChipsAll(row) {
-    const out = [];
+    const list = [];
     for (const b of BOARDS) {
-      const st = row[b.field];
+      const f = b.fields.find(fn => fn in row);
+      const st = f ? row[f] : null;
       if (!st) continue;
       const dashed = !row[b.flag];
-      out.push(chipBoard(b.name, st, dashed));
+      list.push(chipBoard(b.name, st, dashed));
     }
-    return out.join("");
+    return list.join("");
   }
 
   function renderMiniCard(row, opts={}) {
     const title  = row.title || row.display_name || row.name;
     const avatar = pickAvatar(row);
-
-    // обычные теги (цветные из EC_TAG_COLORS)
     const common = [
       row.channel_platform ? chipTag("platform", row.channel_platform) : "",
       row.priority         ? chipTag("priority", row.priority) : "",
     ].filter(Boolean).join("");
-
     const kchips = kanbanChipsAll(row);
     const chips  = [common, kchips ? sepChip + kchips : ""].join("");
-
     const times  = [
       timeChip("Last", row.last_event_at),
       timeChip("First", row.first_event_at)
     ].filter(Boolean).join(" ");
-
-    const badges = [];
-    if (opts.is_parent) badges.push(chipTag("badge", "Parent"));
-    if (opts.hidden)    badges.push(chipTag("badge", "Hidden"));
-
     const right = [
       `<button class="btn btn-xs btn-default" data-act="open"   data-name="${esc(row.name)}">Open</button>`,
       opts.show_unlink   ? `<button class="btn btn-xs btn-danger"  data-act="unlink" data-name="${esc(row.name)}">Unlink</button>` : "",
@@ -174,7 +288,7 @@
         <div class="ec-left">
           <div class="ec-avatar"><img src="${esc(avatar)}" alt=""></div>
           <div class="ec-body">
-            <div class="ec-title">${esc(title)} ${badges.join(" ")}</div>
+            <div class="ec-title">${esc(title)}</div>
             <div class="ec-meta">${chips}</div>
             <div class="ec-meta -time">${times}</div>
           </div>
@@ -182,6 +296,11 @@
         <div class="ec-right">${right}</div>
       </div>
     `;
+  }
+
+  function hideLinkedGrid(frm) {
+    const fld = frm.get_field("linked_engagements");
+    if (fld?.wrapper) fld.wrapper.classList.add("ec-grid-hidden");
   }
 
   async function loadLinkedPreviews(frm) {
@@ -203,6 +322,7 @@
           doctype: "Engagement Case",
           fields: [
             "name","title","display_name","avatar","channel_platform","priority",
+            // ВАЖНО: БЕЗ crm_status, чтобы не ловить DataError
             "status_crm_board","status_leads","status_deals","status_patients",
             "show_board_crm","show_board_leads","show_board_deals","show_board_patients",
             "first_event_at","last_event_at"
@@ -247,7 +367,6 @@
     }
   }
 
-  // ---------- parents ----------
   function ensureParentsContainer(frm) {
     const fld = frm.get_field("linked_engagements");
     if (!fld?.wrapper) return null;
@@ -281,7 +400,46 @@
     }
   }
 
-  // ---------- диалог поиска/линковки (без дублей) ----------
+  // ---- ✎: надёжно открываем редактор строки child-таблицы ----
+  function openLinkRowEditor(frm, engagementName) {
+    const grid = frm.get_field("linked_engagements")?.grid;
+    if (!grid) return;
+
+    const tryOpen = () => {
+      const docRow = (frm.doc.linked_engagements || []).find(r => r.engagement === engagementName);
+      if (!docRow) return false;
+
+      if (!grid.grid_rows || !grid.grid_rows.length) grid.refresh();
+
+      let rowObj =
+        (grid.grid_rows || []).find(r => r.doc && (r.doc.name === docRow.name)) ||
+        (grid.grid_rows || []).find(r => r.doc && (r.doc.engagement === engagementName));
+
+      if (!rowObj) {
+        grid.refresh();
+        rowObj =
+          (grid.grid_rows || []).find(r => r.doc && (r.doc.name === docRow.name)) ||
+          (grid.grid_rows || []).find(r => r.doc && (r.doc.engagement === engagementName));
+      }
+
+      if (rowObj && typeof rowObj.toggle_view === "function") {
+        rowObj.toggle_view(true);
+        return true;
+      }
+
+      if (typeof grid.open_grid_row === "function") {
+        try {
+          grid.open_grid_row(docRow.name || ((docRow.idx || 1) - 1));
+          return true;
+        } catch {}
+      }
+      return false;
+    };
+
+    if (!tryOpen()) setTimeout(() => { if (!tryOpen()) grid.refresh(); }, 30);
+  }
+
+  // ---- диалог поиска/линковки (как было, без crm_status в полях) ----
   function addLinkExistingDialog(frm) {
     const already = new Set((frm.doc.linked_engagements || []).map(r => r.engagement).filter(Boolean));
 
@@ -390,70 +548,42 @@
     runSearch();
   }
 
-  // ---------- кнопки Open Kanban (только текст) ----------
-  function addOpenKanbanButtons(frm) {
-    BOARDS.forEach(meta => {
-      const fld = frm.get_field(meta.field);
-      if (!fld || !fld.$wrapper || fld.$wrapper[0]?.$open_kb_btn) return;
-      const btn = $(`
-        <button class="btn btn-xs btn-default ec-open-kanban" type="button">
-          Open Kanban
-        </button>
-      `).on("click", () => frappe.set_route("List", "Engagement Case", "Kanban", meta.name));
-      fld.$wrapper.find(".control-input").append(btn);
-      fld.$wrapper[0].$open_kb_btn = btn;
-    });
-  }
-
-  // ---------- hooks ----------
-  frappe.ui.form.on("Engagement Case", {
-    async refresh(frm) {
-      await ensureAllBoardColors();
-      await updateTitleBadges(frm);
-      addOpenKanbanButtons(frm);
+  // ---------------- Hooks ----------------
+  frappe.ui.form.on(DOCTYPE, {
+    onload_post_render(frm) {
+      ensureCss();
+      suppressTitleIndicator(frm, true);
+      renderProgress(frm);
+      hideLinkedGrid(frm);
       loadLinkedPreviews(frm);
       loadParentPreviews(frm);
     },
-    linked_engagements_add(frm)    { loadLinkedPreviews(frm); },
-    linked_engagements_remove(frm) { loadLinkedPreviews(frm); loadParentPreviews(frm); }
+    refresh(frm) {
+      ensureCss();
+      suppressTitleIndicator(frm, true);
+      renderProgress(frm);
+      hideLinkedGrid(frm);
+      loadLinkedPreviews(frm);
+      loadParentPreviews(frm);
+
+      requestAnimationFrame(() => { renderProgress(frm); });
+      setTimeout(() => { renderProgress(frm); }, 60);
+    },
+    // слушаем все изменения статусов/флагов
+    status_crm_board:   (frm)=> renderProgress(frm),
+    crm_status:         (frm)=> renderProgress(frm),
+    status_leads:       (frm)=> renderProgress(frm),
+    status_deals:       (frm)=> renderProgress(frm),
+    status_patients:    (frm)=> renderProgress(frm),
+    show_board_crm:     (frm)=> renderProgress(frm),
+    show_board_leads:   (frm)=> renderProgress(frm),
+    show_board_deals:   (frm)=> renderProgress(frm),
+    show_board_patients:(frm)=> renderProgress(frm),
+
+    linked_engagements_add(frm){ loadLinkedPreviews(frm); },
+    linked_engagements_remove(frm){ loadLinkedPreviews(frm); loadParentPreviews(frm); },
+
+    on_close(frm){ suppressTitleIndicator(frm, false); }
   });
 
-  // ---------- styles ----------
-  const style = document.createElement("style");
-  style.innerHTML = `
-  .ec-title-badges{display:flex;gap:6px;align-items:center;margin-left:8px}
-
-  /* База для всех чипов */
-  .crm-chip{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:transparent}
-  .crm-chip.-ghost{background:#f8fafc}
-  .crm-chip.-dashed{border-style:dashed;background:transparent}
-
-  /* Узкая вертикальная пунктирная черта (разделитель) */
-  .crm-vsep{display:inline-block;width:0;border-left:1px dashed #d1d5db;margin:0 6px;align-self:stretch}
-
-  .ec-linked-preview{margin-top:8px;border-top:1px solid #eef2f7;padding-top:6px}
-  .ec-parents-preview{margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:6px}
-  .ec-linked-header{font-size:12px;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
-  .ec-card{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px;border:1px solid #eef2f7;border-radius:10px;margin-top:8px;transition:background .15s}
-  .ec-card:hover{background:#fafafa}
-  .ec-card.-parent{border-style:dashed}
-  .ec-left{display:flex;gap:10px;align-items:flex-start;min-width:0}
-  .ec-avatar{width:28px;height:28px;border-radius:8px;background:#e5e7eb;flex:0 0 auto;overflow:hidden}
-  .ec-avatar img{width:100%;height:100%;object-fit:cover;display:block}
-  .ec-body{min-width:0}
-  .ec-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-  .ec-meta{color:#6b7280;font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
-  .ec-meta.-time .frappe-timestamp{opacity:.9}
-  .ec-right{display:flex;align-items:center;gap:6px}
-  .ec-open-kanban{margin-left:6px}
-
-  /* Скрыть стандартную grid Linked Engagements целиком */
-  .ec-grid-hidden .control-label,
-  .ec-grid-hidden .grid-description,
-  .ec-grid-hidden .grid-custom-buttons,
-  .ec-grid-hidden .form-grid-container,
-  .ec-grid-hidden .grid-heading-row,
-  .ec-grid-hidden .grid-footer { display:none !important; }
-  `;
-  document.head.appendChild(style);
 })();
