@@ -1,13 +1,11 @@
-/* Dantist Kanban skin — v23 (based on v17 + tasks mini + inline title + spacing fix) */
+/* Dantist Kanban skin — v24 (v17 + tasks mini + inline title + spacing/cursors + robust settings btn) */
 (() => {
   const CFG = {
     cssId: "dantist-kanban-skin-css",
     htmlClass: "dantist-kanban-skin",
-    // perms
     rolesSettings: ["AIHub Super Admin", "System Manager"],
     rolesCanColor: ["AIHub Super Admin", "System Manager"],
     rolesColumnMenu:["AIHub Super Admin", "System Manager"],
-    // header btn
     settingsBtnId: "dnt-kanban-settings",
     // tasks
     caseDoctype: "Engagement Case",
@@ -25,6 +23,9 @@
   const getBoardName = () => {
     try { const r = frappe.get_route(); if (r?.[3]) return decodeURIComponent(r[3]); } catch {}
     try { const seg=(location.pathname||"").split("/").filter(Boolean); if(seg[1]==="kanban"&&seg[3]) return decodeURIComponent(seg[3]); } catch {}
+    // запасной способ — из заголовка
+    const h = document.querySelector(".page-head-content .title-text");
+    if (h?.textContent?.trim()) return h.textContent.trim();
     return window.cur_list?.kanban_board?.name || window.cur_list?.board?.name || null;
   };
   function stdIcon(name, size="sm") {
@@ -55,7 +56,7 @@
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; }
       html.${CFG.htmlClass} .kanban-cards > .kanban-card-wrapper + .kanban-card-wrapper{ margin-top:8px !important; }
 
-      /* убираем «раздувание» сортировочных плейсхолдеров */
+      /* убираем раздувание плейсхолдеров при сортировке */
       html.${CFG.htmlClass} .kanban-card-placeholder,
       html.${CFG.htmlClass} .sortable-placeholder,
       html.${CFG.htmlClass} .sortable-ghost,
@@ -96,8 +97,10 @@
 
       /* заголовок (editable) */
       html.${CFG.htmlClass} .kanban-card .kanban-title-area{ margin:0 !important; min-width:0; }
+      html.${CFG.htmlClass} .kanban-card .kanban-title-area a{ display:none !important; } /* убираем ссылку */
       html.${CFG.htmlClass} .kanban-card .dnt-title{
         font-weight:600; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        cursor:text; /* I-beam для редактирования */
       }
       html.${CFG.htmlClass} .kanban-card .dnt-title[contenteditable="true"]{ outline:none; border-radius:6px; padding:0 2px; }
       html.${CFG.htmlClass} .kanban-card .dnt-title[contenteditable="true"]:focus{ background:#f3f4f6; }
@@ -121,16 +124,20 @@
 
       /* низ карточки: Assignments + Like + mini Tasks */
       html.${CFG.htmlClass} .kanban-card .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-      html.${CFG.htmlClass} .kanban-card .dnt-tasks-mini{ margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px; }
+      html.${CFG.htmlClass} .kanban-card .dnt-tasks-mini{
+        margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px;
+        border-top:1px solid #eef2f7; padding-top:6px; /* тонкая полоска-разделитель */
+      }
       html.${CFG.htmlClass} .kanban-card .dnt-taskline{
         display:flex; gap:6px; align-items:center; font-size:11px; color:#4b5563; padding:2px 0;
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        cursor:pointer; /* явно кликабельно */
       }
       html.${CFG.htmlClass} .kanban-card .dnt-taskline .ttl{ font-weight:600; color:#111827; overflow:hidden; text-overflow:ellipsis; }
       html.${CFG.htmlClass} .kanban-card .dnt-chip{ border:1px solid #e5e7eb; border-radius:999px; padding:1px 6px; background:#f8fafc; font-size:10px; }
       html.${CFG.htmlClass} .kanban-card .dnt-overdue{ background:#fee2e2; border-color:#fecaca; }
 
-      /* плавающие действия — только Open */
+      /* плавающие действия — Open + Delete */
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; }
       html.${CFG.htmlClass} .dnt-card-actions{
         position:absolute; top:12px; right:12px;
@@ -166,7 +173,7 @@
       const ttl  = frappe.utils.escape_html(t.description || t.name);
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(t.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
-    const more = total>rows.length ? `<div class="dnt-taskline"><a href="#" data-act="open-all">Show all (${total}) →</a></div>` : ``;
+    const more = total>rows.length ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">Show all (${total}) →</span></div>` : ``;
     return lines + more;
   }
   async function loadMini(container, caseName){
@@ -192,10 +199,10 @@
   }
   function bindMini(container, caseName){
     container.querySelectorAll("[data-open]").forEach(el=>{
-      el.addEventListener("click",(e)=>{ e.preventDefault(); frappe.set_route("Form","ToDo", el.getAttribute("data-open")); });
+      el.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); frappe.set_route("Form","ToDo", el.getAttribute("data-open")); });
     });
     container.querySelector('[data-act="open-all"]')?.addEventListener("click",(e)=>{
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       frappe.set_route("List","ToDo",{ reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" });
     });
   }
@@ -205,7 +212,6 @@
     if (!titleArea || titleArea.__dntEditable) return;
     titleArea.__dntEditable = true;
 
-    // удаляем <a>, оставляем текст
     const anchor = titleArea.querySelector("a");
     const currentText = (titleArea.querySelector(".kanban-card-title")?.textContent || anchor?.textContent || name || "").trim();
 
@@ -293,29 +299,39 @@
       makeTitleEditable(title, name, doctype);
     }
 
-    // плавающие действия — только Open
+    // плавающие действия — Open + Delete
     if (!wrapper.querySelector(".dnt-card-actions")){
       const row = document.createElement("div"); row.className="dnt-card-actions";
       const bOpen = document.createElement("div"); bOpen.className="dnt-icon-btn"; bOpen.title=__("Open");
       bOpen.appendChild(stdIcon("external-link","sm"));
       bOpen.addEventListener("click",(e)=>{ e.stopPropagation(); if (doctype && name) frappe.set_route("Form", doctype, name); });
       row.appendChild(bOpen);
+
+      const bDel = document.createElement("div"); bDel.className="dnt-icon-btn"; bDel.title=__("Delete");
+      bDel.appendChild(stdIcon("delete","sm"));
+      bDel.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        if (!doctype || !name) return;
+        frappe.confirm(__("Delete this document?"),()=>{
+          frappe.call({ method:"frappe.client.delete", args:{ doctype, name } })
+            .then(()=>{ frappe.show_alert(__("Deleted")); try{window.cur_list?.refresh();}catch{} });
+        });
+      });
+      row.appendChild(bDel);
+
       wrapper.appendChild(row);
     }
 
     card.dataset.dntUpgraded = "1";
   }
 
-  const enhanceCards = () => document.querySelectorAll(".kanban-card-wrapper").forEach(w=>{ upgradeCard(w); });
+  const enhanceCards = () => document.querySelectorAll(".kanban-card-wrapper").forEach(upgradeCard);
 
-  /* ---------- кнопка настроек (мгновенно, без дублей) ---------- */
+  /* ---------- кнопка настроек (липкая, без дублей, актуальный boardName по клику) ---------- */
   function injectSettingsBtn(){
-    // убираем дубликаты
+    // убрать дубликаты
     document.querySelectorAll(`#${CFG.settingsBtnId}`).forEach(el => el.remove());
     if(!isKanbanRoute() || !userHasAny(CFG.rolesSettings)) return;
-
-    const bname = getBoardName();
-    if(!bname) return;
 
     const anchor = document.querySelector(".standard-actions .page-icon-group") || document.querySelector(".standard-actions");
     if(!anchor) return;
@@ -324,13 +340,16 @@
     btn.id=CFG.settingsBtnId; btn.className="btn btn-default icon-btn";
     btn.setAttribute("title", __("Kanban settings"));
     btn.appendChild(stdIcon("edit","sm"));
-    btn.addEventListener("click",()=>frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`));
+    btn.addEventListener("click",()=> {
+      const bname = getBoardName();
+      if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
+    });
     anchor.insertAdjacentElement("afterend", btn);
   }
 
-  // маленький ретраер — чтобы кнопка точно появилась «как штатные»
-  function ensureSettingsBtnSoon(){
-    let tries=0, max=20;
+  function ensureSettingsBtnSticky(){
+    // быстрый ретраер + наблюдатель за заголовком
+    let tries=0, max=40;
     const tick=()=>{ if(!isKanbanRoute()) return;
       injectSettingsBtn();
       tries+=1;
@@ -338,6 +357,18 @@
       if (tries<max) setTimeout(tick, 50);
     };
     tick();
+
+    // следим за заменой title-area/page-head (смена доски без reload)
+    const head = document.querySelector(".page-head-content") || document.body;
+    try{
+      const mo = new MutationObserver(()=> {
+        if (!isKanbanRoute()) return;
+        if (!document.getElementById(CFG.settingsBtnId)) injectSettingsBtn();
+      });
+      mo.observe(head, { childList:true, subtree:true });
+      // сохраним на window, чтобы GC не съел при SPA переходах
+      window.__dntKanbanHeadMO = mo;
+    }catch{}
   }
 
   /* ---------- фикc «Unknown Column: [» ---------- */
@@ -383,7 +414,6 @@
   function run(){
     if(!isKanbanRoute()){
       document.documentElement.classList.remove(CFG.htmlClass,"no-color","no-column-menu");
-      // убрать кнопку при уходе с канбана
       document.querySelectorAll(`#${CFG.settingsBtnId}`).forEach(el => el.remove());
       return;
     }
@@ -391,7 +421,7 @@
     document.documentElement.classList.add(CFG.htmlClass);
     applyPermClasses();
     enhanceCards();
-    ensureSettingsBtnSoon();
+    ensureSettingsBtnSticky();
     patchSettingsDialog();
 
     mo.disconnect();
