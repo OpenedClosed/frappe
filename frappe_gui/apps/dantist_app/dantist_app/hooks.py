@@ -203,6 +203,9 @@ doc_events = {
         "after_insert": "dantist_app.api.users_and_notifications.handlers.on_user_changed",
         "on_update":    "dantist_app.api.users_and_notifications.handlers.on_user_changed",
     },
+    "Engagement Case": {
+        "before_save": "dantist_app.api.engagement.handlers.set_display_name",
+    }
 }
 
 

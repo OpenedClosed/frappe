@@ -278,3 +278,19 @@ def parents_of_engagement(name: str) -> List[dict]:
         fields=fields,
         limit_page_length=len(parent_names),
     )
+
+
+# dantist_app/engagement_case/utils.py
+import frappe
+
+def _join(*parts):
+    clean = [(p or "").strip() for p in parts if (p or "").strip()]
+    return " ".join(clean)
+
+def set_display_name(doc, method=None):
+    # Склеиваем ФИО; если пусто — используем title; иначе пустую строку
+    print("-"*100, flush=True)
+    print("yes", flush=True)
+    full = _join(doc.get("first_name"), doc.get("middle_name"), doc.get("last_name"))
+    title = (doc.get("title") or "").strip()
+    doc.display_name = full or title or ""

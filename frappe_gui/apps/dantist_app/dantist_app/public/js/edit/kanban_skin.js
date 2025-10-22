@@ -1,4 +1,7 @@
-/* Dantist Kanban skin — v24 (v17 + tasks mini + inline title + spacing/cursors + robust settings btn) */
+/* Dantist Kanban skin — v24 (stable) + NEW: set show_board_* & status on new cards (minimal)
+   — Без изменений твоего UI/стилей
+   — Только логика: не даём новым карточкам скрыться из-за show=false
+*/
 (() => {
   const CFG = {
     cssId: "dantist-kanban-skin-css",
@@ -13,7 +16,7 @@
     tasksLimit: 5
   };
 
-  /* ---------- helpers ---------- */
+  /* ====== [A] helpers (из твоего v24) ====== */
   const isKanbanRoute = () => {
     const r = frappe.get_route?.() || [];
     if (r[0] === "List" && (r[2] === "Kanban" || r[2] === "Kanban Board")) return true;
@@ -23,7 +26,6 @@
   const getBoardName = () => {
     try { const r = frappe.get_route(); if (r?.[3]) return decodeURIComponent(r[3]); } catch {}
     try { const seg=(location.pathname||"").split("/").filter(Boolean); if(seg[1]==="kanban"&&seg[3]) return decodeURIComponent(seg[3]); } catch {}
-    // запасной способ — из заголовка
     const h = document.querySelector(".page-head-content .title-text");
     if (h?.textContent?.trim()) return h.textContent.trim();
     return window.cur_list?.kanban_board?.name || window.cur_list?.board?.name || null;
@@ -45,18 +47,15 @@
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("YYYY-MM-DD HH:mm"); } catch { return dt; } };
   const planDT = (t) => t.custom_target_datetime || t.due_datetime || t.custom_due_datetime || t.date || null;
 
-  /* ---------- CSS ---------- */
+  /* ====== [B] CSS (как в v24, без изменений) ====== */
   function injectCSS(){
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
     s.textContent = `
-      /* аккуратные отступы у колонок и стека карточек */
       html.${CFG.htmlClass} .kanban-column{ padding:8px; }
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; }
       html.${CFG.htmlClass} .kanban-cards > .kanban-card-wrapper + .kanban-card-wrapper{ margin-top:8px !important; }
-
-      /* убираем раздувание плейсхолдеров при сортировке */
       html.${CFG.htmlClass} .kanban-card-placeholder,
       html.${CFG.htmlClass} .sortable-placeholder,
       html.${CFG.htmlClass} .sortable-ghost,
@@ -64,8 +63,6 @@
         height:0 !important; min-height:0 !important; margin:0 !important; padding:0 !important;
         border:none !important; box-shadow:none !important; background:transparent !important;
       }
-
-      /* каркас карточки */
       html.${CFG.htmlClass} .kanban-card.content{
         border-radius:14px; border:1px solid var(--border-color,rgba(0,0,0,.06));
         background:#fff; padding:12px; box-shadow:0 1px 2px rgba(0,0,0,.06);
@@ -73,8 +70,6 @@
         display:flex !important; flex-direction:column; gap:0;
       }
       html.${CFG.htmlClass} .kanban-card.content:hover{ transform:translateY(-1px); box-shadow:0 8px 22px rgba(0,0,0,.08); }
-
-      /* шапка */
       html.${CFG.htmlClass} .kanban-card .dnt-head{
         display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0;
         margin-bottom:10px;
@@ -82,8 +77,6 @@
       html.${CFG.htmlClass} .kanban-card .dnt-head-left{
         display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 auto;
       }
-
-      /* аватар */
       html.${CFG.htmlClass} .kanban-card .kanban-image{
         width:40px !important; height:40px !important;
         border-radius:10px; overflow:hidden; background:#eef2f7;
@@ -94,23 +87,17 @@
         display:block !important; width:100% !important; height:100% !important;
         max-width:none !important; object-fit:cover !important; object-position:center;
       }
-
-      /* заголовок (editable) */
       html.${CFG.htmlClass} .kanban-card .kanban-title-area{ margin:0 !important; min-width:0; }
-      html.${CFG.htmlClass} .kanban-card .kanban-title-area a{ display:none !important; } /* убираем ссылку */
+      html.${CFG.htmlClass} .kanban-card .kanban-title-area a{ display:none !important; }
       html.${CFG.htmlClass} .kanban-card .dnt-title{
         font-weight:600; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-        cursor:text; /* I-beam для редактирования */
+        cursor:text;
       }
       html.${CFG.htmlClass} .kanban-card .dnt-title[contenteditable="true"]{ outline:none; border-radius:6px; padding:0 2px; }
       html.${CFG.htmlClass} .kanban-card .dnt-title[contenteditable="true"]:focus{ background:#f3f4f6; }
-
-      /* «мета» в шапке (без assignments/like) */
       html.${CFG.htmlClass} .kanban-card .kanban-card-meta{
         margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0;
       }
-
-      /* гибкие поля */
       html.${CFG.htmlClass} .kanban-card .kanban-card-doc{
         display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 10px; padding:0;
       }
@@ -121,23 +108,19 @@
         display:inline-block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
         background:#f3f4f6; border:1px solid #e5e7eb; border-radius:8px; padding:3px 6px; font-size:12px;
       }
-
-      /* низ карточки: Assignments + Like + mini Tasks */
       html.${CFG.htmlClass} .kanban-card .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
       html.${CFG.htmlClass} .kanban-card .dnt-tasks-mini{
         margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px;
-        border-top:1px solid #eef2f7; padding-top:6px; /* тонкая полоска-разделитель */
+        border-top:1px solid #eef2f7; padding-top:6px;
       }
       html.${CFG.htmlClass} .kanban-card .dnt-taskline{
         display:flex; gap:6px; align-items:center; font-size:11px; color:#4b5563; padding:2px 0;
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-        cursor:pointer; /* явно кликабельно */
+        cursor:pointer;
       }
       html.${CFG.htmlClass} .kanban-card .dnt-taskline .ttl{ font-weight:600; color:#111827; overflow:hidden; text-overflow:ellipsis; }
       html.${CFG.htmlClass} .kanban-card .dnt-chip{ border:1px solid #e5e7eb; border-radius:999px; padding:1px 6px; background:#f8fafc; font-size:10px; }
       html.${CFG.htmlClass} .kanban-card .dnt-overdue{ background:#fee2e2; border-color:#fecaca; }
-
-      /* плавающие действия — Open + Delete */
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; }
       html.${CFG.htmlClass} .dnt-card-actions{
         position:absolute; top:12px; right:12px;
@@ -149,8 +132,6 @@
         border-radius:8px; border:1px solid rgba(0,0,0,.12); background:#f8f9fa; cursor:pointer;
       }
       html.${CFG.htmlClass} .dnt-icon-btn:hover{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-
-      /* права */
       html.${CFG.htmlClass}.no-color .kanban-column .column-options .button-group{ display:none !important; }
       html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .menu, 
       html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .dropdown,
@@ -161,7 +142,7 @@
     document.head.appendChild(s);
   }
 
-  /* ---------- mini tasks ---------- */
+  /* ====== [C] mini tasks (как в v24, без изменений) ====== */
   const miniCache = new Map();
   function miniHtml(rows, total){
     if (!rows?.length) return `<div class="dnt-taskline"><span class="dnt-chip">Tasks</span> <span class="ttl">No open tasks</span></div>`;
@@ -207,7 +188,7 @@
     });
   }
 
-  /* ---------- inline title edit ---------- */
+  /* ====== [D] inline title edit (как в v24, без изменений) ====== */
   function makeTitleEditable(titleArea, name, doctype){
     if (!titleArea || titleArea.__dntEditable) return;
     titleArea.__dntEditable = true;
@@ -246,7 +227,7 @@
     span.addEventListener("blur", save);
   }
 
-  /* ---------- Перестройка DOM карточки ---------- */
+  /* ====== [E] перестройка DOM карточки (как в v24, без изменений) ====== */
   function upgradeCard(wrapper){
     const card = wrapper?.querySelector?.(".kanban-card.content");
     if(!card || card.dataset.dntUpgraded==="1") return;
@@ -258,7 +239,6 @@
     const doc   = body?.querySelector(".kanban-card-doc");
     if(!body) return;
 
-    // шапка
     let head = body.querySelector(".dnt-head");
     if(!head){ head = document.createElement("div"); head.className = "dnt-head"; body.prepend(head); }
     let left = head.querySelector(".dnt-head-left");
@@ -270,13 +250,10 @@
       if(!left.contains(title)) left.appendChild(title);
     }
 
-    // мета — в шапке
     if (meta && meta.parentElement !== head) head.appendChild(meta);
 
-    // гибкие поля — сразу под шапкой
     if (doc && doc.previousElementSibling !== head) body.insertBefore(doc, head.nextSibling);
 
-    // нижний блок
     let foot = body.querySelector(".dnt-foot");
     if(!foot){ foot = document.createElement("div"); foot.className = "dnt-foot"; body.appendChild(foot); }
 
@@ -286,7 +263,6 @@
     if(like   && !foot.contains(like))   foot.appendChild(like);
     if(meta && !meta.children.length) meta.remove();
 
-    // mini tasks
     const name = wrapper.getAttribute("data-name");
     const doctype = window.cur_list?.doctype || window.cur_list?.board?.reference_doctype;
     if (doctype === CFG.caseDoctype && name) {
@@ -299,7 +275,6 @@
       makeTitleEditable(title, name, doctype);
     }
 
-    // плавающие действия — Open + Delete
     if (!wrapper.querySelector(".dnt-card-actions")){
       const row = document.createElement("div"); row.className="dnt-card-actions";
       const bOpen = document.createElement("div"); bOpen.className="dnt-icon-btn"; bOpen.title=__("Open");
@@ -327,9 +302,8 @@
 
   const enhanceCards = () => document.querySelectorAll(".kanban-card-wrapper").forEach(upgradeCard);
 
-  /* ---------- кнопка настроек (липкая, без дублей, актуальный boardName по клику) ---------- */
+  /* ====== [F] settings button (как в v24, без изменений) ====== */
   function injectSettingsBtn(){
-    // убрать дубликаты
     document.querySelectorAll(`#${CFG.settingsBtnId}`).forEach(el => el.remove());
     if(!isKanbanRoute() || !userHasAny(CFG.rolesSettings)) return;
 
@@ -346,9 +320,7 @@
     });
     anchor.insertAdjacentElement("afterend", btn);
   }
-
   function ensureSettingsBtnSticky(){
-    // быстрый ретраер + наблюдатель за заголовком
     let tries=0, max=40;
     const tick=()=>{ if(!isKanbanRoute()) return;
       injectSettingsBtn();
@@ -357,8 +329,6 @@
       if (tries<max) setTimeout(tick, 50);
     };
     tick();
-
-    // следим за заменой title-area/page-head (смена доски без reload)
     const head = document.querySelector(".page-head-content") || document.body;
     try{
       const mo = new MutationObserver(()=> {
@@ -366,12 +336,11 @@
         if (!document.getElementById(CFG.settingsBtnId)) injectSettingsBtn();
       });
       mo.observe(head, { childList:true, subtree:true });
-      // сохраним на window, чтобы GC не съел при SPA переходах
       window.__dntKanbanHeadMO = mo;
     }catch{}
   }
 
-  /* ---------- фикc «Unknown Column: [» ---------- */
+  /* ====== [G] fix settings dialog (как в v24, без изменений) ====== */
   function coerceFieldsList(dt, any){
     let arr=[]; if(Array.isArray(any)) arr=any;
     else if(typeof any==="string" && any.trim()){ try{ const j=JSON.parse(any); if(Array.isArray(j)) arr=j; } catch{ arr=any.split(/[,\s]+/).filter(Boolean); } }
@@ -400,7 +369,7 @@
     }
   }
 
-  /* ---------- права ---------- */
+  /* ====== [H] perms (как в v24, без изменений) ====== */
   function applyPermClasses(){
     const allowColor = userHasAny(CFG.rolesCanColor);
     const allowMenu  = userHasAny(CFG.rolesColumnMenu);
@@ -408,7 +377,118 @@
     document.documentElement.classList.toggle("no-column-menu", !allowMenu);
   }
 
-  /* ---------- boot ---------- */
+  /* ====== [I] NEW — логика, чтобы новые карточки не скрывались (show/status) ====== */
+
+  // соответствия борда → флаг/статус
+  const BOARD = {
+    "CRM Board":                  { flag: "show_board_crm",      status: "status_crm_board" },
+    "Leads – Contact Center":     { flag: "show_board_leads",    status: "status_leads" },
+    "Deals – Contact Center":     { flag: "show_board_deals",    status: "status_deals" },
+    "Patients – Care Department": { flag: "show_board_patients", status: "status_patients" },
+  };
+
+  // 1) запоминаем контекст из колонки при клике «+ Add …»
+  function bindKanbanAddClickSniffer(){
+    document.body.addEventListener("click", (ev)=>{
+      if (!isKanbanRoute()) return;
+      const addBtn = ev.target.closest?.(".kanban-column .add-card");
+      if (!addBtn) return;
+
+      const col = addBtn.closest(".kanban-column");
+      const columnLabel =
+        col?.querySelector?.(".kanban-column-header .kanban-title")?.textContent?.trim()
+        || col?.getAttribute("data-column-value")
+        || "";
+
+      const boardName = getBoardName();
+      const map = BOARD[boardName];
+      window.__DNT_KANBAN_CTX = {
+        ts: Date.now(),
+        boardName,
+        columnLabel,
+        ...(map || {})
+      };
+      // отладка по желанию:
+      // console.log("🧭 [KANBAN CTX]", window.__DNT_KANBAN_CTX);
+    }, true);
+  }
+
+  // 2) при создании нового Engagement Case — сразу выставляем show/status
+  function applyDefaultsFromCtx(frm, opts={}) {
+    try {
+      if (!frm || frm.doc.doctype !== CFG.caseDoctype) return;
+      if (!frm.is_new()) return;
+
+      const ctx = window.__DNT_KANBAN_CTX;
+      if (!ctx || !ctx.flag || !ctx.status) return;
+
+      const fresh = (Date.now() - (ctx.ts||0)) < 10*60*1000;
+      if (!fresh) return;
+
+      if (!frm.doc[ctx.flag]) frm.set_value(ctx.flag, 1);
+
+      if (ctx.columnLabel) {
+        const fieldname = ctx.status;
+        const df = frm.fields_dict[fieldname]?.df;
+        let allowed = true;
+        if (df?.options) {
+          const opts = (typeof df.options === "string") ? df.options.split("\n") : df.options;
+          if (Array.isArray(opts)) allowed = opts.includes(ctx.columnLabel);
+        }
+        if (allowed && frm.doc[fieldname] !== ctx.columnLabel) {
+          frm.set_value(fieldname, ctx.columnLabel);
+        }
+      }
+      if (!opts.keep) setTimeout(()=> { delete window.__DNT_KANBAN_CTX; }, 0);
+    } catch(_) {}
+  }
+  function registerFormHooks(){
+    frappe.ui.form.on(CFG.caseDoctype, {
+      onload(frm){  applyDefaultsFromCtx(frm); },
+      refresh(frm){ applyDefaultsFromCtx(frm); },
+      before_save(frm){ applyDefaultsFromCtx(frm, { keep:false }); }
+    });
+  }
+
+  // 3) страховка: если add_card создаёт карточку на сервере без формы
+  function patchAddCardCall(){
+    if (frappe.__dnt_add_card_defaults_v24p) return;
+    frappe.__dnt_add_card_defaults_v24p = true;
+
+    const origCall = frappe.call;
+    frappe.call = function(opts){
+      const isObj  = opts && typeof opts === "object";
+      const method = isObj ? (opts.method || "") : "";
+      const args   = isObj ? (opts.args   || {}) : {};
+      const p = origCall.apply(this, arguments);
+
+      if (method === "frappe.desk.doctype.kanban_board.kanban_board.add_card") {
+        const boardName = getBoardName();
+        const map = BOARD[boardName];
+
+        Promise.resolve(p).then(async (r)=>{
+          try {
+            const docname =
+              args?.docname ||
+              r?.message?.docname ||
+              r?.message?.card?.docname ||
+              r?.message?.doc?.name ||
+              null;
+            if (!docname || !map?.flag) return;
+
+            await frappe.call({
+              method: "frappe.client.set_value",
+              args: { doctype: CFG.caseDoctype, name: docname, fieldname: map.flag, value: 1 }
+            });
+            try { window.cur_list?.refresh(); } catch {}
+          } catch(_) {}
+        }).catch(()=>{});
+      }
+      return p;
+    };
+  }
+
+  /* ====== [J] boot (v24 + наша логика) ====== */
   const mo = new MutationObserver(()=>{ if(isKanbanRoute()) enhanceCards(); });
 
   function run(){
@@ -423,6 +503,11 @@
     enhanceCards();
     ensureSettingsBtnSticky();
     patchSettingsDialog();
+
+    // наша часть
+    bindKanbanAddClickSniffer();
+    registerFormHooks();
+    patchAddCardCall();
 
     mo.disconnect();
     mo.observe(document.body||document.documentElement,{ childList:true, subtree:true });

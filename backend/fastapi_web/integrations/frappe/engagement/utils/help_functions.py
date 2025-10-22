@@ -1000,7 +1000,7 @@ async def ensure_case_from_user(user: Dict[str, Any]) -> Dict[str, Any]:
         "display_name": display_name,
         "email": email,
         "avatar": avatar,
-        "channel_type": "Web Form",
+        "channel_type": "Personal Account",
         "channel_platform": "Internal",
         "mongo_user_id": user_id,
         "first_event_at": to_frappe_dt(created_at),
