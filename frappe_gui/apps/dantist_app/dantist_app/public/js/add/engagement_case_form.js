@@ -6,10 +6,21 @@
 // - Linked Cases: «как было» (цветные чипы всех досок, Search & Link, Unlink).
 // - ✎: надёжно открывает нативный редактор строки (если только inline-режим — временно раскрывает грид, потом снова прячет).
 // - В get_list НЕТ crm_status (исправляет DataError).
+// - NEW: секция “Workflow” сворачиваемая с запоминанием состояния (localStorage: ec_workflow_collapsed).
 
 (function () {
   const DOCTYPE = "Engagement Case";
   const esc = frappe.utils.escape_html;
+
+  // ---------- LS helpers ----------
+  const LS = {
+    get(key, def = null) {
+      try { const v = localStorage.getItem(key); return v === null ? def : v; } catch { return def; }
+    },
+    set(key, val) { try { localStorage.setItem(key, String(val)); } catch {} },
+    del(key) { try { localStorage.removeItem(key); } catch {} },
+  };
+  const WORKFLOW_LS_KEY = "ec_workflow_collapsed"; // "1" — свернуто, "0" — раскрыто
 
   // --- Boards meta ---
   const BOARDS = [
@@ -82,8 +93,18 @@
     /* Progress — СТРОГО как в "stacked pipelines" + кнопка Open Kanban */
     .form-dashboard .ec-progress-section .section-head{
       font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);
+      display:flex; align-items:center; gap:6px; cursor:pointer;
+    }
+    .form-dashboard .ec-progress-section .section-head .collapse-indicator{
+      margin-left:6px; display:inline-flex; align-items:center;
+      transform: rotate(0deg); transition: transform .12s ease;
+    }
+    .form-dashboard .ec-progress-section .section-head.collapsed .collapse-indicator{
+      transform: rotate(-90deg);
     }
     .form-dashboard .ec-progress-section .section-body{ padding:12px; }
+    .form-dashboard .ec-progress-section .section-body.hide{ display:none; }
+
     .ec-pipes{ display:flex; flex-direction:column; gap:12px; }
     .ec-pipe{ border:1px solid var(--border-color,#e5e7eb); border-radius:10px; padding:10px; background:#fff; }
     .ec-pipe.-disabled{ opacity:.9; }
@@ -159,6 +180,50 @@
     if (!df) return [];
     return String(df.options || "").split("\n").map(s => s.trim()).filter(Boolean);
   }
+
+  // ---------- collapsible section wiring (with LS state) ----------
+  function wireCollapsible(sec, lsKey, defaultCollapsed=false){
+    if (!sec) return;
+    const head = sec.querySelector(".section-head");
+    const body = sec.querySelector(".section-body");
+    if (!head || !body) return;
+
+    // add indicator once
+    if (!head.querySelector(".collapse-indicator")){
+      const ind = document.createElement("span");
+      ind.className = "ml-2 collapse-indicator mb-1";
+      ind.setAttribute("tabindex","0");
+      ind.innerHTML = `
+        <svg class="es-icon es-line icon-sm" aria-hidden="true">
+          <use href="#es-line-down"></use>
+        </svg>`;
+      head.appendChild(ind);
+    }
+
+    const apply = (collapsed) => {
+      head.classList.toggle("collapsed", collapsed);
+      body.classList.toggle("hide", collapsed);
+      LS.set(lsKey, collapsed ? "1" : "0");
+    };
+
+    // initial state
+    const ls = LS.get(lsKey, defaultCollapsed ? "1" : "0");
+    apply(ls === "1");
+
+    const toggle = (e) => {
+      if (e && e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return;
+      const now = !head.classList.contains("collapsed");
+      apply(now);
+    };
+
+    // bind once
+    if (!head.__ecBound){
+      head.addEventListener("click", toggle);
+      head.addEventListener("keydown", toggle);
+      head.__ecBound = true;
+    }
+  }
+
   function getOrCreateDashSection(frm, id, title) {
     const host = frm?.page?.wrapper?.[0];
     if (!host) return null;
@@ -169,18 +234,24 @@
       const row = document.createElement("div");
       row.className = "row form-dashboard-section ec-progress-section";
       row.id = id;
+
       const head = document.createElement("div");
-      head.className = "section-head collapsible";
+      head.className = "section-head collapsible"; // важно: collapsible
       head.tabIndex = 0;
       head.textContent = title;
+
       const body = document.createElement("div");
       body.className = "section-body";
+
       row.appendChild(head); row.appendChild(body);
       dash.insertBefore(row, dash.firstChild);
       sec = row;
     }
+    // каждый раз при получении — синхронизируем сворачивание по LS
+    wireCollapsible(sec, WORKFLOW_LS_KEY, /*defaultCollapsed=*/false);
     return sec;
   }
+
   function sectionBody(sec) { return sec?.querySelector(".section-body") || null; }
   function idxOf(steps, v) {
     const i = steps.findIndex(s => (s||"").toLowerCase() === (v||"").toLowerCase());
@@ -210,8 +281,8 @@
 
     const steps = getSelectOptions(frm, fieldname);
     const current = (doc[fieldname] || "");
-    theCurrentIdx = idxOf(steps, current);
-    const currentIdx = theCurrentIdx;
+    const currentIdx = idxOf(steps, current); // фикс: без глобальной переменной
+
     const enabled = parseInt(doc[board.flag] || 0) === 1;
 
     const card = document.createElement("div");
@@ -278,6 +349,9 @@
       const ui = renderOnePipeline(frm, b, doc);
       if (ui) list.appendChild(ui);
     });
+
+    // на случай повторных ререндеров — ещё раз убедимся, что состояние синхронизировано
+    wireCollapsible(sec, WORKFLOW_LS_KEY, /*defaultCollapsed=*/false);
   }
 
   // ---------- Title badges ----------
@@ -383,7 +457,7 @@
     if (fld?.wrapper) fld.wrapper.classList.add("ec-grid-hidden");
   }
 
-  // === NEW: временно показываем грид на время редактирования inline ===
+  // === временно показываем грид на время редактирования inline ===
   function temporarilyShowLinkedGrid(frm) {
     const fld = frm.get_field("linked_engagements");
     const wrap = fld?.wrapper && fld.wrapper[0] ? fld.wrapper[0] : (fld?.wrapper || null);
@@ -400,7 +474,6 @@
     bits.forEach(el => el.style.display = "");
 
     const cleanup = () => {
-      // возвращаем всё, как было
       bits.forEach((el,i) => el.style.display = prevDisplay[i] ?? "");
       if (wasHidden) wrap.classList.add("ec-grid-hidden");
     };
@@ -542,12 +615,10 @@
         const rowEl = wrap && wrap.querySelector(`.grid-row[data-name="${rowDoc.name}"]`);
         const cleanup = ensureVisible.cleanup;
 
-        // кнопка закрытия инлайна
         rowEl?.querySelector(".grid-row-close")?.addEventListener("click", () => {
           setTimeout(cleanup, 40);
         }, { once: true });
 
-        // наблюдаем сворачивание (класс .grid-row-open исчезает)
         if (rowEl) {
           const mo = new MutationObserver(() => {
             if (!rowEl.classList.contains("grid-row-open")) {
@@ -558,10 +629,8 @@
           mo.observe(rowEl, { attributes: true, attributeFilter: ["class"] });
         }
 
-        // жёсткий фолбэк: вернём скрытие через 2 минуты, если что-то пошло не так
         setTimeout(cleanup, 120000);
       } catch (_) {
-        // на крайний случай — вернуть скрытие через 3с
         setTimeout(ensureVisible.cleanup, 3000);
       }
     };
@@ -580,8 +649,6 @@
         } else {
           return false;
         }
-
-        // скроллим к строке, чтобы пользователь её увидел
         try {
           const el = grid.wrapper && grid.wrapper[0] && grid.wrapper[0].querySelector(`.grid-row[data-name="${rowDoc.name}"]`);
           el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -596,12 +663,10 @@
 
     try { console.debug(TAG, "grid.refresh() pre"); grid.refresh(); } catch (_) {}
 
-    // 1) Если есть API модалки — пользуемся им
     if (typeof grid.edit_row === "function") {
       console.info(TAG, "try open via grid.edit_row(name)");
       grid.edit_row(rowDoc.name);
       console.info(TAG, "opened via edit_row");
-      // модалка — грид можно обратно спрятать сразу
       setTimeout(ensureVisible.cleanup, 10);
       return;
     }
@@ -613,10 +678,8 @@
       return;
     }
 
-    // 2) Иначе — инлайн
     if (openInline()) return;
 
-    // 3) Повторная попытка после refresh
     setTimeout(() => {
       try { console.debug(TAG, "grid.refresh() retry"); grid.refresh(); } catch (_) {}
       if (typeof grid.edit_row === "function") {

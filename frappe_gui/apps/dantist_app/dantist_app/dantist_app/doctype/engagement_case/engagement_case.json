@@ -20,12 +20,23 @@
   "identity_section",
   "avatar",
   "display_name",
+  "first_name",
+  "last_name",
+  "middle_name",
   "cb_identity_right",
   "phone",
   "email",
   "preferred_language",
   "timezone",
   "country",
+  "client_portal_section",
+  "priority",
+  "portal_service",
+  "portal_appointment_datetime",
+  "specialist",
+  "portal_card_link",
+  "link_section",
+  "linked_engagements",
   "boards_status_section",
   "show_board_crm",
   "status_crm_board",
@@ -42,10 +53,6 @@
   "unanswered_count",
   "last_actor_role",
   "runtime_status",
-  "link_section",
-  "linked_engagements",
-  "crm_section",
-  "priority",
   "sync_section",
   "sync_enabled",
   "last_synced_at",
@@ -84,7 +91,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Channel Type",
-   "options": "Chat\nCall\nSMS\nEmail\nWeb Form",
+   "options": "Chat\nCall\nPersonal Account\nSMS\nEmail\nWeb Form",
    "reqd": 1
   },
   {
@@ -134,6 +141,7 @@
   {
    "fieldname": "display_name",
    "fieldtype": "Data",
+   "hidden": 1,
    "in_list_view": 1,
    "label": "Display Name"
   },
@@ -169,11 +177,6 @@
    "label": "Country"
   },
   {
-   "fieldname": "crm_section",
-   "fieldtype": "Section Break",
-   "label": "CRM"
-  },
-  {
    "default": "Normal",
    "fieldname": "priority",
    "fieldtype": "Select",
@@ -181,6 +184,7 @@
    "options": "Low\nNormal\nHigh\nUrgent"
   },
   {
+   "collapsible": 1,
    "fieldname": "boards_status_section",
    "fieldtype": "Section Break",
    "label": "Boards & Status"
@@ -246,6 +250,7 @@
    "options": "New Patient\nReturning Patient\nStage Appointment Scheduled\nIn Treatment\nStage Checked\nControl X-ray\nTreatment Completed\nNo-show (patient)"
   },
   {
+   "collapsible": 1,
    "fieldname": "signals_section",
    "fieldtype": "Section Break",
    "label": "Signals"
@@ -292,6 +297,7 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "sync_section",
    "fieldtype": "Section Break",
    "label": "Sync"
@@ -338,13 +344,57 @@
    "fieldtype": "Table",
    "label": "Linked Engagements",
    "options": "Engagement Link Item"
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "label": "First Name"
+  },
+  {
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "label": "Last Name"
+  },
+  {
+   "fieldname": "middle_name",
+   "fieldtype": "Data",
+   "label": "Middle Name"
+  },
+  {
+   "fieldname": "client_portal_section",
+   "fieldtype": "Section Break",
+   "label": "Client Portal"
+  },
+  {
+   "fieldname": "portal_service",
+   "fieldtype": "Select",
+   "label": "Service",
+   "options": "\u0423\u0441\u043b\u0443\u0433\u0430 1\n\u0423\u0441\u043b\u0443\u0433\u0430 2"
+  },
+  {
+   "fieldname": "portal_appointment_datetime",
+   "fieldtype": "Datetime",
+   "label": "Appointment Date & Time"
+  },
+  {
+   "fieldname": "specialist",
+   "fieldtype": "Select",
+   "label": "Specialist",
+   "options": "\u0414\u043e\u043a\u0442\u043e\u0440 1\n\u0414\u043e\u043a\u0442\u043e\u0440 2"
+  },
+  {
+   "fieldname": "portal_card_link",
+   "fieldtype": "Data",
+   "label": "Portal Card Link",
+   "options": "URL",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-21 16:08:39.124452",
+ "modified": "2025-10-22 00:10:42.170940",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",

@@ -1,14 +1,17 @@
-// Engagement Case — Tasks UI (ToDo + configurable auto-rules) — v4.15
+// Engagement Case — Tasks UI — v4.19 (newest first, page=5, overdue highlight)
 (function () {
   const DOCTYPE = "Engagement Case";
-  const PAGE_LEN = 10;
+  const PAGE_LEN = 5; // <= по запросу
+  const SEC_ID = "ec-tasks-area";
+  const SEC_TITLE = "Tasks";
+  const LS_KEY_COLLAPSE = "ec_tasks_collapsed"; // "1" collapsed, "0" expanded
 
-  // ========= Сначала описываем правила ДЛЯ ФОРМЫ =========
+  // ======== Rules (как было) ========
   const FORM_RULES = {
     status_leads: {
       "Call Later": {
         showDialog: true,
-        title: __("Call Later at"),
+        title: __("Call Later"),
         baseFields: ["due", "assignees", "assign_me", "priority"],
         extraFields: () => [],
         shouldTrigger: ({ prev, cur }) => prev !== "Call Later" && cur === "Call Later",
@@ -41,7 +44,7 @@
       "Stage Checked": {
         showDialog: true,
         title: __("Schedule control X-ray"),
-        baseFields: ["assignees", "assign_me", "priority"], // due вычислим
+        baseFields: ["assignees", "assign_me", "priority"],
         extraFields: () => ([
           { fieldtype: "Section Break", label: __("This rule (control)") },
           { fieldtype: "Select", fieldname: "treatment_type", label: __("Treatment Type"), reqd: 1,
@@ -58,7 +61,6 @@
           return { description: "Schedule control X-ray" + note, due, priority: vals.priority || "High", assignees: a };
         },
       },
-      // NEW: автозадача при завершении этапов в patients-фанне
       "Treatment Completed": {
         showDialog: false,
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
@@ -70,11 +72,10 @@
     },
   };
 
-  // ========= Затем правила ДЛЯ КАНБАНА =========
   const KANBAN_RULES = {
     "Call Later": {
       showDialog: true,
-      title: __("Call Later at"),
+      title: __("Call Later"),
       baseFields: ["due", "assignees", "assign_me", "priority"],
       extraFields: () => [],
       makePayload: (vals, me) => {
@@ -106,94 +107,146 @@
     },
   };
 
-  // ========= Итоговый объект правил =========
-  const AUTO_RULES = { form: FORM_RULES, kanban: KANBAN_RULES };
-
-  // ========= UI state =========
   const UI = {
     statusTab: "Open",
     page: 1,
     total: 0,
     frm: null,
     baseline: { status_leads: null, status_deals: null, status_patients: null },
-    pendingRule: null, // { df, rule }
+    pendingRule: null,
     saveGuard: false,
-    kanbanSeen: new Set(), // антидубль по (card::col)
+    kanbanSeen: new Set(),
+    openCount: 0,
   };
 
-  // ========= helpers =========
-  function domOf(w) {
-    if (!w) return null;
-    if (w instanceof HTMLElement) return w;
-    if (w[0] instanceof HTMLElement) return w[0];
-    if (w.$wrapper && w.$wrapper[0]) return w.$wrapper[0];
-    if (w.wrapper && w.wrapper[0]) return w.wrapper[0];
-    if (w.wrapper instanceof HTMLElement) return w.wrapper;
-    return null;
-  }
-
+  // ========== helpers ==========
   function fmtUserDT(dtStr) {
-    if (!dtStr) return "-";
+    if (!dtStr) return "";
     try { return moment(frappe.datetime.convert_to_user_tz(dtStr)).format("YYYY-MM-DD HH:mm"); }
     catch { return String(dtStr); }
   }
-
-  // ==== Диалог (с секциями) ====
-  function buildFields(baseKeys, extra) {
-    const me = frappe.session.user || "";
-    const base = [];
-    if (baseKeys?.includes("due")) base.push({ fieldtype:"Datetime", fieldname:"due", label:__("Due At"), reqd:1 });
-    if (baseKeys?.includes("assignees")) base.push({
-      fieldtype:"MultiSelectList", fieldname:"assignees", label:__("Assign To (multiple)"), options:"User",
-      get_data: (txt)=> frappe.db.get_link_options("User", txt || "")
-    });
-    if (baseKeys?.includes("assign_me")) base.push({ fieldtype:"Check", fieldname:"assign_me", label:__(`Assign to me (${me})`), default:1 });
-    if (baseKeys?.includes("priority")) base.push({ fieldtype:"Select", fieldname:"priority", label:__("Priority"), options:"Low\nMedium\nHigh", default:"Medium" });
-    if (extra?.length) base.unshift({ fieldtype:"Section Break", label: __("Task basics") });
-    return base.concat(extra || []);
+  function fmtUserD(dStr) {
+    if (!dStr) return "";
+    try { return moment(dStr).format("YYYY-MM-DD"); }
+    catch { return String(dStr); }
   }
 
-  function openRuleDialog({ title, baseKeys, extraFields, onOk, onCancel }) {
-    const fields = buildFields(baseKeys, extraFields);
-    const d = new frappe.ui.Dialog({ title: title || __("Task"), fields });
-
-    let confirmed = false;
-    d.set_primary_action(__("OK"), (values) => { confirmed = true; try { onOk && onOk(values); } finally { d.hide(); } });
-
-    const onHidden = () => { d.$wrapper.off("hidden.bs.modal", onHidden); if (!confirmed && onCancel) onCancel(); };
-    d.$wrapper.on("hidden.bs.modal", onHidden);
-
-    d.$wrapper.addClass("ec-task-dialog");
-    d.show();
+  // просрочено по «назначенной дате» (target) — только для Open
+  function isOverdue(t) {
+    if ((t.status || "Open") !== "Open") return false;
+    const now = moment();
+    if (t.custom_target_datetime) {
+      return moment(t.custom_target_datetime).isBefore(now);
+    }
+    if (t.date) {
+      // конец дня локально
+      const endOfDay = moment(t.date).endOf("day");
+      return endOfDay.isBefore(now);
+    }
+    return false;
   }
 
-  async function createTask(caseName, payload, source) {
-    return frappe.call({
-      method: "dantist_app.api.tasks.handlers.create_task_for_case",
-      args: { name: caseName, values: payload, source: source || "auto" }
-    });
+  // ===== Dashboard section (ядровой коллапс) =====
+  function getOrCreateDashSection(frm, id, title) {
+    const host = frm?.page?.wrapper?.[0];
+    if (!host) return null;
+    const dash = host.querySelector(".form-dashboard");
+    if (!dash) return null;
+
+    let sec = dash.querySelector(`#${id}`);
+    if (!sec) {
+      const row = document.createElement("div");
+      row.className = "row form-dashboard-section ec-tasks-section";
+      row.id = id;
+
+      const head = document.createElement("div");
+      head.className = "section-head collapsible";
+      head.tabIndex = 0;
+      head.innerHTML = `
+        <span class="t">${frappe.utils.escape_html(title)}</span>
+        <span class="ml-2 ec-red-dot" hidden></span>
+        <span class="ml-2 collapse-indicator mb-1" tabindex="0">
+          <svg class="es-icon es-line icon-sm" aria-hidden="true">
+            <use class="mb-1" href="#es-line-down"></use>
+          </svg>
+        </span>
+      `;
+      const body = document.createElement("div");
+      body.className = "section-body";
+
+      row.appendChild(head);
+      row.appendChild(body);
+
+      if (dash.firstChild) dash.insertBefore(row, dash.firstChild.nextSibling);
+      else dash.appendChild(row);
+
+      const ls = localStorage.getItem(LS_KEY_COLLAPSE);
+      const collapsed = ls === null ? true : (ls === "1");
+      setCollapsed(row, collapsed);
+
+      head.addEventListener("click", (ev) => {
+        if (ev.target.closest("button, a")) return;
+        toggleCollapsed(row);
+      });
+      head.querySelector(".collapse-indicator")?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCollapsed(row); }
+      });
+
+      sec = row;
+    }
+    return sec;
+  }
+  function sectionBody(sec) { return sec?.querySelector(".section-body") || null; }
+  function sectionHead(sec) { return sec?.querySelector(".section-head") || null; }
+
+  function setCollapsed(sec, collapsed) {
+    const head = sectionHead(sec);
+    const body = sectionBody(sec);
+    if (head) head.classList.toggle("collapsed", !!collapsed);
+    if (body) body.classList.toggle("hide", !!collapsed);
+    sec.classList.toggle("is-collapsed", !!collapsed);
+    localStorage.setItem(LS_KEY_COLLAPSE, collapsed ? "1" : "0");
+  }
+  function toggleCollapsed(sec) {
+    const head = sectionHead(sec);
+    const collapsed = !(head?.classList.contains("collapsed"));
+    setCollapsed(sec, collapsed);
+  }
+  function setRedDot(frm, on) {
+    const sec = getOrCreateDashSection(frm, SEC_ID, SEC_TITLE);
+    const dot = sec?.querySelector(".ec-red-dot");
+    if (!dot) return;
+    dot.hidden = !on;
   }
 
-  // ========= Tasks list =========
+  // ===== список задач =====
   function priorityClass(p){ if (p==="High") return "-p-high"; if (p==="Low") return "-p-low"; return "-p-med"; }
   function taskRow(t) {
-    const due_dt = t.due_datetime || t.custom_due_datetime;
-    const due = due_dt ? fmtUserDT(due_dt) : (t.date ? moment(t.date).format("YYYY-MM-DD") : "-");
+    const reminder_dt = t.due_datetime || t.custom_due_datetime;
+    const reminder = reminder_dt ? fmtUserDT(reminder_dt) : null;
+    const target_dt = t.custom_target_datetime || null;
+    const target = target_dt ? fmtUserDT(target_dt) : (t.date ? fmtUserD(t.date) : null);
+
     const who = t.allocated_to || t.owner || "";
     const st  = t.status || "Open";
     const cls = st === "Open" ? "" : " -muted";
     const pcls = priorityClass(t.priority || "Medium");
+    const overdue = isOverdue(t);
+
+    const chips = [];
+    chips.push(`<span class="chip">${frappe.utils.escape_html(st)}</span>`);
+    if (t.priority) chips.push(`<span class="chip ${pcls}">${frappe.utils.escape_html(t.priority)}</span>`);
+    if (who) chips.push(`<span class="chip -ghost">@${frappe.utils.escape_html(who)}</span>`);
+    if (target) chips.push(`<span class="chip -ghost chip-target${overdue?' -overdue':''}" title="Target at">🗓 ${frappe.utils.escape_html(target)}</span>`);
+    if (reminder) chips.push(`<span class="chip -ghost" title="Reminder at">🔔 ${frappe.utils.escape_html(reminder)}</span>`);
+    if (t.assigned_by) chips.push(`<span class="chip -ghost">by ${frappe.utils.escape_html(t.assigned_by)}</span>`);
+    if (t.creation) chips.push(`<span class="chip -ghost" title="Created">${frappe.utils.escape_html(fmtUserDT(t.creation))}</span>`);
+
     return `
       <div class="ec-task${cls}">
         <div class="l">
           <div class="title">${frappe.utils.escape_html(t.description || t.name)}</div>
-          <div class="meta">
-            <span class="chip">${frappe.utils.escape_html(st)}</span>
-            ${t.priority ? `<span class="chip ${pcls}">${frappe.utils.escape_html(t.priority)}</span>` : ""}
-            ${who ? `<span class="chip -ghost">@${frappe.utils.escape_html(who)}</span>` : ""}
-            ${due ? `<span class="chip -ghost">${frappe.utils.escape_html(due)}</span>` : ""}
-            ${t.assigned_by ? `<span class="chip -ghost">by ${frappe.utils.escape_html(t.assigned_by)}</span>` : ""}
-          </div>
+          <div class="meta">${chips.join(" ")}</div>
         </div>
         <div class="r">
           <button class="btn btn-xs btn-default" onclick="frappe.set_route('Form','ToDo','${frappe.utils.escape_html(t.name)}')">Open</button>
@@ -212,21 +265,15 @@
 
   function ensureTasksContainer(frm) {
     UI.frm = frm;
-    const anchorField = frm.fields_dict["notes_section"] || frm.fields_dict["internal_notes"];
-    const anchorEl = domOf(anchorField) || domOf(frm.wrapper);
-    if (!anchorEl) return null;
+    const sec = getOrCreateDashSection(frm, SEC_ID, SEC_TITLE);
+    const body = sectionBody(sec);
+    if (!body) return null;
 
-    const column = anchorEl.closest(".form-section")?.querySelector(".section-body .form-column") || anchorEl.parentNode;
-
-    const existed = column.querySelectorAll(".ec-tasks-wrap");
-    for (let i = 1; i < existed.length; i++) existed[i].remove();
-
-    let wrap = column.querySelector(".ec-tasks-wrap");
+    let wrap = body.querySelector(".ec-tasks-wrap");
     if (!wrap) {
       wrap = document.createElement("div");
       wrap.className = "ec-tasks-wrap";
       wrap.innerHTML = `
-        <div class="ec-tasks-head"><div class="t">Tasks</div></div>
         <div class="ec-tabs-row">
           ${tabsHtml(UI.statusTab)}
           <div class="actions">
@@ -238,8 +285,8 @@
           <div class="h-title">Auto-tasks for this case</div>
           <ul class="h-list">
             <li><b>Next-Day Feedback</b> — on “Appointment Scheduled / Treatment Completed”.</li>
-            <li><b>Control X-ray</b> — on “Stage Checked” (3–6 months by treatment type).</li>
-            <li><b>Manual Callback</b> — on “Call Later” (due time required; alert −2h).</li>
+            <li><b>Control X-ray</b> — on “Stage Checked”.</li>
+            <li><b>Manual Callback</b> — optional reminder.</li>
           </ul>
         </div>
         <div class="ec-tasks-list"></div>
@@ -252,7 +299,7 @@
           </div>
         </div>
       `;
-      column.appendChild(wrap);
+      body.appendChild(wrap);
 
       wrap.addEventListener("click", (e) => {
         const a = e.target.closest("[data-act]");
@@ -311,8 +358,16 @@
         method: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
         args: { name: frm.doc.name, status, limit_start: start, limit_page_length: PAGE_LEN }
       });
-      const rows = (message && message.rows) || [];
+      let rows = (message && message.rows) || [];
       UI.total = (message && message.total) || rows.length;
+
+      // *** newest first: backend сортирует по возрастанию — просто выводим в обратном порядке на странице
+      rows = rows.slice().reverse();
+
+      // красная точка — по «open на странице»
+      UI.openCount = rows.filter(r => (r.status || "Open") === "Open").length;
+      setRedDot(frm, UI.openCount > 0);
+
       listEl.innerHTML = rows.length ? rows.map(taskRow).join("") : `<div class="text-muted small">No tasks.</div>`;
       updatePagerVisibility(listEl);
     } catch (e) {
@@ -321,36 +376,96 @@
     }
   }
 
+  // ===== Диалоги (Target / Reminder) =====
+  function buildFields(baseKeys, extra) {
+    const me = frappe.session.user || "";
+    const fields = [
+      { fieldtype:"Section Break", label: __("Schedule") },
+      { fieldtype:"Datetime", fieldname:"target_at", label: __("Target at"), reqd:0,
+        description: __("Optional; saved into custom_target_datetime") },
+      { fieldtype:"Check", fieldname:"send_reminder", label: __("Send reminder"), default: 0 },
+      { fieldtype:"Datetime", fieldname:"reminder_at", label: __("Reminder at"), reqd:0,
+        depends_on: "eval:doc.send_reminder==1" },
+      { fieldtype:"Section Break", label: __("Assignment") },
+    ];
+
+    if (baseKeys?.includes("assignees")) fields.push({
+      fieldtype:"MultiSelectList", fieldname:"assignees", label:__("Assign To (multiple)"), options:"User",
+      get_data: (txt)=> frappe.db.get_link_options("User", txt || "")
+    });
+    if (baseKeys?.includes("assign_me")) fields.push({ fieldtype:"Check", fieldname:"assign_me", label:__(`Assign to me (${me})`), default:1 });
+    if (baseKeys?.includes("priority")) fields.push({ fieldtype:"Select", fieldname:"priority", label:__("Priority"), options:"Low\nMedium\nHigh", default:"Medium" });
+
+    if (Array.isArray(extra) && extra.length) fields.push(...extra);
+    return fields;
+  }
+
+  function wireReminderValidation(dlg) {
+    const fSend = dlg.get_field("send_reminder");
+    const fRem  = dlg.get_field("reminder_at");
+    const apply = () => {
+      const on = !!dlg.get_value("send_reminder");
+      fRem.df.reqd = on ? 1 : 0;
+      fRem.refresh();
+    };
+    fSend.$input && fSend.$input.on("change", apply);
+    setTimeout(apply, 0);
+
+    return () => {
+      const on = !!dlg.get_value("send_reminder");
+      const v  = dlg.get_value("reminder_at");
+      if (on && !v) {
+        frappe.msgprint({ title: __("Missing value"), message: __("Please set Reminder at or uncheck Send reminder."), indicator: "red" });
+        return false;
+      }
+      return true;
+    };
+  }
+
+  async function createTask(caseName, payload, source) {
+    return frappe.call({
+      method: "dantist_app.api.tasks.handlers.create_task_for_case",
+      args: { name: caseName, values: payload, source: source || "auto" }
+    });
+  }
+
   function openCreateDialog(frm) {
     const me = frappe.session.user || "";
     const d = new frappe.ui.Dialog({
       title: "New Task",
-      fields: [
-        { fieldtype:"Small Text", fieldname:"description", label:"Description", reqd:1 },
-        { fieldtype:"Datetime", fieldname:"due", label:"Due At", reqd:1 },
-        { fieldtype:"MultiSelectList", fieldname:"assignees", label:"Assign To (multiple)", options:"User",
-          get_data: (txt)=> frappe.db.get_link_options("User", txt || "")
-        },
-        { fieldtype:"Check", fieldname:"assign_me", label:`Assign to me (${me})`, default:1 },
-        { fieldtype:"Select", fieldname:"priority", label:"Priority", options:"Low\nMedium\nHigh", default:"Medium" },
-      ],
-      primary_action_label: "Create",
-      primary_action: async (v) => {
-        try {
-          let a = Array.isArray(v.assignees) ? v.assignees.slice() : (v.assignees || []);
-          if (v.assign_me && me && !a.includes(me)) a.push(me);
-          const payload = { description: v.description, due: v.due, priority: v.priority };
-          if (a.length) payload.assignees = a;
-          await createTask(frm.doc.name, payload, "manual");
-          d.hide();
-          frappe.show_alert({ message:"Task created", indicator:"green" });
-          UI.page = 1; loadTasks(frm);
-        } catch (e) {
-          console.error(e);
-          frappe.msgprint({ message:"Failed to create task", indicator:"red" });
+      fields: buildFields(["assignees","assign_me","priority"], [] )
+        .concat([{ fieldtype:"Small Text", fieldname:"description", label:"Description", reqd:1, insert_after:"reminder_at" }])
+    });
+    const guard = wireReminderValidation(d);
+
+    d.set_primary_action("Create", async () => {
+      if (!guard()) return;
+      const v = d.get_values();
+      try {
+        let a = Array.isArray(v.assignees) ? v.assignees.slice() : (v.assignees || []);
+        if (v.assign_me && me && !a.includes(me)) a.push(me);
+
+        const payload = { description: v.description, priority: v.priority };
+        if (v.target_at) payload.custom_target_datetime = v.target_at;
+
+        if (v.send_reminder) {
+          payload.send_reminder = 1;
+          if (v.reminder_at) payload.due = v.reminder_at; // уйдет в due_datetime/custom_due_datetime на бэке
+        } else {
+          payload.send_reminder = 0;
         }
+        if (a.length) payload.assignees = a;
+
+        await createTask(frm.doc.name, payload, "manual");
+        d.hide();
+        frappe.show_alert({ message:"Task created", indicator:"green" });
+        UI.page = 1; loadTasks(frm);
+      } catch (e) {
+        console.error(e);
+        frappe.msgprint({ message:"Failed to create task", indicator:"red" });
       }
     });
+
     d.$wrapper.addClass("ec-task-dialog");
     d.show();
   }
@@ -360,7 +475,7 @@
     frappe.show_alert({ message: status==="Closed"?"Completed":"Cancelled", indicator:"green" });
   }
 
-  // ========= Перехват save формы =========
+  // ===== перехват Save =====
   function patchFormSave(frm){
     if (frm.__ecSavePatched) return;
     frm.__ecSavePatched = true;
@@ -383,26 +498,45 @@
       }
 
       const extraFields = (typeof rule.extraFields === "function") ? rule.extraFields(frm) : (rule.extraFields || []);
-      openRuleDialog({
-        title: rule.title,
-        baseKeys: rule.baseFields || ["due","assignees","assign_me","priority"],
-        extraFields,
-        onOk: (vals) => {
-          UI.saveGuard = true;
-          Promise.resolve()
-            .then(() => createTask(frm.doc.name, rule.makePayload(vals, me, frm), "manual"))
-            .then(() => frappe.show_alert({ message: __("Task created"), indicator:"green" }))
-            .catch(e => console.warn("[EC Form Save] create failed", e))
-            .finally(() => { UI.pendingRule = null; UI.saveGuard = false; origSave(...args); });
-        },
-        onCancel: () => { UI.pendingRule = null; origSave(...args); }
+      const d = new frappe.ui.Dialog({ title: rule.title, fields: buildFields(rule.baseFields || ["due","assignees","assign_me","priority"], extraFields) });
+      const guard = wireReminderValidation(d);
+
+      d.set_primary_action(__("OK"), (vals) => {
+        if (!guard()) return;
+        UI.saveGuard = true;
+
+        const compat = Object.assign({}, vals, { due: vals.send_reminder ? vals.reminder_at : null });
+        const draft = rule.makePayload(compat, me, frm) || {};
+        const payload = Object.assign({}, draft);
+
+        if (vals.target_at) payload.custom_target_datetime = vals.target_at;
+
+        if (vals.send_reminder) {
+          payload.send_reminder = 1;
+          if (!payload.due && vals.reminder_at) payload.due = vals.reminder_at;
+        } else {
+          payload.send_reminder = 0;
+          if ("due" in payload) delete payload.due;
+        }
+
+        Promise.resolve()
+          .then(() => createTask(frm.doc.name, payload, "manual"))
+          .then(() => frappe.show_alert({ message: __("Task created"), indicator:"green" }))
+          .catch(e => console.warn("[EC Form Save] create failed", e))
+          .finally(() => { UI.pendingRule = null; UI.saveGuard = false; origSave(...args); });
+
+        d.hide();
       });
+
+      d.$wrapper.on("hidden.bs.modal", () => { if (UI.saveGuard) return; UI.pendingRule = null; origSave(...args); });
+      d.$wrapper.addClass("ec-task-dialog");
+      d.show();
 
       return Promise.resolve();
     };
   }
 
-  // ========= bind form events =========
+  // ===== Form bindings =====
   frappe.ui.form.on(DOCTYPE, {
     refresh(frm){
       UI.frm = frm;
@@ -427,7 +561,7 @@
       const rule = FORM_RULES.status_leads["Call Later"];
       const need = rule && rule.shouldTrigger({ prev, cur, frm });
       UI.pendingRule = need ? { df:"status_leads", rule } : null;
-      if (need) frappe.show_alert({ message: __("Due time will be requested on Save"), indicator:"blue" });
+      if (need) frappe.show_alert({ message: __("You can set Target and optional Reminder on Save"), indicator:"blue" });
     },
     status_deals(frm){
       const prev = UI.baseline.status_deals, cur = frm.doc.status_deals || null;
@@ -436,7 +570,7 @@
       const rule = (cur==="Appointment Scheduled") ? r1 : (cur==="Treatment Completed" ? r2 : null);
       const need = rule && rule.shouldTrigger({ prev, cur, frm });
       UI.pendingRule = need ? { df:"status_deals", rule } : null;
-      if (need && !rule.showDialog) frappe.show_alert({ message: __("An auto task will be created on Save"), indicator:"blue" });
+      if (need && !rule.showDialog) frappe.show_alert({ message: __("An auto task will be created"), indicator:"blue" });
     },
     status_patients(frm){
       const prev = UI.baseline.status_patients, cur = frm.doc.status_patients || null;
@@ -447,16 +581,16 @@
       UI.pendingRule = need ? { df:"status_patients", rule } : null;
       if (!need) return;
       if (rule.showDialog) {
-        frappe.show_alert({ message: __("Control task details will be requested on Save"), indicator:"blue" });
+        frappe.show_alert({ message: __("You can set Target and optional Reminder on Save"), indicator:"blue" });
       } else {
-        frappe.show_alert({ message: __("An auto task will be created on Save"), indicator:"blue" });
+        frappe.show_alert({ message: __("An auto task will be created"), indicator:"blue" });
       }
     },
   });
 
-  // ========= КАНБАН: перехват frappe.call (с логами и антидублем) =========
+  // ===== Kanban hook =====
   (function patchKanban(){
-    if (frappe.__ec_call_patched_v415) return;
+    if (frappe.__ec_call_patched_v419) return;
     const orig = frappe.call;
 
     frappe.call = function(opts){
@@ -477,8 +611,6 @@
         const key   = card && `${card}::${toCol}`;
         const rule  = KANBAN_RULES[toCol];
 
-        console.log("[EC Kanban][CALL]", { method, toCol, card, hasRule: !!rule });
-
         if (!rule || !card || !toCol) return;
         if (key && UI.kanbanSeen.has(key)) return;
         if (key) UI.kanbanSeen.add(key), setTimeout(()=> UI.kanbanSeen.delete(key), 3000);
@@ -492,35 +624,55 @@
           return;
         }
 
-        const extraFields = (typeof rule.extraFields === "function") ? rule.extraFields({ toCol, card }) : (rule.extraFields || []);
-        openRuleDialog({
+        const d = new frappe.ui.Dialog({
           title: rule.title,
-          baseKeys: rule.baseFields || ["due","assignees","assign_me","priority"],
-          extraFields,
-          onOk: (vals) => {
-            createTask(card, rule.makePayload(vals, me, { toCol, card }), "manual")
-              .then(()=> frappe.show_alert({ message: __("Task created"), indicator:"green" }))
-              .catch(e => console.warn("[EC Kanban] create failed", e));
-          },
-          onCancel: () => { /* no-op */ }
+          fields: buildFields(rule.baseFields || ["due","assignees","assign_me","priority"], (typeof rule.extraFields === "function") ? rule.extraFields({ toCol, card }) : rule.extraFields)
         });
+        const guard = wireReminderValidation(d);
+        d.set_primary_action(__("OK"), () => {
+          if (!guard()) return;
+          const vals = d.get_values();
+          const compat = Object.assign({}, vals, { due: vals.send_reminder ? vals.reminder_at : null });
+          const draft = rule.makePayload(compat, me, { toCol, card }) || {};
+          const payload = Object.assign({}, draft);
+          if (vals.target_at) payload.custom_target_datetime = vals.target_at;
+          if (vals.send_reminder) {
+            payload.send_reminder = 1;
+            if (!payload.due && vals.reminder_at) payload.due = vals.reminder_at;
+          } else {
+            payload.send_reminder = 0;
+            if ("due" in payload) delete payload.due;
+          }
+          createTask(card, payload, "manual")
+            .then(()=> frappe.show_alert({ message: __("Task created"), indicator:"green" }))
+            .catch(e => console.warn("[EC Kanban] create failed", e));
+          d.hide();
+        });
+        d.$wrapper.addClass("ec-task-dialog");
+        d.show();
       }).catch(()=>{});
       return p;
     };
 
-    frappe.__ec_call_patched_v415 = true;
-    console.log("[EC Kanban] frappe.call patched v4.15 (config, split rules)");
+    frappe.__ec_call_patched_v419 = true;
   })();
 
-  // ========= Стили =========
+  // ===== styles =====
   const css = document.createElement("style");
   css.textContent = `
-  .form-section .section-body .form-column .ec-tasks-wrap{ padding:12px 14px 0 14px; border-top:1px solid #e5e7eb; }
-  .ec-tasks-wrap{ margin:12px 0 0; }
-  .ec-tasks-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px}
-  .ec-tasks-head .t{font-weight:600}
+  .ec-tasks-section .section-head{
+    display:flex;align-items:center;gap:6px;
+    font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);
+    cursor:pointer;
+  }
+  .ec-tasks-section .section-head .t{flex:0 1 auto}
+  .ec-tasks-section .collapse-indicator .es-icon{transition: transform .15s ease;}
+  .ec-tasks-section .section-head.collapsed .collapse-indicator .es-icon{transform: rotate(-90deg);}
+  .ec-tasks-section .ec-red-dot{width:8px;height:8px;border-radius:999px;background:#ef4444;display:inline-block}
+  .ec-tasks-section .section-body{padding:12px}
+  .ec-tasks-section .section-body.hide{display:none!important}
+
   .ec-tabs-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  .ec-tabs-row .actions .btn + .btn{ margin-left:6px; }
   .ec-tabs .nav-link{ padding:6px 10px; }
   .ml-1{margin-left:6px}.ml-2{margin-left:8px}
   .ec-tasks-hint{ margin:8px 0 10px; padding:8px 10px; border-left:3px solid #e5e7eb; background:#fafafa; border-radius:6px; font-size:12px; color:#4b5563; }
@@ -537,6 +689,14 @@
   .ec-task .chip.-p-high{ background:#fee2e2; border-color:#fecaca; }
   .ec-task .chip.-p-med{  background:#e5f0ff; border-color:#dbeafe; }
   .ec-task .chip.-p-low{  background:#e8f5e9; border-color:#d7f0da; }
+
+  /* мягкая подсветка просроченной целевой даты */
+  .ec-task .chip-target.-overdue{
+    background: #fee2e2;       /* розоватая */
+    border-color: #fecaca;
+    color: #991b1b;            /* тёмно-красный текст */
+  }
+
   .ec-task-dialog .modal-body{padding:14px 16px}
   .ec-task-dialog .frappe-control{margin-bottom:8px}
   .ec-task-dialog .control-label{margin-bottom:4px}
