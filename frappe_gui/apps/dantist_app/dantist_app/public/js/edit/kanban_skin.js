@@ -1,6 +1,8 @@
 /* Dantist Kanban skin — v24.3 (no-flicker, no-duplicate, labels-aware, server add_card hook friendly)
    — Мгновенная отрисовка без "мерцания"
-   — Динамические поля: без дублей, уважают Show Labels, пустые скрываются
+   — Динамические поля: без дублей, уважают Show Labels
+     * Labels=ON  → пустые показываем как "—"
+     * Labels=OFF → пустые скрываем
    — Inline title edit, mini tasks, плавающие действия
    — Анти-дубликаты хуков, перехват "+ Add Card" контекста (без новых файлов)
 */
@@ -10,7 +12,7 @@
     htmlClass: "dantist-kanban-skin",
     rolesSettings: ["AIHub Super Admin", "System Manager"],
     rolesCanColor: ["AIHub Super Admin", "System Manager"],
-    rolesColumnMenu:["AIHub Super Admin", "System Manager"],
+    rolesColumnMenu: ["AIHub Super Admin", "System Manager"],
     settingsBtnId: "dnt-kanban-settings",
     // tasks
     caseDoctype: "Engagement Case",
@@ -91,9 +93,9 @@
         background:#f3f4f6; border:1px solid #e5e7eb; border-radius:10px; padding:4px 8px; 
         font-size:12px; min-height:24px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       }
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-kv + .dnt-kv { margin-top:6px; } /* чуть «отлепить» строки */
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-k { opacity:.7; }
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-v { font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-kv + .dnt-kv { margin-top:6px; }
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ opacity:.7; }
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 
       html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
       html.${CFG.htmlClass} .dnt-tasks-mini{ margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px; border-top:1px solid #eef2f7; padding-top:6px; }
@@ -197,44 +199,70 @@
     span.addEventListener("blur", save);
   }
 
-  /* ====== поля карточки (НОВАЯ реализация, без дублей, уважая Show Labels) ====== */
+  /* ====== Show Labels ====== */
   function getShowLabelsFlag(){
     const board = window.cur_list?.board || window.cur_list?.kanban_board;
     return !!(board && (board.show_labels === 1 || board.show_labels === true));
   }
 
+  /* ====== поля карточки (НОВАЯ реализация, без дублей, уважая Show Labels + правила прочерка) ====== */
   function collectPairsFromNative(docEl){
-    // Собираем пары из исходных строк .text-truncate (без наших пометок)
     const rows = Array.from(docEl.querySelectorAll(":scope > .text-truncate"));
     const pairs = [];
+    const clean = s => (s || "").replace(/\s+/g, " ").trim();
+    const stripColon = s => clean(s).replace(/:\s*$/,"");
+    const same = (a,b) => stripColon(a).toLowerCase() === stripColon(b).toLowerCase();
+
     const labelsOn = getShowLabelsFlag();
 
     rows.forEach(row=>{
       const spans = Array.from(row.querySelectorAll(":scope > span"));
-      let label = "", value = "";
-      if (labelsOn) {
-        // у нативной строки: 0 — label, 1 — value (иногда value тоже в 0, но возьмём последний непустой)
-        label = (spans[0]?.textContent || "").replace(/:\s*$/,"").trim();
-        const candidates = spans.map(s => (s.textContent||"").trim()).filter(Boolean);
-        value = candidates.length ? candidates[candidates.length-1] : "";
-      } else {
-        // без лейблов берём последний непустой span как значение
-        const candidates = spans.map(s => (s.textContent||"").trim()).filter(Boolean);
-        value = candidates.length ? candidates[candidates.length-1] : "";
+      const tokens = spans.length ? spans.map(s => clean(s.textContent)) : [clean(row.textContent)];
+      const nonEmpty = tokens.filter(Boolean);
+      if (!nonEmpty.length) return;
+
+      if (!labelsOn) {
+        // без лейблов: берём последний непустой как value, пустые не создаём
+        const value = stripColon(nonEmpty[nonEmpty.length - 1]);
+        if (value) pairs.push(["", value]);
+        return;
       }
-      // Пустые — пропускаем полностью
-      if (!label && !value) return;
-      pairs.push([label, value]);
+
+      // labels=ON: первый — label, значение — первый непустой token, который не совпадает с label
+      const rawLabel = nonEmpty[0];
+      const label = stripColon(rawLabel);
+      let value = "";
+      for (let i=1; i<nonEmpty.length; i++){
+        const t = stripColon(nonEmpty[i]);
+        if (!t) continue;
+        if (same(t, label)) continue; // убираем дубли вроде "Display Name: Display Name:"
+        value = t; break;
+      }
+
+      // важно: при labels=ON пустые допускаем (потом поставим "—")
+      pairs.push([label, value || ""]);
     });
-    return pairs;
+
+    // Очистим возможные повторяющиеся метки (оставим первый)
+    const seen = new Set();
+    const out = [];
+    for (const [k,v] of pairs){
+      const key = k.toLowerCase();
+      if (k && seen.has(key)) continue;
+      if (k) seen.add(key);
+      out.push([k,v]);
+    }
+    return out;
   }
 
   function buildChipsHTML(pairs){
     const labelsOn = getShowLabelsFlag();
     const frag = document.createDocumentFragment();
     pairs.forEach(([k,v])=>{
-      // Если значение пустое — дропаем строку (не рендерим склейку пустых)
-      if (!v || !String(v).trim()) return;
+      const hasVal = !!(v && String(v).trim());
+      // Labels=ON → показываем всегда; если пусто — "—"
+      // Labels=OFF → показываем только если есть значение
+      if (!labelsOn && !hasVal) return;
 
       const kv = document.createElement("div");
       kv.className = "dnt-kv text-truncate";
@@ -248,7 +276,7 @@
 
       const sv = document.createElement("span");
       sv.className = "dnt-v";
-      sv.textContent = v || "—";
+      sv.textContent = hasVal ? v : "—";
       kv.appendChild(sv);
 
       frag.appendChild(kv);
@@ -260,28 +288,27 @@
     if (!docEl || docEl.__dnt_locked) return;
     docEl.__dnt_locked = true;
 
-    // 1) забрать пары из текущего нативного содержимого
+    // 1) собрать пары из текущего нативного содержимого
     const pairs = collectPairsFromNative(docEl);
 
     // 2) полная перерисовка контейнера: только наши чипы (источник правды)
     docEl.innerHTML = "";
     docEl.appendChild(buildChipsHTML(pairs));
 
-    // 3) страховка от «додоливки» нативных span’ов сторонним кодом:
-    //    если в docEl прилетят новые дети НЕ нашего формата — перестроим снова (дебаунс 16ms)
-    let t = null;
+    // 3) страховка от «додоливки» нативных span’ов: если прилетают НЕ наши — перестраиваем
+    let raf = null;
     const mo = new MutationObserver((muts)=>{
-      let needsRebuild = false;
+      let needs = false;
       for (const m of muts){
         for (const n of m.addedNodes||[]){
           if (!(n instanceof HTMLElement)) continue;
-          if (!n.classList.contains("dnt-kv")) { needsRebuild = true; break; }
+          if (!n.classList.contains("dnt-kv")) { needs = true; break; }
         }
-        if (needsRebuild) break;
+        if (needs) break;
       }
-      if (needsRebuild){
-        if (t) cancelAnimationFrame(t);
-        t = requestAnimationFrame(()=>{
+      if (needs){
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(()=>{
           docEl.__dnt_locked = false;
           normalizeDocFields(docEl);
         });
@@ -316,7 +343,7 @@
     if (meta && meta.parentElement !== head) head.appendChild(meta);
     if (doc && doc.previousElementSibling !== head) body.insertBefore(doc, head.nextSibling);
 
-    // Нормализация динамических полей: единожды и без дублей
+    // Нормализация динамических полей
     if (doc) normalizeDocFields(doc);
 
     let foot = body.querySelector(".dnt-foot");
