@@ -1,13 +1,8 @@
-/* Dantist Kanban skin — v25.4 (universal backfill)
-   — Порядок = Kanban Settings (board.fields)
-     * Labels ON: сортируем по board.fields
-     * Labels OFF: нативный порядок + чипы из БД вставляем в позиции по board.fields
-   — Универсальный backfill: для ВСЕХ полей из board.fields
-     * batch get_value по всем полям и подстановка в пустые чипы
-     * если чипа нет, но в БД есть значение — создаём чип (в правильном месте)
-   — Display Name: доп. синонимы + сборка из First/Middle/Last/Title как особый случай
-   — Labels ON: пустые → "—"; Labels OFF: пустые не рисуем
-   — Фикс действий (open/delete), «карандаш» настроек
+/* Dantist Kanban skin — v25.14 (dedupe fix for Labels OFF)
+   — Labels ON: порядок по board.fields, пустые → "—"
+   — Labels OFF: нативный порядок + backfill с апгрейдом существующих чипов (без дублей)
+   — Единый формат дат: DD-MM-YYYY HH:mm:ss; фильтр хвостов времени
+   — Мини-задачи, hover-actions, inline title, Assigned/Like внизу
 */
 (() => {
   const CFG = {
@@ -18,25 +13,26 @@
     rolesColumnMenu:["AIHub Super Admin", "System Manager"],
     settingsBtnId: "dnt-kanban-settings",
     caseDoctype: "Engagement Case",
+    tasksMethod: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
+    tasksLimit: 5,
     BOARD: {
       "CRM Board":                  { flag: "show_board_crm",      status: "status_crm_board" },
       "Leads – Contact Center":     { flag: "show_board_leads",    status: "status_leads" },
       "Deals – Contact Center":     { flag: "show_board_deals",    status: "status_deals" },
       "Patients – Care Department": { flag: "show_board_patients", status: "status_patients" },
-    },
-    debug: { enableStats:false }
+    }
   };
 
   /* ===== helpers ===== */
+  const CLEAN = s => (s||"").replace(/\u00A0/g," ").replace(/\s+/g," ").trim();
+  const STRIP_COLON = s => CLEAN(s).replace(/:\s*$/,"");
+  const LBL_KEY = s => STRIP_COLON(s).toLowerCase();
+  const userHasAny = (roles) => { try { return roles.some((r)=>frappe.user.has_role(r)); } catch { return false; } };
   const isKanbanRoute = () => {
     const r = frappe.get_route?.() || [];
     if (r[0] === "List" && (r[2] === "Kanban" || r[2] === "Kanban Board")) return true;
     return (location.pathname||"").includes("/view/kanban/");
   };
-  const userHasAny = (roles) => { try { return roles.some((r)=>frappe.user.has_role(r)); } catch { return false; } };
-  const CLEAN = s => (s||"").replace(/\u00A0/g," ").replace(/\s+/g," ").trim();
-  const STRIP_COLON = s => CLEAN(s).replace(/:\s*$/,"");
-  const LBL_KEY = s => STRIP_COLON(s).toLowerCase();
   const getShowLabelsFlag = () => {
     const b = window.cur_list?.board || window.cur_list?.kanban_board;
     return !!(b && (b.show_labels === 1 || b.show_labels === true));
@@ -56,26 +52,82 @@
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
     s.textContent = `
+      html.${CFG.htmlClass} .kanban-column{ padding:8px; }
+      html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
+      html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; }
+
       html.${CFG.htmlClass} .kanban-card.content{
         border-radius:14px; border:1px solid var(--border-color,rgba(0,0,0,.06));
         background:#fff; padding:12px; box-shadow:0 1px 2px rgba(0,0,0,.06);
-        display:flex !important; flex-direction:column; gap:0; transition:transform .12s, box-shadow .12s;
+        transition:transform .12s, box-shadow .12s;
+        display:flex !important; flex-direction:column; gap:0;
       }
       html.${CFG.htmlClass} .kanban-card.content:hover{ transform:translateY(-1px); box-shadow:0 8px 22px rgba(0,0,0,.08); }
-      html.${CFG.htmlClass} .dnt-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+
+      html.${CFG.htmlClass} .dnt-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; margin-bottom:10px; }
       html.${CFG.htmlClass} .dnt-head-left{ display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 auto; }
-      html.${CFG.htmlClass} .kanban-image{ width:40px !important; height:40px !important; border-radius:10px; overflow:hidden; background:#eef2f7; flex:0 0 40px; }
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-kv{
-        display:flex; align-items:center; gap:6px; background:#f3f4f6; border:1px solid #e5e7eb;
-        border-radius:10px; padding:4px 8px; font-size:12px; min-height:24px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+
+      html.${CFG.htmlClass} .kanban-image{
+        width:40px !important; height:40px !important; border-radius:10px; overflow:hidden; background:#eef2f7;
+        display:flex; align-items:center; justify-content:center; float:none !important; margin:0 !important; flex:0 0 40px; position:static !important;
+      }
+      html.${CFG.htmlClass} .kanban-image img{ display:block !important; width:100% !important; height:100% !important; object-fit:cover !important; object-position:center; }
+
+      html.${CFG.htmlClass} .kanban-title-area{ margin:0 !important; min-width:0; }
+      html.${CFG.htmlClass} .kanban-card-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      html.${CFG.htmlClass} .dnt-title{ font-weight:600; line-height:1.25; cursor:text; }
+      html.${CFG.htmlClass} .dnt-title[contenteditable="true"]{ outline:none; border-radius:6px; padding:0 2px; }
+      html.${CFG.htmlClass} .dnt-title[contenteditable="true"]:focus{ background:#f3f4f6; }
+
+      html.${CFG.htmlClass} .kanban-card-meta{ margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+      html.${CFG.htmlClass} .kanban-card-doc{ padding:0; }
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-kv{ 
+        display:flex; align-items:center; gap:6px; 
+        background:#f3f4f6; border:1px solid #e5e7eb; border-radius:10px; padding:4px 8px; 
+        font-size:12px; min-height:24px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-kv + .dnt-kv { margin-top:6px; }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ opacity:.7; }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; }
-      html.${CFG.htmlClass} .dnt-card-actions{ position:absolute; top:12px; right:12px; display:flex; gap:6px; z-index:3; }
+
+      html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+      html.${CFG.htmlClass} .dnt-tasks-mini{ margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px; border-top:1px solid #eef2f7; padding-top:6px; }
+      html.${CFG.htmlClass} .dnt-taskline{ display:flex; gap:6px; align-items:center; font-size:11px; color:#4b5563; padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+      html.${CFG.htmlClass} .dnt-taskline .ttl{ font-weight:600; color:#111827; overflow:hidden; text-overflow:ellipsis; }
+      html.${CFG.htmlClass} .dnt-chip{ border:1px solid #e5e7eb; border-radius:999px; padding:1px 6px; background:#f8fafc; font-size:10px; }
+      html.${CFG.htmlClass} .dnt-overdue{ background:#fee2e2; border-color:#fecaca; }
+
+      html.${CFG.htmlClass} .dnt-card-actions{ position:absolute; top:12px; right:12px; display:flex; gap:6px; opacity:0; pointer-events:none; transition:opacity .12s; }
+      html.${CFG.htmlClass} .kanban-card-wrapper:hover .dnt-card-actions{ opacity:1; pointer-events:auto; }
       html.${CFG.htmlClass} .dnt-icon-btn{ height:28px; min-width:28px; padding:0 6px; display:grid; place-items:center; border-radius:8px; border:1px solid rgba(0,0,0,.12); background:#f8f9fa; cursor:pointer; }
+      html.${CFG.htmlClass} .dnt-icon-btn:hover{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+
+      html.${CFG.htmlClass}.no-color .kanban-column .column-options .button-group{ display:none !important; }
+      html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .menu,
+      html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .dropdown,
+      html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .kanban-column-actions{ display:none !important; }
     `;
     document.head.appendChild(s);
+  }
+
+  /* ===== datetime format ===== */
+  const FULL_DT = /\b\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\b/;
+  const DATE_LIKE = /\b(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})\b/;
+  const TIME_TAIL = /^(?:\d{1,2}:\d{2})(?::\d{2})?$/;
+  const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
+
+  function normalizeDateish(raw){
+    let v = CLEAN(raw || "");
+    if (!v) return v;
+    v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1");
+    if (FULL_DT.test(v) || DATE_LIKE.test(v)) {
+      try {
+        const m = moment(frappe.datetime.convert_to_user_tz(v));
+        if (m.isValid()) return HAS_TIME.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
+      } catch {}
+    }
+    return v;
   }
 
   /* ===== board fields & meta ===== */
@@ -126,7 +178,7 @@
     return { label2fn, fn2label };
   }
 
-  /* ===== value extractors ===== */
+  /* ===== parse native rows ===== */
   function tryParseDataFilter(el){
     const raw = el?.getAttribute?.("data-filter") || "";
     if (!raw) return "";
@@ -160,32 +212,47 @@
     return [CLEAN(t.slice(0,i)), CLEAN(t.slice(i+1))];
   }
 
-  /* ===== parse native rows ===== */
   function collectPairsFromNative(docEl, doctype){
     const rows = Array.from(docEl.querySelectorAll(":scope > .text-truncate, :scope > .ellipsis"));
-    const pairs = [];
+    const pairs = [], seenValuesOff=[];
     const labelsOn = getShowLabelsFlag();
     const { label2fn } = buildMetaMaps(doctype);
 
     rows.forEach(row=>{
-      const fullText = row.textContent || "";
+      const fullText = CLEAN(row.textContent || "");
       const spans = Array.from(row.querySelectorAll(":scope > span"));
-      const tokens = spans.length ? spans.map(s => CLEAN(s.textContent)) : [CLEAN(fullText)];
-      const nonEmpty = tokens.filter(Boolean);
-      if (!nonEmpty.length && !CLEAN(fullText) && !extractFromAttrs(row)) return;
+      const tokens = (spans.length ? spans.map(s => CLEAN(s.textContent)) : [fullText]).filter(Boolean);
+      if (!tokens.length && !extractFromAttrs(row)) return;
 
-      if (!labelsOn) {
-        let value = STRIP_COLON(nonEmpty[nonEmpty.length - 1] || CLEAN(fullText));
-        if (!value) value = CLEAN(row.innerText || "");
-        if (!value) value = extractFromAttrs(row);
-        if (value) pairs.push({ k:"", v:value, row, fieldname:null });
+      if (!labelsOn){
+        let value = "";
+        if (FULL_DT.test(fullText)) {
+          const matches = [...fullText.matchAll(FULL_DT)].map(m=>m[0]);
+          value = matches.sort((a,b)=>b.length - a.length)[0] || "";
+        }
+        if (!value) {
+          if (fullText.includes(":")){ const [,tail]=splitByFirstColon(fullText); value = CLEAN(tail); }
+          if (!value) value = STRIP_COLON(tokens[tokens.length-1] || "");
+          if (!value) value = CLEAN(row.innerText || "");
+          if (!value) value = extractFromAttrs(row);
+        }
+        value = normalizeDateish(value);
+
+        if (!value || value.length<=2) return;
+        if (TIME_TAIL.test(value) && tokens.some(t=>t.length>value.length && t.endsWith(value))) return;
+        if (TIME_TAIL.test(value) && seenValuesOff.some(v=>v.length>value.length && v.endsWith(value))) return;
+        if (seenValuesOff.includes(value)) return;
+
+        pairs.push({ k:"", v:value, row, fieldname:null });
+        seenValuesOff.push(value);
         return;
       }
 
-      let label = STRIP_COLON(nonEmpty[0] || "");
+      // labels ON
+      let label = STRIP_COLON(tokens[0] || "");
       let value = "";
-      for (let i=1; i<nonEmpty.length; i++){
-        const t = STRIP_COLON(nonEmpty[i]);
+      for (let i=1; i<tokens.length; i++){
+        const t = STRIP_COLON(tokens[i]);
         if (t && LBL_KEY(t) !== LBL_KEY(label)) { value = t; break; }
       }
       if (!value && fullText) {
@@ -204,6 +271,8 @@
         const a = extractFromAttrs(row);
         if (a) value = a;
       }
+
+      value = normalizeDateish(value);
       const fn = label2fn[LBL_KEY(label)] || (isDisplayName(label) ? "display_name" : null);
       pairs.push({ k: label, v: value || "", row, fieldname: fn });
     });
@@ -263,26 +332,16 @@
     if (target) container.insertBefore(chip, target);
     else container.appendChild(chip);
   }
-  function moveChipToIndex(container, chip, idx){
-    const nodes = Array.from(container.querySelectorAll(":scope > .dnt-kv")).filter(n=>n!==chip);
-    const target = nodes[idx];
-    if (target) container.insertBefore(chip, target);
-    else container.appendChild(chip);
-  }
 
-  /* ===== универсальный backfill ===== */
+  /* ===== backfill + de-dup (key change here) ===== */
   async function backfillAll(container, ctx, labelsOn, orderMap){
     const { fn2label } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
-
-    // 1) Батч: берём все поля борда + компоненты для ДН
     const need = [...new Set(boardFields.concat(["display_name","first_name","middle_name","last_name","title"]))];
     const v = await getValuesBatch(ctx.doctype, ctx.docName, need);
-
-    // 2) Если ДН пуст в БД — соберём
     if (!CLEAN(v.display_name)) v.display_name = composeDisplayName(v);
 
-    // 3) для существующих чипов — дозаполнение пустых
+    // 1) дозаполняем пустые
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(chip=>{
       const labelText = CLEAN(chip.dataset.dntLabel || chip.querySelector(".dnt-k")?.textContent || "");
       const lbl = STRIP_COLON(labelText);
@@ -290,52 +349,89 @@
       const current = CLEAN(sv?.textContent || "");
       const fnGuess = Object.entries(fn2label).find(([fn,lab]) => LBL_KEY(lab)===LBL_KEY(lbl))?.[0]
         || (isDisplayName(lbl) ? "display_name" : null);
-
-      if (!current && fnGuess && CLEAN(v[fnGuess])) {
-        sv.textContent = CLEAN(v[fnGuess]);
-      }
+      const val = fnGuess ? normalizeDateish(v[fnGuess]) : "";
+      if (!current && CLEAN(val)) sv.textContent = CLEAN(val);
     });
 
-    // 4) создать недостающие чипы (есть значение в БД, но нет чипа)
+    // 2) при Labels OFF — апгрейдим безымянные чипы вместо добавления новых
+    const assignedValues = new Set();
+    const valueIndex = new Map(); // value -> массив чипов без label
+    if (!labelsOn){
+      Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
+        const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+        if (lbl) return; // уже «полевой»
+        const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
+        if (!val) return;
+        const key = val;
+        if (!valueIndex.has(key)) valueIndex.set(key, []);
+        valueIndex.get(key).push(ch);
+      });
+    }
+
     boardFields.forEach(fn=>{
-      const value = CLEAN(v[fn]);
-      if (!value) return; // не засоряем пустыми
+      const raw = v[fn];
+      const value = CLEAN(normalizeDateish(raw));
+      if (!value) return;
       const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
-      const have = Array.from(container.querySelectorAll(":scope > .dnt-kv")).some(ch=>{
+
+      // Уже есть привязанный к этому полю чип?
+      const haveLabeled = Array.from(container.querySelectorAll(":scope > .dnt-kv")).some(ch=>{
         const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
         return (LBL_KEY(lbl) === LBL_KEY(human)) || (fn==="display_name" && isDisplayName(lbl));
       });
-      if (have) return;
+      if (haveLabeled){
+        assignedValues.add(value);
+        return;
+      }
 
+      if (!labelsOn){
+        // апгрейдим существующий «безымянный» чип с тем же значением
+        const pool = valueIndex.get(value) || [];
+        const pick = pool.shift?.();
+        if (pick){
+          pick.dataset.dntLabel = human;          // привязка к полю
+          insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0); // переставим по порядку
+          assignedValues.add(value);
+          return;
+        }
+      }
+
+      // иначе создаём новый (labelsOn или нет подходящего безымянного)
       const chip = makeChip(human, value, labelsOn);
       insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
+      assignedValues.add(value);
     });
 
-    // 5) специальные правила отображения
+    // 3) пост-очистка дублей при Labels OFF: удаляем оставшиеся безымянные чипы с теми же values
     if (!labelsOn){
-      // при labels OFF скрываем чипы, у которых пустое значение
+      Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
+        const hasLabel = !!CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+        if (hasLabel) return;
+        const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
+        if (!val) return;
+        if (assignedValues.has(val)) ch.remove();
+      });
+    }
+
+    // 4) финальные правила отображения/порядка
+    if (!labelsOn){
       Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
         const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
         if (!val) ch.remove();
       });
     } else {
-      // при labels ON ставим «—» в пустых
       Array.from(container.querySelectorAll(":scope > .dnt-kv .dnt-v")).forEach(sv=>{
         if (!CLEAN(sv.textContent)) sv.textContent = "—";
       });
-    }
-
-    // 6) привести порядок к orderMap (только если labels ON)
-    if (labelsOn){
+      const { fn2label } = buildMetaMaps(ctx.doctype);
       const chips = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
       chips.sort((a,b)=>{
         const la = CLEAN(a.dataset.dntLabel || a.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
         const lb = CLEAN(b.dataset.dntLabel || b.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
         const fna = (Object.entries(fn2label).find(([fn,lab])=> LBL_KEY(lab)===LBL_KEY(la))||[])[0] || (isDisplayName(la)?"display_name":null);
         const fnb = (Object.entries(fn2label).find(([fn,lab])=> LBL_KEY(lab)===LBL_KEY(lb))||[])[0] || (isDisplayName(lb)?"display_name":null);
-        const ia = orderMap.has(fna||"") ? orderMap.get(fna||"") : 9999;
-        const ib = orderMap.has(fnb||"") ? orderMap.get(fnb||"") : 9999;
-        return ia-ib;
+        const orderMapIdx = (fn)=> orderMap.has(fn||"") ? orderMap.get(fn||"") : 9999;
+        return orderMapIdx(fna) - orderMapIdx(fnb);
       });
       chips.forEach(ch => container.appendChild(ch));
     }
@@ -358,7 +454,7 @@
     const frag = document.createDocumentFragment();
     items.forEach(o=>{
       const k = o.k || (o.fieldname ? fn2label[o.fieldname]||"" : "");
-      const v = (o.v || "").trim();
+      const v = CLEAN(o.v || "");
       if (!labelsOn && !v) return;
       const chip = makeChip(k, labelsOn ? (v||"") : v, labelsOn && CLEAN(k));
       frag.appendChild(chip);
@@ -400,7 +496,92 @@
     docEl.__dnt_mo = mo;
   }
 
-  /* ===== карточка и окружение ===== */
+  /* ===== mini tasks ===== */
+  const miniCache = new Map();
+  const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
+  const planDT = (t) => t.custom_target_datetime || t.due_datetime || t.custom_due_datetime || t.date || null;
+
+  function miniHtml(rows, total){
+    if (!rows?.length) return `<div class="dnt-taskline"><span class="dnt-chip">Tasks</span> <span class="ttl">No open tasks</span></div>`;
+    const lines = rows.map(t=>{
+      const p = planDT(t);
+      const open = (t.status||"Open")==="Open";
+      const overdue = p && open && moment(p).isBefore(moment());
+      const chip = p ? `<span class="dnt-chip ${overdue?'dnt-overdue':''}" title="Planned">${frappe.utils.escape_html(fmtDT(p))}</span>` : ``;
+      const ttl  = frappe.utils.escape_html(t.description || t.name);
+      return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(t.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
+    }).join("");
+    const more = total>rows.length ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">Show all (${total}) →</span></div>` : ``;
+    return lines + more;
+  }
+  async function loadMini(container, caseName){
+    if (miniCache.has(caseName)) {
+      container.innerHTML = miniCache.get(caseName);
+      return bindMini(container, caseName);
+    }
+    container.innerHTML = `<div class="dnt-taskline"><span class="ttl">Loading…</span></div>`;
+    try{
+      const { message } = await frappe.call({
+        method: CFG.tasksMethod,
+        args: { name: caseName, status: "Open", limit_start: 0, limit_page_length: CFG.tasksLimit, order: "desc" }
+      });
+      const rows  = (message && message.rows) || [];
+      const total = (message && message.total) || rows.length;
+      const html  = miniHtml(rows, total);
+      miniCache.set(caseName, html);
+      container.innerHTML = html;
+      bindMini(container, caseName);
+    } catch {
+      container.innerHTML = `<div class="dnt-taskline"><span class="ttl">Failed to load</span></div>`;
+    }
+  }
+  function bindMini(container, caseName){
+    container.querySelectorAll("[data-open]").forEach(el=>{
+      el.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); frappe.set_route("Form","ToDo", el.getAttribute("data-open")); });
+    });
+    container.querySelector('[data-act="open-all"]')?.addEventListener("click",(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      frappe.set_route("List","ToDo",{ reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" });
+    });
+  }
+
+  /* ===== title inline edit ===== */
+  function makeTitleEditable(titleArea, name, doctype){
+    if (!titleArea || titleArea.__dntEditable) return;
+    titleArea.__dntEditable = true;
+
+    const anchor = titleArea.querySelector("a");
+    const currentText = (titleArea.querySelector(".kanban-card-title")?.textContent || anchor?.textContent || name || "").trim();
+
+    const holder = titleArea.querySelector(".kanban-card-title") || document.createElement("div");
+    holder.classList.add("kanban-card-title"); holder.innerHTML = "";
+
+    const span = document.createElement("span");
+    span.className = "dnt-title"; span.setAttribute("contenteditable","true"); span.textContent = currentText;
+    holder.appendChild(span);
+
+    if (anchor) anchor.replaceWith(holder); else titleArea.appendChild(holder);
+
+    const save = async () => {
+      const val = (span.textContent || "").trim();
+      if (!val || val === currentText) return;
+      try{
+        await frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname:"title", value: val } });
+        frappe.show_alert({ message: __("Title updated"), indicator:"green" });
+      }catch{
+        frappe.msgprint({ message: __("Failed to update title"), indicator:"red" });
+        span.textContent = currentText;
+      }
+    };
+    span.addEventListener("keydown", (e)=>{
+      if (e.key==="Enter"){ e.preventDefault(); span.blur(); }
+      else if (e.key==="Escape"){ e.preventDefault(); span.textContent=currentText; span.blur(); }
+    });
+    span.addEventListener("click", e=> e.stopPropagation());
+    span.addEventListener("blur", save);
+  }
+
+  /* ===== карточка ===== */
   function upgradeCard(wrapper){
     const card = wrapper?.querySelector?.(".kanban-card.content, .kanban-card");
     if(!card || card.dataset.dntUpgraded==="1") return;
@@ -412,11 +593,16 @@
     const doc   = body?.querySelector(".kanban-card-doc");
     if(!body) { card.dataset.dntUpgraded="1"; return; }
 
-    let head = body.querySelector(".dnt-head"); if(!head){ head = document.createElement("div"); head.className = "dnt-head"; body.prepend(head); }
-    let left = head.querySelector(".dnt-head-left"); if(!left){ left = document.createElement("div"); left.className = "dnt-head-left"; head.prepend(left); }
+    let head = body.querySelector(".dnt-head");
+    if(!head){ head = document.createElement("div"); head.className = "dnt-head"; body.prepend(head); }
+    let left = head.querySelector(".dnt-head-left");
+    if(!left){ left = document.createElement("div"); left.className = "dnt-head-left"; head.prepend(left); }
 
     if (img && !left.contains(img)) left.prepend(img);
-    if (title) { title.querySelectorAll("br").forEach(br=>br.remove()); if(!left.contains(title)) left.appendChild(title); }
+    if (title) {
+      title.querySelectorAll("br").forEach(br=>br.remove());
+      if(!left.contains(title)) left.appendChild(title);
+    }
     if (meta && meta.parentElement !== head) head.appendChild(meta);
     if (doc && doc.previousElementSibling !== head) body.insertBefore(doc, head.nextSibling);
 
@@ -425,7 +611,7 @@
 
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
-    // footer
+    // footer с Assigned/Like
     let foot = body.querySelector(".dnt-foot");
     if(!foot){ foot = document.createElement("div"); foot.className = "dnt-foot"; body.appendChild(foot); }
     const assign = (meta || body).querySelector(".kanban-assignments");
@@ -434,11 +620,23 @@
     if(like   && !foot.contains(like))   foot.appendChild(like);
     if(meta && !meta.children.length) meta.remove();
 
-    // actions
+    // мини-задачи + inline title (для Engagement Case)
+    if (doctype === CFG.caseDoctype && name) {
+      if (!body.querySelector(".dnt-tasks-mini")) {
+        const mini = document.createElement("div");
+        mini.className = "dnt-tasks-mini";
+        body.appendChild(mini);
+        setTimeout(()=> loadMini(mini, name), 0);
+      }
+      makeTitleEditable(title, name, doctype);
+    }
+
+    // hover-actions
     if (!wrapper.querySelector(".dnt-card-actions")){
       const row = document.createElement("div"); row.className="dnt-card-actions";
       const bOpen = document.createElement("div"); bOpen.className="dnt-icon-btn"; bOpen.title=__("Open");
-      bOpen.innerHTML = frappe.utils.icon("external-link","sm"); bOpen.addEventListener("click",(e)=>{ e.stopPropagation(); if (doctype && name) frappe.set_route("Form", doctype, name); });
+      bOpen.innerHTML = frappe.utils.icon("external-link","sm");
+      bOpen.addEventListener("click",(e)=>{ e.stopPropagation(); if (doctype && name) frappe.set_route("Form", doctype, name); });
       row.appendChild(bOpen);
 
       const bDel = document.createElement("div"); bDel.className="dnt-icon-btn"; bDel.title=__("Delete / Remove from board");
@@ -548,7 +746,6 @@
     enhanceCards();
     ensureSettingsBtnSticky();
 
-    // несколько прогонов для поздней догрузки
     let attempts = 0;
     const pump = () => {
       if (!isKanbanRoute()) return;
