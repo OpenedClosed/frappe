@@ -1,9 +1,13 @@
-/* Dantist Kanban skin — v25.0
+/* Dantist Kanban skin — v25.6 (final)
+   — Порядок чипов:
+       * Labels ON: по Kanban Settings (board.fields)
+       * Labels OFF: нативный, но Display Name ставим на позицию из настроек
    — Labels ON: пустые → "—"; Labels OFF: пустые скрываем
-   — Усиленный парсер значений (+ data-* и split по :)
-   — Если "Display Name" пуст в DOM — добираем через get_value и подставляем
+   — Display Name гарантирован: DOM → get_value(display_name) → F/M/L → Title
+   — «—» теперь перезаписывается при дозаполнении (помечаем data-dnt-empty="1")
+   — Понимаем синонимы Display Name / Отображаемое имя / ФИО / Full Name / Name
    — Кнопки действий закреплены; Delete = «убрать с доски» ИЛИ жёстко удалить
-   — Карандаш настроек закреплён и не отваливается при переключении досок
+   — Карандаш настроек закреплён
 */
 (() => {
   const CFG = {
@@ -11,20 +15,16 @@
     htmlClass: "dantist-kanban-skin",
     rolesSettings: ["AIHub Super Admin", "System Manager"],
     rolesCanColor: ["AIHub Super Admin", "System Manager"],
-    rolesColumnMenu:["AIHub Super Admin", "System Manager"],
+    rolesColumnMenu: ["AIHub Super Admin", "System Manager"],
     settingsBtnId: "dnt-kanban-settings",
     caseDoctype: "Engagement Case",
-    // для «убрать с доски» по текущей доске:
     BOARD: {
       "CRM Board":                  { flag: "show_board_crm",      status: "status_crm_board" },
       "Leads – Contact Center":     { flag: "show_board_leads",    status: "status_leads" },
       "Deals – Contact Center":     { flag: "show_board_deals",    status: "status_deals" },
       "Patients – Care Department": { flag: "show_board_patients", status: "status_patients" },
     },
-    debug: {
-      targetId: "INSTAGRAM_797099196357045", // docname/visible title/external id — любой
-      enableStats: true
-    }
+    debug: { enableStats: false, targetId: "" }
   };
 
   /* ===== helpers ===== */
@@ -57,8 +57,18 @@
   }
   const CLEAN = s => (s||"").replace(/\u00A0/g," ").replace(/\s+/g," ").trim();
   const STRIP_COLON = s => CLEAN(s).replace(/:\s*$/,"");
-  const LBL_MATCH = s => STRIP_COLON(s).toLowerCase();
-  const isDisplayNameKey = (k) => ["display name","display_name","displayname"].includes(LBL_MATCH(k));
+  const LBL_KEY = s => STRIP_COLON(s).toLowerCase();
+
+  const LABEL_ALIASES = {
+    display_name: new Set([
+      "display name","display_name","displayname",
+      "отображаемое имя","имя профиля","full name","name","фио","имя / фио","имя и фамилия","имя, фамилия"
+    ]),
+    first_name: new Set(["first name","first_name","firstname","имя"]),
+    last_name: new Set(["last name","last_name","lastname","фамилия"]),
+    middle_name: new Set(["middle name","middle_name","middlename","отчество"])
+  };
+  const isDisplayNameLabel = (s)=> LABEL_ALIASES.display_name.has(LBL_KEY(s));
   const getShowLabelsFlag = () => {
     const b = window.cur_list?.board || window.cur_list?.kanban_board;
     return !!(b && (b.show_labels === 1 || b.show_labels === true));
@@ -90,7 +100,6 @@
       html.${CFG.htmlClass} .kanban-image img{ display:block !important; width:100% !important; height:100% !important; max-width:none !important; object-fit:cover !important; object-position:center; }
       html.${CFG.htmlClass} .kanban-title-area{ margin:0 !important; min-width:0; }
       html.${CFG.htmlClass} .kanban-title-area a{ display:none !important; }
-      html.${CFG.htmlClass} .dnt-title{ font-weight:600; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:text; }
       html.${CFG.htmlClass} .kanban-card-meta{ margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
       html.${CFG.htmlClass} .kanban-card-doc{ padding:0; }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-kv{ 
@@ -102,7 +111,6 @@
       html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ opacity:.7; }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; }
       html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-      /* плавающие действия — фикс в правом верхнем (как раньше, но без мерцаний) */
       html.${CFG.htmlClass} .dnt-card-actions{ position:absolute; top:12px; right:12px; display:flex; gap:6px; z-index:3; }
       html.${CFG.htmlClass} .dnt-icon-btn{ height:28px; min-width:28px; padding:0 6px; display:grid; place-items:center; border-radius:8px; border:1px solid rgba(0,0,0,.12); background:#f8f9fa; cursor:pointer; }
       html.${CFG.htmlClass} .dnt-icon-btn:hover{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
@@ -114,27 +122,58 @@
     document.head.appendChild(s);
   }
 
-  /* ===== статистика (минимум логов) ===== */
-  const STATS = {
-    enabled: !!CFG.debug.enableStats, printed:false,
-    totalCards:0, labelsOnCards:0, totalPairs:0,
-    displayNameRows:0, displayNameRendered:0, displayNameDashed:0, displayNameMissing:0
-  };
-  function printStatsOnce(){
-    if (!STATS.enabled || STATS.printed) return;
-    if (STATS.totalCards === 0) return;
-    STATS.printed = true;
-    try {
-      console.table([{
-        totalCards: STATS.totalCards,
-        labelsOnCards: STATS.labelsOnCards,
-        totalPairs: STATS.totalPairs,
-        displayNameRows: STATS.displayNameRows,
-        displayNameRendered: STATS.displayNameRendered,
-        displayNameDashed: STATS.displayNameDashed,
-        displayNameMissing: STATS.displayNameMissing
-      }]);
-    } catch {}
+  /* ===== board fields: парсинг и отображаемый порядок ===== */
+  function coerceFieldsList(dt, any){
+    let arr=[];
+    if(Array.isArray(any)) arr=any;
+    else if(typeof any==="string" && any.trim()){
+      try{ const j=JSON.parse(any); if(Array.isArray(j)) arr=j; }
+      catch{ arr=any.split(/[,\s]+/).filter(Boolean); }
+    }
+    const meta = frappe.get_meta(dt);
+    const fieldnames = new Set((meta?.fields||[]).map(f=>f.fieldname)
+      .concat((frappe.model.std_fields||[]).map(f=>f.fieldname)).concat(["name"]));
+    const label2fn = {};
+    (meta?.fields||[]).forEach(f=>{ if (f?.label) label2fn[LBL_KEY(f.label)] = f.fieldname; });
+    (frappe.model.std_fields||[]).forEach(f=>{ if (f?.label) label2fn[LBL_KEY(f.label)] = f.fieldname; });
+
+    const out = [];
+    arr.forEach(x=>{
+      if (!x) return;
+      const raw = (""+x).trim();
+      if (fieldnames.has(raw)) { out.push(raw); return; }
+      const guess = label2fn[LBL_KEY(raw)];
+      if (guess && fieldnames.has(guess)) out.push(guess);
+    });
+    if (!out.includes("display_name")) out.unshift("display_name");
+    return [...new Set(out)];
+  }
+
+  function getBoardOrderMap(doctype){
+    try{
+      const board = window.cur_list?.board || window.cur_list?.kanban_board;
+      const fields = coerceFieldsList(doctype, board?.fields || []);
+      const order = new Map();
+      fields.forEach((fn, i)=> order.set(fn, i));
+      if (!order.has("display_name")) order.set("display_name", 0);
+      return order;
+    }catch{ return new Map([["display_name",0]]); }
+  }
+
+  function buildMetaMaps(doctype){
+    const meta = frappe.get_meta(doctype);
+    const label2fn = {};
+    const fn2label = {};
+    (meta?.fields||[]).forEach(f=>{
+      const lbl = CLEAN(f?.label||"");
+      if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; }
+    });
+    (frappe.model.std_fields||[]).forEach(f=>{
+      const lbl = CLEAN(f?.label||"");
+      if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; }
+    });
+    LABEL_ALIASES.display_name.forEach(a=> label2fn[a] = "display_name");
+    return { label2fn, fn2label };
   }
 
   /* ===== value extractors ===== */
@@ -172,24 +211,24 @@
   }
 
   /* ===== сбор k/v из нативной разметки ===== */
-  function collectPairsFromNative(docEl){
+  function collectPairsFromNative(docEl, doctype){
     const rows = Array.from(docEl.querySelectorAll(":scope > .text-truncate, :scope > .ellipsis"));
     const pairs = [];
     const labelsOn = getShowLabelsFlag();
+    const { label2fn } = buildMetaMaps(doctype);
 
     rows.forEach(row=>{
       const fullText = row.textContent || "";
       const spans = Array.from(row.querySelectorAll(":scope > span"));
       const tokens = spans.length ? spans.map(s => CLEAN(s.textContent)) : [CLEAN(fullText)];
       const nonEmpty = tokens.filter(Boolean);
-
       if (!nonEmpty.length && !CLEAN(fullText) && !extractFromAttrs(row)) return;
 
       if (!labelsOn) {
         let value = STRIP_COLON(nonEmpty[nonEmpty.length - 1] || CLEAN(fullText));
         if (!value) value = CLEAN(row.innerText || "");
         if (!value) value = extractFromAttrs(row);
-        if (value) pairs.push({ k:"", v:value, row, tokens, reason:"labels_off" });
+        if (value) pairs.push({ k:"", v:value, row, reason:"labels_off", fieldname:null });
         return;
       }
 
@@ -199,18 +238,18 @@
 
       for (let i=1; i<nonEmpty.length; i++){
         const t = STRIP_COLON(nonEmpty[i]);
-        if (t && LBL_MATCH(t) !== LBL_MATCH(label)) { value = t; reason = "next_token"; break; }
+        if (t && LBL_KEY(t) !== LBL_KEY(label)) { value = t; reason = "next_token"; break; }
       }
       if (!value && fullText) {
         const [lbl, tail] = splitByFirstColon(fullText);
-        if (LBL_MATCH(lbl)) label = STRIP_COLON(lbl);
+        if (LBL_KEY(lbl)) label = STRIP_COLON(lbl);
         if (tail) { value = tail; reason = "split_fulltext"; }
       }
       if (!value) {
         const it = CLEAN(row.innerText || "");
         if (it){
           const [lbl2, tail2] = splitByFirstColon(it);
-          if (LBL_MATCH(lbl2)) { if (tail2){ value = tail2; reason = "split_innerText"; } }
+          if (LBL_KEY(lbl2)) { if (tail2){ value = tail2; reason = "split_innerText"; } }
         }
       }
       if (!value) {
@@ -218,115 +257,147 @@
         if (a){ value = a; reason = "attrs_fallback"; }
       }
 
-      const pair = { k: label, v: value || "", row, tokens, reason };
-      pairs.push(pair);
-
-      if (STATS.enabled && isDisplayNameKey(label)) STATS.displayNameRows += 1;
+      const fn = label2fn[LBL_KEY(label)] || (isDisplayNameLabel(label) ? "display_name" : null);
+      pairs.push({ k: label, v: value || "", row, reason, fieldname: fn });
     });
 
     const seen = new Set();
     const out = [];
     for (const o of pairs){
-      const key = (o.k || "").toLowerCase();
-      if (o.k && seen.has(key)) continue;
-      if (o.k) seen.add(key);
+      const key = (o.fieldname || o.k || "").toLowerCase();
+      if (key && seen.has(key)) continue;
+      if (key) seen.add(key);
       out.push(o);
     }
     return out;
   }
 
-  /* ===== дозагрузка пустых значений из БД (точечно) ===== */
-  const gvCache = new Map(); // key: `${doctype}:${name}:${field}`
-  async function fetchField(doctype, name, field){
-    const key = `${doctype}:${name}:${field}`;
+  /* ===== дозагрузка значений ===== */
+  const gvCache = new Map();
+  async function getValuesBatch(doctype, name, fields){
+    const key = `${doctype}:${name}::${fields.slice().sort().join(",")}`;
     if (gvCache.has(key)) return gvCache.get(key);
     try{
       const { message } = await frappe.call({
         method: "frappe.client.get_value",
-        args: { doctype, filters:{ name }, fieldname: field }
+        args: { doctype, filters:{ name }, fieldname: fields }
       });
-      const val = message?.[field] || "";
-      gvCache.set(key, val);
-      return val;
-    }catch{ gvCache.set(key, ""); return ""; }
+      const obj = message || {};
+      gvCache.set(key, obj);
+      return obj;
+    }catch{ gvCache.set(key, {}); return {}; }
+  }
+  function composeDisplayName(v){
+    const f = CLEAN(v.first_name);
+    const m = CLEAN(v.middle_name);
+    const l = CLEAN(v.last_name);
+    const parts = [f, m, l].filter(Boolean);
+    if (parts.length) return parts.join(" ");
+    const t = CLEAN(v.title);
+    return t || "";
   }
 
-  function matchTarget(ctx){
-    const wanted = (CFG.debug.targetId || "").trim();
-    if (!wanted) return false;
-    const s = (x)=> (x||"").trim();
-    return (
-      s(ctx.docName) === wanted ||
-      s(ctx.titleText) === wanted ||
-      s(ctx.mongoId) === wanted ||
-      s(ctx.externalId) === wanted
-    );
+  /* ===== чипы / плейсхолдеры ===== */
+  function makeChip(label, value, showLabel){
+    const kv = document.createElement("div");
+    kv.className = "dnt-kv text-truncate";
+    if (showLabel && CLEAN(label)){
+      const sk = document.createElement("span");
+      sk.className = "dnt-k";
+      sk.textContent = STRIP_COLON(label) + ":";
+      kv.appendChild(sk);
+    }
+    const sv = document.createElement("span");
+    sv.className = "dnt-v";
+    const cleanVal = CLEAN(value);
+    if (cleanVal) {
+      sv.textContent = cleanVal;
+    } else {
+      if (showLabel) {
+        sv.textContent = "—";
+        sv.dataset.dntEmpty = "1";     // помечаем плейсхолдер
+      } else {
+        sv.textContent = "";
+        sv.dataset.dntEmpty = "1";
+      }
+    }
+    kv.appendChild(sv);
+    return kv;
+  }
+  function insertChipAtIndex(container, chip, idx){
+    const nodes = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
+    const target = nodes[idx];
+    if (target) container.insertBefore(chip, target);
+    else container.appendChild(chip);
+  }
+  function moveChipToIndex(container, chip, idx){
+    const nodes = Array.from(container.querySelectorAll(":scope > .dnt-kv")).filter(n=>n!==chip);
+    const target = nodes[idx];
+    if (target) container.insertBefore(chip, target);
+    else container.appendChild(chip);
   }
 
+  /* ===== гарантируем Display Name и порядок ===== */
+  async function ensureDisplayNameChip(container, ctx, labelsOn, orderMap){
+    const dnChip = Array.from(container.querySelectorAll(".dnt-kv")).find(kv=>{
+      const k = CLEAN(kv.querySelector(".dnt-k")?.textContent||"").replace(/:$/,"");
+      return isDisplayNameLabel(k) || LBL_KEY(k)==="display name";
+    });
+
+    const v = await getValuesBatch(ctx.doctype, ctx.docName,
+      ["display_name","first_name","middle_name","last_name","title"]);
+    const dn = CLEAN(v.display_name) || composeDisplayName(v);
+
+    if (labelsOn){
+      if (dnChip){
+        const sv = dnChip.querySelector(".dnt-v");
+        const now = CLEAN(sv?.textContent || "");
+        const isPlaceholder = sv?.dataset?.dntEmpty === "1" || /^[-–—]$/.test(now) || !now;
+        if (sv && isPlaceholder) {
+          sv.textContent = dn || "—";
+          if (dn) delete sv.dataset.dntEmpty; else sv.dataset.dntEmpty = "1";
+        }
+        moveChipToIndex(container, dnChip, orderMap.get("display_name") ?? 0);
+      } else {
+        const chip = makeChip("Display Name", dn || "—", true);
+        insertChipAtIndex(container, chip, orderMap.get("display_name") ?? 0);
+      }
+    } else {
+      if (dn){
+        const chip = makeChip("", dn, false);
+        insertChipAtIndex(container, chip, orderMap.get("display_name") ?? 0);
+      }
+    }
+  }
+
+  /* ===== сборка и рендер ===== */
   function buildChipsHTML(pairs, ctx){
     const labelsOn = getShowLabelsFlag();
+    const orderMap = getBoardOrderMap(ctx.doctype);
+    const { fn2label } = buildMetaMaps(ctx.doctype);
+
+    let items = pairs.slice();
+    if (labelsOn){
+      items.sort((a,b)=>{
+        const ia = orderMap.has(a.fieldname||"") ? orderMap.get(a.fieldname||"") : 9999;
+        const ib = orderMap.has(b.fieldname||"") ? orderMap.get(b.fieldname||"") : 9999;
+        return ia - ib;
+      });
+    }
+
     const frag = document.createDocumentFragment();
-
-    const sawDisplayName = pairs.some(p => isDisplayNameKey(p.k));
-    if (STATS.enabled && labelsOn && !sawDisplayName) STATS.displayNameMissing += 1;
-
-    pairs.forEach(o=>{
-      const k = o.k || "";
+    items.forEach(o=>{
+      const k = o.k || (o.fieldname ? fn2label[o.fieldname]||"" : "");
       const v = (o.v || "").trim();
       const hasVal = !!v;
-      const isDisplay = isDisplayNameKey(k);
-
       if (!labelsOn && !hasVal) return;
-
-      const kv = document.createElement("div");
-      kv.className = "dnt-kv text-truncate";
-      if (k) {
-        const sk = document.createElement("span");
-        sk.className = "dnt-k";
-        sk.textContent = k + ":";
-        kv.appendChild(sk);
-      }
-
-      const sv = document.createElement("span");
-      sv.className = "dnt-v";
-      sv.textContent = hasVal ? v : "—";
-      kv.appendChild(sv);
-
-      // точечная диагностика — только для целевой карточки и только для Display Name
-      if (isDisplay && matchTarget(ctx)) {
-        try {
-          console.info("[DNT Kanban · DisplayName]", {
-            target: CFG.debug.targetId,
-            board: getBoardName(),
-            showLabels: labelsOn,
-            parsed: { label: k, value: hasVal ? v : null, reason: o.reason || null },
-            textContent: CLEAN(o.row?.textContent || ""),
-            innerText: CLEAN(o.row?.innerText || ""),
-            dataValue: o.row?.getAttribute?.("data-value") || null,
-            dataFilter: o.row?.getAttribute?.("data-filter") || null,
-            deepAttrs: extractFromAttrs(o.row) || null,
-            rowHTML: o.row?.outerHTML || null
-          });
-        } catch {}
-      }
-
-      // если это Display Name и значения нет — дозакачиваем из БД и подставляем
-      if (isDisplay && !hasVal && ctx?.doctype && ctx?.docName) {
-        fetchField(ctx.doctype, ctx.docName, "display_name").then(val=>{
-          const finalVal = CLEAN(val);
-          if (finalVal) {
-            sv.textContent = finalVal;
-            if (STATS.enabled){ STATS.displayNameDashed = Math.max(0, STATS.displayNameDashed - 1); STATS.displayNameRendered += 1; }
-          }
-        });
-      }
-
-      if (STATS.enabled && isDisplay) {
-        if (hasVal) STATS.displayNameRendered += 1; else STATS.displayNameDashed += 1;
-      }
-
-      frag.appendChild(kv);
+      frag.appendChild(makeChip(k, hasVal ? v : "—", labelsOn && CLEAN(k)));
     });
+
+    queueMicrotask(async ()=>{
+      frag.__dntMount && await ensureDisplayNameChip(frag.__dntMount, ctx, labelsOn, orderMap);
+    });
+
     return frag;
   }
 
@@ -334,11 +405,12 @@
     if (!docEl || docEl.__dnt_locked) return;
     docEl.__dnt_locked = true;
 
-    const pairs = collectPairsFromNative(docEl);
-    STATS.totalPairs += pairs.length;
+    const pairs = collectPairsFromNative(docEl, ctx.doctype);
 
     docEl.innerHTML = "";
-    docEl.appendChild(buildChipsHTML(pairs, ctx));
+    const frag = buildChipsHTML(pairs, ctx);
+    frag.__dntMount = docEl;
+    docEl.appendChild(frag);
 
     let raf = null;
     const mo = new MutationObserver((muts)=>{
@@ -359,6 +431,7 @@
     docEl.__dnt_mo = mo;
   }
 
+  /* ===== карточка ===== */
   function upgradeCard(wrapper){
     const card = wrapper?.querySelector?.(".kanban-card.content, .kanban-card");
     if(!card || card.dataset.dntUpgraded==="1") return;
@@ -384,26 +457,9 @@
     if (doc && doc.previousElementSibling !== head) body.insertBefore(doc, head.nextSibling);
 
     const name = wrapper.getAttribute("data-name") || wrapper.dataset.name || card.getAttribute("data-name") || "";
-    const titleText = CLEAN(title?.textContent || "");
     const doctype = window.cur_list?.doctype || window.cur_list?.board?.reference_doctype || CFG.caseDoctype;
 
-    if (doc) {
-      STATS.totalCards += 1;
-      if (getShowLabelsFlag()) STATS.labelsOnCards += 1;
-
-      // для диагностики цели
-      let externalId = "", mongoId = "";
-      const rawRows = Array.from(doc.querySelectorAll(":scope > .text-truncate, :scope > .ellipsis"));
-      rawRows.forEach(r=>{
-        const t = CLEAN(r.textContent || "");
-        if (!externalId && /external user id/i.test(t)) externalId = t.split(":").slice(1).join(":").trim();
-        if (!mongoId && /(mongo (client )?id)/i.test(t)) mongoId = t.split(":").slice(1).join(":").trim();
-        if (!externalId) externalId = r.getAttribute("data-external-id") || "";
-        if (!mongoId) mongoId = r.getAttribute("data-mongo-id") || "";
-      });
-
-      normalizeDocFields(doc, { doctype, docName: name, titleText, externalId, mongoId });
-    }
+    if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
     let foot = body.querySelector(".dnt-foot");
     if(!foot){ foot = document.createElement("div"); foot.className = "dnt-foot"; body.appendChild(foot); }
@@ -432,11 +488,9 @@
           primary_action_label: canSoft ? __("Remove from this board") : __("Delete"),
           primary_action: ()=> {
             if (canSoft) {
-              // мягко убираем с текущей доски
               frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname: board.flag, value: 0 } })
                 .then(()=>{ frappe.show_alert(__("Removed from board")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
             } else {
-              // жёсткое удаление
               frappe.call({ method:"frappe.client.delete", args:{ doctype, name } })
                 .then(()=>{ frappe.show_alert(__("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
             }
@@ -514,19 +568,10 @@
       mo.observe(head, { childList:true, subtree:true });
       window.__dntKanbanHeadMO = mo;
     }catch{}
-
-    if (window.__dntSettingsInt) clearInterval(window.__dntSettingsInt);
-    window.__dntSettingsInt = setInterval(()=>{
-      if (!isKanbanRoute()) return;
-      if (!document.getElementById(CFG.settingsBtnId)) injectSettingsBtn();
-    }, 800);
-    setTimeout(()=> clearInterval(window.__dntSettingsInt), 30_000);
   }
 
   /* ===== boot ===== */
   function run(){
-    Object.assign(STATS, { printed:false, totalCards:0, labelsOnCards:0, totalPairs:0, displayNameRows:0, displayNameRendered:0, displayNameDashed:0, displayNameMissing:0 });
-
     if(!isKanbanRoute()){
       document.documentElement.classList.remove(CFG.htmlClass,"no-color","no-column-menu");
       document.querySelectorAll(`#${CFG.settingsBtnId}`).forEach(el => el.remove());
@@ -549,12 +594,11 @@
       attempts += 1;
       enhanceCards();
       if (attempts < 30) setTimeout(pump, 60);
-      else setTimeout(printStatsOnce, 0);
     };
     pump();
 
     if (window.__dntKanbanMO) window.__dntKanbanMO.disconnect();
-    const mo = new MutationObserver(()=>{ if(isKanbanRoute()) { enhanceCards(); printStatsOnce(); } });
+    const mo = new MutationObserver(()=>{ if(isKanbanRoute()) enhanceCards(); });
     mo.observe(document.body||document.documentElement,{ childList:true, subtree:true });
     window.__dntKanbanMO = mo;
   }
