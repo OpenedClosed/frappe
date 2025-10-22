@@ -259,6 +259,7 @@ override_whitelisted_methods = {
 
     "frappe.desk.reportview.get":       "dantist_app.api.engagement.handlers.reportview_get",
     "frappe.desk.reportview.get_count": "dantist_app.api.engagement.handlers.reportview_get_count",
+    "frappe.desk.doctype.kanban_board.kanban_board.add_card": "dantist_app.api.engagement.handlers.add_card",
 
 }
 

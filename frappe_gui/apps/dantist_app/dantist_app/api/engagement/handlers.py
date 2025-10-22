@@ -294,3 +294,114 @@ def set_display_name(doc, method=None):
     full = _join(doc.get("first_name"), doc.get("middle_name"), doc.get("last_name"))
     title = (doc.get("title") or "").strip()
     doc.display_name = full or title or ""
+
+# --- Kanban: server-side add_card wrapper (ничего не ломаем, только дописываем флаги) ---
+import frappe
+from typing import Optional
+from frappe.desk.doctype.kanban_board.kanban_board import add_card as _core_add_card
+
+# карта «имя борда → (флаг показа, поле статуса)»
+# --- Kanban: safe add_card wrapper (sanitize kwargs + set flags) ---
+import frappe
+from typing import Optional
+from frappe.desk.doctype.kanban_board.kanban_board import add_card as _core_add_card
+
+# карта «имя борда → (флаг показа, поле статуса)»
+_BOARD_MAP = {
+    "CRM Board":                  dict(flag="show_board_crm",      status="status_crm_board"),
+    "Leads – Contact Center":     dict(flag="show_board_leads",    status="status_leads"),
+    "Deals – Contact Center":     dict(flag="show_board_deals",    status="status_deals"),
+    "Patients – Care Department": dict(flag="show_board_patients", status="status_patients"),
+}
+
+def _clean_kwargs(kwargs: dict) -> dict:
+    """Оставляем только аргументы, которые понимает core add_card."""
+    # в разных ветках frappe параметры немного различаются
+    # поддержим обе формы: (board_name|board), (colname|column), docname
+    allowed = {}
+    if kwargs.get("board_name"): allowed["board_name"] = kwargs["board_name"]
+    if kwargs.get("board"):      allowed["board"] = kwargs["board"]
+    if kwargs.get("docname"):    allowed["docname"] = kwargs["docname"]
+    if kwargs.get("colname"):    allowed["colname"] = kwargs["colname"]
+    if kwargs.get("column"):     allowed["column"] = kwargs["column"]
+    return allowed
+
+def _norm_board(kwargs: dict) -> Optional[str]:
+    return kwargs.get("board_name") or kwargs.get("board")
+
+def _norm_column(kwargs: dict) -> Optional[str]:
+    return kwargs.get("colname") or kwargs.get("column")
+
+def _get_reference_doctype(board_name: str) -> Optional[str]:
+    try:
+        return frappe.db.get_value("Kanban Board", board_name, "reference_doctype")
+    except Exception:
+        return None
+
+def _set_show_and_status(doctype: str, name: str, board_name: str, column_label: Optional[str]):
+    mapping = _BOARD_MAP.get(board_name)
+    if not mapping:
+        return
+    flag_field   = mapping.get("flag")
+    status_field = mapping.get("status")
+
+    updates = {}
+    if flag_field:
+        updates[flag_field] = 1
+
+    if status_field and column_label:
+        try:
+            df = frappe.get_meta(doctype).get_field(status_field)
+            opts = []
+            if df and df.options:
+                if isinstance(df.options, str):
+                    opts = [o.strip() for o in df.options.split("\n") if o.strip()]
+                elif isinstance(df.options, (list, tuple)):
+                    opts = list(df.options)
+            # если список пуст или колонка есть в опциях — ставим
+            if not opts or column_label in opts:
+                updates[status_field] = column_label
+        except Exception:
+            pass
+
+    if updates:
+        frappe.db.set_value(doctype, name, updates, update_modified=False)
+        frappe.db.commit()
+
+@frappe.whitelist()
+def add_card(**kwargs):
+    """
+    Обёртка над стандартным add_card:
+      1) выбрасываем мусорные ключи (например, cmd)
+      2) зовём ядро
+      3) в том же запросе проставляем show_* и статус для созданного/добавленного документа
+    """
+    # 1) чистые аргументы для ядра
+    clean = _clean_kwargs(kwargs)
+
+    # 2) вызов ядра
+    result = _core_add_card(**clean)
+
+    # 3) пост-обработка
+    board_name = _norm_board(clean)
+    column_lbl = _norm_column(clean)
+
+    # имя дока может вернуться по-разному
+    docname = (
+        clean.get("docname")
+        or (isinstance(result, dict) and (
+            result.get("docname")
+            or result.get("card", {}).get("docname")
+            or result.get("doc", {}).get("name")
+        ))
+    )
+
+    if board_name and docname:
+        doctype = _get_reference_doctype(board_name)
+        if doctype:
+            try:
+                _set_show_and_status(doctype, docname, board_name, column_lbl)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "dantist_app.add_card ensure show/status")
+
+    return result
