@@ -1,4 +1,4 @@
-// Engagement Case — Tasks UI — v4.19 (newest first, page=5, overdue highlight)
+// Engagement Case — Tasks UI — v4.19 (newest first, page=5, overdue highlight) + i18n
 (function () {
   const DOCTYPE = "Engagement Case";
   const PAGE_LEN = 5; // <= по запросу
@@ -18,7 +18,12 @@
         makePayload: (vals, me) => {
           let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
           if (vals.assign_me && me && !a.includes(me)) a.push(me);
-          return { description: "Manual Callback", due: vals.due, priority: vals.priority || "Medium", assignees: a };
+          return {
+            description: __("Manual Callback"),
+            due: vals.due,
+            priority: vals.priority || "Medium",
+            assignees: a
+          };
         },
       },
     },
@@ -28,7 +33,12 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Appointment Scheduled" && cur === "Appointment Scheduled",
         makePayload: (_vals, me) => {
           const due = moment().add(1, "day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: "Next-Day Feedback call", due, priority: "Medium", assignees: me ? [me] : [] };
+          return {
+            description: __("Next-Day Feedback call"),
+            due,
+            priority: "Medium",
+            assignees: me ? [me] : []
+          };
         },
       },
       "Treatment Completed": {
@@ -36,7 +46,12 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
           const due = moment().add(5, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: "Recall: schedule prophylaxis", due, priority: "Medium", assignees: me ? [me] : [] };
+          return {
+            description: __("Recall: schedule prophylaxis"),
+            due,
+            priority: "Medium",
+            assignees: me ? [me] : []
+          };
         },
       },
     },
@@ -57,8 +72,13 @@
           const due = moment().add(months, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
           let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
           if (vals.assign_me && me && !a.includes(me)) a.push(me);
-          const note = ` (type: ${vals.treatment_type}, +${months}m)`;
-          return { description: "Schedule control X-ray" + note, due, priority: vals.priority || "High", assignees: a };
+          const note = ` (${__("type")}: ${vals.treatment_type}, +${months}m)`;
+          return {
+            description: __("Schedule control X-ray") + note,
+            due,
+            priority: vals.priority || "High",
+            assignees: a
+          };
         },
       },
       "Treatment Completed": {
@@ -66,7 +86,12 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
           const due = moment().add(5, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: "Recall: schedule prophylaxis", due, priority: "Medium", assignees: me ? [me] : [] };
+          return {
+            description: __("Recall: schedule prophylaxis"),
+            due,
+            priority: "Medium",
+            assignees: me ? [me] : []
+          };
         },
       },
     },
@@ -81,21 +106,36 @@
       makePayload: (vals, me) => {
         let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
         if (vals.assign_me && me && !a.includes(me)) a.push(me);
-        return { description: "Manual Callback", due: vals.due, priority: vals.priority || "Medium", assignees: a };
+        return {
+          description: __("Manual Callback"),
+          due: vals.due,
+          priority: vals.priority || "Medium",
+          assignees: a
+        };
       },
     },
     "Appointment Scheduled": {
       showDialog: false,
       makePayload: (_vals, me) => {
         const due = moment().add(1, "day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return { description: "Next-Day Feedback call", due, priority: "Medium", assignees: me ? [me] : [] };
+        return {
+          description: __("Next-Day Feedback call"),
+          due,
+          priority: "Medium",
+          assignees: me ? [me] : []
+        };
       },
     },
     "Treatment Completed": {
       showDialog: false,
       makePayload: (_vals, me) => {
         const due = moment().add(5, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return { description: "Recall: schedule prophylaxis", due, priority: "Medium", assignees: me ? [me] : [] };
+        return {
+          description: __("Recall: schedule prophylaxis"),
+          due,
+          priority: "Medium",
+          assignees: me ? [me] : []
+        };
       },
     },
     "Stage Checked": {
@@ -163,7 +203,7 @@
       head.className = "section-head collapsible";
       head.tabIndex = 0;
       head.innerHTML = `
-        <span class="t">${frappe.utils.escape_html(title)}</span>
+        <span class="t">${frappe.utils.escape_html(__(title))}</span>
         <span class="ml-2 ec-red-dot" hidden></span>
         <span class="ml-2 collapse-indicator mb-1" tabindex="0">
           <svg class="es-icon es-line icon-sm" aria-hidden="true">
@@ -234,13 +274,13 @@
     const overdue = isOverdue(t);
 
     const chips = [];
-    chips.push(`<span class="chip">${frappe.utils.escape_html(st)}</span>`);
-    if (t.priority) chips.push(`<span class="chip ${pcls}">${frappe.utils.escape_html(t.priority)}</span>`);
+    chips.push(`<span class="chip">${frappe.utils.escape_html(__(st))}</span>`);
+    if (t.priority) chips.push(`<span class="chip ${pcls}">${frappe.utils.escape_html(__(t.priority))}</span>`);
     if (who) chips.push(`<span class="chip -ghost">@${frappe.utils.escape_html(who)}</span>`);
-    if (target) chips.push(`<span class="chip -ghost chip-target${overdue?' -overdue':''}" title="Target at">🗓 ${frappe.utils.escape_html(target)}</span>`);
-    if (reminder) chips.push(`<span class="chip -ghost" title="Reminder at">🔔 ${frappe.utils.escape_html(reminder)}</span>`);
-    if (t.assigned_by) chips.push(`<span class="chip -ghost">by ${frappe.utils.escape_html(t.assigned_by)}</span>`);
-    if (t.creation) chips.push(`<span class="chip -ghost" title="Created">${frappe.utils.escape_html(fmtUserDT(t.creation))}</span>`);
+    if (target) chips.push(`<span class="chip -ghost chip-target${overdue?' -overdue':''}" title="${frappe.utils.escape_html(__("Target at"))}">🗓 ${frappe.utils.escape_html(target)}</span>`);
+    if (reminder) chips.push(`<span class="chip -ghost" title="${frappe.utils.escape_html(__("Reminder at"))}">🔔 ${frappe.utils.escape_html(reminder)}</span>`);
+    if (t.assigned_by) chips.push(`<span class="chip -ghost">${frappe.utils.escape_html(__("by"))} ${frappe.utils.escape_html(t.assigned_by)}</span>`);
+    if (t.creation) chips.push(`<span class="chip -ghost" title="${frappe.utils.escape_html(__("Created"))}">${frappe.utils.escape_html(fmtUserDT(t.creation))}</span>`);
 
     return `
       <div class="ec-task${cls}">
@@ -249,17 +289,17 @@
           <div class="meta">${chips.join(" ")}</div>
         </div>
         <div class="r">
-          <button class="btn btn-xs btn-default" onclick="frappe.set_route('Form','ToDo','${frappe.utils.escape_html(t.name)}')">Open</button>
+          <button class="btn btn-xs btn-default" onclick="frappe.set_route('Form','ToDo','${frappe.utils.escape_html(t.name)}')">${frappe.utils.escape_html(__("Open"))}</button>
           ${st==="Open" ? `
-            <button class="btn btn-xs btn-success ml-1" data-act="done" data-name="${frappe.utils.escape_html(t.name)}">Complete</button>
-            <button class="btn btn-xs btn-default ml-1" data-act="cancel" data-name="${frappe.utils.escape_html(t.name)}">Cancel</button>
+            <button class="btn btn-xs btn-success ml-1" data-act="done" data-name="${frappe.utils.escape_html(t.name)}">${frappe.utils.escape_html(__("Complete"))}</button>
+            <button class="btn btn-xs btn-default ml-1" data-act="cancel" data-name="${frappe.utils.escape_html(t.name)}">${frappe.utils.escape_html(__("Cancel"))}</button>
           ` : ``}
         </div>
       </div>`;
   }
 
   function tabsHtml(active) {
-    const mk = (v,t)=>`<li class="nav-item"><a class="nav-link${active===v?' active':''}" href="#" data-act="tab" data-val="${v}">${t}</a></li>`;
+    const mk = (v,t)=>`<li class="nav-item"><a class="nav-link${active===v?' active':''}" href="#" data-act="tab" data-val="${v}">${frappe.utils.escape_html(__(t))}</a></li>`;
     return `<ul class="nav nav-tabs ec-tabs">${mk("Open","Open")}${mk("Closed","Closed")}${mk("All","All")}</ul>`;
   }
 
@@ -277,16 +317,16 @@
         <div class="ec-tabs-row">
           ${tabsHtml(UI.statusTab)}
           <div class="actions">
-            <button class="btn btn-xs btn-primary" data-act="add" type="button">Add Task</button>
-            <button class="btn btn-xs btn-default ml-2" data-act="open-list" type="button">Open All</button>
+            <button class="btn btn-xs btn-primary" data-act="add" type="button">${frappe.utils.escape_html(__("Add Task"))}</button>
+            <button class="btn btn-xs btn-default ml-2" data-act="open-list" type="button">${frappe.utils.escape_html(__("Open All"))}</button>
           </div>
         </div>
         <div class="ec-tasks-hint">
-          <div class="h-title">Auto-tasks for this case</div>
+          <div class="h-title">${frappe.utils.escape_html(__("Auto-tasks for this case"))}</div>
           <ul class="h-list">
-            <li><b>Next-Day Feedback</b> — on “Appointment Scheduled / Treatment Completed”.</li>
-            <li><b>Control X-ray</b> — on “Stage Checked”.</li>
-            <li><b>Manual Callback</b> — optional reminder.</li>
+            <li><b>${frappe.utils.escape_html(__("Next-Day Feedback"))}</b> — ${frappe.utils.escape_html(__("on “Appointment Scheduled / Treatment Completed”."))}</li>
+            <li><b>${frappe.utils.escape_html(__("Control X-ray"))}</b> — ${frappe.utils.escape_html(__("on “Stage Checked”."))}</li>
+            <li><b>${frappe.utils.escape_html(__("Manual Callback"))}</b> — ${frappe.utils.escape_html(__("optional reminder."))}</li>
           </ul>
         </div>
         <div class="ec-tasks-list"></div>
@@ -294,8 +334,8 @@
           <div class="spacer"></div>
           <span class="info"></span>
           <div class="nav">
-            <button class="btn btn-xs btn-default" data-act="prev" type="button">← Prev</button>
-            <button class="btn btn-xs btn-default ml-1" data-act="next" type="button">Next →</button>
+            <button class="btn btn-xs btn-default" data-act="prev" type="button">← ${frappe.utils.escape_html(__("Prev"))}</button>
+            <button class="btn btn-xs btn-default ml-1" data-act="next" type="button">${frappe.utils.escape_html(__("Next"))} →</button>
           </div>
         </div>
       `;
@@ -344,13 +384,15 @@
     const info = pager.querySelector(".info");
     if (prevBtn) prevBtn.disabled = (UI.page <= 1);
     if (nextBtn) nextBtn.disabled = (UI.page >= totalPages);
-    if (info) info.textContent = `Page ${UI.page} / ${totalPages} • ${UI.total} total • ${PAGE_LEN} per page`;
+    if (info) {
+      info.textContent = `${__("Page")} ${UI.page} / ${totalPages} • ${UI.total} ${__("total")} • ${PAGE_LEN} ${__("per page")}`;
+    }
   }
 
   async function loadTasks(frm) {
     const listEl = ensureTasksContainer(frm);
     if (!listEl) return;
-    listEl.innerHTML = `<div class="text-muted small">Loading…</div>`;
+    listEl.innerHTML = `<div class="text-muted small">${frappe.utils.escape_html(__("Loading…"))}</div>`;
     try {
       const status = UI.statusTab === "All" ? null : UI.statusTab;
       const start = (UI.page - 1) * PAGE_LEN;
@@ -361,18 +403,20 @@
       let rows = (message && message.rows) || [];
       UI.total = (message && message.total) || rows.length;
 
-      // *** newest first: backend сортирует по возрастанию — просто выводим в обратном порядке на странице
+      // newest first на странице
       rows = rows.slice().reverse();
 
       // красная точка — по «open на странице»
       UI.openCount = rows.filter(r => (r.status || "Open") === "Open").length;
       setRedDot(frm, UI.openCount > 0);
 
-      listEl.innerHTML = rows.length ? rows.map(taskRow).join("") : `<div class="text-muted small">No tasks.</div>`;
+      listEl.innerHTML = rows.length
+        ? rows.map(taskRow).join("")
+        : `<div class="text-muted small">${frappe.utils.escape_html(__("No tasks."))}</div>`;
       updatePagerVisibility(listEl);
     } catch (e) {
       console.error(e);
-      listEl.innerHTML = `<div class="text-danger small">Failed to load tasks.</div>`;
+      listEl.innerHTML = `<div class="text-danger small">${frappe.utils.escape_html(__("Failed to load tasks."))}</div>`;
     }
   }
 
@@ -432,13 +476,13 @@
   function openCreateDialog(frm) {
     const me = frappe.session.user || "";
     const d = new frappe.ui.Dialog({
-      title: "New Task",
+      title: __("New Task"),
       fields: buildFields(["assignees","assign_me","priority"], [] )
-        .concat([{ fieldtype:"Small Text", fieldname:"description", label:"Description", reqd:1, insert_after:"reminder_at" }])
+        .concat([{ fieldtype:"Small Text", fieldname:"description", label:__("Description"), reqd:1, insert_after:"reminder_at" }])
     });
     const guard = wireReminderValidation(d);
 
-    d.set_primary_action("Create", async () => {
+    d.set_primary_action(__("Create"), async () => {
       if (!guard()) return;
       const v = d.get_values();
       try {
@@ -458,11 +502,11 @@
 
         await createTask(frm.doc.name, payload, "manual");
         d.hide();
-        frappe.show_alert({ message:"Task created", indicator:"green" });
+        frappe.show_alert({ message: __("Task created"), indicator:"green" });
         UI.page = 1; loadTasks(frm);
       } catch (e) {
         console.error(e);
-        frappe.msgprint({ message:"Failed to create task", indicator:"red" });
+        frappe.msgprint({ message: __("Failed to create task"), indicator:"red" });
       }
     });
 
@@ -472,7 +516,7 @@
 
   async function updateTaskStatus(name, status) {
     await frappe.call({ method: "dantist_app.api.tasks.handlers.update_task_status", args: { name, status } });
-    frappe.show_alert({ message: status==="Closed"?"Completed":"Cancelled", indicator:"green" });
+    frappe.show_alert({ message: status==="Closed"?__("Completed"):__("Cancelled"), indicator:"green" });
   }
 
   // ===== перехват Save =====
@@ -692,9 +736,9 @@
 
   /* мягкая подсветка просроченной целевой даты */
   .ec-task .chip-target.-overdue{
-    background: #fee2e2;       /* розоватая */
+    background: #fee2e2;
     border-color: #fecaca;
-    color: #991b1b;            /* тёмно-красный текст */
+    color: #991b1b;
   }
 
   .ec-task-dialog .modal-body{padding:14px 16px}
