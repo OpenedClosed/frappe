@@ -33,7 +33,9 @@
     "createdLabel": "Created",
     "externalIdLabel": "External ID",
     "phoneLabel": "Phone",
-
+    "searchRooms": "Search chats...",
+    "searchingChats": "Searching chats...",
+    "errorTitle": "Error",
     "seeSources": "See sources",
     "excelSuccess": "Excel created",
     "excelFailed": "Excel export failed",
