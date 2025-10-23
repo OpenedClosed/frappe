@@ -1,6 +1,6 @@
-/* Dantist Kanban skin — v25.14 (dedupe fix for Labels OFF)
-   — Labels ON: порядок по board.fields, пустые → "—"
-   — Labels OFF: нативный порядок + backfill с апгрейдом существующих чипов (без дублей)
+/* Dantist Kanban skin — v25.15 (only board.fields; no forced display_name; dedupe fixed)
+   — Labels ON: строго порядок по board.fields, пустые → "—"
+   — Labels OFF: апгрейд безымянных чипов ТОЛЬКО под board.fields, дубли и лишние — в очистку
    — Единый формат дат: DD-MM-YYYY HH:mm:ss; фильтр хвостов времени
    — Мини-задачи, hover-actions, inline title, Assigned/Like внизу
 */
@@ -151,18 +151,19 @@
       if (fns.has(raw)) out.push(raw);
       else { const g = label2fn[LBL_KEY(raw)]; if (g && fns.has(g)) out.push(g); }
     });
-    if (!out.includes("display_name")) out.unshift("display_name");
+    // ВАЖНО: больше НЕ добавляем display_name принудительно
     return [...new Set(out)];
   }
+
   function getBoardOrderMap(doctype){
     try{
       const board = window.cur_list?.board || window.cur_list?.kanban_board;
       const fields = coerceFieldsList(doctype, board?.fields || []);
       const map = new Map(); fields.forEach((fn,i)=> map.set(fn,i));
-      if (!map.has("display_name")) map.set("display_name", 0);
       return map;
-    }catch{ return new Map([["display_name",0]]); }
+    }catch{ return new Map(); }
   }
+
   function buildMetaMaps(doctype){
     const meta = frappe.get_meta(doctype);
     const label2fn = {}, fn2label = {};
@@ -313,7 +314,7 @@
   function makeChip(label, value, showLabel){
     const kv = document.createElement("div");
     kv.className = "dnt-kv text-truncate";
-    kv.dataset.dntLabel = CLEAN(label||"");
+    kv.dataset.dntLabel = showLabel ? CLEAN(label||"") : ""; // OFF — не оставляем label
     if (showLabel && CLEAN(label)){
       const sk = document.createElement("span");
       sk.className = "dnt-k";
@@ -333,122 +334,135 @@
     else container.appendChild(chip);
   }
 
-  /* ===== backfill + de-dup (key change here) ===== */
+  /* ===== backfill + de-dup (только board.fields) ===== */
   async function backfillAll(container, ctx, labelsOn, orderMap){
-    const { fn2label } = buildMetaMaps(ctx.doctype);
+    const { fn2label, label2fn } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
-    const need = [...new Set(boardFields.concat(["display_name","first_name","middle_name","last_name","title"]))];
-    const v = await getValuesBatch(ctx.doctype, ctx.docName, need);
-    if (!CLEAN(v.display_name)) v.display_name = composeDisplayName(v);
 
-    // 1) дозаполняем пустые
-    Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(chip=>{
-      const labelText = CLEAN(chip.dataset.dntLabel || chip.querySelector(".dnt-k")?.textContent || "");
-      const lbl = STRIP_COLON(labelText);
-      const sv = chip.querySelector(".dnt-v");
-      const current = CLEAN(sv?.textContent || "");
-      const fnGuess = Object.entries(fn2label).find(([fn,lab]) => LBL_KEY(lab)===LBL_KEY(lbl))?.[0]
-        || (isDisplayName(lbl) ? "display_name" : null);
-      const val = fnGuess ? normalizeDateish(v[fnGuess]) : "";
-      if (!current && CLEAN(val)) sv.textContent = CLEAN(val);
+    // Предварительная очистка: убрать все чипы с label, не входящие в board.fields
+    Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
+      const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+      if (!lbl) return;
+      const fn = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
+      if (!fn || !boardFields.includes(fn)) ch.remove();
     });
 
-    // 2) при Labels OFF — апгрейдим безымянные чипы вместо добавления новых
-    const assignedValues = new Set();
-    const valueIndex = new Map(); // value -> массив чипов без label
-    if (!labelsOn){
+    const need = boardFields.slice(); // только гибкие поля
+    const v = await getValuesBatch(ctx.doctype, ctx.docName, need);
+    // формируем display_name только если он реально входит в board.fields
+    if (boardFields.includes("display_name") && !CLEAN(v.display_name)) {
+      const pseudo = await getValuesBatch(ctx.doctype, ctx.docName, ["first_name","middle_name","last_name","title"]);
+      v.display_name = composeDisplayName(pseudo);
+    }
+
+    // дозаполнение пустых (Labels ON)
+    if (labelsOn){
+      boardFields.forEach(fn=>{
+        const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
+        const value = CLEAN(normalizeDateish(v[fn])) || "";
+        let chip = Array.from(container.querySelectorAll(":scope > .dnt-kv")).find(ch=>{
+          const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+          const f = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
+          return f === fn;
+        });
+        if (!chip){
+          chip = makeChip(human, value, true);
+          insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
+        } else {
+          const sv = chip.querySelector(".dnt-v"); if (sv && !CLEAN(sv.textContent)) sv.textContent = value || "—";
+        }
+      });
+
+      // Удалить любые чипы не из board.fields (если всё же просочились)
       Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
         const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
-        if (lbl) return; // уже «полевой»
-        const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
-        if (!val) return;
-        const key = val;
-        if (!valueIndex.has(key)) valueIndex.set(key, []);
-        valueIndex.get(key).push(ch);
+        const fn = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
+        if (!fn || !boardFields.includes(fn)) ch.remove();
       });
+
+      // Отсортировать по порядку board.fields
+      const chips = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
+      chips.sort((a,b)=>{
+        const la = CLEAN(a.dataset.dntLabel || a.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+        const lb = CLEAN(b.dataset.dntLabel || b.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+        const fna = label2fn[LBL_KEY(la)] || (isDisplayName(la) ? "display_name" : null);
+        const fnb = label2fn[LBL_KEY(lb)] || (isDisplayName(lb) ? "display_name" : null);
+        const ia = orderMap.has(fna||"") ? orderMap.get(fna||"") : 9999;
+        const ib = orderMap.has(fnb||"") ? orderMap.get(fnb||"") : 9999;
+        return ia - ib;
+      });
+      chips.forEach(ch => container.appendChild(ch));
+      // Заполнить дефисы
+      Array.from(container.querySelectorAll(":scope > .dnt-kv .dnt-v")).forEach(sv=>{
+        if (!CLEAN(sv.textContent)) sv.textContent = "—";
+      });
+      return;
     }
+
+    // Labels OFF: апгрейд безымянных чипов только под значения из board.fields
+    const assignedValues = new Set();
+    const valueIndex = new Map(); // value -> [] безымянных чипов
+    Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
+      const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+      if (lbl) return;
+      const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
+      if (!val) return;
+      const key = val;
+      if (!valueIndex.has(key)) valueIndex.set(key, []);
+      valueIndex.get(key).push(ch);
+    });
 
     boardFields.forEach(fn=>{
       const raw = v[fn];
       const value = CLEAN(normalizeDateish(raw));
       if (!value) return;
-      const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
-
-      // Уже есть привязанный к этому полю чип?
-      const haveLabeled = Array.from(container.querySelectorAll(":scope > .dnt-kv")).some(ch=>{
-        const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
-        return (LBL_KEY(lbl) === LBL_KEY(human)) || (fn==="display_name" && isDisplayName(lbl));
-      });
-      if (haveLabeled){
+      const pool = valueIndex.get(value) || [];
+      const pick = pool.shift?.();
+      if (pick){
+        // просто переставим по порядку (label не показываем)
+        insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0);
         assignedValues.add(value);
-        return;
+      } else {
+        // создаём безымянный чип под нужное поле
+        const chip = makeChip("", value, false);
+        insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
+        assignedValues.add(value);
       }
-
-      if (!labelsOn){
-        // апгрейдим существующий «безымянный» чип с тем же значением
-        const pool = valueIndex.get(value) || [];
-        const pick = pool.shift?.();
-        if (pick){
-          pick.dataset.dntLabel = human;          // привязка к полю
-          insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0); // переставим по порядку
-          assignedValues.add(value);
-          return;
-        }
-      }
-
-      // иначе создаём новый (labelsOn или нет подходящего безымянного)
-      const chip = makeChip(human, value, labelsOn);
-      insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
-      assignedValues.add(value);
     });
 
-    // 3) пост-очистка дублей при Labels OFF: удаляем оставшиеся безымянные чипы с теми же values
-    if (!labelsOn){
-      Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
-        const hasLabel = !!CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
-        if (hasLabel) return;
-        const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
-        if (!val) return;
-        if (assignedValues.has(val)) ch.remove();
-      });
-    }
-
-    // 4) финальные правила отображения/порядка
-    if (!labelsOn){
-      Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
-        const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
-        if (!val) ch.remove();
-      });
-    } else {
-      Array.from(container.querySelectorAll(":scope > .dnt-kv .dnt-v")).forEach(sv=>{
-        if (!CLEAN(sv.textContent)) sv.textContent = "—";
-      });
-      const { fn2label } = buildMetaMaps(ctx.doctype);
-      const chips = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
-      chips.sort((a,b)=>{
-        const la = CLEAN(a.dataset.dntLabel || a.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
-        const lb = CLEAN(b.dataset.dntLabel || b.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
-        const fna = (Object.entries(fn2label).find(([fn,lab])=> LBL_KEY(lab)===LBL_KEY(la))||[])[0] || (isDisplayName(la)?"display_name":null);
-        const fnb = (Object.entries(fn2label).find(([fn,lab])=> LBL_KEY(lab)===LBL_KEY(lb))||[])[0] || (isDisplayName(lb)?"display_name":null);
-        const orderMapIdx = (fn)=> orderMap.has(fn||"") ? orderMap.get(fn||"") : 9999;
-        return orderMapIdx(fna) - orderMapIdx(fnb);
-      });
-      chips.forEach(ch => container.appendChild(ch));
-    }
+    // Очистка: убрать оставшиеся чипы, не соответствующие board.fields
+    Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
+      const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
+      if (lbl){
+        const fn = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
+        if (!fn || !boardFields.includes(fn)) ch.remove();
+        return;
+      }
+      const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
+      if (!val || !assignedValues.has(val)) ch.remove();
+    });
   }
 
   function buildChipsHTML(pairs, ctx){
     const labelsOn = getShowLabelsFlag();
     const orderMap = getBoardOrderMap(ctx.doctype);
     const { fn2label } = buildMetaMaps(ctx.doctype);
+    const boardFields = [...orderMap.keys()];
 
     let items = pairs.slice();
+
+    // ФИЛЬТР: оставляем только поля из board.fields.
     if (labelsOn){
+      items = items.filter(o => o.fieldname && boardFields.includes(o.fieldname));
       items.sort((a,b)=>{
         const ia = orderMap.has(a.fieldname||"") ? orderMap.get(a.fieldname||"") : 9999;
         const ib = orderMap.has(b.fieldname||"") ? orderMap.get(b.fieldname||"") : 9999;
         return ia - ib;
       });
+    } else {
+      // OFF: временно пропускаем «безымянные», всё равно backfillAll подчистит лишнее
+      // но чипы с label вне board.fields не добавляем
+      items = items.filter(o => !o.fieldname || boardFields.includes(o.fieldname));
     }
 
     const frag = document.createDocumentFragment();
@@ -480,7 +494,7 @@
     let raf = null;
     const mo = new MutationObserver((muts)=>{
       for (const m of muts){
-        for (const n of m.addedNodes||[]){
+        for (const n of (m.addedNodes||[])){
           if (n instanceof HTMLElement && !n.classList.contains("dnt-kv")) {
             if (raf) cancelAnimationFrame(raf);
             raf = requestAnimationFrame(()=>{
@@ -611,7 +625,6 @@
 
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
-    // footer с Assigned/Like
     let foot = body.querySelector(".dnt-foot");
     if(!foot){ foot = document.createElement("div"); foot.className = "dnt-foot"; body.appendChild(foot); }
     const assign = (meta || body).querySelector(".kanban-assignments");
@@ -620,7 +633,6 @@
     if(like   && !foot.contains(like))   foot.appendChild(like);
     if(meta && !meta.children.length) meta.remove();
 
-    // мини-задачи + inline title (для Engagement Case)
     if (doctype === CFG.caseDoctype && name) {
       if (!body.querySelector(".dnt-tasks-mini")) {
         const mini = document.createElement("div");
@@ -631,7 +643,6 @@
       makeTitleEditable(title, name, doctype);
     }
 
-    // hover-actions
     if (!wrapper.querySelector(".dnt-card-actions")){
       const row = document.createElement("div"); row.className="dnt-card-actions";
       const bOpen = document.createElement("div"); bOpen.className="dnt-icon-btn"; bOpen.title=__("Open");
