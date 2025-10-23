@@ -28,6 +28,11 @@
     "sourceLabel": "Source",
     "userIdLabel": "User",
     "closeButton": "Close",
+    "userInfoDialogHeader": "User Information",
+    "startedLabel": "Started",
+    "createdLabel": "Created",
+    "externalIdLabel": "External ID",
+    "phoneLabel": "Phone",
 
     "seeSources": "See sources",
     "excelSuccess": "Excel created",
@@ -38,6 +43,29 @@
     "consultant": "Consultant",
     "client": "Client",
     "chatFallback": "Chat {index}"
+  },
+  "FilterMetadataTest": {
+    "title": "API Metadata Test",
+    "fetchButton": "Fetch Metadata",
+    "testFiltersButton": "Test Filters",
+    "error": "Error",
+    "apiInfo": "API Information",
+    "searchConfig": "Search Configuration",
+    "filterConfig": "Filter Configuration",
+    "sortConfig": "Sort Configuration",
+    "customRoutes": "Custom Routes",
+    "availableFilters": "Available Filters",
+    "fullResponse": "Full API Response",
+    "testResults": "Filter Test Results",
+    "resultsCount": "Results Count",
+    "totalRecords": "Total Records",
+    "noData": "Click 'Fetch Metadata' to load data",
+    "success": "Success",
+    "metadataFetched": "Metadata fetched successfully",
+    "fetchError": "Fetch Error",
+    "testSuccess": "Test Success",
+    "testFiltersSuccess": "Filters tested successfully",
+    "testError": "Test Error"
   },
   "UseChatLogic": {
     "client": "👤 Client",
@@ -156,13 +184,18 @@
     "Information": "Information",
     "ReferralCodeEntered": "You have entered a referral code.",
     "usePhone2FA": "Use phone (SMS) for two-factor authentication",
-    "phoneMustBePolish": "Phone number must start with +48 to enable SMS codes.",
     "phoneImportant": "Important:",
     "phoneOptional": "Optional:",
     "phoneImportantInfo": "Required for SMS two-factor authentication and operational communication.",
     "phoneOptionalInfo": "For operational communication if necessary.",
     "emailOptional": "Optional:",
-    "emailOptionalInfo": "For operational communication if necessary."
+    "emailOptionalInfo": "For operational communication if necessary.",
+    "firstNameInvalid": "First name must contain only Latin letters",
+    "lastNameInvalid": "Last name must contain only Latin letters",
+    "firstNameTooShort": "First name must contain at least 2 characters",
+    "lastNameTooShort": "Last name must contain at least 2 characters",
+    "firstNameTooLong": "First name cannot be longer than 50 characters",
+    "lastNameTooLong": "Last name cannot be longer than 50 characters"
   },
   "DynamicForm": {
     "upload": "Upload",
@@ -654,7 +687,219 @@
     "BriefInProgress": "📋🛠️ Brief In Progress — brief in progress",
     "BriefCompleted": "📋✅ Brief Completed — brief completed"
   },
-  "test": {
+  "countryPhone": {
+    "country": "Country Code",
+    "phone": "Phone number",
+    "selectCountry": "Select country",
+    "searchCountry": "Search by country code...",
+    "phonePlaceholder": "Enter phone number",
+    "selectCountryFirst": "Please select a country first",
+    "invalidFormat": "Invalid phone number format",
+    "tooShort": "Phone number is too short for selected country",
+    "tooLong": "Phone number is too long for selected country",
+    "required": "This field is required",
+    "phoneRequired": "Phone number is required for SMS verification",
+    "emailRequired": "Email is required for email verification",
+    "smsAvailable": "SMS verification available for all countries",
+    "emailAvailable": "Email verification available as alternative",
+    "chooseMethod": "Choose verification method",
+    "smsVerification": "SMS verification",
+    "emailVerification": "Email verification"
+  },
+  "filters": {
+    "title": "Filters",
+    "activeCount": "active",
+    "actions": {
+      "apply": "Apply Filters",
+      "clearAll": "Clear All Filters",
+      "reset": "Reset",
+      "clearChannel": "Clear channels",
+      "clearDate": "Clear dates",
+      "clearStatus": "Clear statuses",
+      "clearClientType": "Clear client types"
+    },
+    "clear": "Clear",
+    "channel": {
+      "title": "Channel",
+      "placeholder": "Select channels",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Website",
+        "instagram": "Instagram",
+        "internal": "Internal"
+      }
+    },
+    "updated": {
+      "title": "Updated",
+      "placeholder": "Select date range",
+      "presets": {
+        "week": "Last Week",
+        "month": "Last Month",
+        "quarter": "Last 3 Months"
+      }
+    },
+    "status": {
+      "title": "Answer",
+      "choices": {
+        "unanswered": "Unanswered",
+        "answered": "Answered"
+      }
+    },
+    "clientType": {
+      "title": "Type",
+      "choices": {
+        "lead": "Lead",
+        "account": "Account"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Search in messages",
+        "placeholder": "Search in message content"
+      },
+      "clientName": {
+        "label": "Search by client name",
+        "placeholder": "Search by client name"
+      },
+      "companyName": {
+        "label": "Search by company",
+        "placeholder": "Search by company name"
+      },
+      "chatId": {
+        "label": "Search by Chat ID",
+        "placeholder": "Enter chat ID"
+      }
+    },
+    "date": {
+      "placeholder": "Select date range",
+      "presets": {
+        "week": "Last Week",
+        "month": "Last Month",
+        "quarter": "Last 3 Months"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "results",
+    "loadingMetadata": "Loading filter metadata...",
+    "metadataFailed": "Failed to load filter metadata",
+    "noResultsFound": "No Results Found",
+    "filtersActive": "Filters Active",
+    "filterPanel": "Filter Panel",
+    "tryDifferentFilters": "Try different filters or search terms",
+    "showingFilteredResults": "Showing filtered results",
+    "configureFilters": "Configure your filters and search criteria"
+  },
+    "test": {
     "test": "Test"
+  },
+  "primevue": {
+    "startsWith": "Starts with",
+    "contains": "Contains",
+    "notContains": "Not contains",
+    "endsWith": "Ends with",
+    "equals": "Equals",
+    "notEquals": "Not equals",
+    "noFilter": "No Filter",
+    "lt": "Less than",
+    "lte": "Less than or equal to",
+    "gt": "Greater than",
+    "gte": "Greater than or equal to",
+    "dateIs": "Date is",
+    "dateIsNot": "Date is not",
+    "dateBefore": "Date is before",
+    "dateAfter": "Date is after",
+    "clear": "Clear",
+    "apply": "Apply",
+    "matchAll": "Match All",
+    "matchAny": "Match Any",
+    "addRule": "Add Rule",
+    "removeRule": "Remove Rule",
+    "accept": "Yes",
+    "reject": "No",
+    "choose": "Choose",
+    "upload": "Upload",
+    "cancel": "Cancel",
+    "completed": "Completed",
+    "pending": "Pending",
+    "dayNames": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
+    "dayNamesShort": {
+      "sunday": "Sun",
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat"
+    },
+    "dayNamesMin": {
+      "sunday": "Su",
+      "monday": "Mo",
+      "tuesday": "Tu",
+      "wednesday": "We",
+      "thursday": "Th",
+      "friday": "Fr",
+      "saturday": "Sa"
+    },
+    "monthNames": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "monthNamesShort": {
+      "january": "Jan",
+      "february": "Feb",
+      "march": "Mar",
+      "april": "Apr",
+      "may": "May",
+      "june": "Jun",
+      "july": "Jul",
+      "august": "Aug",
+      "september": "Sep",
+      "october": "Oct",
+      "november": "Nov",
+      "december": "Dec"
+    },
+    "chooseYear": "Choose Year",
+    "chooseMonth": "Choose Month",
+    "chooseDate": "Choose Date",
+    "prevDecade": "Previous Decade",
+    "nextDecade": "Next Decade",
+    "prevYear": "Previous Year",
+    "nextYear": "Next Year",
+    "prevMonth": "Previous Month",
+    "nextMonth": "Next Month",
+    "prevHour": "Previous Hour",
+    "nextHour": "Next Hour",
+    "prevMinute": "Previous Minute",
+    "nextMinute": "Next Minute",
+    "prevSecond": "Previous Second",
+    "nextSecond": "Next Second",
+    "am": "am",
+    "pm": "pm",
+    "today": "Today",
+    "weekHeader": "Wk",
+    "weak": "Weak",
+    "medium": "Medium",
+    "strong": "Strong",
+    "passwordPrompt": "Enter a password"
   }
 }

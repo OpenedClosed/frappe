@@ -18,6 +18,9 @@
     "allLabel": "Wszystkie",
     "unreadLabel": "Nieprzeczytane",
     "exportButton": "Eksportuj czaty do Excela",
+    "exportCSV": "Eksportuj czaty do CSV",
+    "csvSuccess": "CSV utworzony",
+    "csvFailed": "Eksport CSV nie powiódł się",
     "messageDialogHeader": "Wiadomość",
     "messageDialogId": "ID",
     "messageDialogText": "Tekst",
@@ -25,6 +28,11 @@
     "sourceLabel": "Źródło",
     "userIdLabel": "Użytkownik",
     "closeButton": "Zamknij",
+    "userInfoDialogHeader": "Informacje o użytkowniku",
+    "startedLabel": "Rozpoczęto",
+    "createdLabel": "Utworzono",
+    "externalIdLabel": "ID zewnętrzne",
+    "phoneLabel": "Telefon",
 
     "seeSources": "Zobacz źródła",
     "excelSuccess": "Plik Excel utworzony",
@@ -34,8 +42,30 @@
     "startedAgo": "Rozpoczęto {diffDays} dni, {diffHours} godz., {diffMinutes} min temu",
     "consultant": "Konsultant",
     "client": "Klient",
-    "chatFallback": "Czat {index}",
-    "exportCSV": "Eksportuj czaty do CSV"
+    "chatFallback": "Czat {index}"
+  },
+  "FilterMetadataTest": {
+    "title": "Test metadanych API",
+    "fetchButton": "Pobierz metadane",
+    "testFiltersButton": "Testuj filtry",
+    "error": "Błąd",
+    "apiInfo": "Informacje API",
+    "searchConfig": "Konfiguracja wyszukiwania",
+    "filterConfig": "Konfiguracja filtrów",
+    "sortConfig": "Konfiguracja sortowania",
+    "customRoutes": "Trasy niestandardowe",
+    "availableFilters": "Dostępne filtry",
+    "fullResponse": "Pełna odpowiedź API",
+    "testResults": "Wyniki testów filtrów",
+    "resultsCount": "Liczba wyników",
+    "totalRecords": "Łączna liczba rekordów",
+    "noData": "Kliknij 'Pobierz metadane', aby załadować dane",
+    "success": "Sukces",
+    "metadataFetched": "Metadane pobrane pomyślnie",
+    "fetchError": "Błąd pobierania",
+    "testSuccess": "Test zakończony sukcesem",
+    "testFiltersSuccess": "Filtry przetestowane pomyślnie",
+    "testError": "Błąd testu"
   },
   "UseChatLogic": {
     "client": "👤 Klient",
@@ -101,6 +131,7 @@
     "password": "Hasło",
     "passwordPlaceholder": "Wprowadź hasło",
     "loginButton": "Zaloguj się",
+    "usePhoneLogin": "Użyj telefonu (SMS) do logowania",
     "noAccount": "Nie masz konta?",
     "registerLink": "Zarejestruj się",
     "title2FA": "Potwierdzenie logowania",
@@ -157,13 +188,18 @@
     "Information": "Informacja",
     "ReferralCodeEntered": "Wpisałeś kod polecający.",
     "usePhone2FA": "Używaj telefonu (SMS) do uwierzytelniania dwuskładnikowego",
-    "phoneMustBePolish": "Numer telefonu musi zaczynać się od +48, aby włączyć SMS.",
     "phoneImportant": "Ważne:",
     "phoneOptional": "Opcjonalne:",
     "phoneImportantInfo": "Wymagane do uwierzytelniania dwuskładnikowego SMS i komunikacji operacyjnej.",
     "phoneOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby.",
     "emailOptional": "Opcjonalne:",
-    "emailOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby."
+    "emailOptionalInfo": "Do komunikacji operacyjnej w razie potrzeby.",
+    "firstNameInvalid": "Imię musi zawierać tylko litery łacińskie",
+    "lastNameInvalid": "Nazwisko musi zawierać tylko litery łacińskie",
+    "firstNameTooShort": "Imię musi zawierać co najmniej 2 znaki",
+    "lastNameTooShort": "Nazwisko musi zawierać co najmniej 2 znaki",
+    "firstNameTooLong": "Imię nie może być dłuższe niż 50 znaków",
+    "lastNameTooLong": "Nazwisko nie może być dłuższe niż 50 znaków"
   },
 
   "DynamicForm": {
@@ -676,8 +712,220 @@
     "BriefInProgress": "📋🛠️ Wypełnianie briefu",
     "BriefCompleted": "📋✅ Brief ukończony"
   },
-
+  "countryPhone": {
+    "country": "Kod kraju",
+    "phone": "Numer telefonu",
+    "selectCountry": "Wybierz kraj",
+    "searchCountry": "Szukaj po kodzie kraju...",
+    "phonePlaceholder": "Wprowadź numer telefonu",
+    "selectCountryFirst": "Najpierw wybierz kraj",
+    "invalidFormat": "Nieprawidłowy format numeru telefonu",
+    "tooShort": "Numer telefonu jest za krótki dla wybranego kraju",
+    "tooLong": "Numer telefonu jest za długi dla wybranego kraju",
+    "required": "To pole jest wymagane",
+    "phoneRequired": "Numer telefonu jest wymagany do weryfikacji SMS",
+    "emailRequired": "Email jest wymagany do weryfikacji email",
+    "smsAvailable": "Weryfikacja SMS dostępna dla wszystkich krajów",
+    "emailAvailable": "Weryfikacja email dostępna jako alternatywa",
+    "chooseMethod": "Wybierz metodę weryfikacji",
+    "smsVerification": "Weryfikacja SMS",
+    "emailVerification": "Weryfikacja email"
+  },
+  "filters": {
+    "title": "Filtry",
+    "activeCount": "aktywne",
+    "actions": {
+      "apply": "Zastosuj filtry",
+      "clearAll": "Wyczyść wszystkie filtry",
+      "reset": "Resetuj",
+      "clearChannel": "Wyczyść kanały",
+      "clearDate": "Wyczyść daty",
+      "clearStatus": "Wyczyść statusy",
+      "clearClientType": "Wyczyść typy klientów"
+    },
+    "clear": "Wyczyść",
+    "channel": {
+      "title": "Kanał",
+      "placeholder": "Wybierz kanały",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Strona internetowa",
+        "instagram": "Instagram",
+        "internal": "Wewnętrzny"
+      }
+    },
+    "updated": {
+      "title": "Zaktualizowano",
+      "placeholder": "Wybierz zakres dat",
+      "presets": {
+        "week": "Ostatni tydzień",
+        "month": "Ostatni miesiąc",
+        "quarter": "Ostatnie 3 miesiące"
+      }
+    },
+    "status": {
+      "title": "Odpowiedź",
+      "choices": {
+        "unanswered": "Bez odpowiedzi",
+        "answered": "Odpowiedziane"
+      }
+    },
+    "clientType": {
+      "title": "Typ",
+      "choices": {
+        "lead": "Lead",
+        "account": "Konto"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "Szukaj w wiadomościach",
+        "placeholder": "Szukaj w treści wiadomości"
+      },
+      "clientName": {
+        "label": "Szukaj po nazwie klienta",
+        "placeholder": "Szukaj po nazwie klienta"
+      },
+      "companyName": {
+        "label": "Szukaj po firmie",
+        "placeholder": "Szukaj po nazwie firmy"
+      },
+      "chatId": {
+        "label": "Szukaj po ID czatu",
+        "placeholder": "Wprowadź ID czatu"
+      }
+    },
+    "date": {
+      "placeholder": "Wybierz zakres dat",
+      "presets": {
+        "week": "Ostatni tydzień",
+        "month": "Ostatni miesiąc",
+        "quarter": "Ostatnie 3 miesiące"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "wyniki",
+    "loadingMetadata": "Ładowanie metadanych filtrów...",
+    "metadataFailed": "Nie udało się załadować metadanych filtrów",
+    "noResultsFound": "Nie znaleziono wyników",
+    "filtersActive": "Filtry aktywne",
+    "filterPanel": "Panel filtrów",
+    "tryDifferentFilters": "Spróbuj innych filtrów lub kryteriów wyszukiwania",
+    "showingFilteredResults": "Wyświetlanie przefiltrowanych wyników",
+    "configureFilters": "Skonfiguruj filtry i kryteria wyszukiwania"
+  },
   "test": {
     "test": "Test"
+  },
+  "primevue": {
+    "startsWith": "Zaczyna się od",
+    "contains": "Zawiera",
+    "notContains": "Nie zawiera",
+    "endsWith": "Kończy się na",
+    "equals": "Równe",
+    "notEquals": "Nie równe",
+    "noFilter": "Bez filtra",
+    "lt": "Mniejsze niż",
+    "lte": "Mniejsze lub równe",
+    "gt": "Większe niż",
+    "gte": "Większe lub równe",
+    "dateIs": "Data to",
+    "dateIsNot": "Data to nie",
+    "dateBefore": "Data przed",
+    "dateAfter": "Data po",
+    "clear": "Wyczyść",
+    "apply": "Zastosuj",
+    "matchAll": "Dopasuj wszystkie",
+    "matchAny": "Dopasuj dowolne",
+    "addRule": "Dodaj regułę",
+    "removeRule": "Usuń regułę",
+    "accept": "Tak",
+    "reject": "Nie",
+    "choose": "Wybierz",
+    "upload": "Prześlij",
+    "cancel": "Anuluj",
+    "completed": "Zakończone",
+    "pending": "Oczekuje",
+    "dayNames": {
+      "sunday": "Niedziela",
+      "monday": "Poniedziałek",
+      "tuesday": "Wtorek",
+      "wednesday": "Środa",
+      "thursday": "Czwartek",
+      "friday": "Piątek",
+      "saturday": "Sobota"
+    },
+    "dayNamesShort": {
+      "sunday": "Nie",
+      "monday": "Pon",
+      "tuesday": "Wto",
+      "wednesday": "Śro",
+      "thursday": "Czw",
+      "friday": "Pią",
+      "saturday": "Sob"
+    },
+    "dayNamesMin": {
+      "sunday": "N",
+      "monday": "P",
+      "tuesday": "W",
+      "wednesday": "Ś",
+      "thursday": "C",
+      "friday": "P",
+      "saturday": "S"
+    },
+    "monthNames": {
+      "january": "Styczeń",
+      "february": "Luty",
+      "march": "Marzec",
+      "april": "Kwiecień",
+      "may": "Maj",
+      "june": "Czerwiec",
+      "july": "Lipiec",
+      "august": "Sierpień",
+      "september": "Wrzesień",
+      "october": "Październik",
+      "november": "Listopad",
+      "december": "Grudzień"
+    },
+    "monthNamesShort": {
+      "january": "Sty",
+      "february": "Lut",
+      "march": "Mar",
+      "april": "Kwi",
+      "may": "Maj",
+      "june": "Cze",
+      "july": "Lip",
+      "august": "Sie",
+      "september": "Wrz",
+      "october": "Paź",
+      "november": "Lis",
+      "december": "Gru"
+    },
+    "chooseYear": "Wybierz rok",
+    "chooseMonth": "Wybierz miesiąc",
+    "chooseDate": "Wybierz datę",
+    "prevDecade": "Poprzednia dekada",
+    "nextDecade": "Następna dekada",
+    "prevYear": "Poprzedni rok",
+    "nextYear": "Następny rok",
+    "prevMonth": "Poprzedni miesiąc",
+    "nextMonth": "Następny miesiąc",
+    "prevHour": "Poprzednia godzina",
+    "nextHour": "Następna godzina",
+    "prevMinute": "Poprzednia minuta",
+    "nextMinute": "Następna minuta",
+    "prevSecond": "Poprzednia sekunda",
+    "nextSecond": "Następna sekunda",
+    "am": "przed południem",
+    "pm": "po południu",
+    "today": "Dzisiaj",
+    "weekHeader": "Tydz",
+    "weak": "Słaby",
+    "medium": "Średni",
+    "strong": "Silny",
+    "passwordPrompt": "Wprowadź hasło"
   }
 }
+

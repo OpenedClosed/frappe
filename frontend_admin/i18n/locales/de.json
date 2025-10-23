@@ -28,6 +28,11 @@
     "sourceLabel": "Quelle",
     "userIdLabel": "Benutzer",
     "closeButton": "Schließen",
+    "userInfoDialogHeader": "Benutzerinformationen",
+    "startedLabel": "Gestartet",
+    "createdLabel": "Erstellt",
+    "externalIdLabel": "Externe ID",
+    "phoneLabel": "Telefon",
 
     "seeSources": "Quellen anzeigen",
     "excelSuccess": "Excel erstellt",
@@ -161,13 +166,18 @@
     "Information": "Information",
     "ReferralCodeEntered": "You have entered a referral code.",
     "usePhone2FA": "Telefon (SMS) für Zwei-Faktor-Authentifizierung verwenden",
-    "phoneMustBePolish": "Telefonnummer muss mit +48 beginnen, um SMS zu aktivieren.",
     "phoneImportant": "Wichtig:",
     "phoneOptional": "Optional:",
     "phoneImportantInfo": "Erforderlich für SMS-Zwei-Faktor-Authentifizierung und operative Kommunikation.",
     "phoneOptionalInfo": "Für operative Kommunikation bei Bedarf.",
     "emailOptional": "Optional:",
-    "emailOptionalInfo": "Für operative Kommunikation bei Bedarf."
+    "emailOptionalInfo": "Für operative Kommunikation bei Bedarf.",
+    "firstNameInvalid": "Vorname darf nur lateinische Buchstaben enthalten",
+    "lastNameInvalid": "Nachname darf nur lateinische Buchstaben enthalten",
+    "firstNameTooShort": "Vorname muss mindestens 2 Zeichen enthalten",
+    "lastNameTooShort": "Nachname muss mindestens 2 Zeichen enthalten",
+    "firstNameTooLong": "Vorname darf nicht länger als 50 Zeichen sein",
+    "lastNameTooLong": "Nachname darf nicht länger als 50 Zeichen sein"
   },
 
   "DynamicForm": {
@@ -681,7 +691,219 @@
     "BriefInProgress": "📋🛠️ Brief wird ausgefüllt",
     "BriefCompleted": "📋✅ Brief abgeschlossen"
   },
+  "countryPhone": {
+    "country": "Ländercode",
+    "phone": "Telefonnummer",
+    "selectCountry": "Land auswählen",
+    "searchCountry": "Nach Ländercode suchen...",
+    "phonePlaceholder": "Telefonnummer eingeben",
+    "selectCountryFirst": "Bitte zuerst ein Land auswählen",
+    "invalidFormat": "Ungültiges Telefonnummernformat",
+    "tooShort": "Telefonnummer zu kurz für das gewählte Land",
+    "tooLong": "Telefonnummer zu lang für das gewählte Land",
+    "required": "Dieses Feld ist erforderlich",
+    "phoneRequired": "Telefonnummer ist für SMS-Verifizierung erforderlich",
+    "emailRequired": "E-Mail ist für E-Mail-Verifizierung erforderlich",
+    "smsAvailable": "SMS-Verifizierung für alle Länder verfügbar",
+    "emailAvailable": "E-Mail-Verifizierung als Alternative verfügbar",
+    "chooseMethod": "Verifizierungsmethode wählen",
+    "smsVerification": "SMS-Verifizierung",
+    "emailVerification": "E-Mail-Verifizierung"
+  },
+  "filters": {
+    "title": "Filter",
+    "activeCount": "aktiv",
+    "actions": {
+      "apply": "Filter anwenden",
+      "clearAll": "Alle Filter löschen",
+      "reset": "Zurücksetzen",
+      "clearChannel": "Kanäle löschen",
+      "clearDate": "Daten löschen",
+      "clearStatus": "Status löschen",
+      "clearClientType": "Kundentypen löschen"
+    },
+    "clear": "Löschen",
+    "channel": {
+      "title": "Kanal",
+      "placeholder": "Kanäle auswählen",
+      "choices": {
+        "telegram": "Telegram",
+        "whatsapp": "WhatsApp",
+        "website": "Website",
+        "instagram": "Instagram",
+        "internal": "Intern"
+      }
+    },
+    "updated": {
+      "title": "Aktualisiert",
+      "placeholder": "Datumsbereich auswählen",
+      "presets": {
+        "week": "Letzte Woche",
+        "month": "Letzter Monat",
+        "quarter": "Letzte 3 Monate"
+      }
+    },
+    "status": {
+      "title": "Antwort",
+      "choices": {
+        "unanswered": "Unbeantwortet",
+        "answered": "Beantwortet"
+      }
+    },
+    "clientType": {
+      "title": "Typ",
+      "choices": {
+        "lead": "Lead",
+        "account": "Konto"
+      }
+    },
+    "search": {
+      "messageContent": {
+        "label": "In Nachrichten suchen",
+        "placeholder": "Im Nachrichteninhalt suchen"
+      },
+      "clientName": {
+        "label": "Nach Kundenname suchen",
+        "placeholder": "Nach Kundenname suchen"
+      },
+      "companyName": {
+        "label": "Nach Unternehmen suchen",
+        "placeholder": "Nach Firmennamen suchen"
+      },
+      "chatId": {
+        "label": "Nach Chat-ID suchen",
+        "placeholder": "Chat-ID eingeben"
+      }
+    },
+    "date": {
+      "placeholder": "Datumsbereich auswählen",
+      "presets": {
+        "week": "Letzte Woche",
+        "month": "Letzter Monat",
+        "quarter": "Letzte 3 Monate"
+      }
+    }
+  },
+  "ChatFilterPanel": {
+    "results": "Ergebnisse",
+    "loadingMetadata": "Laden der Filter-Metadaten...",
+    "metadataFailed": "Laden der Filter-Metadaten fehlgeschlagen",
+    "noResultsFound": "Keine Ergebnisse gefunden",
+    "filtersActive": "Filter aktiv",
+    "filterPanel": "Filter-Panel",
+    "tryDifferentFilters": "Probieren Sie andere Filter oder Suchbegriffe aus",
+    "showingFilteredResults": "Gefilterte Ergebnisse anzeigen",
+    "configureFilters": "Konfigurieren Sie Ihre Filter und Suchkriterien"
+  },
   "test": {
     "test": "Test"
+  },
+  "primevue": {
+    "startsWith": "Beginnt mit",
+    "contains": "Enthält",
+    "notContains": "Enthält nicht",
+    "endsWith": "Endet mit",
+    "equals": "Gleich",
+    "notEquals": "Nicht gleich",
+    "noFilter": "Kein Filter",
+    "lt": "Kleiner als",
+    "lte": "Kleiner oder gleich",
+    "gt": "Größer als",
+    "gte": "Größer oder gleich",
+    "dateIs": "Datum ist",
+    "dateIsNot": "Datum ist nicht",
+    "dateBefore": "Datum ist vor",
+    "dateAfter": "Datum ist nach",
+    "clear": "Löschen",
+    "apply": "Anwenden",
+    "matchAll": "Alle übereinstimmen",
+    "matchAny": "Beliebige übereinstimmen",
+    "addRule": "Regel hinzufügen",
+    "removeRule": "Regel entfernen",
+    "accept": "Ja",
+    "reject": "Nein",
+    "choose": "Wählen",
+    "upload": "Hochladen",
+    "cancel": "Abbrechen",
+    "completed": "Abgeschlossen",
+    "pending": "Ausstehend",
+    "dayNames": {
+      "sunday": "Sonntag",
+      "monday": "Montag",
+      "tuesday": "Dienstag",
+      "wednesday": "Mittwoch",
+      "thursday": "Donnerstag",
+      "friday": "Freitag",
+      "saturday": "Samstag"
+    },
+    "dayNamesShort": {
+      "sunday": "So",
+      "monday": "Mo",
+      "tuesday": "Di",
+      "wednesday": "Mi",
+      "thursday": "Do",
+      "friday": "Fr",
+      "saturday": "Sa"
+    },
+    "dayNamesMin": {
+      "sunday": "So",
+      "monday": "Mo",
+      "tuesday": "Di",
+      "wednesday": "Mi",
+      "thursday": "Do",
+      "friday": "Fr",
+      "saturday": "Sa"
+    },
+    "monthNames": {
+      "january": "Januar",
+      "february": "Februar",
+      "march": "März",
+      "april": "April",
+      "may": "Mai",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "August",
+      "september": "September",
+      "october": "Oktober",
+      "november": "November",
+      "december": "Dezember"
+    },
+    "monthNamesShort": {
+      "january": "Jan",
+      "february": "Feb",
+      "march": "Mär",
+      "april": "Apr",
+      "may": "Mai",
+      "june": "Jun",
+      "july": "Jul",
+      "august": "Aug",
+      "september": "Sep",
+      "october": "Okt",
+      "november": "Nov",
+      "december": "Dez"
+    },
+    "chooseYear": "Jahr wählen",
+    "chooseMonth": "Monat wählen",
+    "chooseDate": "Datum wählen",
+    "prevDecade": "Vorheriges Jahrzehnt",
+    "nextDecade": "Nächstes Jahrzehnt",
+    "prevYear": "Vorheriges Jahr",
+    "nextYear": "Nächstes Jahr",
+    "prevMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "prevHour": "Vorherige Stunde",
+    "nextHour": "Nächste Stunde",
+    "prevMinute": "Vorherige Minute",
+    "nextMinute": "Nächste Minute",
+    "prevSecond": "Vorherige Sekunde",
+    "nextSecond": "Nächste Sekunde",
+    "am": "vorm.",
+    "pm": "nachm.",
+    "today": "Heute",
+    "weekHeader": "KW",
+    "weak": "Schwach",
+    "medium": "Mittel",
+    "strong": "Stark",
+    "passwordPrompt": "Passwort eingeben"
   }
 }
