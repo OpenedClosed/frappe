@@ -1,0 +1,169 @@
+/* =========================================================
+   Frappe Theme — Light & Dark (brand + sharp dark states)
+   Applied to Admin Frontend
+   ========================================================= */
+
+/* Шрифт — подключение и применение */
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap");
+
+html, body {
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* ====== Бренд и минимум для light ====== */
+:root {
+  /* фирменный зелёный */
+  --brand-primary: #488a5b;
+  --brand-primary-strong: #1c7e50;
+  --brand-contrast: #ffffff;
+
+  /* единственный базовый тон дарка (greenish blue-black) */
+  --ink-base: #1f3a40;
+
+  /* ровно то, что нужно для лайт-темы по бренду */
+  --btn-primary: var(--brand-primary);
+
+  /* ===== ЧЕКБОКСЫ: как в «рабочей» версии (LIGHT) ===== */
+  --checkbox-color: var(--brand-contrast);
+  --checkbox-gradient: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
+  --checkbox-disabled-gradient: linear-gradient(180deg, #d1d5db 0%, #d1d5db 100%);
+  --checkbox-focus-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-primary) 28%, transparent);
+
+  /* Integration with existing Tailwind variables */
+  --tw-color-primary: var(--brand-primary);
+  --tw-color-primary-light: #63a475;
+  --tw-color-primary-dark: var(--brand-primary-strong);
+  --tw-color-primary-header: var(--brand-primary);
+}
+
+/* ====== ТЁМНАЯ ТЕМА (как у тебя, плюс чекбоксы «как работало») ====== */
+:root.dark,
+[data-theme="dark"] {
+	--neutral: var(--neutral-black);
+	--invert-neutral: var(--neutral-white);
+
+	/* единая палитра на базе --ink-base */
+	--bg-color:   #15282b;
+	--fg-color:   var(--bg-color);
+	--subtle-accent: #20353a;
+	--subtle-fg:     #1a2d31;
+	--navbar-bg:     var(--bg-color);
+	--fg-hover-color:#2b4349;
+	--card-bg:       #1d2f33;
+	--disabled-text-color: #aeb7bb;
+	--disabled-control-bg: #1f3438;
+	--control-bg:    #243a3f;
+	--control-bg-on-gray: var(--control-bg);
+	--awesomebar-focus-bg: var(--control-bg);
+	--awesomplete-hover-bg: var(--fg-hover-color);
+	--modal-bg: var(--bg-color);
+	--toast-bg: var(--modal-bg);
+	--popover-bg: var(--bg-color);
+
+	/* Типографика */
+	--text-neutral: #f4f8f9;
+	--text-dark: #0e1112;
+	--text-muted: #c9d1d4;
+	--text-light: #d9dfe3;
+	--text-color: #f4f8f9;
+	--heading-color: #ffffff;
+
+	/* SVG (без утолщения иконок) */
+	--icon-fill: transparent;
+	--icon-stroke: #e9eef0;
+
+	/* Ошибки */
+	--error-bg: var(--red-800);
+	--error-border: var(--red-400);
+
+	/* Кнопки */
+	--btn-default-bg: var(--control-bg);
+	--btn-default-hover-bg: var(--fg-hover-color);
+	--btn-primary: var(--brand-primary);
+
+	/* Бордеры */
+	--border-primary: #3e555a;
+	--border-color:   var(--border-primary);
+	--dark-border-color: #2f474c;
+	--table-border-color: var(--border-color);
+
+	/* Пары */
+	--bg-blue: #2563eb;
+	--bg-light-blue: #2563eb;
+	--bg-dark-blue: #0c254f;
+	--bg-green: #14532d;
+	--bg-yellow: #a16207;
+	--bg-orange: #c2410c;
+	--bg-red: #dc2626;
+	--bg-gray: #6b7280;
+	--bg-grey: #6b7280;
+	--bg-darkgrey: #6b7280;
+	--bg-dark-gray: #4b5563;
+	--bg-light-gray: var(--control-bg);
+	--bg-purple: #6d28d9;
+	--bg-pink: #be185d;
+	--bg-cyan: #155e75;
+
+	--text-on-blue:#eff6ff; --text-on-light-blue:#eff6ff; --text-on-dark-blue:#93c5fd;
+	--text-on-green:#dcfce7; --text-on-yellow:#fff7ed; --text-on-orange:#ffedd5; --text-on-red:#fee2e2;
+	--text-on-gray:#f9fafb; --text-on-grey:#f9fafb; --text-on-darkgrey:#e5e7eb; --text-on-dark-gray:#e5e7eb;
+	--text-on-light-gray:#e5e7eb; --text-on-purple:#e9d5ff; --text-on-pink:#fbcfe8; --text-on-cyan:#cffafe;
+
+	/* Алерты */
+	--alert-text-danger:#fecaca; --alert-text-warning:#fde68a; --alert-text-info:#bfdbfe; --alert-text-success:#bbf7d0;
+	--alert-bg-danger:#7f1d1d; --alert-bg-warning:#713f12; --alert-bg-info:#0c254f; --alert-bg-success:#14532d;
+
+	--sidebar-select-color: var(--control-bg);
+
+	--scrollbar-thumb-color: #556c72;
+	--scrollbar-track-color: #1b2e32;
+
+	--timeline-badge-color: #8fa2a7;
+	--timeline-badge-bg: var(--bg-color);
+
+	--shadow-inset: var(--fg-color);
+	--highlight-color: #233b41;
+	--yellow-highlight-color: #a16207;
+
+	--btn-group-border-color: #3a5157;
+
+	--placeholder-color: #8ba0a6;
+
+	--highlight-shadow: 1px 1px 10px #0c254f, 0 0 4px #3b82f6;
+
+	--shadow-base: 0 4px 8px rgba(31,58,64,.10), 0 0 4px rgba(31,58,64,.16);
+
+	/* ===== ЧЕКБОКСЫ в дарке: как в «рабочей» версии ===== */
+	--checkbox-color: var(--brand-contrast);
+	--checkbox-gradient: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
+	--checkbox-disabled-gradient: linear-gradient(180deg, #6b7280 0%, #6b7280 100%);
+	--checkbox-focus-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-primary) 24%, transparent);
+
+	/* switch */
+	--switch-bg: #92a4a9;
+
+	/* date-picker */
+	--date-active-text: #e5e7eb;
+	--date-active-bg: #2b444a;
+	--date-range-bg: var(--subtle-fg);
+
+	/* Integration with existing Tailwind variables for dark mode */
+	--tw-color-primary: #63a475;
+	--tw-color-primary-light: #8fb89a;
+	--tw-color-primary-dark: var(--brand-primary-strong);
+	--tw-color-primary-header: var(--bg-color);
+
+	--tw-color-secondary: var(--control-bg);
+	--tw-color-secondary-light: var(--subtle-fg);
+	--tw-color-secondary-extra-light: var(--subtle-accent);
+	--tw-color-secondary-dark: var(--fg-hover-color);
+
+	--tw-color-neutral: var(--bg-color);
+	--tw-color-neutral-dark: var(--subtle-fg);
+	--tw-color-neutral-light: var(--control-bg);
+
+	color-scheme: dark;
+}
+
+
