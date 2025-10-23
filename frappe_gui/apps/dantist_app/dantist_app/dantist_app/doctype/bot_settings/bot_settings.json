@@ -48,7 +48,7 @@
    "fieldname": "help_panel",
    "fieldtype": "HTML",
    "label": "Quick Help",
-   "options": "<!-- Dentist \u2022 Bot Settings inline help (static, no collapse) -->\n<div style=\"margin:8px 0 0; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;\">\n  <div style=\"font-weight:600; margin:0 0 8px;\">\ud83d\udca1 Quick guide to Bot Settings</div>\n\n  <ul style=\"margin:0 0 10px 18px; padding:0; line-height:1.6;\">\n    <li><strong>Project Name</strong> \u2014 internal name for lists and search.</li>\n    <li><strong>Employee Name</strong> \u2014 the public display name in chat.</li>\n    <li><strong>Avatar</strong> &amp; <strong>Bot Color</strong> \u2014 visual look of the widget.</li>\n    <li><strong>Communication Tone</strong> &amp; <strong>Personality Traits</strong> \u2014 how the bot speaks.</li>\n    <li><strong>Core Principles</strong> \u2014 always-on guardrails and boundaries.</li>\n    <li><strong>Additional Instructions</strong> \u2014 step-by-step behavior for preparing, answering, finishing.</li>\n    <li><strong>Special Instructions</strong> \u2014 quick presets (e.g., be concise, don\u2019t invent info).</li>\n    <li><strong>Forbidden Topics</strong> \u2014 subjects the bot must avoid.</li>\n    <li><strong>Target Actions</strong> \u2014 what the bot helps with (can be multiple).</li>\n  </ul>\n\n  <p style=\"margin:0 0 6px; line-height:1.6;\"><strong>Messages (JSON)</strong> use a simple language\u2192text map. Example:</p>\n  <pre style=\"margin:0 0 10px; background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:10px; overflow:auto;\">{\n  \"en\": \"Hello! How can I help you?\"\n}</pre>\n\n  <ul style=\"margin:0; padding:0 0 0 18px; line-height:1.6;\">\n    <li>Use standard language codes (e.g., <code>en</code>) and only those you actually need.</li>\n    <li>The most recently created bot is prioritized and shown first by default.</li>\n  </ul>\n</div>\n<!-- /Dentist \u2022 Bot Settings inline help -->\n"
+   "options": "<div class=\"bot-help\" style=\"margin:8px 0 0; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;\"></div>"
   },
   {
    "description": "Define basic bot information",
@@ -243,8 +243,8 @@
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-09 14:34:16.487832",
- "modified_by": "Administrator",
+ "modified": "2025-10-23 20:22:55.804421",
+ "modified_by": "opendoor200179@gmail.com",
  "module": "Dantist App",
  "name": "Bot Settings",
  "naming_rule": "By fieldname",

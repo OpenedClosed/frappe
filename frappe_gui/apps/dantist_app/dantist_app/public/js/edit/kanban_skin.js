@@ -1,9 +1,9 @@
-/* Dantist Kanban skin — v25.18
+/* Dantist Kanban skin — v25.18.1
    (visual parity with v25.15, i18n labels in chips, mini-tasks fallback to get_list)
    — Labels ON: строго порядок по board.fields, пустые → "—"
    — Labels OFF: апгрейд безымянных чипов ТОЛЬКО под board.fields, дубли и лишние — в очистку
    — Единый формат дат: DD-MM-YYYY HH:mm:ss; фильтр хвостов времени
-   — Мини-задачи с фолбэком, hover-actions, inline title, Assigned/Like внизу
+   — Мини-задачи с фолбэком (без due_* в get_list), hover-actions, inline title, Assigned/Like внизу
 */
 (() => {
   const CFG = {
@@ -338,7 +338,7 @@
     if (showLabel && CLEAN(label)){
       const sk = document.createElement("span");
       sk.className = "dnt-k";
-      // !!! ЛОКАЛИЗАЦИЯ ЛЕЙБЛА !!!
+      // i18n:
       sk.textContent = t(STRIP_COLON(label)) + ":";
       kv.appendChild(sk);
     }
@@ -377,7 +377,6 @@
 
     if (labelsOn){
       boardFields.forEach(fn=>{
-        // human → пропускаем через t в makeChip()
         const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
         const value = CLEAN(normalizeDateish(v[fn])) || "";
         let chip = Array.from(container.querySelectorAll(":scope > .dnt-kv")).find(ch=>{
@@ -386,11 +385,10 @@
           return f === fn;
         });
         if (!chip){
-          chip = makeChip(human, value, true);         // t(human) произойдёт внутри
+          chip = makeChip(human, value, true);         // t(human) — внутри
           insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         } else {
           const sv = chip.querySelector(".dnt-v"); if (sv && !CLEAN(sv.textContent)) sv.textContent = value || "—";
-          // если лейбл уже отрендерен — принудительно локализуем его текст
           const sk = chip.querySelector(".dnt-k"); if (sk) sk.textContent = t(STRIP_COLON(human)) + ":";
         }
       });
@@ -443,7 +441,7 @@
       }
     });
 
-    // очистка: убрать всё неиспользуемое
+    // очистка
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
       if (lbl){
@@ -523,6 +521,7 @@
   /* ===== mini tasks (fallback) ===== */
   const miniCache = new Map();
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
+  // читаем приоритетные пользовательские поля, затем обычную date (как в твоём примере ToDo)
   const planDT = (t) => t.custom_target_datetime || t.due_datetime || t.custom_due_datetime || t.date || null;
 
   function miniHtml(rows, total){
@@ -559,7 +558,8 @@
             reference_name: caseName,
             status: "Open"
           },
-          fields: ["name","description","status","due_date","date","custom_due_datetime","due_datetime","custom_target_datetime"],
+          // ВАЖНО: никаких due_date/due_datetime — их выкидываем из fields
+          fields: ["name","description","status","date","custom_due_datetime","custom_target_datetime"],
           limit_page_length: CFG.tasksLimit,
           order_by: "modified desc"
         }

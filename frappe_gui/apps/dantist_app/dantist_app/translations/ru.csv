@@ -488,6 +488,10 @@ You created this document,Вы создали этот документ,
 You last edited this,Вы отредактировали запись,
 last edited this,внёс изменения,
 created this,создал(а) запись,
+just now,прямо сейчас,
+edited this,внёс изменения,
+Discard,Отменить,
+Expand,Развернуть
 
 Zap,Зет,
 
@@ -615,6 +619,13 @@ on {0},при {0},
 AI Knowledge,ИИ Знания,
 Chat Sessions,Сессии Чатов,
 yesterday,вчера,
+Target Datetime,Целевая Дата и Время,
+Choose Color,Выберите цвет,
+Due Datetime,Напомнить когда?,
+Reminder Sent At,Напоминание отправлено в,
+Send Reminder,Отправить напоминание?
+Virtual,Виртуальный,
+In List Filter,В фильтре списка,
 
 Short human-readable title (e.g. name/channel/context),Название карточки,
 
@@ -641,3 +652,296 @@ Patients – Care Department,Пациенты – Отдел лечения,
 Show on: Patients – Care Department,Показывать на доске Пациенты – Отдел лечения
 Patients – Care Department — Status,Пациенты – Отдел лечения – Статус
 Used by Kanban «Patients – Care Department»,Использован Канбан «Пациенты – Отдел лечения»
+
+{0} created this,{0} создал(а) это,
+Computed by backend from source systems,вычислено,
+Disable to take full manual control in Frappe,Отключите если хотите получить полный ручной контроль,
+
+Me,Мне,
+ascending,в прямом напрвлении,
+descending,в обратном напрвлении,
+Assign to me ({0}),Назначить на себя ({0}),
+Reminder at,Когда напомнить?,
+You can set Target and optional Reminder on Save,При сохранении будет предложена форма автозадачи,
+Assign To (multiple),Назначить нескольких человек,
+Send reminder,Отправить напоминание?,
+Target at,Срок задачи,
+Optional; saved into custom_target_datetime,Необязательно; Выберите срок задачи,
+{0} week,{0} неделя,
+{0} weeks ago,{0} недель назад,
+Open,Открыть,
+Not Saved,Не сохранено,
+
+No parents.,Нет родительских кейсов,
+{0} week,{0} неделя,
+{0} weeks,{0} недель,
+{0} week ago,{0} неделю назад,
+{0} weeks ago,{0} недель назад,
+a week ago,неделю назад,
+
+{0} day,{0} день,
+{0} days,{0} дней,
+{0} day ago,{0} день назад,
+{0} days ago,{0} дней назад,
+a day ago,день назад,
+
+{0} hour,{0} час,
+{0} hours,{0} часов,
+{0} hour ago,{0} час назад,
+{0} hours ago,{0} часов назад,
+an hour ago,час назад,
+hour ago,час назад,
+
+{0} minute,{0} минута,
+{0} minutes,{0} минут,
+{0} minute ago,{0} минуту назад,
+{0} minutes ago,{0} минут назад,
+a minute ago,минуту назад,
+minute ago,минуту назад,
+
+{0} month,{0} месяц,
+{0} months,{0} месяцев,
+{0} month ago,{0} месяц назад,
+{0} months ago,{0} месяцев назад,
+a month ago,месяц назад,
+
+{0} year,{0} год,
+{0} years,{0} лет,
+{0} year ago,{0} год назад,
+{0} years ago,{0} лет назад,
+a year ago,год назад,
+
+App Logo,Логотип приложения,
+Bot Settings,Настройки бота,
+
+PaNa Medica,PaNa Medica,
+
+Assigned To,Назначены,
+Applications,Приложения,
+Tags,Теги,
+
+How to Use (Quick Help),Как пользоваться (быстрая помощь),
+Basic Settings,Базовые настройки,
+Define basic bot information,Задайте базовую информацию о боте,
+Employee Name,Имя сотрудника,
+The name of the employee that the bot represents.,Имя сотрудника, которого представляет бот.,
+employee_name,employee_name,
+
+Mention Bot Name in Conversation,Упоминать имя бота в диалоге,
+Should the bot mention its name?,Должен ли бот упоминать своё имя?,
+
+Avatar,Аватар,
+Upload an image for the bot’s avatar.,Загрузите изображение для аватара бота.,
+Bot Color,Цвет бота,
+If you don’t have time to customize the bot, we can do it for you.,Если нет времени на настройку, мы сделаем это за вас.,
+
+Character and Behavior,Характер и поведение,
+Set how the bot interacts with users,Определите, как бот взаимодействует с пользователями,
+Choose Communication Tone,Выберите тон общения,
+Choose the bot’s communication style.,Выберите стиль общения бота.,
+Personality Traits,Черты личности,
+Define key personality traits for the bot.,Определите ключевые черты личности бота.,
+
+Target Action,Целевое действие,
+What the bot is designed to perform (multiple allowed).,Какие действия должен выполнять бот (можно несколько).,
+
+Additional Instructions,Дополнительные инструкции,
+Provide any additional guidelines for bot behavior.,Добавьте дополнительные рекомендации по поведению бота.,
+
+Topics and Restrictions,Темы и ограничения,
+Define allowed and restricted topics,Определите разрешённые и запрещённые темы,
+Special Instructions,Особые инструкции,
+Additional functionality settings.,Дополнительные настройки функциональности.,
+Forbidden Topics,Запрещённые темы,
+Topics the bot should avoid.,Темы, которых боту следует избегать.,
+
+Core Principles,Базовые принципы,
+Fundamental principles guiding the bot’s responses.,Основные принципы, определяющие ответы бота.,
+
+Interaction Guidelines,Правила взаимодействия,
+Set the bot’s predefined messages,Задайте предустановленные сообщения бота,
+
+Artificial Intelligence,Искусственный интеллект,
+Choose the AI model for your bot,Выберите модель ИИ для бота,
+AI Model,Модель ИИ,
+AI model the bot is using.,Модель ИИ, которую использует бот.,
+
+Comments,Комментарии,
+comment,комментарий,
+Activity,Активность,
+
+Administrator last edited this,Administrator внёс изменения,
+Administrator created this,Administrator создал(а) это,
+
+{0} created this,{0} создал(а) это,
+{0} last edited this,{0} внёс изменения,
+{0} changed the value of {1} from {2} to {3},{0} изменил(а) значение {1} с {2} на {3},
+changed the value of,изменил(а) значение,
+
+Last edited,Последнее изменение,
+Created,Создано,
+
+# относительное время — формы "ago" и без "ago"
+{0} minute,{0} минута,
+{0} minutes,{0} минут,
+{0} minute ago,{0} минуту назад,
+{0} minutes ago,{0} минут назад,
+a minute ago,минуту назад,
+minute ago,минуту назад,
+
+{0} hour,{0} час,
+{0} hours,{0} часов,
+{0} hour ago,{0} час назад,
+{0} hours ago,{0} часов назад,
+an hour ago,час назад,
+hour ago,час назад,
+
+{0} day,{0} день,
+{0} days,{0} дней,
+{0} day ago,{0} день назад,
+{0} days ago,{0} дней назад,
+a day ago,день назад,
+yesterday,вчера,
+Today,Сегодня,
+just now,только что,
+
+{0} week,{0} неделя,
+{0} weeks,{0} недель,
+{0} week ago,{0} неделю назад,
+{0} weeks ago,{0} недель назад,
+a week ago,неделю назад,
+
+{0} month,{0} месяц,
+{0} months,{0} месяцев,
+{0} month ago,{0} месяц назад,
+{0} months ago,{0} месяцев назад,
+a month ago,месяц назад,
+
+{0} year,{0} год,
+{0} years,{0} лет,
+{0} year ago,{0} год назад,
+{0} years ago,{0} лет назад,
+a year ago,год назад,
+
+The name of the employee that the bot represents.,Имя сотрудника, которого представляет бот.,
+mention_name,mention_name,
+Should the bot mention its name?,Должен ли бот упоминать своё имя?,
+
+"If you don’t have time to customize the bot, we can do it for you.","Если у вас нет времени на настройку, мы сделаем это за вас.",
+
+Set how the bot interacts with users,Определите, как бот взаимодействует с пользователями.,
+Begin typing for results.,Начните ввод для поиска.,
+
+Topics the bot should avoid.,Темы, которых боту следует избегать.,
+Fundamental principles guiding the bot’s responses.,Основные принципы, определяющие ответы бота.,
+AI model the bot is using.,Модель ИИ, которую использует бот.,
+
+Administrator changed the value of Bot Color from Sky Blue to Fresh Green,Administrator изменил(а) значение Цвет бота с Небесно-голубой на Ярко-зелёную.,
+Sky Blue,Небесно-голубой,
+Fresh Green,Ярко-зелёная,
+Bot Color,Цвет бота,
+
+Select a field to edit its properties.,Выбрать поле для редактирования,
+
+"Bot Settings","Настройки бота",
+"How to Use (Quick Help)","Как пользоваться (быстрая помощь)",
+"Quick Help","Быстрая помощь",
+
+"Basic Settings","Базовые настройки",
+"Define basic bot information","Задайте базовую информацию о боте",
+
+"Project Name","Название проекта",
+"Short name of the project using the bot.","Короткое имя проекта, где используется бот.",
+
+"Employee Name","Имя сотрудника",
+"The name of the employee that the bot represents.","Имя сотрудника, которого представляет бот.",
+
+"Mention Bot Name in Conversation","Упоминать имя бота в диалоге",
+"Should the bot mention its name?","Должен ли бот упоминать своё имя?",
+
+"Avatar","Аватар",
+"Upload an image for the bot’s avatar.","Загрузите изображение для аватара бота.",
+
+"Bot Color","Цвет бота",
+"If you don’t have time to customize the bot, we can do it for you.","Если у вас нет времени на настройку, мы сделаем это за вас.",
+
+"Character and Behavior","Характер и поведение",
+"Set how the bot interacts with users","Определите, как бот взаимодействует с пользователями",
+
+"Choose Communication Tone","Выберите тон общения",
+"Choose the bot’s communication style.","Выберите стиль общения бота.",
+
+"Personality Traits","Черты личности",
+"Define key personality traits for the bot.","Определите ключевые черты личности бота.",
+
+"Target Action","Целевое действие",
+"What the bot is designed to perform (multiple allowed).","Какие действия должен выполнять бот (можно несколько).",
+
+"Additional Instructions","Дополнительные инструкции",
+"Provide any additional guidelines for bot behavior.","Добавьте дополнительные рекомендации по поведению бота.",
+
+"Topics and Restrictions","Темы и ограничения",
+"Define allowed and restricted topics","Определите разрешённые и запрещённые темы",
+
+"Special Instructions","Особые инструкции",
+"Additional functionality settings.","Дополнительные настройки функциональности.",
+
+"Forbidden Topics","Запрещённые темы",
+"Topics the bot should avoid.","Темы, которых боту следует избегать.",
+
+"Core Principles","Базовые принципы",
+"Fundamental principles guiding the bot’s responses.","Фундаментальные принципы, определяющие ответы бота.",
+
+"Interaction Guidelines","Правила взаимодействия",
+"Set the bot’s predefined messages","Задайте предустановленные сообщения бота",
+
+"Greeting","Приветствие",
+"Default greeting messages in different languages.","Приветственные сообщения по умолчанию на разных языках.",
+
+"Error Message","Сообщение об ошибке",
+"Message displayed when the bot cannot answer.","Сообщение, которое показывается, когда бот не может ответить.",
+
+"Farewell Message","Прощальное сообщение",
+"Bot’s goodbye message.","Сообщение бота при завершении диалога.",
+
+"AI Error Fallback","Резервное сообщение об ошибке ИИ",
+"Message shown if AI fails to generate a response.","Сообщение, если ИИ не смог сгенерировать ответ.",
+
+"Artificial Intelligence","Искусственный интеллект",
+"Choose the AI model for your bot","Выберите модель ИИ для бота",
+
+"AI Model","Модель ИИ",
+"AI model the bot is using.","Модель ИИ, которую использует бот.",
+
+"App Name","Имя приложения",
+"Filled automatically in some flows (optional).","Заполняется автоматически в некоторых сценариях (необязательно).",
+
+"Created At","Создано",
+"Timestamp when the bot settings were created.","Время создания настроек бота.",
+
+"Soft Red","Мягкий красный",
+"Warm Orange","Тёплый оранжевый",
+"Sunny Yellow","Солнечный жёлтый",
+"Fresh Green","Свежий зелёный",
+"Teal Blue","Бирюзовый",
+"Sky Blue","Небесно-голубой",
+"Lavender Purple","Лавандовый",
+"Rose Pink","Розовый",
+
+"Friendly","Дружелюбный",
+"Formal","Официальный",
+"Casual","Неформальный",
+"Professional","Профессиональный",
+"Humorous","С юмором",
+"Business","Деловой",
+"Strictly from additional description","Строго по дополнительному описанию",
+
+"Highly structured and predictable","Очень структурный и предсказуемый",
+"Logical and precise","Логичный и точный",
+"Balanced and well-reasoned","Сбалансированный и продуманный",
+"Adaptive and slightly creative","Адаптивный и немного креативный",
+"Highly creative and free-thinking","Очень креативный и свободомыслящий",
+
+"gpt-4o","gpt-4o",
+"gpt-4o-mini","gpt-4o-mini",
+"gemini-2.0-flash","gemini-2.0-flash",

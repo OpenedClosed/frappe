@@ -437,7 +437,15 @@
       fieldtype:"MultiSelectList", fieldname:"assignees", label:__("Assign To (multiple)"), options:"User",
       get_data: (txt)=> frappe.db.get_link_options("User", txt || "")
     });
-    if (baseKeys?.includes("assign_me")) fields.push({ fieldtype:"Check", fieldname:"assign_me", label:__(`Assign to me (${me})`), default:1 });
+
+    if (baseKeys?.includes("assign_me")) {
+      fields.push({
+        fieldtype: "Check",
+        fieldname: "assign_me",
+        label: __("Assign to me ({0})", [me]),
+        default: 1
+      });
+    };
     if (baseKeys?.includes("priority")) fields.push({ fieldtype:"Select", fieldname:"priority", label:__("Priority"), options:"Low\nMedium\nHigh", default:"Medium" });
 
     if (Array.isArray(extra) && extra.length) fields.push(...extra);

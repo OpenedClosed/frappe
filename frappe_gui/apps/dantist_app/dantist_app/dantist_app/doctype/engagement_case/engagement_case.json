@@ -144,7 +144,8 @@
    "in_filter": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Display Name"
+   "label": "Display Name",
+   "read_only": 1
   },
   {
    "fieldname": "cb_identity_right",
@@ -395,8 +396,8 @@
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-22 14:22:08.428493",
- "modified_by": "opendoor200179@gmail.com",
+ "modified": "2025-10-23 18:26:51.530870",
+ "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",
  "naming_rule": "By \"Naming Series\" field",
