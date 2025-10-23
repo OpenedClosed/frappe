@@ -558,11 +558,14 @@ Modified,Изменено,
 From,От,
 To,К,
 
+{0} week,{0} неделя,
 {0} hour,{0} час,
+{0} minute,{0} минута,
+{0} day,{0} день,
 {0} ago,{0} назад,
 {0} hours ago,{0} часов назад,
 {0} minute ago,{0} минуту назад,
-{0} inutes ago,{0}минут назад,
+{0} minutes ago,{0} минут назад,
 {0} just now,{0} только что,
 {0} yesterday,{0} вчера,
 {0} days ago,{0} дней назад,
@@ -596,4 +599,45 @@ Reset Password,Сбросить Пароль,
 View Permitted Document,Посмотреть Разрешенный документ,
 Jump to field,Перейти к полю,
 Remind Me,Напомнить Мне,
-Add {0},Добавить {0}
+Add {0},Добавить {0},
+Appointment Date & Time,Место и время встречи,
+Specialist,Специалист,
+Search & Link,Найти и Привязать,
+Unlink,Отвязать,
+Add Task,Добавить Задачу,
+Open All,Открыть Все,
+total,всего,
+per page,на страницу,
+Normal,Нормальный,
+Prev,Назад,
+by,от,
+on {0},при {0},
+AI Knowledge,ИИ Знания,
+Chat Sessions,Сессии Чатов,
+yesterday,вчера,
+
+Short human-readable title (e.g. name/channel/context),Название карточки,
+
+AIHub Admin,AIHub Админ,
+AIHub Super Admin,AIHub Суперадмин,
+AIHub Demo,AIHub Демо,
+
+CRM Board,CRM Доска,
+Show on: CRM Board,Показывать на доске Базовой CRM Доске
+CRM Board — Status,Базовая CRM Доска – Статус
+Used by Kanban «CRM Board»,Использован Канбан Базовая «CRM Доска»
+
+Leads – Contact Center,Лиды – Контакт-центр,
+Show on: Leads – Contact Center,Показывать на доске Лиды – Контакт-центр
+Leads – Contact Center — Status,Лиды – Контакт-центр – Статус
+Used by Kanban «Leads – Contact Center»,Использован Канбан «Лиды – Контакт-центр»
+
+Deals – Contact Center,Сделки – Контакт-центр,
+Show on: Deals – Contact Center,Показывать на доске Сделки – Контакт-центр
+Deals – Contact Center — Status,Сделки – Контакт-центр – Статус
+Used by Kanban «Deals – Contact Center»,Использован Канбан «Сделки – Контакт-центр»
+
+Patients – Care Department,Пациенты – Отдел лечения,
+Show on: Patients – Care Department,Показывать на доске Пациенты – Отдел лечения
+Patients – Care Department — Status,Пациенты – Отдел лечения – Статус
+Used by Kanban «Patients – Care Department»,Использован Канбан «Пациенты – Отдел лечения»

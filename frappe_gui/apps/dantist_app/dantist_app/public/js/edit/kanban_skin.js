@@ -1,8 +1,9 @@
-/* Dantist Kanban skin — v25.15 (only board.fields; no forced display_name; dedupe fixed)
+/* Dantist Kanban skin — v25.18
+   (visual parity with v25.15, i18n labels in chips, mini-tasks fallback to get_list)
    — Labels ON: строго порядок по board.fields, пустые → "—"
    — Labels OFF: апгрейд безымянных чипов ТОЛЬКО под board.fields, дубли и лишние — в очистку
    — Единый формат дат: DD-MM-YYYY HH:mm:ss; фильтр хвостов времени
-   — Мини-задачи, hover-actions, inline title, Assigned/Like внизу
+   — Мини-задачи с фолбэком, hover-actions, inline title, Assigned/Like внизу
 */
 (() => {
   const CFG = {
@@ -21,6 +22,26 @@
       "Deals – Contact Center":     { flag: "show_board_deals",    status: "status_deals" },
       "Patients – Care Department": { flag: "show_board_patients", status: "status_patients" },
     }
+  };
+
+  /* ===== i18n ===== */
+  async function ensure_messages(timeout_ms = 2000) {
+    const start = Date.now();
+    while (Date.now() - start < timeout_ms) {
+      if (typeof __ === "function") return true;
+      if (frappe && frappe._messages && Object.keys(frappe._messages).length) return true;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return false;
+  }
+  const t = (s) => {
+    if (typeof __ === "function") return __(s);
+    const dict = (frappe && frappe._messages) ? frappe._messages : null;
+    return (dict && typeof dict[s] === "string" && dict[s].length) ? dict[s] : s;
+  };
+  const tf = (s, args=[]) => {
+    if (typeof __ === "function") return __(s, args);
+    return s.replace(/\{(\d+)\}/g, (_, i) => (args[i] ?? ""));
   };
 
   /* ===== helpers ===== */
@@ -47,7 +68,7 @@
   };
   const isDisplayName = (s)=> LABEL_ALIASES.display_name.has(LBL_KEY(s));
 
-  /* ===== CSS ===== */
+  /* ===== CSS (как v25.15) ===== */
   function injectCSS(){
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
@@ -151,7 +172,6 @@
       if (fns.has(raw)) out.push(raw);
       else { const g = label2fn[LBL_KEY(raw)]; if (g && fns.has(g)) out.push(g); }
     });
-    // ВАЖНО: больше НЕ добавляем display_name принудительно
     return [...new Set(out)];
   }
 
@@ -253,8 +273,8 @@
       let label = STRIP_COLON(tokens[0] || "");
       let value = "";
       for (let i=1; i<tokens.length; i++){
-        const t = STRIP_COLON(tokens[i]);
-        if (t && LBL_KEY(t) !== LBL_KEY(label)) { value = t; break; }
+        const tkn = STRIP_COLON(tokens[i]);
+        if (tkn && LBL_KEY(tkn) !== LBL_KEY(label)) { value = tkn; break; }
       }
       if (!value && fullText) {
         const [lbl, tail] = splitByFirstColon(fullText);
@@ -278,7 +298,7 @@
       pairs.push({ k: label, v: value || "", row, fieldname: fn });
     });
 
-    // dedupe по fieldname/label
+    // dedupe
     const seen = new Set(), out=[];
     for (const o of pairs){
       const key = (o.fieldname || o.k || "").toLowerCase();
@@ -314,11 +334,12 @@
   function makeChip(label, value, showLabel){
     const kv = document.createElement("div");
     kv.className = "dnt-kv text-truncate";
-    kv.dataset.dntLabel = showLabel ? CLEAN(label||"") : ""; // OFF — не оставляем label
+    kv.dataset.dntLabel = showLabel ? CLEAN(label||"") : ""; // OFF — пусто (как в v25.15)
     if (showLabel && CLEAN(label)){
       const sk = document.createElement("span");
       sk.className = "dnt-k";
-      sk.textContent = STRIP_COLON(label) + ":";
+      // !!! ЛОКАЛИЗАЦИЯ ЛЕЙБЛА !!!
+      sk.textContent = t(STRIP_COLON(label)) + ":";
       kv.appendChild(sk);
     }
     const sv = document.createElement("span");
@@ -339,7 +360,7 @@
     const { fn2label, label2fn } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
 
-    // Предварительная очистка: убрать все чипы с label, не входящие в board.fields
+    // убрать чипы с label вне board.fields
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
       if (!lbl) return;
@@ -347,17 +368,16 @@
       if (!fn || !boardFields.includes(fn)) ch.remove();
     });
 
-    const need = boardFields.slice(); // только гибкие поля
+    const need = boardFields.slice();
     const v = await getValuesBatch(ctx.doctype, ctx.docName, need);
-    // формируем display_name только если он реально входит в board.fields
     if (boardFields.includes("display_name") && !CLEAN(v.display_name)) {
       const pseudo = await getValuesBatch(ctx.doctype, ctx.docName, ["first_name","middle_name","last_name","title"]);
       v.display_name = composeDisplayName(pseudo);
     }
 
-    // дозаполнение пустых (Labels ON)
     if (labelsOn){
       boardFields.forEach(fn=>{
+        // human → пропускаем через t в makeChip()
         const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
         const value = CLEAN(normalizeDateish(v[fn])) || "";
         let chip = Array.from(container.querySelectorAll(":scope > .dnt-kv")).find(ch=>{
@@ -366,21 +386,16 @@
           return f === fn;
         });
         if (!chip){
-          chip = makeChip(human, value, true);
+          chip = makeChip(human, value, true);         // t(human) произойдёт внутри
           insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         } else {
           const sv = chip.querySelector(".dnt-v"); if (sv && !CLEAN(sv.textContent)) sv.textContent = value || "—";
+          // если лейбл уже отрендерен — принудительно локализуем его текст
+          const sk = chip.querySelector(".dnt-k"); if (sk) sk.textContent = t(STRIP_COLON(human)) + ":";
         }
       });
 
-      // Удалить любые чипы не из board.fields (если всё же просочились)
-      Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
-        const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
-        const fn = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
-        if (!fn || !boardFields.includes(fn)) ch.remove();
-      });
-
-      // Отсортировать по порядку board.fields
+      // сортировка по board.fields
       const chips = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
       chips.sort((a,b)=>{
         const la = CLEAN(a.dataset.dntLabel || a.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
@@ -392,24 +407,24 @@
         return ia - ib;
       });
       chips.forEach(ch => container.appendChild(ch));
-      // Заполнить дефисы
+
+      // заполнение дефисами
       Array.from(container.querySelectorAll(":scope > .dnt-kv .dnt-v")).forEach(sv=>{
         if (!CLEAN(sv.textContent)) sv.textContent = "—";
       });
       return;
     }
 
-    // Labels OFF: апгрейд безымянных чипов только под значения из board.fields
+    // OFF: безымянные чипы только для board.fields
     const assignedValues = new Set();
-    const valueIndex = new Map(); // value -> [] безымянных чипов
+    const valueIndex = new Map();
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
       if (lbl) return;
       const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
       if (!val) return;
-      const key = val;
-      if (!valueIndex.has(key)) valueIndex.set(key, []);
-      valueIndex.get(key).push(ch);
+      if (!valueIndex.has(val)) valueIndex.set(val, []);
+      valueIndex.get(val).push(ch);
     });
 
     boardFields.forEach(fn=>{
@@ -419,18 +434,16 @@
       const pool = valueIndex.get(value) || [];
       const pick = pool.shift?.();
       if (pick){
-        // просто переставим по порядку (label не показываем)
         insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0);
         assignedValues.add(value);
       } else {
-        // создаём безымянный чип под нужное поле
         const chip = makeChip("", value, false);
         insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         assignedValues.add(value);
       }
     });
 
-    // Очистка: убрать оставшиеся чипы, не соответствующие board.fields
+    // очистка: убрать всё неиспользуемое
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
       if (lbl){
@@ -451,7 +464,6 @@
 
     let items = pairs.slice();
 
-    // ФИЛЬТР: оставляем только поля из board.fields.
     if (labelsOn){
       items = items.filter(o => o.fieldname && boardFields.includes(o.fieldname));
       items.sort((a,b)=>{
@@ -460,8 +472,6 @@
         return ia - ib;
       });
     } else {
-      // OFF: временно пропускаем «безымянные», всё равно backfillAll подчистит лишнее
-      // но чипы с label вне board.fields не добавляем
       items = items.filter(o => !o.fieldname || boardFields.includes(o.fieldname));
     }
 
@@ -510,43 +520,82 @@
     docEl.__dnt_mo = mo;
   }
 
-  /* ===== mini tasks ===== */
+  /* ===== mini tasks (fallback) ===== */
   const miniCache = new Map();
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   const planDT = (t) => t.custom_target_datetime || t.due_datetime || t.custom_due_datetime || t.date || null;
 
   function miniHtml(rows, total){
-    if (!rows?.length) return `<div class="dnt-taskline"><span class="dnt-chip">Tasks</span> <span class="ttl">No open tasks</span></div>`;
-    const lines = rows.map(t=>{
-      const p = planDT(t);
-      const open = (t.status||"Open")==="Open";
+    if (!rows?.length) return `<div class="dnt-taskline"><span class="dnt-chip">${t("Tasks")}</span> <span class="ttl">${t("No open tasks")}</span></div>`;
+    const lines = rows.map(ti=>{
+      const p = planDT(ti);
+      const open = (ti.status||"Open")==="Open";
       const overdue = p && open && moment(p).isBefore(moment());
-      const chip = p ? `<span class="dnt-chip ${overdue?'dnt-overdue':''}" title="Planned">${frappe.utils.escape_html(fmtDT(p))}</span>` : ``;
-      const ttl  = frappe.utils.escape_html(t.description || t.name);
-      return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(t.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
+      const chip = p ? `<span class="dnt-chip ${overdue?'dnt-overdue':''}" title="${t("Planned")}">${frappe.utils.escape_html(fmtDT(p))}</span>` : ``;
+      const ttl  = frappe.utils.escape_html(ti.description || ti.name);
+      return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
-    const more = total>rows.length ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">Show all (${total}) →</span></div>` : ``;
+    const more = total>rows.length ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(tf("Show all ({0}) →",[total]))}</span></div>` : ``;
     return lines + more;
   }
+
+  async function fetchMiniPrimary(caseName){
+    const { message } = await frappe.call({
+      method: CFG.tasksMethod,
+      args: { name: caseName, status: "Open", limit_start: 0, limit_page_length: CFG.tasksLimit, order: "desc" }
+    });
+    const rows  = (message && message.rows) || [];
+    const total = (message && message.total) || rows.length;
+    return { rows, total };
+  }
+  async function fetchMiniFallback(caseName){
+    try{
+      const { message: rows=[] } = await frappe.call({
+        method: "frappe.client.get_list",
+        args: {
+          doctype: "ToDo",
+          filters: {
+            reference_type: CFG.caseDoctype,
+            reference_name: caseName,
+            status: "Open"
+          },
+          fields: ["name","description","status","due_date","date","custom_due_datetime","due_datetime","custom_target_datetime"],
+          limit_page_length: CFG.tasksLimit,
+          order_by: "modified desc"
+        }
+      });
+      return { rows, total: rows.length };
+    } catch {
+      return { rows: [], total: 0 };
+    }
+  }
+
   async function loadMini(container, caseName){
     if (miniCache.has(caseName)) {
       container.innerHTML = miniCache.get(caseName);
       return bindMini(container, caseName);
     }
-    container.innerHTML = `<div class="dnt-taskline"><span class="ttl">Loading…</span></div>`;
+    container.innerHTML = `<div class="dnt-taskline"><span class="ttl">${t("Loading…")}</span></div>`;
     try{
-      const { message } = await frappe.call({
-        method: CFG.tasksMethod,
-        args: { name: caseName, status: "Open", limit_start: 0, limit_page_length: CFG.tasksLimit, order: "desc" }
-      });
-      const rows  = (message && message.rows) || [];
-      const total = (message && message.total) || rows.length;
-      const html  = miniHtml(rows, total);
+      let data = await fetchMiniPrimary(caseName);
+      if ((!data.rows || !data.rows.length) && (!data.total || data.total === 0)) {
+        data = await fetchMiniFallback(caseName);
+      }
+      const html  = miniHtml(data.rows || [], data.total || 0);
       miniCache.set(caseName, html);
       container.innerHTML = html;
       bindMini(container, caseName);
     } catch {
-      container.innerHTML = `<div class="dnt-taskline"><span class="ttl">Failed to load</span></div>`;
+      // последний шанс — фолбэк
+      try{
+        const data = await fetchMiniFallback(caseName);
+        const html  = miniHtml(data.rows || [], data.total || 0);
+        miniCache.set(caseName, html);
+        container.innerHTML = html;
+        bindMini(container, caseName);
+      }catch{
+        container.innerHTML = `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
+      }
     }
   }
   function bindMini(container, caseName){
@@ -581,9 +630,9 @@
       if (!val || val === currentText) return;
       try{
         await frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname:"title", value: val } });
-        frappe.show_alert({ message: __("Title updated"), indicator:"green" });
+        frappe.show_alert({ message: t("Title updated"), indicator:"green" });
       }catch{
-        frappe.msgprint({ message: __("Failed to update title"), indicator:"red" });
+        frappe.msgprint({ message: t("Failed to update title"), indicator:"red" });
         span.textContent = currentText;
       }
     };
@@ -625,6 +674,7 @@
 
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
+    // footer
     let foot = body.querySelector(".dnt-foot");
     if(!foot){ foot = document.createElement("div"); foot.className = "dnt-foot"; body.appendChild(foot); }
     const assign = (meta || body).querySelector(".kanban-assignments");
@@ -633,6 +683,7 @@
     if(like   && !foot.contains(like))   foot.appendChild(like);
     if(meta && !meta.children.length) meta.remove();
 
+    // мини-задачи + inline title
     if (doctype === CFG.caseDoctype && name) {
       if (!body.querySelector(".dnt-tasks-mini")) {
         const mini = document.createElement("div");
@@ -643,14 +694,16 @@
       makeTitleEditable(title, name, doctype);
     }
 
+    // hover-actions
     if (!wrapper.querySelector(".dnt-card-actions")){
       const row = document.createElement("div"); row.className="dnt-card-actions";
-      const bOpen = document.createElement("div"); bOpen.className="dnt-icon-btn"; bOpen.title=__("Open");
+
+      const bOpen = document.createElement("div"); bOpen.className="dnt-icon-btn"; bOpen.title=t("Open");
       bOpen.innerHTML = frappe.utils.icon("external-link","sm");
       bOpen.addEventListener("click",(e)=>{ e.stopPropagation(); if (doctype && name) frappe.set_route("Form", doctype, name); });
       row.appendChild(bOpen);
 
-      const bDel = document.createElement("div"); bDel.className="dnt-icon-btn"; bDel.title=__("Delete / Remove from board");
+      const bDel = document.createElement("div"); bDel.className="dnt-icon-btn"; bDel.title=t("Delete / Remove from board");
       bDel.innerHTML = frappe.utils.icon("delete","sm");
       bDel.addEventListener("click",(e)=>{
         e.stopPropagation();
@@ -658,24 +711,24 @@
         const board = CFG.BOARD[getBoardName()];
         const canSoft = !!(board && board.flag);
         const d = new frappe.ui.Dialog({
-          title: __("Card actions"),
-          primary_action_label: canSoft ? __("Remove from this board") : __("Delete"),
+          title: t("Card actions"),
+          primary_action_label: canSoft ? t("Remove from this board") : t("Delete"),
           primary_action: ()=> {
             if (canSoft) {
               frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname: board.flag, value: 0 } })
-                .then(()=>{ frappe.show_alert(__("Removed from board")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
+                .then(()=>{ frappe.show_alert(t("Removed from board")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
             } else {
               frappe.call({ method:"frappe.client.delete", args:{ doctype, name } })
-                .then(()=>{ frappe.show_alert(__("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
+                .then(()=>{ frappe.show_alert(t("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
             }
           }
         });
         if (canSoft){
-          d.set_secondary_action_label(__("Delete document"));
+          d.set_secondary_action_label(t("Delete document"));
           d.set_secondary_action(()=> {
-            frappe.confirm(__("Delete this document?"),()=>{
+            frappe.confirm(t("Delete this document?"),()=>{
               frappe.call({ method:"frappe.client.delete", args:{ doctype, name } })
-                .then(()=>{ frappe.show_alert(__("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
+                .then(()=>{ frappe.show_alert(t("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
             });
           });
         }
@@ -712,7 +765,7 @@
     const anchor = findSettingsAnchor(); if(!anchor) return;
     const btn=document.createElement("button");
     btn.id=CFG.settingsBtnId; btn.className="btn btn-default icon-btn";
-    btn.setAttribute("title", __("Kanban settings"));
+    btn.setAttribute("title", t("Kanban settings"));
     btn.innerHTML = frappe.utils.icon("edit","sm");
     btn.addEventListener("click",()=> {
       const r = frappe.get_route(); const bname = r?.[3] ? decodeURIComponent(r[3]) : (window.cur_list?.board?.name||"");
@@ -740,7 +793,8 @@
   }
 
   /* ===== boot ===== */
-  function run(){
+  async function run(){
+    await ensure_messages();
     if(!isKanbanRoute()){
       document.documentElement.classList.remove(CFG.htmlClass,"no-color","no-column-menu");
       document.querySelectorAll(`#${CFG.settingsBtnId}`).forEach(el => el.remove());

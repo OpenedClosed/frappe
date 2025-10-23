@@ -68,19 +68,20 @@
       });
 
       // Common blocks
-      [".form-assignments", ".form-shared", ".form-sidebar-stats", ".form-sidebar .form-follow"]
+      [".form-shared", ".form-sidebar-stats", ".form-sidebar .form-follow"]
         .forEach(sel => document.querySelectorAll(sel).forEach(el => {
           el.style.display = "none";
           el.setAttribute("aria-hidden", "true");
         }));
 
       // Timeline / comments
+      const assign = document.querySelector('.form-assignments');
       const meta = document.querySelector('ul.list-unstyled.sidebar-menu.text-muted');
       const timeline   = document.querySelector(".new-timeline");
       const commentBox = document.querySelector(".form-footer .comment-box");
       const commentBtn = document.querySelector(".form-footer .btn-comment");
       if (is_super()) {
-        [meta, timeline, commentBox, commentBtn].forEach(el => { if (!el) return; el.style.display = ""; el.removeAttribute("aria-hidden"); });
+        [assign, meta, timeline, commentBox, commentBtn].forEach(el => { if (!el) return; el.style.display = ""; el.removeAttribute("aria-hidden"); });
         // раскрываем боковую панель если надо
         let p = meta && meta.parentElement;
         while (p && p !== document.documentElement) {
