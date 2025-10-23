@@ -111,7 +111,7 @@
 
     <!-- Chat view -->
     <div v-else class="flex flex-col justify-between">
-      <EmbeddedChat v-if="itemData.chat_id" :id="itemData.chat_id" :user_id="itemData.client[0].client_id || null" />
+      <EmbeddedChat v-if="itemData.chat_id" />
       <div class="w-full mt-4">
         <Button :label="t('MainForm.backToList')" icon="pi pi-arrow-left" @click="goToFormView" />
       </div>

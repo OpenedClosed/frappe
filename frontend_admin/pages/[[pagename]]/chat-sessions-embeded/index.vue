@@ -1,5 +1,10 @@
 <template>
-  <EmbeddedChat />
+  <div class="p-4">
+    <EmbeddedChat 
+      :entity="'chat_sessions'"
+      :group="'chats'"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
