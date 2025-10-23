@@ -1,26 +1,21 @@
-// Engagement Case — Form UX (final: your original + stacked pipelines progress)
-// - Progress: Пайплайны по одной доске в строку; шаги тянутся из df.options;
-//   классы ec-steps/ec-step/-past/-current/-future/-disabled — как в "stacked pipelines" + кнопка Open Kanban.
-// - Скрываем title-indicator ТОЛЬКО на Engagement Case (через ec-suppress-title-indicator).
-// - Title badges: цветные чипы по всем доскам + "Hidden" при необходимости.
-// - Linked Cases: «как было» (цветные чипы всех досок, Search & Link, Unlink).
-// - ✎: надёжно открывает нативный редактор строки (если только inline-режим — временно раскрывает грид, потом снова прячет).
-// - В get_list НЕТ crm_status (исправляет DataError).
-// - NEW: секция “Workflow” сворачиваемая с запоминанием состояния (localStorage: ec_workflow_collapsed).
+// === FILE 1 (final) ===
+// Engagement Case — Form UX (i18n + Kanban colors + one-line header chips + no overlap)
+// Изменения к прошлой версии:
+// - Чипы в шапке всегда в ОДНУ строку и начинаются сразу после названия (с небольшим отступом).
+// - НИКАКОГО налезания на заголовок: чипы — сосед .title-text, а не внутри.
+// - Цвет текста во всех статус-чипах теперь контрастный тёмно-серый (#111827), чтобы не сливаться с цветом статуса.
+// - Цвет подложки/границы по-прежнему тянется из Kanban (window.EC_BOARD_COLORS).
 
 (function () {
   const DOCTYPE = "Engagement Case";
   const esc = frappe.utils.escape_html;
 
-  // ---------- LS helpers ----------
+  // ---------- LS ----------
   const LS = {
-    get(key, def = null) {
-      try { const v = localStorage.getItem(key); return v === null ? def : v; } catch { return def; }
-    },
+    get(key, def = null) { try { const v = localStorage.getItem(key); return v === null ? def : v; } catch { return def; } },
     set(key, val) { try { localStorage.setItem(key, String(val)); } catch {} },
-    del(key) { try { localStorage.removeItem(key); } catch {} },
   };
-  const WORKFLOW_LS_KEY = "ec_workflow_collapsed"; // "1" — свернуто, "0" — раскрыто
+  const WORKFLOW_LS_KEY = "ec_workflow_collapsed";
 
   // --- Boards meta ---
   const BOARDS = [
@@ -30,15 +25,35 @@
     { name: "Patients – Care Department", flag: "show_board_patients", fields: ["status_patients"],                 color: "#9333ea" },
   ];
 
-  // ---------- colors ----------
+  // ---------- Route-scoped cleanup ----------
+  function isOnThisForm() {
+    try { const r = frappe.get_route ? frappe.get_route() : []; return r && r[0] === "Form" && r[1] === DOCTYPE; }
+    catch { return false; }
+  }
+  function clearBadgesEverywhere() {
+    document.querySelectorAll(".ec-title-badges").forEach(n => n.remove());
+    document.querySelectorAll(".ec-title-layout").forEach(n => n.classList.remove("ec-title-layout"));
+    document.querySelectorAll(".ec-suppress-title-indicator").forEach(n => n.classList.remove("ec-suppress-title-indicator"));
+  }
+  try { if (frappe.router?.on) frappe.router.on("change", () => { if (!isOnThisForm()) clearBadgesEverywhere(); }); } catch {}
+  window.addEventListener("hashchange", () => { if (!isOnThisForm()) clearBadgesEverywhere(); });
+
+  // ---------- Colors (Kanban) ----------
   async function ensureAllBoardColors() {
     if (typeof window.getBoardColors === "function") {
       await Promise.all(BOARDS.map(b => window.getBoardColors(b.name)));
     }
   }
-  function colorFor(board, status) {
+  function colorMetaFor(board, status) {
     const map = (window.EC_BOARD_COLORS && window.EC_BOARD_COLORS[board]) || {};
-    return map[status] || map[(status||"").toLowerCase?.()] || "#2563eb";
+    const key = status || "";
+    const v = map[key] ?? map[key.toLowerCase?.()] ?? null;
+    if (!v) return { bd: "#2563eb" };
+    if (typeof v === "string") return { bd: v };
+    const bd = v.bd || v.bg || v.tx || "#2563eb";
+    const bg = v.bg || null;
+    const tx = v.tx || null;
+    return { bd, bg, tx };
   }
   function rgba(hex, a){
     const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||"");
@@ -47,27 +62,43 @@
     return `rgba(${r},${g},${b},${a})`;
   }
 
-  // ---------- chips ----------
+  // ---------- Chips (переводимый текст; lookup цвета — по raw status) ----------
+  const TEXT_DARK = "#111827"; // единый контрастный цвет текста для всех статусов
+
   function chipTag(bucket, val, dashed=false){
     if (!val) return "";
-    if (typeof window.tagChip === "function") return window.tagChip(bucket,val,dashed);
-    return `<span class="crm-chip${dashed?" -dashed":""}">${esc(val)}</span>`;
+    if (typeof window.tagChip === "function") {
+      const html = window.tagChip(bucket, String(val), dashed);
+      try {
+        const tmp = document.createElement("div"); tmp.innerHTML = html || "";
+        const el = tmp.firstElementChild || tmp;
+        const target = (el.querySelector?.(".crm-chip") || el);
+        if (target) target.textContent = __(String(val));
+        return el.outerHTML || el.innerHTML || html;
+      } catch { return html; }
+    }
+    return `<span class="crm-chip${dashed?" -dashed":""}">${esc(__(String(val)))}</span>`;
   }
-  function chipBoard(boardName, status, dashed=false){
-    if (!status) return "";
-    if (typeof window.boardChip === "function") return window.boardChip(boardName,status,dashed);
-    const c = colorFor(boardName, status);
-    const st = dashed
-      ? `border-color:${c};border-style:dashed;background:transparent;color:${c}`
-      : `background:${rgba(c,.18)};border-color:${rgba(c,.25)};color:#111827`;
-    return `<span class="crm-chip" style="${st}">${esc(status)}</span>`;
+
+  function chipBoard(boardName, rawStatus, dashed=false){
+    if (!rawStatus) return "";
+    const { bd } = colorMetaFor(boardName, rawStatus);
+    if (dashed) {
+      // неактивные — пунктир, текст тёмно-серый
+      const st = `border-color:${bd};border-style:dashed;background:transparent;color:${TEXT_DARK}`;
+      return `<span class="crm-chip" style="${st}">${esc(__(rawStatus))}</span>`;
+    }
+    // активные — мягкая подложка по цвету доски, ГРАНИЦА по цвету доски, ТЕКСТ тёмно-серый
+    const st = `background:${rgba(bd,.12)};border-color:${rgba(bd,.25)};color:${TEXT_DARK}`;
+    return `<span class="crm-chip" style="${st}">${esc(__(rawStatus))}</span>`;
   }
-  const timeChip  = (lbl, dt)=> dt ? `<span class="crm-chip -ghost"><span class="lbl">${esc(lbl)}:</span> ${frappe.datetime.comment_when(dt)}</span>` : "";
+
+  const timeChip  = (lbl, dt)=> dt ? `<span class="crm-chip -ghost"><span class="lbl">${esc(__(lbl))}:</span> ${frappe.datetime.comment_when(dt)}</span>` : "";
   const sepChip   = `<span class="crm-vsep" aria-hidden="true"></span>`;
   const fullPath  = (p)=> p ? (p.startsWith("/") ? p : `/${p}`) : "";
   const pickAvatar= (row)=> fullPath(row.avatar || "/assets/frappe/images/ui/user-avatar.svg");
 
-  // ---------- hidden mark ----------
+  // ---------- Hidden mark ----------
   let HIDDEN_SET=null;
   async function isCurrentHidden(name){
     try{
@@ -80,17 +111,24 @@
     } catch { return false; }
   }
 
-  // ---------- scoping + css ----------
+  // ---------- CSS ----------
   const CSS_ID = "ec-form-ux-css";
   function ensureCss() {
     if (document.getElementById(CSS_ID)) return;
     const s = document.createElement("style");
     s.id = CSS_ID;
     s.textContent = `
-    /* Скрываем стандартный title-indicator только здесь */
+    /* скрываем стандартный индикатор только на нашей форме */
     .ec-suppress-title-indicator .page-head .indicator-pill { display:none !important; }
 
-    /* Progress — СТРОГО как в "stacked pipelines" + кнопка Open Kanban */
+    /* Локальный layout шапки: одна строка, без налезания на заголовок */
+    .ec-title-layout .page-head .title-area { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+    .ec-title-layout .page-head .title-area .title-text{ display:flex; align-items:center; gap:8px; min-width:0; }
+    .ec-title-badges{ display:flex; gap:6px; flex-wrap:nowrap; white-space:nowrap; margin-left:8px; overflow:hidden; }
+    /* чипы не переносятся */
+    .ec-title-badges .crm-chip{ white-space:nowrap; }
+
+    /* Остальные стили */
     .form-dashboard .ec-progress-section .section-head{
       font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);
       display:flex; align-items:center; gap:6px; cursor:pointer;
@@ -99,9 +137,7 @@
       margin-left:6px; display:inline-flex; align-items:center;
       transform: rotate(0deg); transition: transform .12s ease;
     }
-    .form-dashboard .ec-progress-section .section-head.collapsed .collapse-indicator{
-      transform: rotate(-90deg);
-    }
+    .form-dashboard .ec-progress-section .section-head.collapsed .collapse-indicator{ transform: rotate(-90deg); }
     .form-dashboard .ec-progress-section .section-body{ padding:12px; }
     .form-dashboard .ec-progress-section .section-body.hide{ display:none; }
 
@@ -131,8 +167,6 @@
     .ec-name.-current{ color:#111827; font-weight:600; }
     .ec-names.-disabled .ec-name{ color:#9ca3af; }
 
-    /* Title badges + Linked Cards — как было у тебя */
-    .ec-title-badges{display:flex;gap:6px;align-items:center;margin-left:8px}
     .crm-chip{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:transparent}
     .crm-chip.-ghost{background:#f8fafc}
     .crm-chip.-dashed{border-style:dashed;background:transparent}
@@ -149,11 +183,10 @@
     .ec-avatar img{width:100%;height:100%;object-fit:cover;display:block}
     .ec-body{min-width:0}
     .ec-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-    .ec-meta{color:#6b7280;font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+    .ec-meta{color:#6b7280;font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;max-width:100%}
     .ec-meta.-time .frappe-timestamp{opacity:.9}
     .ec-right{display:flex;align-items:center;gap:6px}
 
-    /* Прячем нативную grid визуально, DOM остаётся для ✎ */
     .ec-grid-hidden .control-label,
     .ec-grid-hidden .grid-description,
     .ec-grid-hidden .grid-custom-buttons,
@@ -170,6 +203,7 @@
     const root = pageWrap(frm);
     if (!root) return;
     root.classList.toggle("ec-suppress-title-indicator", !!on);
+    root.classList.toggle("ec-title-layout", !!on); // включает наш локальный layout заголовка (одна строка)
   }
   function findFirstExistingField(frm, list) {
     for (const fn of list) if (frm.fields_dict[fn]) return fn;
@@ -181,22 +215,18 @@
     return String(df.options || "").split("\n").map(s => s.trim()).filter(Boolean);
   }
 
-  // ---------- collapsible section wiring (with LS state) ----------
-  function wireCollapsible(sec, lsKey, defaultCollapsed=false){
+  // ---------- collapsible ----------
+  function wireCollapsible(sec, lsKey, defCollapsed=false){
     if (!sec) return;
     const head = sec.querySelector(".section-head");
     const body = sec.querySelector(".section-body");
     if (!head || !body) return;
 
-    // add indicator once
     if (!head.querySelector(".collapse-indicator")){
       const ind = document.createElement("span");
       ind.className = "ml-2 collapse-indicator mb-1";
       ind.setAttribute("tabindex","0");
-      ind.innerHTML = `
-        <svg class="es-icon es-line icon-sm" aria-hidden="true">
-          <use href="#es-line-down"></use>
-        </svg>`;
+      ind.innerHTML = `<svg class="es-icon es-line icon-sm" aria-hidden="true"><use href="#es-line-down"></use></svg>`;
       head.appendChild(ind);
     }
 
@@ -206,8 +236,7 @@
       LS.set(lsKey, collapsed ? "1" : "0");
     };
 
-    // initial state
-    const ls = LS.get(lsKey, defaultCollapsed ? "1" : "0");
+    const ls = LS.get(lsKey, defCollapsed ? "1" : "0");
     apply(ls === "1");
 
     const toggle = (e) => {
@@ -216,7 +245,6 @@
       apply(now);
     };
 
-    // bind once
     if (!head.__ecBound){
       head.addEventListener("click", toggle);
       head.addEventListener("keydown", toggle);
@@ -236,9 +264,9 @@
       row.id = id;
 
       const head = document.createElement("div");
-      head.className = "section-head collapsible"; // важно: collapsible
+      head.className = "section-head collapsible";
       head.tabIndex = 0;
-      head.textContent = title;
+      head.textContent = __(title);
 
       const body = document.createElement("div");
       body.className = "section-body";
@@ -247,8 +275,7 @@
       dash.insertBefore(row, dash.firstChild);
       sec = row;
     }
-    // каждый раз при получении — синхронизируем сворачивание по LS
-    wireCollapsible(sec, WORKFLOW_LS_KEY, /*defaultCollapsed=*/false);
+    wireCollapsible(sec, WORKFLOW_LS_KEY, false);
     return sec;
   }
 
@@ -271,7 +298,7 @@
       div.style.border = "1px dashed #d1d5db";
       div.style.cursor = "default";
     }
-    div.title = label;
+    div.title = __(label);
     return div;
   }
 
@@ -281,7 +308,7 @@
 
     const steps = getSelectOptions(frm, fieldname);
     const current = (doc[fieldname] || "");
-    const currentIdx = idxOf(steps, current); // фикс: без глобальной переменной
+    const currentIdx = idxOf(steps, current);
 
     const enabled = parseInt(doc[board.flag] || 0) === 1;
 
@@ -295,13 +322,13 @@
     const dot = document.createElement("span");
     dot.className = "dot"; dot.style.background = board.color;
     const ttl = document.createElement("div");
-    ttl.className = "title"; ttl.textContent = board.name;
+    ttl.className = "title"; ttl.textContent = __(board.name);
     left.appendChild(dot); left.appendChild(ttl);
 
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-xs btn-default ec-open-kanban";
-    btn.textContent = "Open Kanban";
+    btn.textContent = __("Open Kanban");
     btn.addEventListener("click", () => frappe.set_route("List", DOCTYPE, "Kanban", board.name));
 
     head.appendChild(left);
@@ -320,7 +347,7 @@
     steps.forEach((lbl, i) => {
       const n = document.createElement("div");
       n.className = "ec-name" + (i === currentIdx && enabled ? " -current" : "");
-      n.title = lbl; n.textContent = lbl;
+      n.title = __(lbl); n.textContent = __(lbl);
       namesWrap.appendChild(n);
     });
 
@@ -350,20 +377,30 @@
       if (ui) list.appendChild(ui);
     });
 
-    // на случай повторных ререндеров — ещё раз убедимся, что состояние синхронизировано
-    wireCollapsible(sec, WORKFLOW_LS_KEY, /*defaultCollapsed=*/false);
+    wireCollapsible(sec, WORKFLOW_LS_KEY, false);
   }
 
   // ---------- Title badges ----------
   async function updateTitleBadges(frm){
-    const titleArea = document.querySelector(".page-head .title-area .flex");
-    if (!titleArea) return;
-    let wrap = titleArea.querySelector(".ec-title-badges");
-    if (!wrap){
-      wrap = document.createElement("div");
-      wrap.className = "ec-title-badges";
-      titleArea.appendChild(wrap);
-    }
+    if (!isOnThisForm()) return;
+
+    const root = pageWrap(frm);
+    if (!root) return;
+    root.classList.add("ec-title-layout");
+    root.classList.add("ec-suppress-title-indicator");
+
+    const titleArea = root.querySelector(".page-head .title-area");
+    const titleText = titleArea?.querySelector(".title-text");
+    if (!titleArea || !titleText) return;
+
+    // убрать прошлые
+    titleArea.querySelectorAll(".ec-title-badges").forEach(n => n.remove());
+
+    // вставляем СЛЕДОМ за .title-text — одна линия, без overlay
+    const wrap = document.createElement("div");
+    wrap.className = "ec-title-badges";
+    titleText.insertAdjacentElement("afterend", wrap);
+
     const chips=[];
     for (const b of BOARDS){
       const fieldname = findFirstExistingField(frm, b.fields);
@@ -373,10 +410,10 @@
       chips.push(chipBoard(b.name, st, dashed));
     }
     const hidden = await isCurrentHidden(frm.doc.name);
-    wrap.innerHTML = chips.join("") + (hidden ? sepChip + chipTag("badge","Hidden",false) : "");
+    wrap.innerHTML = chips.join("") + (hidden ? sepChip + chipTag("badge", "Hidden", false) : "");
   }
 
-  // ---------- Linked ----------
+  // ---------- Linked UI ----------
   function ensureLinkedContainer(frm) {
     const fld = frm.get_field("linked_engagements");
     if (!fld?.wrapper) return null;
@@ -388,9 +425,9 @@
       div.className = "ec-linked-preview";
       div.innerHTML = `
         <div class="ec-linked-header">
-          Linked engagements
+          ${esc(__("Linked engagements"))}
           <span class="ec-actions">
-            <button class="btn btn-xs btn-default" data-ec-act="search-link">Search & Link</button>
+            <button class="btn btn-xs btn-default" data-ec-act="search-link">${esc(__("Search & Link"))}</button>
           </span>
         </div>
         <div class="ec-linked-list"></div>`;
@@ -432,9 +469,9 @@
     if (opts.hidden)    badges.push(chipTag("badge", "Hidden"));
 
     const right = [
-      `<button class="btn btn-xs btn-default" data-act="open"   data-name="${esc(row.name)}">Open</button>`,
-      opts.show_unlink   ? `<button class="btn btn-xs btn-danger"  data-act="unlink" data-name="${esc(row.name)}">Unlink</button>` : "",
-      opts.can_edit_link ? `<button class="btn btn-xs btn-primary" data-act="edit-link" data-name="${esc(row.name)}" title="Edit link row">✎</button>` : ""
+      `<button class="btn btn-xs btn-default" data-act="open"   data-name="${esc(row.name)}">${esc(__("Open"))}</button>`,
+      opts.show_unlink   ? `<button class="btn btn-xs btn-danger"  data-act="unlink" data-name="${esc(row.name)}">${esc(__("Unlink"))}</button>` : "",
+      opts.can_edit_link ? `<button class="btn btn-xs btn-primary" data-act="edit-link" data-name="${esc(row.name)}" title="${esc(__("Edit link row"))}">✎</button>` : ""
     ].filter(Boolean).join(" ");
 
     return `
@@ -457,7 +494,6 @@
     if (fld?.wrapper) fld.wrapper.classList.add("ec-grid-hidden");
   }
 
-  // === временно показываем грид на время редактирования inline ===
   function temporarilyShowLinkedGrid(frm) {
     const fld = frm.get_field("linked_engagements");
     const wrap = fld?.wrapper && fld.wrapper[0] ? fld.wrapper[0] : (fld?.wrapper || null);
@@ -484,14 +520,14 @@
   async function loadLinkedPreviews(frm) {
     const listWrap = ensureLinkedContainer(frm);
     if (!listWrap) return;
-    listWrap.innerHTML = `<div class="text-muted small">Loading…</div>`;
+    listWrap.innerHTML = `<div class="text-muted small">${esc(__("Loading…"))}</div>`;
 
     const linkRows = (frm.doc.linked_engagements || []).filter(r => r.engagement);
     const names = linkRows.map(r => r.engagement);
     const hiddenByName = {};
     linkRows.forEach(r => { hiddenByName[r.engagement] = !!r.hide_in_lists; });
 
-    if (!names.length) { listWrap.innerHTML = `<div class="text-muted small">No linked engagements yet.</div>`; return; }
+    if (!names.length) { listWrap.innerHTML = `<div class="text-muted small">${esc(__("No linked engagements yet."))}</div>`; return; }
 
     try {
       const { message: rows = [] } = await frappe.call({
@@ -513,7 +549,7 @@
         show_unlink: true,
         can_edit_link: true,
         hidden: !!hiddenByName[r.name]
-      })).join("") || `<div class="text-muted small">No data.</div>`;
+      })).join("") || `<div class="text-muted small">${esc(__("No data."))}</div>`;
 
       listWrap.querySelectorAll("[data-act]").forEach(btn => {
         btn.addEventListener("click", (ev) => {
@@ -530,7 +566,7 @@
                 frm.refresh_field("linked_engagements");
                 loadLinkedPreviews(frm);
                 loadParentPreviews(frm);
-                frappe.show_alert({ message: `Unlinked ${name}`, indicator: "orange" });
+                frappe.show_alert({ message: `${esc(__("Unlinked"))} ${esc(name)}`, indicator: "orange" });
               }
             });
           } else if (act === "edit-link") {
@@ -540,7 +576,7 @@
       });
     } catch (e) {
       console.error(e);
-      listWrap.innerHTML = `<div class="text-danger small">Failed to load linked previews.</div>`;
+      listWrap.innerHTML = `<div class="text-danger small">${esc(__("Failed to load linked previews."))}</div>`;
     }
   }
 
@@ -551,7 +587,7 @@
     if (!wrap) {
       const div = document.createElement("div");
       div.className = "ec-parents-preview";
-      div.innerHTML = `<div class="ec-linked-header">Parents (where this case is linked)</div><div class="ec-parents-list"></div>`;
+      div.innerHTML = `<div class="ec-linked-header">${esc(__("Parents (where this case is linked)"))}</div><div class="ec-parents-list"></div>`;
       fld.wrapper.appendChild(div);
       wrap = div;
     }
@@ -561,43 +597,29 @@
   async function loadParentPreviews(frm) {
     const listWrap = ensureParentsContainer(frm);
     if (!listWrap || frm.is_new()) { if (listWrap) listWrap.innerHTML = ""; return; }
-    listWrap.innerHTML = `<div class="text-muted small">Loading…</div>`;
+    listWrap.innerHTML = `<div class="text-muted small">${esc(__("Loading…"))}</div>`;
     try {
       const { message: rows = [] } = await frappe.call({
         method: "dantist_app.api.engagement.handlers.parents_of_engagement",
         args: { name: frm.doc.name }
       });
-      listWrap.innerHTML = (rows||[]).map(r => renderMiniCard(r, { is_parent:true })).join("") || `<div class="text-muted small">No parents.</div>`;
+      listWrap.innerHTML = (rows||[]).map(r => renderMiniCard(r, { is_parent:true })).join("") || `<div class="text-muted small">${esc(__("No parents."))}</div>`;
       listWrap.querySelectorAll("[data-act='open']").forEach(btn =>
         btn.addEventListener("click", ()=> frappe.set_route("Form", DOCTYPE, btn.getAttribute("data-name")))
       );
     } catch (e) {
       console.error(e);
-      listWrap.innerHTML = `<div class="text-danger small">Failed to load parent previews.</div>`;
+      listWrap.innerHTML = `<div class="text-danger small">${esc(__("Failed to load parent previews."))}</div>`;
     }
   }
 
-  // ---------- ✎: открыть нативный редактор строки (с логами вокруг кнопки/открытия) ----------
+  // ---------- Row editor ----------
   function openLinkRowEditor(frm, engagementName) {
-    const TAG = "[EC ✎]";
     const grid = frm.get_field("linked_engagements")?.grid;
-    if (!grid) { console.warn(TAG, "grid not found for linked_engagements"); return; }
+    if (!grid) return;
 
     const rowDoc = (frm.doc.linked_engagements || []).find(r => r.engagement === engagementName);
-    if (!rowDoc) { console.warn(TAG, "rowDoc not found for engagement", engagementName); return; }
-
-    try {
-      console.debug(TAG, "rowDoc:", { name: rowDoc.name, idx: rowDoc.idx, engagement: rowDoc.engagement });
-      console.debug(TAG, "grid methods:", {
-        edit_row: typeof grid.edit_row,
-        open_grid_row: typeof grid.open_grid_row,
-        get_row: typeof grid.get_row,
-        show_form: typeof grid.show_form,
-        grid_rows_len: (grid.grid_rows && grid.grid_rows.length) || 0,
-        grid_rows_by_docname: !!grid.grid_rows_by_docname,
-        grid_form_type: typeof grid.grid_form
-      });
-    } catch (_) {}
+    if (!rowDoc) return;
 
     const getGridRow = () => {
       try {
@@ -615,9 +637,7 @@
         const rowEl = wrap && wrap.querySelector(`.grid-row[data-name="${rowDoc.name}"]`);
         const cleanup = ensureVisible.cleanup;
 
-        rowEl?.querySelector(".grid-row-close")?.addEventListener("click", () => {
-          setTimeout(cleanup, 40);
-        }, { once: true });
+        rowEl?.querySelector(".grid-row-close")?.addEventListener("click", () => { setTimeout(cleanup, 40); }, { once: true });
 
         if (rowEl) {
           const mo = new MutationObserver(() => {
@@ -628,7 +648,6 @@
           });
           mo.observe(rowEl, { attributes: true, attributeFilter: ["class"] });
         }
-
         setTimeout(cleanup, 120000);
       } catch (_) {
         setTimeout(ensureVisible.cleanup, 3000);
@@ -638,14 +657,11 @@
     const openInline = () => {
       try {
         const gRow = getGridRow();
-        if (!gRow) { console.debug(TAG, "no grid row by docname for inline path"); return false; }
+        if (!gRow) return false;
         if (typeof gRow.open_form === "function") {
-          console.info(TAG, "try open via gRow.open_form()");
           gRow.open_form();
-          console.info(TAG, "opened via gRow.open_form()");
         } else if (typeof gRow.toggle_view === "function") {
           gRow.toggle_view(true);
-          console.info(TAG, "opened via gRow.toggle_view(true) (inline)");
         } else {
           return false;
         }
@@ -655,50 +671,24 @@
         } catch (_){}
         attachAutoHide();
         return true;
-      } catch (e) {
-        console.error(TAG, "inline path failed:", e);
-        return false;
-      }
+      } catch { return false; }
     };
 
-    try { console.debug(TAG, "grid.refresh() pre"); grid.refresh(); } catch (_) {}
+    try { grid.refresh?.(); } catch (_) {}
 
     if (typeof grid.edit_row === "function") {
-      console.info(TAG, "try open via grid.edit_row(name)");
-      grid.edit_row(rowDoc.name);
-      console.info(TAG, "opened via edit_row");
-      setTimeout(ensureVisible.cleanup, 10);
-      return;
+      grid.edit_row(rowDoc.name); setTimeout(ensureVisible.cleanup, 10); return;
     }
     if (typeof grid.open_grid_row === "function") {
-      console.info(TAG, "try open via grid.open_grid_row(name)");
-      grid.open_grid_row(rowDoc.name);
-      console.info(TAG, "opened via open_grid_row");
-      setTimeout(ensureVisible.cleanup, 10);
-      return;
+      grid.open_grid_row(rowDoc.name); setTimeout(ensureVisible.cleanup, 10); return;
     }
-
     if (openInline()) return;
 
     setTimeout(() => {
-      try { console.debug(TAG, "grid.refresh() retry"); grid.refresh(); } catch (_) {}
-      if (typeof grid.edit_row === "function") {
-        console.info(TAG, "retry via grid.edit_row(name)");
-        grid.edit_row(rowDoc.name);
-        console.info(TAG, "opened via edit_row");
-        setTimeout(ensureVisible.cleanup, 10);
-        return;
-      }
-      if (typeof grid.open_grid_row === "function") {
-        console.info(TAG, "retry via grid.open_grid_row(name)");
-        grid.open_grid_row(rowDoc.name);
-        console.info(TAG, "opened via open_grid_row");
-        setTimeout(ensureVisible.cleanup, 10);
-        return;
-      }
+      try { grid.refresh?.(); } catch (_) {}
+      if (typeof grid.edit_row === "function") { grid.edit_row(rowDoc.name); setTimeout(ensureVisible.cleanup, 10); return; }
+      if (typeof grid.open_grid_row === "function") { grid.open_grid_row(rowDoc.name); setTimeout(ensureVisible.cleanup, 10); return; }
       if (openInline()) return;
-
-      console.error(TAG, "all paths failed; editor did not open");
       ensureVisible.cleanup();
     }, 40);
   }
@@ -708,20 +698,20 @@
     const already = new Set((frm.doc.linked_engagements || []).map(r => r.engagement).filter(Boolean));
 
     const d = new frappe.ui.Dialog({
-      title: "Link existing case",
+      title: __("Link existing case"),
       fields: [
-        { fieldtype: "Data", fieldname: "q", label: "Search", description: "name, title, display name, phone, email" },
+        { fieldtype: "Data", fieldname: "q", label: __("Search"), description: __("name, title, display name, phone, email") },
         { fieldtype: "Section Break" },
         { fieldtype: "HTML", fieldname: "results" },
       ],
-      primary_action_label: "Close",
+      primary_action_label: __("Close"),
       primary_action() { d.hide(); }
     });
     const $res = ()=> d.get_field("results").$wrapper;
 
     async function runSearch() {
       const q = (d.get_value("q") || "").trim();
-      $res().html(`<div class="text-muted small">Searching…</div>`);
+      $res().html(`<div class="text-muted small">${esc(__("Searching…"))}</div>`);
       const like = `%${q}%`;
       const or_filters = q ? [
         [DOCTYPE,"name","like",like],
@@ -750,7 +740,7 @@
         });
 
         const filtered = (items || []).filter(it => !already.has(it.name));
-        if (!filtered.length) { $res().html(`<div class="text-muted small">Nothing found</div>`); return; }
+        if (!filtered.length) { $res().html(`<div class="text-muted small">${esc(__("Nothing found"))}</div>`); return; }
 
         const html = filtered.map(r => {
           const common = [
@@ -773,8 +763,8 @@
                 </div>
               </div>
               <div class="ec-right">
-                <button class="btn btn-xs btn-default" data-act="open" data-name="${esc(r.name)}">Open</button>
-                <button class="btn btn-xs btn-primary" data-act="link" data-name="${esc(r.name)}">Link</button>
+                <button class="btn btn-xs btn-default" data-act="open" data-name="${esc(r.name)}">${esc(__("Open"))}</button>
+                <button class="btn btn-xs btn-primary" data-act="link" data-name="${esc(r.name)}">${esc(__("Link"))}</button>
               </div>
             </div>
           `;
@@ -798,12 +788,12 @@
             frm.refresh_field("linked_engagements");
             loadLinkedPreviews(frm);
             loadParentPreviews(frm);
-            frappe.show_alert({ message: `Linked ${name}`, indicator: "green" });
+            frappe.show_alert({ message: `${esc(__("Linked"))} ${esc(name)}`, indicator: "green" });
           }
         });
       } catch (e) {
         console.error(e);
-        $res().html(`<div class="text-danger small">Search failed</div>`);
+        $res().html(`<div class="text-danger small">${esc(__("Search failed"))}</div>`);
       }
     }
 
@@ -816,8 +806,8 @@
   frappe.ui.form.on(DOCTYPE, {
     async onload_post_render(frm) {
       ensureCss();
-      suppressTitleIndicator(frm, true);
       await ensureAllBoardColors();
+      suppressTitleIndicator(frm, true);
       await updateTitleBadges(frm);
       renderProgress(frm);
       hideLinkedGrid(frm);
@@ -826,16 +816,16 @@
     },
     async refresh(frm) {
       ensureCss();
-      suppressTitleIndicator(frm, true);
       await ensureAllBoardColors();
+      suppressTitleIndicator(frm, true);
       await updateTitleBadges(frm);
       renderProgress(frm);
       hideLinkedGrid(frm);
       loadLinkedPreviews(frm);
       loadParentPreviews(frm);
 
-      requestAnimationFrame(() => { renderProgress(frm); });
-      setTimeout(() => { renderProgress(frm); }, 60);
+      requestAnimationFrame(renderProgress.bind(null, frm));
+      setTimeout(renderProgress.bind(null, frm), 60);
     },
 
     // обновляем пайплайны при изменениях
@@ -852,7 +842,10 @@
     linked_engagements_add(frm){ loadLinkedPreviews(frm); },
     linked_engagements_remove(frm){ loadLinkedPreviews(frm); loadParentPreviews(frm); },
 
-    on_close(frm){ suppressTitleIndicator(frm, false); }
+    on_close(frm){
+      suppressTitleIndicator(frm, false);
+      clearBadgesEverywhere();
+    }
   });
 
 })();

@@ -1,5 +1,6 @@
+// === FILE A: EC_TAG_COLORS (drop-in) ===
 // EC_TAG_COLORS + tagChip: различимая палитра для НЕ-канбанных "тегов"
-// Используется и в List View, и в карточках связанных кейсов, и в шапке формы.
+// Текст переводим (__(...)), цвет подбираем по исходному значению ключа (raw).
 (function (w) {
   const PALETTE = {
     gray:   {bg:"#f3f4f6", bd:"#e5e7eb"},
@@ -15,7 +16,6 @@
     indigo: {bg:"#eef2ff", bd:"#c7d2fe"},
   };
 
-  // максимально различимые источники/каналы
   const platform = {
     "Internal": PALETTE.gray,
     "Instagram": PALETTE.purple,
@@ -57,20 +57,22 @@
     "Closed by Operator": PALETTE.green,
   };
 
-  // спец-бейджи для карточек и шапки
   const badge = {
-    "Hidden": PALETTE.orange, // мягкий оранжевый (как раньше)
-    "Parent": PALETTE.indigo, // спокойный индиго
+    "Hidden": PALETTE.orange,
+    "Parent": PALETTE.indigo,
   };
 
   w.EC_TAG_COLORS = { platform, channel_type, priority, runtime_status, badge };
 
   const esc = frappe.utils.escape_html;
+  const TEXT_DARK = "#111827";
 
-  // dashed=true → пунктирный контур; по умолчанию — сплошная окантовка с заливкой
-  w.tagChip = function (bucket, key, dashed=false) {
-    const c = (w.EC_TAG_COLORS[bucket] && w.EC_TAG_COLORS[bucket][key]) || PALETTE.gray;
-    const extra = dashed ? "border-style:dashed; background:transparent;" : "";
-    return `<span class="crm-chip" style="background:${c.bg};border-color:${c.bd};${extra}">${esc(key||"")}</span>`;
+  // dashed=true → пунктир, иначе — мягкая заливка
+  w.tagChip = function (bucket, rawKey, dashed=false) {
+    const colorsMap = w.EC_TAG_COLORS?.[bucket] || {};
+    const pal = colorsMap[rawKey] || PALETTE.gray;
+    const extra = dashed ? "border-style:dashed; background:transparent;" : `background:${pal.bg};`;
+    // Текст переводим, цвет — нет
+    return `<span class="crm-chip" style="border-color:${pal.bd};${extra}color:${TEXT_DARK}">${esc(__(String(rawKey||"")))}</span>`;
   };
 })(window);
