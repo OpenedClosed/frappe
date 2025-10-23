@@ -1,0 +1,794 @@
+"About","სისტემის შესახებ",
+"Action","ქმედება",
+"Actions","ქმედებები",
+"Active","აქტიური",
+"Add","დამატება",
+"Add {0}","{0}-ის დამატება",
+"+ Add","+ დამატება",
+"Add New","ახლის დამატება",
+"Add New {0}","ახალი {0}-ის დამატება",
+"Add New {}","ახალი {}-ის დამატება",
+"Add a Filter","ფილტრის დამატება",
+"Add/Update Filter","ფილტრის დამატება/განახლება",
+"Add Column","სვეტის დამატება",
+"Add Field","ველის დამატება",
+"Add Row","სტრიქონის დამატება",
+"Add Rows","სტრიქონების დამატება",
+"Add Child","შვილით დამატება",
+"Add Tab","ჩანართის დამატება",
+
+"AI Settings","ხელოვნური ინტელექტის პარამეტრები",
+"Application","აპლიკაცია",
+"App Logo","აპლიკაციის ლოგო",
+"App Name","აპლიკაციის სახელი",
+
+"Archived","დაარქივებული",
+"Archive","დაარქივება",
+"Unarchive","დეარქივება",
+
+"Avatar","ავატარი",
+
+"Basic Info","ძირითადი ინფორმაცია",
+"Beta","ბეტა",
+"Begin typing for results.","დაიწყეთ აკრეფა ძიებისთვის",
+"Begin typing for results..","დაიწყეთ აკრეფა შედეგების საჩვენებლად.",
+
+"Bot Settings","ბოტის პარამეტრები",
+"Bot Settings Images","ბოტის პარამეტრების სურათები",
+
+"Bulk Transaction","მასობრივი ოპერაცია",
+
+"Call","ზარი",
+"Cancel","გაუქმება",
+"Cancel Changes","ცვლილებების გაუქმება",
+"Case","საქმე",
+"Change Password","პაროლის შეცვლა",
+"Chat","ჩატი",
+"Chats","ჩატები",
+"Child Tables are shown as tables in other documents.","შვილობილი ცხრილები სხვა დოკუმენტებში ცხრილებად არის ნაჩვენები.",
+
+"Clear","გასუფთავება",
+"Clear Filters","ფილტრების გასუფთავება",
+
+"Client","კლიენტი",
+"Client Portal","კლიენტის პორტალი",
+"Close","დახურვა",
+"Closed – Not Converted","დახურული — არ კონვერტირდა",
+"Closed by Operator","დახურული ოპერატორის მიერ",
+"Closed by Timeout","დახურული ვადის გასვლით",
+"Closed – No Messages","დახურული — შეტყობინებების გარეშე",
+
+"Compact Item Print","პოზიციის კომპაქტური ბეჭდვა",
+"Community","საზოგადოება",
+"Communication","კომუნიკაცია",
+"Company","კომპანია",
+"Copied to clipboard","დააკოპირდა ბუფერში",
+"Copy","კოპირება",
+"Copy Link","ბმულის კოპირება",
+"Copy to Clipboard","ბუფერში კოპირება",
+
+"Consultant","კონსულტანტი",
+"Contacts","კონტაქტები",
+"Control Center","საკონტროლო ცენტრი",
+"Control X-ray","საკონტროლო რენტგენი",
+
+"Country","ქვეყანა",
+"Create","შექმნა",
+"Create {0}","{0}-ის შექმნა",
+"Create user","მომხმარებლის შექმნა",
+"Create User","მომხმარებლის შექმნა",
+"Create User Email","მომხმარებლის ელფოსტის შექმნა",
+"Created By","ვინ შექმნა",
+"Created On","შექმნის თარიღი",
+
+"CRM","CRM",
+"CRM Space","CRM სივრცე",
+"CRM Board","CRM დაფა",
+
+"Customize","მორგება",
+"Customize Form","ფორმის მორგება",
+"Customization","მომხმარებლის მორგება",
+
+"Dashboard View","დაფა",
+"Date ranges","თარიღების დიაპაზონი",
+"Days","დღეები",
+
+"Deal Completed","გარიგება დასრულდა",
+"Deals","გარიგებები",
+"Deals – Contact Center","გარიგებები – საკონტაქტო ცენტრი",
+
+"Default","ნაგულისხმევი",
+"Delete","წაშლა",
+"Delete Row","სტრიქონის წაშლა",
+"Description","აღწერა",
+
+"DocType","დოკუმენტის ტიპი",
+"Document States","დოკუმენტის სტატუსები",
+"Documentation","დოკუმენტაცია",
+"Documentation Link","დოკუმენტაციის ბმული",
+
+"Duplicate","დუბლირება",
+
+"EDI","ელექტრონული მონაცემთა გაცვლა",
+"Edit","რედაქტირება",
+"Edit DocType","DocType-ის რედაქტირება",
+"Edit Filters","ფილტრების რედაქტირება",
+"Edit Settings","პარამეტრების რედაქტირება",
+
+"Email","ელ. ფოსტა",
+"Email Settings","ელ. ფოსტის პარამეტრები",
+"Employee Name","თანამშრომლის სახელი",
+
+"Enable","ჩართვა",
+"Disable","გამორთვა",
+
+"Enables Calendar and Gantt views.","კალენდრისა და განტის ხედების ჩართვა.",
+
+"Engagement Boards","ინტერაქციის დაფები",
+"Engagement Case","ინტერაქციის საქმე",
+"Engineering","ინჟინერია",
+
+"Enter","შეყვანა",
+
+"ERPNext Integration","ERPNext ინტეგრაცია",
+
+"Error","შეცდომა",
+"Error Message","შეცდომის შეტყობინება",
+
+"Experimental","ექსპერიმენტული",
+"External User ID","გარე მომხმარებლის ID",
+
+"Facebook","Facebook",
+
+"Failed / No Show (lead)","ჩავარდა/არ გამოცხადდა (ლიდი)",
+"Filter","ფილტრი",
+"Filter By","გაფილტვრა მიხედვით",
+"Filters","ფილტრები",
+
+"First","პირველი",
+"First:","პირველი:",
+"First Event At","პირველი მოვლენის დრო",
+"First Name","სახელი",
+
+"Follow","დაკვირვება",
+"Follow Document","დოკუმენტზე დაკვირვება",
+
+"Form Settings","ფორმის პარამეტრები",
+
+"From","დან",
+
+"Geo","გეო",
+"General","ზოგადი",
+"Go to {}","გადასვლა {}",
+"Go to Workspace","გადასვლა სამუშაო სივრცეში",
+"Go to {0}","გადასვლა {0}",
+
+"Grid Empty State No Data","მონაცემები არ არის",
+
+"Has Web View","აქვს ვებ-ხედვა",
+"Hide","დამალვა",
+"Hide Filters","ფილტრების დამალვა",
+
+"High","მაღალი",
+
+"Icon","ხატი",
+"If you just want to customize for your site, use Customize Form instead.","თუ მხოლოდ საიტისთვის გინდათ მორგება, გამოიყენეთ „ფორმის მორგება“.",
+"Image","სურათი",
+
+"In Create","შექმნისას",
+"In Progress","პროცესში",
+"In Treatment","მკურნალობაში",
+"Index web pages for search","ვებგვერდების ინდექსირება ძიებისთვის",
+
+"Integration","ინტეგრაცია",
+"Internal","შიდა",
+"internal","შიდა",
+
+"Invalid","არასწორი",
+"Is Billing Contact","საბილინგო საკონტაქტო პირია",
+"Is Calendar and Gantt","კალენდარი და განტი",
+"Is Child Table","შვილობილი ცხრილია",
+"Is Single","ერთეულია",
+"Is Tree","ხის.Structure",
+"Is Virtual","ვირტუალურია",
+
+"Keyboard Shortcuts","კლავიატურის მალსახმობები",
+
+"Kanban View","კანბანის ხედი",
+"Kanban Settings","კანბანის პარამეტრები",
+"Select Kanban","კანბანის არჩევა",
+
+"Knowledge Base","ცოდნის ბაზა",
+
+"Label","ნიშნული",
+"Language","ენა",
+
+"Last","ბოლო",
+"Last:","ბოლო:",
+"Last Actor Role","ბოლო მოქმედი როლი",
+"Last Edited","ბოლო რედაქტირება",
+"Last Event At","ბოლო მოვლენის დრო",
+"Last Name","გვარი",
+"Last Synced At","ბოლო სინქრონიზაცია",
+"Last Updated On","ბოლო განახლება",
+
+"Leads","ლიდები",
+"Leads – Contact Center","ლიდები – საკონტაქტო ცენტრი",
+
+"Level","დონე",
+"Link","ბმული",
+"Linked Cases","დაკავშირებული საქმეები",
+"Linked Documents","დაკავშირებული დოკუმენტები",
+"Linked engagements","დაკავშირებული ინტერაქციები",
+"List","სია",
+"List Settings","სიის პარამეტრები",
+"List View","სიის ხედი",
+"List of Users","მომხმარებელთა სია",
+"List of {0}","{0}-ის სია",
+
+"Loading...","იტვირთება...",
+
+"Log Out","გამოსვლა",
+"Login","შესვლა",
+
+"Lost","დაკარგული",
+
+"Low","დაბალი",
+
+"Menu","მენიუ",
+"Middle Name","მეორე სახელი",
+
+"Module","მოდული",
+"Module Profile","მოდულის პროფილი",
+
+"Mongo ID","Mongo ID",
+"Mongo Client ID","Mongo კლიენტის ID",
+
+"Most Used","ხშირად გამოყენებული",
+
+"My Profile","ჩემი პროფილი",
+"My Settings","ჩემი პარამეტრები",
+
+"Name","დასახელება",
+"Naming Rule","დასახელების წესი",
+"Navigation Settings","ნავიგაციის პარამეტრები",
+"New","ახალი",
+"New Email","ახალი ელფოსტა",
+"New Case","ახალი საქმე",
+"New Engagement Case","ახალი ინტერაქციის საქმე",
+"New Patient","ახალი პაციენტი",
+"New Reminder","ახალი შეხსენება",
+"New Session","ახალი სესია",
+"New {0}","ახალი {0}",
+
+"Next","შემდეგი",
+"Next Document","შემდეგი დოკუმენტი",
+
+"No","არა",
+"No Data","მონაცემები არ არის",
+"No records found","ჩანაწერები ვერ მოიძებნა",
+"No filters selected","ფილტრები არ არის არჩეული",
+"No filters found","ფილტრები ვერ მოიძებნა",
+"No filters fount","ფილტრები ვერ მოიძებნა",
+"No Tags","ტეგები არ არის",
+
+"Notes","შენიშვნები",
+"Internal Notes","შიდა შენიშვნები",
+"Notification","შეტყობინება",
+
+"On Hold","დაყოვნებულია",
+
+"Open Kanban","კანბანის გახსნა",
+"Open Kanban Board","კანბანის დაფის გახსნა",
+"Open full list","სრული სიის გახსნა",
+
+"Operations","ოპერაციები",
+
+"Owner","მფლობელი",
+
+"Parents (where this case is linked)","მშობელი ჩანაწერები (სადაც მიბმულია საქმე)",
+"Password","პაროლი",
+
+"Patients","პაციენტები",
+"Patients – Care Department","პაციენტები – მოვლის განყოფილება",
+
+"Pending","მოლოდინში",
+
+"Phone","ტელეფონი",
+"Platform","პლატფორმა",
+
+"Portal","პორტალი",
+"Portal Card Link","პორტალის ბარათის ბმული",
+
+"Post-Visit Check","შემდგომი შემოწმება",
+
+"Preferred Language","სასურველი ენა",
+"Preview","წინასწარი დათვალიერება",
+"Previous","წინა",
+"Previous Document","წინა დოკუმენტი",
+
+"Print","ბეჭდვა",
+"Printing","ბეჭდვა მიმდინარეობს",
+"Priority","პრიორიტეტი",
+"P: {0}","პრიორ.: {0}",
+"P: Normal","პრიორ.: ნორმალური",
+"P: High","პრიორ.: მაღალი",
+"P: Urgent","პრიორ.: გადაუდებელი",
+
+"Product","პროდუქტი",
+"Profile","პროფილი",
+"Project Name","პროექტის სახელი",
+
+"Public","საჯარო",
+
+"Qualification","კვალიფიკაცია",
+"Quick Entry","სწრაფი ჩანაწერი",
+"Quick overview & jump","სწრაფი მიმოხილვა და გადასვლა",
+
+"Reader","მკითხველი",
+"Read","კითხვა",
+"Read Only","მხოლოდ კითხვა",
+
+"Recent","ახლახანს",
+"Record","ჩანაწერი",
+"Records","ჩანაწერები",
+
+"Redo","გამეორება",
+"Refresh","განახლება",
+"Refresh Events","მოვლენების განახლება",
+"Refresh List","სიის განახლება",
+"Reload","გადატვირთვა",
+"Reload List","სიის გადატვირთვა",
+
+"Relations","კავშირები",
+"Remove","ამოღება",
+"Remove Filter","ფილტრის ამოღება",
+"Rename","სახელის გადარქმევა",
+"Report View","ანგარიშის ხედი",
+"Report an Issue","პრობლემის შეტყობინება",
+"Reset","საწყისზე დაბრუნება",
+"Reset Chart","გრაფიკის განულება",
+
+"Restrict To Domain","დომენით შეზღუდვა",
+"Restrict to Domain","დომენით შეზღუდვა",
+
+"Return","დაბრუნება",
+"Returning Patient","მორიგე პაციენტი",
+
+"Role","როლი",
+"Roles & Permission","როლები და უფლებები",
+"Roles & Permissions","როლები და უფლებები",
+"Route","მარშრუტი",
+
+"Runtime Status","შესრულების სტატუსი",
+
+"Save","შენახვა",
+"Save Filter","ფილტრის შენახვა",
+
+"Scheduled","დაგეგმილი",
+"Search","ძიება",
+"Search Settings","ძებნის პარამეტრები",
+"Search or type a command","ძიება ან ბრძანების შეყვანა",
+"Search properties...","ქონებების ძიება...",
+
+"Section","სექცია",
+"Select","არჩევა",
+"Select All","ყველას არჩევა",
+"Unselect All","მონიშნულის მოხსნა",
+
+"Selling","გაყიდვები",
+"Sequence ID","მიმდევრობის ID",
+
+"Service","სერვისი",
+"Session Defaults","სესიის ნაგულისხმევები",
+
+"Settings","პარამეტრები",
+"Setup","დაყენება",
+
+"Share","გაზიარება",
+"Show","ჩვენება",
+"Show Filters","ფილტრების ჩვენება",
+"Show Preview","წინასწარი დათვალიერების ჩვენება",
+"Show Tags","ტეგების ჩვენება",
+
+"Signals","სიგნალები",
+
+"Single","ერთეული",
+"Single DocTypes have only one record stored in tabSingles.","Single ტიპებს ერთ ჩანაწერი აქვთ tabSingles-ში.",
+
+"Site is running in developer mode","საიტი დეველოპერის რეჟიმში მუშაობს",
+"This site is running in developer mode.","ეს საიტი დეველოპერის რეჟიმში მუშაობს.",
+"Any change made here will be updated in code.","აქ செய்யப்பட்ட ცვლილებები კოდში აისახება.",
+
+"SMS","SMS",
+"Stage Appointment Scheduled","ეტაპი: ვიზიტი დანიშნულია",
+"Stage Checked","ეტაპი შემოწმებულია",
+"Status","სტატუსი",
+"Status (current board)","სტატუსი (მიმდინარე დაფა)",
+
+"Stock","მარაგი",
+"Subcontracting","სუბკონტრაქტინგი",
+"Subscribe","გამოწერა",
+"Support","მხარდაჭერა",
+"Sync","სინქრონიზაცია",
+"Sync Enabled","სინქრონიზაცია ჩართულია",
+"Disable to take full manual control in Frappe","გამორთეთ, რომ სრულად ხელით მართოთ Frappe-ში",
+
+"System Manager","სისტემის მენეჯერი",
+
+"Tag","ტეგი",
+"Tags","ტეგები",
+"Tax Category","საგადასახადო კატეგორია",
+"Telephony","ტელეფონია",
+"Telegram","Telegram",
+"Telegram Mini-App","Telegram მინი-აპი",
+
+"Theme","თემა",
+"Timezone","დროის სარტყელი",
+
+"Title","სათაური",
+"Toggle Full Width","სრული სიგანის ჩართ/გამორთ",
+"Toggle Theme","თემის შეცვლა",
+"Toggle Sidebar","გვერდითი ზოლის ჩართ/გამორთ",
+
+"Today","დღეს",
+
+"Topic","თემა",
+"To","ვის",
+"Transferred to Care","მოვლაში გადაიგზავნა",
+"Treatment Completed","მკურნალობა დასრულდა",
+
+"Type a reply / comment","შეიყვანეთ პასუხი / კომენტარი",
+
+"Undo","დაბრუნება",
+"Unanswered Tail Count","უპასუხო ბოლოდან რაოდენობა",
+
+"Update Details","მონაცემების განახლება",
+"Updated","განახლდა",
+
+"Urgent","გადაუდებელი",
+"User","მომხმარებელი",
+"User Cannot Create","მომხმარებელს შექმნა არ შეუძლია",
+"User Cannot Search","მომხმარებელს ძიება არ შეუძლია",
+"User Details","მომხმარებლის მონაცემები",
+"User Forum","მომხმარებელთა ფორუმი",
+"User Permissions","მომხმარებლის უფლებები",
+"Users","მომხმარებლები",
+"Users By Day","მომხმარებლები დღეების მიხედვით",
+
+"Utilities","ხელსაწყოები",
+"View","ნახვა",
+"View List","სიის ნახვა",
+"View Settings","ხედვის პარამეტრები",
+"View Website","ვებგვერდის ნახვა",
+
+"Waiting List","მოსალოდნელთა სია",
+"Waiting for AI","მოითმინეთ — AI",
+"Waiting for Client","მოლოდინში — კლიენტი",
+"Waiting for Client (AI)","მოლოდინში — კლიენტი (AI)",
+"Waiting for Consultant","მოლოდინში — კონსულტანტი",
+
+"Warn","გაფრთხილება",
+"Website","ვებგვერდი",
+"Web Form","ვებფორმა",
+"Web View","ვებ ხედი",
+"WhatsApp","WhatsApp",
+"Workspace","სამუშაო სივრცე",
+
+"Won","მოგებული",
+"Workflow","საქმის მიმდინარეობა",
+"What's New","რა არის ახალი",
+
+"You attached","თქვენ მიამაგრეთ",
+"You changed the value of","შეიცვალეთ ველის მნიშვნელობა",
+"You created this","ეს თქვენ შექმენით",
+"You created this document","ეს დოკუმენტი თქვენ შექმენით",
+"You last edited this","ბოლო რედაქტირება — თქვენ",
+"last edited this","ბოლო ცვლილებები შეიტანა",
+"created this","შექმნა",
+"just now","ახლახანს",
+"edited this","შეიტანა ცვლილებები",
+"Discard","უარყოფა",
+"Expand","გაფართოება",
+
+"Zap","ზაპი",
+
+
+"— Кастом «Engagement» —","— კასტომიზაცია «Engagement» —",
+"Quick overview & jump","სწრაფი მიმოხილვა და გადასვლა",
+"New Case","ახალი საქმე",
+"Open Kanban","კანბანის გახსნა",
+"Open full list","სრული სიის გახსნა",
+"All","სულ",
+"Last","ბოლო",
+"First","პირველი",
+"Upd","განახლდა",
+"Upd:","განახლდა:",
+
+"Leads – Contact Center","ლიდები – საკონტაქტო ცენტრი",
+"Bot Active / New Inquiry","ბოტი აქტიურია / ახალი მოთხოვნა",
+"Call Later","მოგვიანებით დარეკვა",
+"Closed – Not Converted","დახურული — არ კონვერტირდა",
+"Converted to Deal","გარიგებად გადაიქცა",
+
+"Appointment Scheduled","ვიზიტი დანიშნულია",
+"Recommended Recall Added","რეკომენდებული შეხმიანება დამატებულია",
+"Deal Completed","გარიგება დასრულდა",
+"No-show (deal)","არ გამოცხადდა (გარიგება)",
+
+"New Patient","ახალი პაციენტი",
+"Returning Patient","მორიგე პაციენტი",
+"In Treatment","მკურნალობაში",
+"Control X-ray","საკონტროლო რენტგენი",
+"Treatment Completed","მკურნალობა დასრულდა",
+"No-show (patient)","არ გამოცხადდა (პაციენტი)",
+
+"Tasks","ამოცანები",
+"Primary Channel","ძირითადი არხი",
+"Channel Type","არხის ტიპი",
+"Channel Platform","არხის პლატფორმა",
+"Session ID in Service","სერვისის სესიის ID",
+"External User ID","გარე მომხმარებლის ID",
+"Contact Identity","კონტაქტის იდენტიფიკატორი",
+"Display Name","საჩვენებელი სახელი",
+"Preferred Language","სასურველი ენა",
+"Linked Cases","დაკავშირებული საქმეები",
+"No linked engagements yet.","დაკავშირებული ინტერაქციები ჯერ არ არის.",
+"Parents (where this case is linked)","მშობელი ჩანაწერები (სადაც მიბმულია საქმე)",
+"Boards & Status","დაფები და სტატუსები",
+"Signals","სიგნალები",
+"Internal Notes","შიდა შენიშვნები",
+"Runtime Status","შესრულების სტატუსი",
+
+"Filters","ფილტრები",
+"Status (current board)","სტატუსი (მიმდინარე დაფა)",
+"Tip: unselect a status to hide that column.","რჩევა: მოხსენით სტატუსის მონიშვნა სვეტის დასამალად.",
+"Platform","პლატფორმა",
+"Priority","პრიორიტეტი",
+"Modified","შეიცვალა",
+"From","დან",
+"To","მდე",
+
+
+"{0} created this","{0}-მა შექმნა",
+"Computed by backend from source systems","გათვლილია უკანა მხრიდან წყაროებიდან",
+"Disable to take full manual control in Frappe","გამორთეთ, რომ სრულად ხელით მართოთ Frappe-ში",
+
+"Me","მე",
+"ascending","ზრდადობით",
+"descending","კლებადობით",
+"Assign to me ({0})","მონიჭება ჩემთვის ({0})",
+"Reminder at","შეხსენება",
+"You can set Target and optional Reminder on Save","შენახვისას შეგიძლიათ დააყენოთ ვადა და სურვილისამებრ შეხსენება",
+"Assign To (multiple)","მიანიჭეთ (მრავლობითი)",
+"Send reminder","შეხსენების გაგზავნა?",
+"Target at","ამოცანის ვადა",
+"Optional; saved into custom_target_datetime","სურვილისამებრ; ინახება custom_target_datetime-ში",
+"Open","გახსნა",
+"Not Saved","შეუნახავია",
+
+"No parents.","მშობელი ჩანაწერები არ არის",
+
+
+"# time — minutes","წუთები",
+"{0} minute","{0} წუთი",
+"{0} minutes","{0} წუთი",
+"{0} minute ago","{0} წუთის წინ",
+"{0} minutes ago","{0} წუთის წინ",
+"a minute ago","ერთი წუთის წინ",
+"minute ago","წუთის წინ",
+
+"# time — hours","საათები",
+"{0} hour","{0} საათი",
+"{0} hours","{0} საათი",
+"{0} hour ago","{0} საათის წინ",
+"{0} hours ago","{0} საათის წინ",
+"an hour ago","ერთი საათის წინ",
+"hour ago","საათის წინ",
+
+"# time — days","დღეები",
+"{0} day","{0} დღე",
+"{0} days","{0} დღე",
+"{0} day ago","{0} დღის წინ",
+"{0} days ago","{0} დღის წინ",
+"a day ago","ერთი დღის წინ",
+"yesterday","გუშინ",
+"Today","დღეს",
+"just now","ახლავე",
+
+"# time — weeks","კვირები",
+"{0} week","{0} კვირა",
+"{0} weeks","{0} კვირა",
+"{0} week ago","{0} კვირის წინ",
+"{0} weeks ago","{0} კვირის წინ",
+"a week ago","ერთი კვირის წინ",
+
+"# time — months","თვეები",
+"{0} month","{0} თვე",
+"{0} months","{0} თვე",
+"{0} month ago","{0} თვის წინ",
+"{0} months ago","{0} თვის წინ",
+"a month ago","ერთი თვის წინ",
+
+"# time — years","წლები",
+"{0} year","{0} წელი",
+"{0} years","{0} წელი",
+"{0} year ago","{0} წელის წინ",
+"{0} years ago","{0} წელის წინ",
+"a year ago","ერთი წლის წინ",
+
+
+"Wellcome!","კეთილი იყოს თქვენი მობრძანება!",
+"Events","მოვლენები",
+"What's New","რა არის ახალი?",
+"Briefing","ბრიფინგი",
+"In Work","მუშაობაში",
+"Auto-tasks for this case","ავტო-ამოცანები ამ საქმისთვის",
+"No tasks.","ამოცანები არ არის.",
+"No open tasks","აქტიური ამოცანები არ არის",
+"Show all {0}","ყველა {0}-ის ჩვენება",
+"Assigned To","მიანიჭებულია",
+"Go to {0}","გადასვლა {0}",
+"Form","ფორმა",
+"Connection","კავშირი",
+"Connections","კავშირები",
+"You {0}","თქვენ {0}",
+"Set {0}","დააყენეთ {0}",
+"Set User Permissions","მომხმარებლის უფლებების დაყენება",
+"Reset Password","პაროლის განულება",
+"View Permitted Document","ნებადართული დოკუმენტის ნახვა",
+"Jump to field","ველზე გადასვლა",
+"Remind Me","შემახსენე",
+"Add {0}","{0}-ის დამატება",
+"Appointment Date & Time","ვიზიტის თარიღი და დრო",
+"Specialist","სპეციალისტი",
+"Search & Link","ძებნა და მიბმა",
+"Unlink","მიბმის მოხსნა",
+"Add Task","ამოცანის დამატება",
+"Open All","ყველას გახსნა",
+"total","სულ",
+"per page","გვერდზე",
+"Normal","ნორმალური",
+"Prev","წინა",
+"by","ავტორი",
+"on {0}","{0}-ზე",
+"AI Knowledge","AI ცოდნა",
+"Chat Sessions","ჩატის სესიები",
+"yesterday","გუშინ",
+"Target Datetime","სამიზნე თარიღი-დრო",
+"Choose Color","ფერის არჩევა",
+"Due Datetime","როდის შეგახსენოთ?",
+"Reminder Sent At","შეხსენება გაიგზავნა",
+"Send Reminder","შეხსენების გაგზავნა?",
+"Virtual","ვირტუალური",
+"In List Filter","სიის ფილტრში",
+
+"Short human-readable title (e.g. name/channel/context)","კარტის მოკლე აღწერა",
+
+"AIHub Admin","AIHub ადმინი",
+"AIHub Super Admin","AIHub სუპერადმინი",
+"AIHub Demo","AIHub დემო",
+
+
+"Show on: CRM Board","ჩვენება: CRM დაფაზე",
+"CRM Board — Status","CRM დაფა — სტატუსი",
+"Used by Kanban «CRM Board»","იყენებს კანბანი «CRM დაფა»",
+
+"Show on: Leads – Contact Center","ჩვენება: ლიდები – საკონტაქტო ცენტრი",
+"Leads – Contact Center — Status","ლიდები – საკონტაქტო ცენტრი — სტატუსი",
+"Used by Kanban «Leads – Contact Center»","იყენებს კანბანი «ლიდები – საკონტაქტო ცენტრი»",
+
+"Show on: Deals – Contact Center","ჩვენება: გარიგებები – საკონტაქტო ცენტრი",
+"Deals – Contact Center — Status","გარიგებები – საკონტაქტო ცენტრი — სტატუსი",
+"Used by Kanban «Deals – Contact Center»","იყენებს კანბანი «გარიგებები – საკონტაქტო ცენტრი»",
+
+"Show on: Patients – Care Department","ჩვენება: პაციენტები – მოვლის განყოფილება",
+"Patients – Care Department — Status","პაციენტები – მოვლის განყოფილება — სტატუსი",
+"Used by Kanban «Patients – Care Department»","იყენებს კანბანი «პაციენტები – მოვლის განყოფილება»",
+
+
+"App Logo","აპლიკაციის ლოგო",
+"PaNa Medica","PaNa Medica",
+"Applications","აპლიკაციები",
+
+"How to Use (Quick Help)","როგორ გამოვიყენოთ (სწრაფი დახმარება)",
+"Basic Settings","ძირითადი პარამეტრები",
+"Define basic bot information","მიუთითეთ ბოტის ძირითადი ინფორმაცია",
+
+"The name of the employee that the bot represents.","თანამშრომლის სახელი, რომელსაც ბოტი წარმოადგენს.",
+"employee_name","employee_name",
+
+"Mention Bot Name in Conversation","ჩატში ბოტის სახელის ხსენება",
+"Should the bot mention its name?","უნდა ახსენოს ბოტმა საკუთარი სახელი?",
+
+"Upload an image for the bot’s avatar.","ატვირთეთ სურათი ბოტის ავატარისთვის.",
+"Bot Color","ბოტის ფერი",
+"If you don’t have time to customize the bot, we can do it for you.","თუ არ გაქვთ დრო მორგებისთვის, გავაკეთებთ ჩვენ.",
+
+"Character and Behavior","ხასიათი და ქცევა",
+"Set how the bot interacts with users","დააყენეთ, როგორ იურთიერთებს ბოტი მომხმარებელთან",
+"Choose Communication Tone","კომუნიკაციის ტონის არჩევა",
+"Choose the bot’s communication style.","აირჩიეთ ბოტის კომუნიკაციის სტილი.",
+"Personality Traits","პიროვნული მახასიათებლები",
+"Define key personality traits for the bot.","მიუთითეთ ბოტის ძირითადი თვისებები.",
+
+"Target Action","სამიზნე მოქმედება",
+"What the bot is designed to perform (multiple allowed).","რის შესრულებაზეა ბოტი განწყობილი (შეიძლება რამდენიმე).",
+
+"Additional Instructions","დამატებითი მითითებები",
+"Provide any additional guidelines for bot behavior.","მიუწერეთ დამატებითი რეკომენდაციები ბოტის ქცევაზე.",
+
+"Topics and Restrictions","თემები და შეზღუდვები",
+"Define allowed and restricted topics","მიუთითეთ ნებადართული და აკრძალული თემები",
+"Special Instructions","სპეცინსტრუქციები",
+"Additional functionality settings.","დამატებითი ფუნქციონალის პარამეტრები.",
+"Forbidden Topics","აკრძალული თემები",
+"Topics the bot should avoid.","თემები, რომლებსაც ბოტმა უნდა აარიდოს თავი.",
+
+"Core Principles","ძირითადი პრინციპები",
+"Fundamental principles guiding the bot’s responses.","ბოტის პასუხების საფუძვლადი პრინციპები.",
+
+"Interaction Guidelines","ინტერაქციის მითითებები",
+"Set the bot’s predefined messages","დააყენეთ ბოტის წინასწარ განსაზღვრული მესიჯები",
+
+"Artificial Intelligence","ხელოვნური ინტელექტი",
+"Choose the AI model for your bot","აირჩიეთ AI მოდელი თქვენს ბოტისთვის",
+"AI Model","AI მოდელი",
+"AI model the bot is using.","AI მოდელი, რომელსაც ბოტი იყენებს.",
+
+"Comments","კომენტარები",
+"comment","კომენტარი",
+"Activity","აქტივობა",
+
+"Administrator last edited this","ადმინისტრატორმა ბოლო ცვლილება შეიტანა",
+"Administrator created this","ეს ადმინისტრატორმა შექმნა",
+"{0} last edited this","{0}-მა ბოლო ცვლილება შეიტანა",
+"{0} changed the value of {1} from {2} to {3}","{0}-მა {1}-ის მნიშვნელობა {2}-დან {3}-ზე შეცვალა",
+"changed the value of","შეცვალა მნიშვნელობა",
+"Last edited","ბოლო რედაქტირება",
+"Created","შექმნილია",
+
+
+"Greeting","მისალმება",
+"Default greeting messages in different languages.","ნაგულისხმები მისალმებები სხვადასხვა ენაზე.",
+"Error Message","შეცდომის მესიჯი",
+"Message displayed when the bot cannot answer.","მესიჯი, როდესაც ბოტს არ შეუძლია პასუხი.",
+"Farewell Message","გამოთხოვების მესიჯი",
+"Bot’s goodbye message.","ბოტის დამშვიდობება.",
+"AI Error Fallback","AI შეცდომის სათადარიგო მესიჯი",
+"Message shown if AI fails to generate a response.","მესიჯი, თუ AI-ს პასუხი ვერ შეიქმნა.",
+
+"App Name","აპლიკაციის სახელი",
+"Filled automatically in some flows (optional).","ზოგ პროცესში ივსება ავტომატურად (არასავალდებულო).",
+"Created At","როდის შეიქმნა",
+"Timestamp when the bot settings were created.","ბოტის პარამეტრების შექმნის დრო.",
+
+
+"Soft Red","მორბენილი წითელი",
+"Warm Orange","თბილი ნარინჯისფერი",
+"Sunny Yellow","მზიანი ყვითელი",
+"Fresh Green","მწვანე, ახალი",
+"Teal Blue","ტიალ-ლურჯი",
+"Sky Blue","ცისფერი",
+"Lavender Purple","ლავანდის იისფერი",
+"Rose Pink","ვარდისფერი",
+
+"Friendly","მეგობრული",
+"Formal","ოფიციალური",
+"Casual","არაოფიციალური",
+"Professional","პროფესიონალური",
+"Humorous","იუმორით",
+"Business","საქმიანი",
+"Strictly from additional description","მკაცრად დამატებითი აღწერიდან",
+
+"Highly structured and predictable","ძალიან სტრუქტურული და პროგნოზირებადი",
+"Logical and precise","ლოგიკური და ზუსტი",
+"Balanced and well-reasoned","ბალანსირებული და არგუმენტირებული",
+"Adaptive and slightly creative","ადაპტიური და ოდნავ კრეატიული",
+"Highly creative and free-thinking","ძალიან კრეატიული და თავისუფლად მოაზროვნე",
+
+"gpt-4o","gpt-4o",
+"gpt-4o-mini","gpt-4o-mini",
+"gemini-2.0-flash","gemini-2.0-flash",
+
+"Is Custom","კასტომიზებულია?"
