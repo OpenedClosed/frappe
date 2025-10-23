@@ -278,6 +278,24 @@ export function useChatLogic(options = {}) {
    */
   function updateMessages(newMessage) {
     chatMessages.value = [...chatMessages.value, newMessage];
+    
+    // Emit event to notify components about new message
+    if (newMessage && currentChatId.value) {
+      const messageData = {
+        chat_id: currentChatId.value,
+        message: newMessage.content,
+        sender_id: newMessage.senderId,
+        sender_role: { 
+          en: newMessage.senderId === "1234" ? "Client" : "Consultant" 
+        },
+        timestamp: new Date().toISOString(),
+        backend_id: newMessage.backend_id || newMessage._id
+      };
+      
+      // Emit global event for room updates
+      $event("new_message_arrived", messageData);
+      console.log("Emitted new_message_arrived event:", messageData);
+    }
   }
 
   /**
@@ -377,9 +395,24 @@ export function useChatLogic(options = {}) {
           {
             console.log("Получено новое сообщение:", data);
             const [transformed] = await transformChatMessages([data]);
-            // $event("new_message_arrived", transformed);
+            
+            // Add message to chat
             chatMessages.value = [...chatMessages.value, transformed];
             messagesLoaded.value = true;
+            
+            // Emit event for room updates with original message data
+            const messageData = {
+              chat_id: currentChatId.value,
+              message: data.message,
+              sender_id: transformed.senderId,
+              sender_role: data.sender_role || { en: transformed.senderId === "1234" ? "Client" : "Consultant" },
+              timestamp: data.timestamp || new Date().toISOString(),
+              backend_id: data.id || data._id
+            };
+            
+            $event("new_message_arrived", messageData);
+            console.log("Emitted new_message_arrived event from WebSocket:", messageData);
+            
             // УБРАНО повторное status_check после каждого сообщения
 
             // Обновляем choiceOptions, если пришли

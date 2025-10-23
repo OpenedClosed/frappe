@@ -1,25 +1,49 @@
 <!-- ~/components/ChatPanel.vue -->
 <template>
-  <div class="flex flex-col h-[80vh] max-h-[80vh]">
+  <div class="flex flex-col " :class="isMobile ? 'h-[100vh] max-h-[100vh]' : 'h-[80vh] max-h-[80vh]'">
     <Toast class="max-w-[18rem] md:max-w-full" />
-    <div class="flex flex-row justify-between items-center">
-      <div class="flex items-center gap-3 m-2">
-        <!-- “All” label -->
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.allLabel") }} </span>
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-1 sm:gap-0 p-2  sm:py-2">
+      <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div class="flex flex-row items-center gap-2 sm:gap-3">
+          <!-- Mobile: Stack labels and switch vertically, Desktop: Horizontal -->
+          <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <!-- InputSwitch (PrimeVue) -->
+            <div class="flex items-center gap-2 justify-center sm:justify-start">
+              <span class="text-xs sm: text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.allLabel") }} </span>
+              <InputSwitch
+                v-model="unreadOnly"
+                :onLabel="t('EmbeddedChat.unreadLabel')"
+                :offLabel="t('EmbeddedChat.allLabel')"
+                onIcon="pi pi-envelope-open"
+                offIcon="pi pi-inbox"
+                class="h-6 w-11 shrink-0 cursor-pointer outline-none transition-colors duration-200"
+              />
+              <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.unreadLabel") }} </span>
+            </div>
+          </div>
 
-        <!-- InputSwitch (PrimeVue) -->
-        <InputSwitch
-          v-model="unreadOnly"
-          :onLabel="t('EmbeddedChat.unreadLabel')"
-          :offLabel="t('EmbeddedChat.allLabel')"
-          onIcon="pi pi-envelope-open"
-          offIcon="pi pi-inbox"
-          class="h-6 w-11 shrink-0 cursor-pointer outline-none transition-colors duration-200"
-        />
-
-        <!-- “Unread” label -->
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.unreadLabel") }} </span>
-        <Button icon="pi pi-info-circle" text @click="toggleLegend" />
+          <Button icon="pi pi-info-circle" text size="small" class="self-center sm:self-auto" @click="toggleLegend" />
+          <ChatFilters
+            v-if="filterMetadata"
+            :metadata="filterMetadata"
+            :metadata-loading="metadataLoading"
+            :has-active-filters="true"
+            :has-empty-results="hasEmptyFilterResults"
+            :results-count="totalRecords"
+            :show-debug="true"
+            @filters-changed="onFiltersChanged"
+            @clear-filters="clearFilters"
+            @filters-loaded="onFiltersLoaded"
+          />
+          <Button
+            v-if="isExportChangeButtonVisible"
+            :icon="showExport ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+            class="sm:hidden"
+            text
+            size="small"
+            @click="toggleExport"
+          />
+        </div>
 
         <OverlayPanel ref="legendPanel">
           <div class="text-sm space-y-1">
@@ -37,14 +61,20 @@
           </div>
         </OverlayPanel>
       </div>
-      <SplitButton
-        :label="t('EmbeddedChat.exportButton')"
-        icon="pi pi-file-excel"
-        :model="exportItems"
-        severity="success"
-        class="m-2"
-        @click="onExportToExcel"
-      />
+
+      <transition name="slide-down">
+        <div v-show="isExportVisible" class="flex items-center gap-1">
+          <SplitButton
+            :label="t('EmbeddedChat.exportButton')"
+            :icon="hasActiveFilters ? 'pi pi-filter' : 'pi pi-file-excel'"
+            :model="exportItems"
+            severity="success"
+            size="small"
+            class="w-auto sm:w-auto mt-2 sm:mt-0 mobile-icon-only sm:block"
+            @click="onExportToExcel"
+          ></SplitButton>
+        </div>
+      </transition>
     </div>
 
     <vue-advanced-chat
@@ -67,40 +97,65 @@
       @send-message="(msg) => sendMessage(msg.detail[0])"
       @fetch-messages="getChatId"
       @room-selected="({ detail }) => (activeRoomId = detail[0])"
-      :rooms-loaded="!isRoomsLoading"
+      :rooms-loaded="!isRoomsLoading && !filtersLoaded"
       @fetch-more-rooms="loadMoreChats"
       :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
       :text-messages="textMessagesJson"
     >
       <div slot="room-header-avatar" class="flex items-center justify-center">
-        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" size="large" shape="circle" class="mr-2" />
-        <Avatar v-else icon="pi pi-user" size="large" shape="circle" class="mr-2" />
+        <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" :size="isMobile ? 'normal' : 'large'" shape="circle" class="mr-2" />
+        <Avatar v-else icon="pi pi-user" :size="isMobile ? 'normal' : 'large'" shape="circle" class="mr-2" />
       </div>
-      <div slot="room-header-info" class="flex-1">
+      <div slot="room-header-info" class="flex-1 pl-1">
         <!-- 🔥 Added flex-1 here -->
         <div class="flex flex-row items-center justify-between gap-2 w-full flex-1 min-w-0">
-          <div class="flex flex-col">
-            <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
-              {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
-            </h2>
-            <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+          <div class="flex flex-col flex-1">
+            <!-- Mobile: Compact view with dialog button -->
+            <div v-if="isMobile" class="flex items-center justify-between gap-2">
+              <h2 class="font-bold text-sm truncate max-w-[8rem]">
+                {{ activePdEntry?.username || activeUserId }}
+              </h2>
+              <Button icon="pi pi-info" severity="info" size="small" class="p-1 text-xs" @click="showUserInfoDialog = true" />
+            </div>
+
+            <div v-else class="flex flex-col justify-center items-start gap-2">
+              <!-- Desktop: Full view -->
+              <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
+                {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
+              </h2>
+              <div class="flex flex-row justify-center items-center gap-1">
+                <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+                <p class="text-sm flex justify-center items-center" v-if="activeRoomCreatedAt">
+                  ({{ t("EmbeddedChat.createdLabel") }}: {{ activeRoomCreatedAt }})
+                </p>
+              </div>
+            </div>
           </div>
-          <div class="flex flex-row justify-center items-center gap-1">
+          <div v-if="!isMobile" class="flex flex-row justify-center items-center gap-1">
             {{ t("EmbeddedChat.sourceLabel") }}:
             <p class="text-sm">{{ currentRoomSource }}</p>
           </div>
         </div>
       </div>
       <div slot="rooms-list-search">
-        <div v-if="isRoomsLoading" class="flex items-center justify-center py-5">
-          <LoaderSmall />
-        </div>
-        <div v-else class="h-[65px]"></div>
+        <ChatSearch
+          ref="chatSearchRef"
+          v-model="roomSearchQuery"
+          :placeholder="t('EmbeddedChat.searchRooms', 'Search chats...')"
+          :debounce-time="300"
+          :loading="isRoomsLoading"
+          :loading-text="t('EmbeddedChat.searchingChats', 'Searching chats...')"
+          @search="onRoomSearch"
+          @clear="onRoomSearchClear"
+        />
       </div>
     </vue-advanced-chat>
     <!-- ⬇️ add this right after the closing </vue-advanced-chat> tag -->
-    <Paginator :rows="20" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" />
+    <Paginator :rows="pageSize" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" :template="{
+        '640px': 'FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink JumpToPageDropdown',
+        default: 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink JumpToPageDropdown'
+    }" />
     <!-- place this just before </template> so it sits outside vue‑advanced-chat -->
     <Dialog v-model:visible="showMsgDialog" modal :header="t('EmbeddedChat.messageDialogHeader')" :style="{ width: '600px' }">
       <p class="mb-3">
@@ -117,14 +172,61 @@
         <Button :label="t('EmbeddedChat.closeButton')" icon="pi pi-times" @click="showMsgDialog = false" />
       </template>
     </Dialog>
+
+    <!-- User Info Dialog for Mobile -->
+    <Dialog
+      v-model:visible="showUserInfoDialog"
+      modal
+      :closable="false"
+      :header="t('EmbeddedChat.userInfoDialogHeader')"
+      :style="{ width: '90vw' }"
+    >
+      <div class="space-y-3">
+        <div v-if="activePdEntry?.avatar" class="flex justify-center">
+          <Avatar :image="activePdEntry.avatar" size="xlarge" shape="circle" />
+        </div>
+        <div>
+          <strong>{{ t("EmbeddedChat.userIdLabel") }}:</strong>
+          <p class="mt-1">{{ activePdEntry?.username || activeUserId }}</p>
+        </div>
+        <div>
+          <strong>{{ t("EmbeddedChat.sourceLabel") }}:</strong>
+          <p class="mt-1">{{ currentRoomSource }}</p>
+        </div>
+        <div>
+          <strong>{{ t("EmbeddedChat.startedLabel") }}:</strong>
+          <p class="mt-1">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
+        </div>
+        <div v-if="activeRoomCreatedAt">
+          <strong>{{ t("EmbeddedChat.createdLabel") }}:</strong>
+          <p class="mt-1">{{ activeRoomCreatedAt }}</p>
+        </div>
+        <div v-if="activePdEntry?.externalId">
+          <strong>{{ t("EmbeddedChat.externalIdLabel") }}:</strong>
+          <p class="mt-1">{{ activePdEntry.externalId }}</p>
+        </div>
+        <div v-if="activePdEntry?.phone">
+          <strong>{{ t("EmbeddedChat.phoneLabel") }}:</strong>
+          <p class="mt-1">{{ activePdEntry.phone }}</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button :label="t('EmbeddedChat.closeButton')" icon="pi pi-times" @click="showUserInfoDialog = false" />
+      </template>
+    </Dialog>
+
+
+ 
   </div>
 </template>
 
 <script setup>
 /* ── imports ──────────────────────────────────────────────── */
-import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount } from "vue";
+import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount, onMounted, nextTick } from "vue";
 import { register } from "vue-advanced-chat";
 import Toast from "primevue/toast";
+import Badge from "primevue/badge";
 import { useChatLogic } from "~/composables/useChatLogic";
 import LoaderOverlay from "../LoaderOverlay.vue";
 import LoaderSmall from "../LoaderSmall.vue";
@@ -132,6 +234,9 @@ import ReadonlyKB from "~/components/Dashboard/Components/ReadonlyKB.vue";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { useI18n } from "#imports";
+import ChatFilters from "./ChatFilters.vue";
+import ChatSearch from "./ChatSearch.vue";
+import { debounce } from "lodash";
 const { t, locale } = useI18n();
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 const route = useRoute();
@@ -143,14 +248,105 @@ const colorMode = useColorMode();
 const { $listen } = useNuxtApp();
 const roomsLoaded = computed(() => rooms.value.length > 0);
 const unreadOnly = ref(false); // false → “All”, true → “Unread”
-const legendPanel = ref()
+const legendPanel = ref();
 
 const toggleLegend = (event) => {
-  legendPanel.value.toggle(event)
+  legendPanel.value.toggle(event);
+};
+
+const toggleExport = () => {
+  showExport.value = !showExport.value;
+};
+const showExport = ref(false);
+
+const windowWidth = ref(0);
+
+const isMobile = computed(() => {
+  return windowWidth.value < 640;
+});
+
+const isExportVisible = computed(() => {
+  return !isMobile.value || showExport.value;
+});
+
+const isExportChangeButtonVisible = computed(() => {
+  return isMobile.value;
+});
+
+const updateWindowWidth = () => {
+  if (typeof window !== "undefined") {
+    windowWidth.value = window.innerWidth;
+  }
+};
+
+/* ── Data initialization from MainContent ──────────────────── */
+async function initializeChatData() {
+  if (!currentEntity.value) {
+    console.warn('No entity specified for initialization');
+    return;
+  }
+
+  try {
+    isLoadingData.value = true;
+    
+    // Fetch initial data
+    await fetchChatData(0, {}, {});
+    
+    // Validate entity configuration
+    const entityConfig = validateEntityConfig();
+    
+    if (entityConfig) {
+      console.log('Entity configuration loaded:', entityConfig);
+    }
+    
+  } catch (error) {
+    console.error('Failed to initialize chat data:', error);
+    parseError(error);
+  } finally {
+    isLoadingData.value = false;
+  }
 }
+
+onMounted(async () => {
+  updateWindowWidth();
+  window.addEventListener("resize", updateWindowWidth);
+  await initializeChatData();
+});
+
 /* ── REFS ───────────────────────────────────────────── */
 const showMsgDialog = ref(false);
 const selectedMsg = ref(null);
+const showUserInfoDialog = ref(false);
+
+// Room search functionality
+const roomSearchQuery = ref('');
+const chatSearchRef = ref(null);
+
+// Filter metadata and chat data refs
+const filterMetadata = ref(null);
+const metadataLoading = ref(false);
+const filtersLoaded = ref(false);
+const appliedFilters = ref({});
+const appliedSearch = ref({});
+const chatData = ref([]);
+const totalRecords = ref(0);
+const currentPage = ref(0);
+
+// Additional processing refs from MainContent
+const isLoading = ref(false);
+const isLoadingData = ref(false);
+const isRoomsLoading = ref(false);
+const tableDataOriginal = ref([]);
+const currentEntityName = ref("");
+const isEntityInline = ref(false);
+const pageSize = ref(10);
+const searchQuery = ref("");
+const selectedField = ref(null);
+const dateRange = ref({ start: null, end: null });
+
+// Request tracking to prevent duplicates
+const isRequestInProgress = ref(false);
+const lastRequestParams = ref("");
 
 /* ── CUSTOM DROPDOWN ITEMS (only one in this example) ─ */
 const messageActions = [{ name: "seeSources", title: t("EmbeddedChat.seeSources") }];
@@ -169,18 +365,61 @@ function onMessageAction(messageAction) {
 }
 
 /* ── props / emits ─────────────────────────────────────────── */
-const props = defineProps({
-  user_id: { type: String, default: "" },
-  totalRecords: { type: Number, default: 0 },
-  chatsData: { type: Array, default: () => [] },
-  isRoomsLoading: { type: Boolean, default: false },
-});
-
-watch(props, () => {
-  console.log("props", props); // For debugging: log props changes (e.g. close chat on user_id change)
-});
-
 const toast = useToast();
+
+/* ── Error handling from MainContent ──────────────────────── */
+function parseError(error) {
+  console.log('Parsing error:', error);
+
+  if (error.response && error.response.data) {
+    const data = error.response.data;
+    console.log('Error data:', data);
+
+    let toastMessage = "";
+
+    if (data.detail) {
+      if (typeof data.detail === "string") {
+        toastMessage = data.detail;
+      } else if (Array.isArray(data.detail)) {
+        toastMessage = data.detail.map((e) => e.msg || e).join(", ");
+      } else if (typeof data.detail === "object") {
+        toastMessage = Object.entries(data.detail)
+          .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)
+          .join("; ");
+      }
+      
+      toast.add({
+        severity: "error",
+        summary: t("EmbeddedChat.errorTitle", "Error"),
+        detail: toastMessage,
+        life: 5000,
+      });
+
+      return toastMessage;
+    }
+
+    toastMessage = data.message || error.message;
+
+    toast.add({
+      severity: "error",
+      summary: t("EmbeddedChat.errorTitle", "Error"),
+      detail: toastMessage,
+      life: 5000,
+    });
+
+    return toastMessage;
+  }
+
+  const fallbackMessage = error.message || t("EmbeddedChat.unknownError", "Unknown error occurred");
+  toast.add({
+    severity: "error",
+    summary: t("EmbeddedChat.errorTitle", "Error"),
+    detail: fallbackMessage,
+    life: 5000,
+  });
+
+  return fallbackMessage;
+}
 
 /* ── dropdown items for SplitButton ───────────────── */
 const exportItems = [
@@ -196,10 +435,35 @@ async function onExportToCSV() {
   try {
     const { utils } = await import("xlsx");
 
-    /* gather rows exactly like onExportToExcel() */
-    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/?order=-1`);
+    // Build URL with current filters and search parameters
+    const params = new URLSearchParams();
+    params.append('order', '-1');
+    params.append('export', 'true'); // Flag to get all filtered data
+    
+    // Add filters if any are applied
+    if (Object.keys(appliedFilters.value).length > 0) {
+      params.append('filters', JSON.stringify(appliedFilters.value));
+    }
+    
+    // Add search if any is applied (from filters or room search)
+    const searchQuery = appliedSearch.value?.q || roomSearchQuery.value;
+    if (searchQuery && searchQuery.trim()) {
+      params.append('search', searchQuery.trim());
+    }
+    
+    // Add unread filter if active
+    if (unreadOnly.value) {
+      params.append('unread_only', 'true');
+    }
 
-    const rows = response.data.flatMap((chat) =>
+    const url = `api/${currentPageName.value}/${currentEntity.value}/?${params.toString()}`;
+    const response = await useNuxtApp().$api.get(url);
+
+    // Handle response data structure
+    const data = response.data?.data ? response.data.data : response.data;
+    const chats = Array.isArray(data) ? data : [data];
+
+    const rows = chats.flatMap((chat) =>
       chat.messages.map((m) => ({
         ChatID: chat.chat_id,
         Time: m.timestamp,
@@ -214,9 +478,29 @@ async function onExportToCSV() {
 
     /* trigger download */
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`);
+    const filename = hasActiveFilters.value 
+      ? `chats_filtered_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`
+      : `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`;
+    saveAs(blob, filename);
 
-    toast.add({ severity: "success", summary: t("EmbeddedChat.csvSuccess"), life: 3000 });
+    // Build export summary message
+    let exportSummary = "";
+    if (hasActiveFilters.value) {
+      const activeFilterTypes = [];
+      if (Object.keys(appliedFilters.value).length > 0) activeFilterTypes.push(t("EmbeddedChat.filters", "filters"));
+      if (searchQuery && searchQuery.trim()) activeFilterTypes.push(t("EmbeddedChat.search", "search"));
+      if (unreadOnly.value) activeFilterTypes.push(t("EmbeddedChat.unreadOnly", "unread only"));
+      
+      exportSummary = t("EmbeddedChat.exportedWithFilters", 
+        `Exported ${rows.length} messages with: ${activeFilterTypes.join(", ")}`);
+    }
+
+    toast.add({ 
+      severity: "success", 
+      summary: t("EmbeddedChat.csvSuccess"), 
+      detail: exportSummary || undefined,
+      life: 3000 
+    });
   } catch (err) {
     console.error("CSV export failed:", err);
     toast.add({
@@ -237,11 +521,37 @@ async function onExportToExcel() {
     const wb = utils.book_new();
     const usedNames = new Set();
 
-    const response = await useNuxtApp().$api.get(`api/${currentPageName.value}/${currentEntity.value}/?order=-1`);
+    // Build URL with current filters and search parameters
+    const params = new URLSearchParams();
+    params.append('order', '-1');
+    params.append('export', 'true'); // Flag to get all filtered data
+    
+    // Add filters if any are applied
+    if (Object.keys(appliedFilters.value).length > 0) {
+      params.append('filters', JSON.stringify(appliedFilters.value));
+    }
+    
+    // Add search if any is applied (from filters or room search)
+    const searchQuery = appliedSearch.value?.q || roomSearchQuery.value;
+    if (searchQuery && searchQuery.trim()) {
+      params.append('search', searchQuery.trim());
+    }
+    
+    // Add unread filter if active
+    if (unreadOnly.value) {
+      params.append('unread_only', 'true');
+    }
+
+    const url = `api/${currentPageName.value}/${currentEntity.value}/?${params.toString()}`;
+    const response = await useNuxtApp().$api.get(url);
     console.log("response", response); // For debugging: log API response
 
+    // Handle response data structure
+    const data = response.data?.data ? response.data.data : response.data;
+    const chats = Array.isArray(data) ? data : [data];
+
     // ── 2. Добавляем листы без дубликатов ──────────────
-    response.data.forEach((chat, idx) => {
+    chats.forEach((chat, idx) => {
       const rows = chat.messages.map((m) => ({
         ChatID: chat.chat_id,
         Time: m.timestamp,
@@ -269,9 +579,29 @@ async function onExportToExcel() {
     });
 
     // ── 3. Сохраняем файл ──────────────────────────────
-    writeFileXLSX(wb, `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`);
+    const filename = hasActiveFilters.value 
+      ? `chats_filtered_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`
+      : `chats_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`;
+    writeFileXLSX(wb, filename);
 
-    toast.add({ severity: "success", summary: t("EmbeddedChat.excelSuccess"), life: 3000 });
+    // Build export summary message
+    let exportSummary = "";
+    if (hasActiveFilters.value) {
+      const activeFilterTypes = [];
+      if (Object.keys(appliedFilters.value).length > 0) activeFilterTypes.push(t("EmbeddedChat.filters", "filters"));
+      if (searchQuery && searchQuery.trim()) activeFilterTypes.push(t("EmbeddedChat.search", "search"));
+      if (unreadOnly.value) activeFilterTypes.push(t("EmbeddedChat.unreadOnly", "unread only"));
+      
+      exportSummary = t("EmbeddedChat.exportedWithFilters", 
+        `Exported ${chats.length} chats with: ${activeFilterTypes.join(", ")}`);
+    }
+
+    toast.add({ 
+      severity: "success", 
+      summary: t("EmbeddedChat.excelSuccess"), 
+      detail: exportSummary || undefined,
+      life: 3000 
+    });
   } catch (err) {
     console.error("Excel export failed:", err);
     toast.add({
@@ -283,20 +613,90 @@ async function onExportToExcel() {
   }
 }
 
-const chatRows = computed(() => props.chatsData.filter((row) => !row._isBlank && row.chat_id));
-
-const emit = defineEmits(["close-chat", "page"]); // Emit if you still need "exportToExcel" or other events
-
-function onPageChange(e) {
-  emit("page", e.page);
-}
-
-watch(props, () => {
-  console.log("props", props); // For debugging: log props changes (e.g. close chat on user_id change)
+// Single source of truth for all chat data
+const hasActiveFilters = computed(() => {
+  return Object.keys(appliedFilters.value).length > 0 || 
+         (appliedSearch.value?.q && appliedSearch.value.q.trim()) ||
+         (roomSearchQuery.value && roomSearchQuery.value.trim()) ||
+         unreadOnly.value;
 });
 
+// Count active filters for badge display
+const getActiveFiltersCount = () => {
+  let count = 0;
+  if (Object.keys(appliedFilters.value).length > 0) count++;
+  if ((appliedSearch.value?.q && appliedSearch.value.q.trim()) || (roomSearchQuery.value && roomSearchQuery.value.trim())) count++;
+  if (unreadOnly.value) count++;
+  return count;
+};
+
+// Check if filtered results are empty
+const hasEmptyFilterResults = computed(() => {
+  return hasActiveFilters.value && chatRows.value.length === 0;
+});
+
+const chatRows = computed(() => {
+  // Always use chatData as single source of truth
+  const filteredData = chatData.value.filter((row) => !row._isBlank && row.chat_id);
+  
+  // If we have active filters but no results, return empty array to trigger empty state
+  if (hasActiveFilters.value && filteredData.length === 0) {
+    return [];
+  }
+  
+  return filteredData;
+});
+
+
+const emit = defineEmits(["close-chat", "page", "refresh-chats", "data-loaded", "entity-config-loaded"]); // Added more emits
+
+/* ── Entity configuration functions from MainContent ──────────── */
+function findEntityConfig(data, groupKey, entityKey) {
+  if (!groupKey || !entityKey) return null;
+  if (!data[groupKey]) return null;
+  return data[groupKey].entities.find((e) => e.registered_name === entityKey) || null;
+}
+
+function validateEntityConfig() {
+  if (!filterMetadata.value) {
+    console.warn('No metadata available for entity validation');
+    return null;
+  }
+
+  const entityConfig = findEntityConfig(filterMetadata.value, currentGroup.value, currentEntity.value);
+  if (!entityConfig) {
+    console.warn('No valid entityConfig found for:', currentGroup.value, currentEntity.value);
+    return null;
+  }
+
+  // Set entity properties
+  currentEntityName.value = entityConfig.model?.verbose_name || entityConfig.model?.name || currentEntity.value;
+  isEntityInline.value = entityConfig.model?.is_inline || false;
+  
+  // Emit entity config for parent components
+  emit('entity-config-loaded', entityConfig);
+  
+  return entityConfig;
+}
+
+async function onPageChange(e) {
+  // PrimeVue's DataTable uses zero-based 'page' in the event
+  const newPage = typeof e.page !== 'undefined' ? e.page : e;
+  const newPageSize = e.rows || pageSize.value;
+  
+  
+  // Update local state
+  currentPage.value = newPage;
+  pageSize.value = newPageSize;
+  
+  // Fetch new data with current filters/search state
+  const response = await fetchChatData(newPage, appliedFilters.value, appliedSearch.value);
+  
+  // Emit to parent
+  emit("page", newPage);
+}
+
 /* ── expose refs coming from useChatLogic ──────────────────── */
-const isMobile = computed(() => chatLogic.value?.isMobile);
 // const currentUserId = computed(() => chatLogic.value?.currentUserId);
 const isChoiceStrict = computed(() => chatLogic.value?.isChoiceStrict);
 const timerExpired = computed(() => chatLogic.value?.timerExpired);
@@ -312,6 +712,8 @@ const activeUsername = ref(null);
 const activeUserId = ref(null);
 const activePdEntry = ref(null);
 const activeStartDate = ref(null);
+const activeRoomCreatedAt = ref(null);
+const activeRoomUpdatedAt = ref(null);
 
 const textMessagesObject = computed(() => ({
   SEARCH: t("textMessages.SEARCH"),
@@ -354,6 +756,8 @@ function getChatId(data) {
       activeUserId.value = room?.roomName || null;
       activePdEntry.value = room?.pdEntry || null;
       activeStartDate.value = room?.lastMessage?.timestamp || null;
+      activeRoomCreatedAt.value = room?.createdAtFormatted || null;
+      activeRoomUpdatedAt.value = room?.updatedAtFormatted || null;
     }
   }
 }
@@ -361,6 +765,55 @@ function getChatId(data) {
 function clearRoomName(room) {
   const clean = room.roomName.replace(/^🔴\s*/, ""); // strip a previous badge
   return clean;
+}
+
+/**
+ * Update a specific room's data when a new message arrives
+ * @param {string} roomId - The ID of the room to update
+ * @param {Object} newMessage - The new message object
+ */
+function updateRoomOnNewMessage(roomId, newMessage) {
+  const roomIndex = rooms.value.findIndex(room => room.roomId === roomId);
+  
+  if (roomIndex === -1) {
+    console.warn('Room not found for update:', roomId);
+    return;
+  }
+  
+  const room = rooms.value[roomIndex];
+  const currentTime = new Date().toISOString();
+  const formattedTime = formatDateEU(currentTime);
+  
+  // Extract the base room name without the old timestamp
+  const baseRoomName = room.roomName.replace(/\s•\s.*$/, ''); // Remove existing timestamp
+  const isUnread = newMessage.sender_role?.en === t("EmbeddedChat.client");
+  
+  // Update room data with new message info
+  const updatedRoom = {
+    ...room,
+    lastMessage: {
+      content: newMessage.message || newMessage.content || '',
+      senderId: newMessage.sender_id || (newMessage.sender_role?.en === t("EmbeddedChat.client") ? "1234" : currentUserId.value),
+      timestamp: formattedTime,
+    },
+    updatedAt: currentTime,
+    updatedAtFormatted: formattedTime,
+    // Update room name with new timestamp (preserve structure)
+    roomName: `${baseRoomName} • ${formattedTime}`,
+    // Mark as unread if message is from client
+    seen: isUnread ? false : room.seen
+  };
+  
+  // Update the room in the array
+  rooms.value[roomIndex] = updatedRoom;
+  
+  // If this is the active room, update the active room data
+  if (roomId === activeRoomId.value) {
+    activeStartDate.value = formattedTime;
+    activeRoomUpdatedAt.value = formattedTime;
+  }
+  
+  console.log('Room updated on new message:', roomId, updatedRoom);
 }
 
 /* ── Chat logic instance (re‑created on room switch) ───────── */
@@ -377,8 +830,39 @@ function initChatLogic(chat_id) {
 
 const displayedRooms = ref([]);
 
+// Room search handlers for ChatSearch component
+const onRoomSearch = async (searchTerm) => {
+  try {
+    if (!searchTerm || !searchTerm.trim()) {
+      // If no search term, fetch all data
+      await fetchChatData(0, appliedFilters.value, {});
+      return;
+    }
+    
+    // Use existing fetchChatData with simple search parameter
+    const searchObj = { q: searchTerm.trim() };
+    await fetchChatData(0, appliedFilters.value, searchObj);
+  } catch (error) {
+    console.error('Room search failed:', error);
+  } finally {
+    // Stop loading indicator in ChatSearch component
+    if (chatSearchRef.value) {
+      chatSearchRef.value.stopLoading();
+    }
+  }
+};
+
+const onRoomSearchClear = () => {
+  // Reset to original data
+  fetchChatData(0, appliedFilters.value, {});
+  // Ensure loading state is cleared
+  if (chatSearchRef.value) {
+    chatSearchRef.value.stopLoading();
+  }
+};
+
+// Simplified display logic - no more client-side search filtering
 watch([unreadOnly, rooms], (newVal) => {
-  // console.log("unreadOnly changed to:", newVal); // Log the change for debugging
   let filteredRooms = rooms.value;
   if (unreadOnly.value) {
     // Filter for unread rooms
@@ -501,21 +985,32 @@ function buildRooms(chats, consultantId) {
     };
 
     const last = chat.messages && chat.messages.length ? chat.messages[chat.messages.length - 1] : null;
+    
+    // Calculate proper last message timestamp
+    const lastMessageTimestamp = last ? formatDateEU(last.timestamp || last.created_at) : formatDateEU(chat.created_at);
+    
+    // Calculate last update date (from last message or updated_at)
+    const lastUpdateDate = last ? (last.timestamp || last.created_at || chat.updated_at || chat.created_at) : (chat.updated_at || chat.created_at);
+    
     const lastMessage = last
       ? {
           content: last.message,
           senderId: last.sender_role && last.sender_role.en === t("EmbeddedChat.client") ? clientUser._id : consultantUser._id,
-          timestamp: formatDateEU(chat.created_at),
+          timestamp: lastMessageTimestamp,
         }
-      : { content: "", senderId: consultantUser._id };
+      : { content: "", senderId: consultantUser._id, timestamp: formatDateEU(chat.created_at) };
     console.log("lastMessage", chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0); // For debugging: log last message data
     const status_emoji = chat.status_emoji;
     const seen = chat.messages?.[chat.messages?.length - 1]?.read_by_display?.length > 0 || false;
+    
+    // Format update date for display in room name
+    const updateDateFormatted = formatDateEU(lastUpdateDate);
+    
     return {
       avatar: sourceAvatars[sourceName] || "/avatars/default.png",
       roomId: chat.chat_id,
       roomName:
-        `${seen ? "" : "🔴"} ${status_emoji || ""} ${normalizedPd.username || client.id}` ||
+        `${seen ? "" : "🔴"} ${status_emoji || ""} ${normalizedPd.username || client.id} • ${updateDateFormatted}` ||
         t("EmbeddedChat.chatFallback", { index: idx + 1 }),
       users: [clientUser, consultantUser],
       lastMessage,
@@ -523,18 +1018,264 @@ function buildRooms(chats, consultantId) {
       seen: seen,
       sourceName: sourceName,
       pdEntry: normalizedPd,
+      createdAt: chat.created_at,
+      updatedAt: lastUpdateDate,
+      createdAtFormatted: formatDateEU(chat.created_at),
+      updatedAtFormatted: updateDateFormatted,
     };
   });
+}
+
+/* ── Filter metadata and chat data functionality ──────────────── */
+async function fetchChatData(page = 0, filters = {}, search = {}) {
+  if (!currentEntity.value) {
+    console.warn('No entity specified in the route.');
+    return;
+  }
+
+  // Create a unique request signature to prevent duplicates
+  const requestSignature = JSON.stringify({ page, filters, search, entity: currentEntity.value });
+  
+  // Prevent duplicate requests only if request is currently in progress with same params
+  if (isRequestInProgress.value && lastRequestParams.value === requestSignature) {
+    console.log('Duplicate request prevented (same request in progress):', requestSignature);
+    return;
+  }
+
+  // Set request state
+  isLoading.value = true;
+  isRoomsLoading.value = true;
+  metadataLoading.value = true;
+  isRequestInProgress.value = true;
+  lastRequestParams.value = requestSignature;
+  
+  try {
+    // First fetch metadata if not already loaded
+    if (!filterMetadata.value) {
+      const metadataResponse = await useNuxtApp().$api.get(`api/${currentPageName.value}/info`);
+      console.log('Filter metadata response:', metadataResponse);
+      filterMetadata.value = metadataResponse;
+    }
+
+    // Build URL with pagination and filters
+    const params = new URLSearchParams();
+    params.append('sort_by', 'updated_at');
+    params.append('order', '-1');
+    params.append('page', (page + 1).toString()); // API uses 1-based pagination
+    params.append('page_size', pageSize.value.toString());
+    
+    // Add filters if any
+    if (Object.keys(filters).length > 0) {
+      params.append('filters', JSON.stringify(filters));
+    }
+    
+    // Add search if any - simple format
+    if (search?.q && search.q.trim()) {
+      params.append('search', search.q.trim());
+    }
+
+    const url = `api/${currentPageName.value}/${currentEntity.value}/?${params.toString()}`;
+    console.log('Fetching chat data from:', url);
+    
+    const response = await useNuxtApp().$api.get(url);
+    
+    // Process response data similar to MainContent
+    let data = response.data?.data ? response.data.data : response.data;
+    console.log('Chat data response:', response);
+    console.log('Processed chat data:', data);
+    
+    // Validate and process data
+    if (!Array.isArray(data)) {
+      console.warn('Expected array data but got:', typeof data);
+      data = data ? [data] : [];
+    }
+    
+    // Update state
+    chatData.value = data || [];
+    tableDataOriginal.value = data || []; // Keep original for filtering
+    totalRecords.value = response.data?.meta?.total_count || response.data?.meta?.total || response.total || data.length;
+    currentPage.value = page;
+    
+    // Emit success event
+    emit('data-loaded', {
+      data: data,
+      total: totalRecords.value,
+      page: page,
+      filters: filters,
+      search: search
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('Error fetching chat data:', error);
+    
+    // Handle different error types
+    if (error.response && error.response.status !== 404) {
+      parseError(error);
+    } else if (error.response?.status === 404) {
+      console.warn('Chat data endpoint not found (404)');
+      toast.add({
+        severity: 'warn',
+        summary: t('EmbeddedChat.notFound', 'Not Found'),
+        detail: t('EmbeddedChat.noDataAvailable', 'No chat data available'),
+        life: 3000
+      });
+    }
+    
+    // Reset state on error
+    filterMetadata.value = null;
+    chatData.value = [];
+    tableDataOriginal.value = [];
+    totalRecords.value = 0;
+    
+    return null;
+  } finally {
+    isLoading.value = false;
+    isRoomsLoading.value = false;
+    metadataLoading.value = false;
+    isRequestInProgress.value = false;
+    // Reset lastRequestParams after a short delay to allow duplicate detection during request
+    setTimeout(() => {
+      lastRequestParams.value = "";
+    }, 100);
+  }
+}
+
+// Create debounced versions to prevent rapid-fire requests
+const debouncedRefreshChatList = debounce(async (resetPage = true) => {
+  try {
+    console.log('Debounced refresh with filters:', appliedFilters.value, 'search:', appliedSearch.value, 'resetPage:', resetPage);
+    
+    // Reset to page 0 only when filters change, not during pagination
+    const pageToUse = resetPage ? 0 : currentPage.value;
+    const response = await fetchChatData(pageToUse, appliedFilters.value, appliedSearch.value);
+    
+    if (response) {
+      console.log('Chat response:', response);
+      
+      // Check if we got empty results with active filters
+      const responseData = response.data || response;
+      if (hasActiveFilters.value && (!responseData || responseData.length === 0)) {
+        console.log('Empty filter results detected');
+        toast.add({
+          severity: 'info',
+          summary: t('EmbeddedChat.noResultsFound', 'No Results Found'),
+          detail: t('EmbeddedChat.noMatchingChats', 'No chats match your current filters'),
+          life: 3000
+        });
+      }
+      
+      // Update current page if we reset
+      if (resetPage) {
+        currentPage.value = 0;
+      }
+      
+      // Emit to parent for pagination and other metadata
+      emit('refresh-chats', {
+        data: responseData,
+        meta: response.meta,
+        filters: appliedFilters.value,
+        search: appliedSearch.value,
+        page: pageToUse,
+        isEmpty: hasActiveFilters.value && (!responseData || responseData.length === 0)
+      });
+    }
+    
+  } catch (error) {
+    console.error('Failed to refresh chat list with filters:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Filter Error',
+      detail: 'Failed to apply filters to chat list',
+      life: 5000
+    });
+  }
+}, 300); // 300ms debounce
+
+async function onFiltersChanged(filters) {
+  console.log('Filters changed:', filters);
+  
+  // Update applied filters immediately
+  appliedFilters.value = filters;
+  
+  // Check if filters are empty - if so, clear filtered state
+  if (Object.keys(filters).length === 0) {
+    await clearFilters();
+    return;
+  }
+  
+  // Apply filters to the chat list with debouncing (reset to page 0)
+  debouncedRefreshChatList(true);
+}
+
+// Function to handle when filters are loaded
+function onFiltersLoaded(loaded) {
+  console.log('Filters loaded state changed:', loaded);
+  filtersLoaded.value = loaded;
+  
+  // You can add additional logic here when filters become ready
+  if (loaded) {
+    console.log('Filters are now ready for use');
+  }
+}
+
+// Function to clear filters and return to original data
+async function clearFilters() {
+  
+  appliedFilters.value = {};
+  appliedSearch.value = {};
+  
+  // Reset to page 0 when clearing filters
+  currentPage.value = 0;
+  
+  // Reload original data without filters
+  await fetchChatData(0);
+}
+
+// Function to refresh chat list with filters and search (kept for backwards compatibility)
+async function refreshChatList(resetPage = true) {
+  // This function is now just a wrapper around the debounced version
+  debouncedRefreshChatList(resetPage);
+}
+
+/**
+ * Refresh rooms data to get latest updates from server
+ * Useful when we want to sync with server after WebSocket events
+ */
+async function refreshRoomsData() {
+  try {
+    await fetchChatData(currentPage.value, appliedFilters.value, appliedSearch.value);
+    console.log('Rooms data refreshed successfully');
+  } catch (error) {
+    console.error('Failed to refresh rooms data:', error);
+  }
 }
 
 const currentRoomSource = computed(() => {
   return rooms.value.find((r) => r.roomId === activeRoomId.value)?.sourceName || "";
 });
 
+// Watch for route changes and reinitialize data
+watch([currentGroup, currentEntity], () => {
+  console.log('Route changed:', { group: currentGroup.value, entity: currentEntity.value });
+  initializeChatData();
+});
+
+// Watch for chat data changes and build rooms
 watch(
   chatRows,
   (rows) => {
-    if (!rows.length) return;
+    if (!rows.length) {
+      // If we have active filters but no results, show empty state
+      if (hasActiveFilters.value) {
+        rooms.value = [];
+        activeRoomId.value = null;
+        return;
+      }
+      // Otherwise, just return without updating rooms
+      return;
+    }
+    
     rooms.value = buildRooms(rows, currentUserId.value);
 
     // выбрать активную комнату, если ещё не выбрана
@@ -544,14 +1285,60 @@ watch(
   },
   { immediate: true }
 );
+
+// Watch for props changes that might affect data fetching
+// Watch for chat data changes and build rooms
 /* ── external events ───────────────────────────────────────── */
-// $listen("new_message_arrived", (msg) => {
-//   if (!msg || !messagesMap.value[activeRoomId.value]) return;
-//   messagesMap.value[activeRoomId.value].push(msg);
-// });
+// Listen for new messages and update room data accordingly
+$listen("new_message_arrived", (msg) => {
+  console.log('New message arrived:', msg);
+  
+  if (!msg || !msg.chat_id) {
+    console.warn('Invalid message data received:', msg);
+    return;
+  }
+  
+  // Update the specific room's data
+  updateRoomOnNewMessage(msg.chat_id, msg);
+  
+  // If we have a messages map, update it too
+  if (messagesMap.value[msg.chat_id]) {
+    messagesMap.value[msg.chat_id].push(msg);
+  }
+});
+
+// Also listen for WebSocket messages from chatLogic if available
+watch(() => chatLogic.value?.chatMessages?.value, (newMessages, oldMessages) => {
+  if (!newMessages || !oldMessages || !activeRoomId.value) return;
+  
+  // Check if new messages were added
+  if (newMessages.length > oldMessages.length) {
+    const latestMessage = newMessages[newMessages.length - 1];
+    if (latestMessage) {
+      updateRoomOnNewMessage(activeRoomId.value, {
+        message: latestMessage.content,
+        sender_id: latestMessage.senderId,
+        sender_role: { en: latestMessage.senderId === "1234" ? t("EmbeddedChat.client") : t("EmbeddedChat.consultant") },
+        chat_id: activeRoomId.value
+      });
+    }
+  }
+}, { deep: true });
 
 /* ── tidy up on unmount ───────────────────────────────────── */
-onBeforeUnmount(() => chatLogic.value?.destroy?.());
+onBeforeUnmount(() => {
+  chatLogic.value?.destroy?.();
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", updateWindowWidth);
+  }
+});
+
+// Expose functions for external use
+defineExpose({
+  updateRoomOnNewMessage,
+  refreshRoomsData,
+  refreshChatList
+});
 </script>
 
 <style>
@@ -566,5 +1353,36 @@ onBeforeUnmount(() => chatLogic.value?.destroy?.());
 <style scoped>
 :deep(.vac-button-download) {
   display: none !important;
+}
+
+/* Custom slide-down animation similar to PrimeFlex */
+.slide-down-enter-active {
+  animation: slide-down-in 0.3s ease-out;
+}
+
+.slide-down-leave-active {
+  animation: slide-down-out 0.3s ease-in;
+}
+
+@keyframes slide-down-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
 }
 </style>

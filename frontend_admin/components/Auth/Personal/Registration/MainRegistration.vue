@@ -30,6 +30,8 @@
                 :placeholder="t('PersonalMainRegistration.firstNamePlaceholder')"
                 required
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+                @input="onFirstNameInput"
+                @blur="onFirstNameBlur"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -50,6 +52,8 @@
                 :placeholder="t('PersonalMainRegistration.lastNamePlaceholder')"
                 required
                 class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
+                @input="onLastNameInput"
+                @blur="onLastNameBlur"
               />
             </div>
             <small class="text-red-500 mt-1 text-[12px]">
@@ -110,51 +114,24 @@
           </div>
 
           <Divider />
-
           <!-- Номер телефона (conditionally required) -->
-          <div>
-            <label for="phone" class="block mb-1 text-[14px] text-black dark:text-white">
-              {{ t("PersonalMainRegistration.phone") }} <span v-if="usePhone2FA" class="text-red-500">*</span>
-            </label>
-            <div class="input-container flex items-center border rounded-lg" :class="{ 'p-invalid': !!regError.phone }">
-              <InputMask
-                v-model="regForm.phone"
-                id="phone"
-                size="small"
-                type="tel"
-                :required="usePhone2FA"
-                mask="+48 999 999 999"
-                placeholder="+48 ___ ___ ___"
-                :minlength="8"
-                :maxlength="30"
-                :placeholder="t('PersonalMainRegistration.phonePlaceholder')"
-                class="w-full bg-transparent border-none shadow-none focus:ring-0 focus:outline-none text-[14px]"
-              />
-            </div>
-            <div class="flex flex-col">
-              <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
-                <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                  >{{ usePhone2FA ? t("PersonalMainRegistration.phoneImportant") : t("PersonalMainRegistration.phoneOptional") }} &nbsp;</span
-                >{{ usePhone2FA ? t("PersonalMainRegistration.phoneImportantInfo") : t("PersonalMainRegistration.phoneOptionalInfo") }}</small
-              >
-              <small class="text-red-500 mt-1 text-[12px]">
-                {{ regError.phone }}
-              </small>
-            </div>
-          </div>
+          <CountryPhoneSelector
+            v-model="regForm.phone"
+            :required="usePhone2FA"
+            :error="regError.phone"
+            :phoneError="regError.phone"
+            :needAdditionalInfo="true"
+          />
           <!-- 2FA Method Toggle -->
           <div class="flex items-center justify-between mt-2">
             <label class="text-[14px] text-black dark:text-white">
               {{ t("PersonalMainRegistration.usePhone2FA") }}
             </label>
-            <InputSwitch v-model="usePhone2FA" :disabled="!isPolishPhone" />
+            <ToggleSwitch v-model="usePhone2FA" />
           </div>
-          <small v-if="!isPolishPhone" class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
-            {{ t("PersonalMainRegistration.phoneMustBePolish") }}
-          </small>
 
           <!-- Email (conditionally required) -->
-          <div>
+          <div class="flex flex-col">
             <label for="email" class="block mb-1 text-[14px] text-black dark:text-white">
               {{ t("PersonalMainRegistration.email") }} <span v-if="!usePhone2FA" class="text-red-500">*</span>
             </label>
@@ -171,7 +148,10 @@
             </div>
             <small class="text-gray-500 dark:text-gray-300 mt-1 text-[12px]">
               <span class="text-gray-500 dark:text-gray-300 font-bold text-[14px] mt-1"
-                >{{ usePhone2FA ? t("PersonalMainRegistration.emailOptional") : t("PersonalMainRegistration.numberImportant") }} &nbsp;</span
+                >{{
+                  usePhone2FA ? t("PersonalMainRegistration.emailOptional") : t("PersonalMainRegistration.numberImportant")
+                }}
+                &nbsp;</span
               >{{ usePhone2FA ? t("PersonalMainRegistration.emailOptionalInfo") : t("PersonalMainRegistration.numberInfo") }}</small
             >
             <small class="text-red-500 mt-1 text-[12px]">
@@ -344,24 +324,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onUnmounted } from "vue";
 import { useRoute, navigateTo, reloadNuxtApp } from "#imports";
 import { useI18n } from "vue-i18n";
+import { debounce } from "lodash";
+import { useNameValidation } from "~/composables/useNameValidation.js";
+
 const { t } = useI18n();
+const { validateName, formatName } = useNameValidation();
 const is_loading = ref(false);
 const loading_text_displayed = ref(false);
 const hasReferralCode = ref(false);
 const isCode = ref(false);
 const usePhone2FA = ref(false); // toggle state
 
-// Computed helper to check if phone starts with +48 (Polish number)
-const isPolishPhone = computed(() => regForm.value.phone.startsWith("+48"));
 // Управление видом пароля
 const passwordType = ref("password");
 const passwordTypeConfirm = ref("password");
 const { currentLanguage } = useLanguageState();
 
 import { useErrorParser } from "~/composables/useErrorParser.js";
+import CountryPhoneSelector from "~/components/ui/CountryPhoneSelector.vue";
 const { parseAxiosError } = useErrorParser();
 const toast = useToast();
 // язык пользователя из состояния
@@ -476,18 +459,72 @@ function onReferralCheckboxClick(event) {
   }
 }
 
+// Функции валидации
+function validateFirstName() {
+  const errorKey = validateName(regForm.value.first_name, 'firstName');
+  if (errorKey) {
+    regError.value.first_name = t(errorKey);
+  } else {
+    regError.value.first_name = '';
+  }
+}
+
+function validateLastName() {
+  const errorKey = validateName(regForm.value.last_name, 'lastName');
+  if (errorKey) {
+    regError.value.last_name = t(errorKey);
+  } else {
+    regError.value.last_name = '';
+  }
+}
+
+// Debounced валидация с lodash
+const debouncedValidateFirstName = debounce(validateFirstName, 300);
+const debouncedValidateLastName = debounce(validateLastName, 300);
+
+// Обработчики валидации имени
+function onFirstNameInput() {
+  // Форматирование имени
+  regForm.value.first_name = formatName(regForm.value.first_name);
+  
+  // Валидация с debounce
+  debouncedValidateFirstName();
+}
+
+function onFirstNameBlur() {
+  // Отменяем debounced валидацию и выполняем немедленно
+  debouncedValidateFirstName.cancel();
+  validateFirstName();
+}
+
+// Обработчики валидации фамилии
+function onLastNameInput() {
+  // Форматирование фамилии
+  regForm.value.last_name = formatName(regForm.value.last_name);
+  
+  // Валидация с debounce
+  debouncedValidateLastName();
+}
+
+function onLastNameBlur() {
+  // Отменяем debounced валидацию и выполняем немедленно
+  debouncedValidateLastName.cancel();
+  validateLastName();
+}
+
 function sendReg() {
   if (!CheckboxValue.value) {
     regError.value.terms = "You must agree to the Terms of Service.";
     return;
   }
 
+  // Очистка предыдущих ошибок
   regError.value = {
     phone: "",
     email: "",
     first_name: "",
     last_name: "",
-    birth_date: null, 
+    birth_date: null,
     gender: "",
     password: "",
     password_confirm: "",
@@ -495,18 +532,38 @@ function sendReg() {
     accept_terms: "",
     code: "",
   };
+
+  // Валидация имени и фамилии перед отправкой
+  let hasValidationErrors = false;
+  
+  const firstNameError = validateName(regForm.value.first_name, 'firstName');
+  if (firstNameError) {
+    regError.value.first_name = t(firstNameError);
+    hasValidationErrors = true;
+  }
+  
+  const lastNameError = validateName(regForm.value.last_name, 'lastName');
+  if (lastNameError) {
+    regError.value.last_name = t(lastNameError);
+    hasValidationErrors = true;
+  }
+  
+  // Если есть ошибки валидации, прерываем отправку
+  if (hasValidationErrors) {
+    return;
+  }
+
   const { currentPageName } = usePageState();
   is_loading.value = true;
   loading_text_displayed.value = false;
   let formData = regForm.value;
-  console.log("formData", formData);
   useNuxtApp()
     .$api.post(`/api/${currentPageName.value}/register`, formData)
     .then((response) => {
       isCode.value = true;
       is_loading.value = false;
       const responceData = response.data;
-      console.log("responceData", responceData);
+
       testCode.value = responceData?.debug_code;
     })
     .catch((err) => {
@@ -524,7 +581,7 @@ function sendCode() {
     .$api.post(url, formData)
     .then((response) => {
       let responceData = response.data;
-      console.log("responceData", responceData);
+
       reloadNuxtApp({ path: `/${currentPageName.value}`, ttl: 1000 });
     })
     .catch((err) => {
@@ -550,6 +607,10 @@ function resetForm() {
     regError.value[field] = "";
   });
   isCode.value = false;
+  
+  // Отмена debounced валидации
+  debouncedValidateFirstName.cancel();
+  debouncedValidateLastName.cancel();
 }
 
 watch(hasReferralCode, (newValue) => {
@@ -565,16 +626,6 @@ watch(usePhone2FA, (newVal) => {
   regForm.value.via = newVal ? "phone" : "email";
 });
 
-// Disable phone-based 2FA if phone is not Polish
-watch(
-  () => regForm.value.phone,
-  (newPhone) => {
-    if (!newPhone.startsWith("+48")) {
-      usePhone2FA.value = false;
-      regForm.value.via = "email";
-    }
-  }
-);
 onMounted(() => {
   if (referralCode) {
     regForm.value.referral_code = referralCode;
@@ -585,6 +636,12 @@ onMounted(() => {
   if (currentPageName.value != "personal_account") {
     reloadNuxtApp({ path: `/${currentPageName.value}/login/`, ttl: 1000 });
   }
+});
+
+onUnmounted(() => {
+  // Отмена debounced функций при размонтировании компонента
+  debouncedValidateFirstName.cancel();
+  debouncedValidateLastName.cancel();
 });
 </script>
 <style scoped>
