@@ -1,0 +1,332 @@
+[
+ {
+  "columns": [
+   {
+    "column_name": "New",
+    "indicator": "Pink",
+    "order": "[\"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Qualification",
+    "indicator": "Yellow",
+    "order": "[\"IE-2025-00751\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00720\", \"IE-2025-00771\", \"IE-2025-00775\", \"IE-2025-00782\", \"IE-2025-00795\", \"IE-2025-00796\", \"IE-2025-00797\", \"IE-2025-00800\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Briefing",
+    "indicator": "Orange",
+    "order": "[\"IE-2025-00802\", \"IE-2025-00710\", \"IE-2025-00772\", \"IE-2025-00776\", \"IE-2025-00783\", \"IE-2025-00784\", \"IE-2025-00792\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Scheduled",
+    "indicator": "Light Blue",
+    "order": "[\"IE-2025-00753\", \"IE-2025-00756\", \"IE-2025-00750\", \"IE-2025-00778\", \"IE-2025-00785\", \"IE-2025-00786\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "In Work",
+    "indicator": "Blue",
+    "order": "[\"IE-2025-00755\", \"IE-2025-00752\", \"IE-2025-00789\", \"IE-2025-00793\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "On Hold",
+    "indicator": "Purple",
+    "order": "[\"IE-2025-00787\", \"IE-2025-00788\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Won",
+    "indicator": "Green",
+    "order": "[\"IE-2025-00790\", \"IE-2025-00794\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Lost",
+    "indicator": "Red",
+    "order": "[\"IE-2025-00791\"]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Archived",
+    "indicator": "Gray",
+    "order": "[]",
+    "parent": "CRM Board",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Kanban Board",
+  "field_name": "status_crm_board",
+  "fields": "[\"channel_type\", \"channel_platform\", \"display_name\", \"mongo_chat_id\", \"last_event_at\", \"modified\"]",
+  "filters": null,
+  "kanban_board_name": "CRM Board",
+  "modified": "2025-10-24 00:24:00.703316",
+  "name": "CRM Board",
+  "private": 0,
+  "reference_doctype": "Engagement Case",
+  "show_labels": 0
+ },
+ {
+  "columns": [
+   {
+    "column_name": "Bot Active / New Inquiry",
+    "indicator": "Pink",
+    "order": "[\"IE-2025-00756\", \"IE-2025-00771\", \"IE-2025-00772\", \"IE-2025-00775\", \"IE-2025-00776\", \"IE-2025-00778\", \"IE-2025-00782\", \"IE-2025-00783\", \"IE-2025-00784\", \"IE-2025-00785\", \"IE-2025-00786\", \"IE-2025-00787\", \"IE-2025-00788\", \"IE-2025-00789\", \"IE-2025-00790\", \"IE-2025-00791\", \"IE-2025-00792\", \"IE-2025-00793\", \"IE-2025-00794\", \"IE-2025-00795\", \"IE-2025-00796\", \"IE-2025-00797\", \"IE-2025-00800\", \"IE-2025-00710\", \"IE-2025-00753\", \"IE-2025-00751\", \"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00744\", \"IE-2025-00742\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00723\", \"IE-2025-00721\", \"IE-2025-00720\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\", \"IE-2025-00750\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00736\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00711\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00718\", \"IE-2025-00717\"]",
+    "parent": "Leads – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "In Progress",
+    "indicator": "Yellow",
+    "order": "[\"IE-2025-00755\", \"IE-2025-00752\"]",
+    "parent": "Leads – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Waiting List",
+    "indicator": "Purple",
+    "order": "[]",
+    "parent": "Leads – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Call Later",
+    "indicator": "Orange",
+    "order": "[]",
+    "parent": "Leads – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Failed / No Show (lead)",
+    "indicator": "Red",
+    "order": "[]",
+    "parent": "Leads – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Closed – Not Converted",
+    "indicator": "Gray",
+    "order": "[]",
+    "parent": "Leads – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Converted to Deal",
+    "indicator": "Green",
+    "order": "[]",
+    "parent": "Leads – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Kanban Board",
+  "field_name": "status_leads",
+  "fields": "[\"channel_type\",\"channel_platform\",\"display_name\",\"mongo_chat_id\",\"last_event_at\",\"modified\"]",
+  "filters": null,
+  "kanban_board_name": "Leads – Contact Center",
+  "modified": "2025-10-23 18:04:38.593461",
+  "name": "Leads – Contact Center",
+  "private": 0,
+  "reference_doctype": "Engagement Case",
+  "show_labels": 1
+ },
+ {
+  "columns": [
+   {
+    "column_name": "Appointment Scheduled",
+    "indicator": "Light Blue",
+    "order": "[\"IE-2025-00755\", \"IE-2025-00753\", \"IE-2025-00752\", \"IE-2025-00710\", \"IE-2025-00751\", \"IE-2025-00750\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00720\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\", \"IE-2025-00771\", \"IE-2025-00772\", \"IE-2025-00775\", \"IE-2025-00776\", \"IE-2025-00778\", \"IE-2025-00782\", \"IE-2025-00783\", \"IE-2025-00784\", \"IE-2025-00785\", \"IE-2025-00786\", \"IE-2025-00787\", \"IE-2025-00788\", \"IE-2025-00789\", \"IE-2025-00790\", \"IE-2025-00791\", \"IE-2025-00792\", \"IE-2025-00793\", \"IE-2025-00794\", \"IE-2025-00795\", \"IE-2025-00796\", \"IE-2025-00797\", \"IE-2025-00800\", \"IE-2025-00756\"]",
+    "parent": "Deals – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Post-Visit Check",
+    "indicator": "Yellow",
+    "order": "[]",
+    "parent": "Deals – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Recommended Recall Added",
+    "indicator": "Purple",
+    "order": "[]",
+    "parent": "Deals – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Transferred to Care",
+    "indicator": "Blue",
+    "order": "[]",
+    "parent": "Deals – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Deal Completed",
+    "indicator": "Green",
+    "order": "[]",
+    "parent": "Deals – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "No-show (deal)",
+    "indicator": "Red",
+    "order": "[]",
+    "parent": "Deals – Contact Center",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Kanban Board",
+  "field_name": "status_deals",
+  "fields": "[\"channel_type\", \"channel_platform\", \"display_name\", \"mongo_chat_id\", \"last_event_at\", \"modified\"]",
+  "filters": null,
+  "kanban_board_name": "Deals – Contact Center",
+  "modified": "2025-10-23 18:04:44.513099",
+  "name": "Deals – Contact Center",
+  "private": 0,
+  "reference_doctype": "Engagement Case",
+  "show_labels": 1
+ },
+ {
+  "columns": [
+   {
+    "column_name": "New Patient",
+    "indicator": "Pink",
+    "order": "[\"IE-2025-00756\"]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Returning Patient",
+    "indicator": "Orange",
+    "order": "[]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Stage Appointment Scheduled",
+    "indicator": "Light Blue",
+    "order": "[\"IE-2025-00779\"]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "In Treatment",
+    "indicator": "Blue",
+    "order": "[\"IE-2025-00780\"]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Stage Checked",
+    "indicator": "Yellow",
+    "order": "[]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Control X-ray",
+    "indicator": "Purple",
+    "order": "[]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Treatment Completed",
+    "indicator": "Green",
+    "order": "[]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "No-show (patient)",
+    "indicator": "Red",
+    "order": "[]",
+    "parent": "Patients – Care Department",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Kanban Board",
+  "field_name": "status_patients",
+  "fields": "[\"channel_type\",\"channel_platform\",\"display_name\",\"mongo_chat_id\",\"last_event_at\",\"modified\"]",
+  "filters": null,
+  "kanban_board_name": "Patients – Care Department",
+  "modified": "2025-10-23 22:56:18.742554",
+  "name": "Patients – Care Department",
+  "private": 0,
+  "reference_doctype": "Engagement Case",
+  "show_labels": 1
+ }
+]

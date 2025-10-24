@@ -5,26 +5,41 @@ on:
     branches:
       - main
       - dev
- 
+
 env:
   PROD_HOST: ${{ secrets.HOST }}
   DEV_HOST: ${{ secrets.DEV_HOST }}
+
+  # ===== Core backends / storage =====
   REDIS_URL: ${{ secrets.REDIS_URL }}
   MONGO_URL: ${{ secrets.MONGO_URL }}
   MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+
+  # ===== AI =====
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+  # ===== Misc storages / services =====
   REDIS_STORAGE_URL: ${{ secrets.REDIS_STORAGE_URL }}
+
+  # ===== Meta / Service =====
   CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
   SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
   BOT_LINK: ${{ secrets.BOT_LINK }}
+
+  # ===== Telegram =====
   TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
   DEV_TOKEN: ${{ secrets.DEV_TOKEN }}
   TOKEN: ${{ secrets.TOKEN }}
+  TELEGRAM_BOT_ID: ${{ secrets.TELEGRAM_BOT_ID }}
   ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+
   CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
 
+  # ===== Weather =====
   WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+
+  # ===== Instagram =====
   INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
   INSTAGRAM_APP_ID: ${{ secrets.INSTAGRAM_APP_ID }}
   INSTAGRAM_APP_SECRET: ${{ secrets.INSTAGRAM_APP_SECRET }}
@@ -32,6 +47,7 @@ env:
   INSTAGRAM_BOT_NAME: ${{ secrets.INSTAGRAM_BOT_NAME }}
   INSTAGRAM_BOT_ID: ${{ secrets.INSTAGRAM_BOT_ID }}
 
+  # ===== WhatsApp =====
   WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
   WHATSAPP_BOT_NUMBER_ID: ${{ secrets.WHATSAPP_BOT_NUMBER_ID }}
   WHATSAPP_BOT_NUMBER: ${{ secrets.WHATSAPP_BOT_NUMBER }}
@@ -39,16 +55,22 @@ env:
   WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}
   WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
 
+  # ===== Facebook Messenger =====
   FACEBOOK_ACCESS_TOKEN: ${{ secrets.FACEBOOK_ACCESS_TOKEN }}
   FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
   FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
   FACEBOOK_VERIFY_TOKEN: ${{ secrets.FACEBOOK_VERIFY_TOKEN }}
   FACEBOOK_BUSINESS_ACCOUNT_ID: ${{ secrets.FACEBOOK_BUSINESS_ACCOUNT_ID }}
 
+  # ===== Application (FB Page-level) =====
+  APPLICATION_ACCESS_TOKEN: ${{ secrets.APPLICATION_ACCESS_TOKEN }}
+  APPLICATION_PAGE_ID: ${{ secrets.APPLICATION_PAGE_ID }}
+
+  # ===== Constructor.chat =====
   CONSTRUCTOR_TOKEN: ${{ secrets.CONSTRUCTOR_TOKEN }}
   CONSTRUCTOR_ASSISTANT_ID: ${{ secrets.CONSTRUCTOR_ASSISTANT_ID }}
 
-
+  # ===== CRM =====
   CRM_API_URL: ${{ secrets.CRM_API_URL }}
   CRM_CLIENT_ID: ${{ secrets.CRM_CLIENT_ID }}
   CRM_CLIENT_SECRET: ${{ secrets.CRM_CLIENT_SECRET }}
@@ -56,9 +78,28 @@ env:
   DEV_CRM_CLIENT_ID: ${{ secrets.DEV_CRM_CLIENT_ID }}
   DEV_CRM_CLIENT_SECRET: ${{ secrets.DEV_CRM_CLIENT_SECRET }}
 
+  # ===== SMS / SMTP =====
   SMS_API_URL: ${{ secrets.SMS_API_URL }}
   SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
   SMS_API_SENDER: ${{ secrets.SMS_API_SENDER }}
+  SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+  SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+
+  # ===== Backend app =====
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+
+  # ===== Frappe <-> FastAPI auth =====
+  FRAPPE_API_KEY: ${{ secrets.FRAPPE_API_KEY }}
+  FRAPPE_API_SECRET: ${{ secrets.FRAPPE_API_SECRET }}
+  FRAPPE_SHARED_SECRET: ${{ secrets.FRAPPE_SHARED_SECRET }}
+
+  # ===== Frappe / MariaDB (создание сайта) =====
+  SITE_NAME: dantist.localhost
+
+  # единый секрет рут-пароля MariaDB
+  MARIADB_ROOT_PASSWORD: ${{ secrets.MARIADB_ROOT_PASSWORD }}
+  FRAPPE_DB_ROOT_PASSWORD: ${{ secrets.MARIADB_ROOT_PASSWORD }}
+  FRAPPE_ADMIN_PASSWORD: ${{ secrets.FRAPPE_ADMIN_PASSWORD }}
 
 jobs:
   build_and_push_to_docker_hub:
@@ -66,10 +107,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@v3
+      - name: Check out the repo (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
-      # 1) Определяем, какие файлы изменились в этом пуше
       - name: Check changed files
         id: changes
         uses: tj-actions/changed-files@v34
@@ -84,8 +127,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # ============== 2) Сборка и пуш контейнеров =============
 
       # Mongo
       - name: Build and push Mongo
@@ -106,7 +147,7 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/redis:latest
 
       # Backend (FastAPI + Celery)
-      - name: Build and push Backend (FastAPI + Celery)
+      - name: Build and push Backend
         if: contains( steps.changes.outputs.all_modified_files, 'backend/')
         uses: docker/build-push-action@v3
         with:
@@ -115,7 +156,7 @@ jobs:
           file: ./backend/Dockerfile
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
-      # Bot (если бот в отдельной папке, например /backend/telegram_bot/)
+      # Bot
       - name: Build and push Bot
         if: contains( steps.changes.outputs.all_modified_files, 'backend/telegram_bot/')
         uses: docker/build-push-action@v3
@@ -125,7 +166,27 @@ jobs:
           file: ./backend/telegram_bot/TelegramBotDockerfile
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
 
-      # Frontend admin
+      # Frappe
+      - name: Build and push Frappe (dantist_frappe)
+        if: contains(steps.changes.outputs.all_modified_files, 'frappe_gui/')
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frappe_gui
+          file: ./frappe_gui/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/dantist_frappe:latest
+
+      # MariaDB
+      - name: Build and push MariaDB
+        if: contains( steps.changes.outputs.all_modified_files, 'mariadb/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./mariadb
+          tags: ${{ secrets.DOCKER_USERNAME }}/mariadb:latest
+
+      # Frontends
       - name: Build and push Frontend admin
         if: contains( steps.changes.outputs.all_modified_files, 'frontend_admin/')
         uses: docker/build-push-action@v3
@@ -134,7 +195,6 @@ jobs:
           context: ./frontend_admin
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
 
-      # Frontend chat
       - name: Build and push Frontend chat
         if: contains( steps.changes.outputs.all_modified_files, 'frontend_chat/')
         uses: docker/build-push-action@v3
@@ -152,12 +212,10 @@ jobs:
           context: ./nginx
           tags: ${{ secrets.DOCKER_USERNAME }}/dentist_nginx:latest
 
-  # ============== Дальше деплой на сервер =============
-
   deploy:
     runs-on: ubuntu-latest
     needs: build_and_push_to_docker_hub
-    steps: 
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -166,7 +224,7 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "HOST=${{ env.PROD_HOST }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+          else
             echo "HOST=${{ env.DEV_HOST }}" >> $GITHUB_ENV
           fi
 
@@ -177,7 +235,7 @@ jobs:
             echo "CRM_API_URL=${{ secrets.CRM_API_URL }}" >> $GITHUB_ENV
             echo "CRM_CLIENT_ID=${{ secrets.CRM_CLIENT_ID }}" >> $GITHUB_ENV
             echo "CRM_CLIENT_SECRET=${{ secrets.CRM_CLIENT_SECRET }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+          else
             echo "CRM_API_URL=${{ secrets.DEV_CRM_API_URL }}" >> $GITHUB_ENV
             echo "CRM_CLIENT_ID=${{ secrets.DEV_CRM_CLIENT_ID }}" >> $GITHUB_ENV
             echo "CRM_CLIENT_SECRET=${{ secrets.DEV_CRM_CLIENT_SECRET }}" >> $GITHUB_ENV
@@ -187,7 +245,7 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "ENV=prod" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+          else
             echo "ENV=dev" >> $GITHUB_ENV
           fi
 
@@ -222,25 +280,17 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
+          # shellcheck disable=all
           script: |
-
-            # Замок деплоя
             sudo mkdir -p /var/lock
             LOCK_FILE="/var/lock/driving_school_deploy.lock"
             sudo touch "$LOCK_FILE"
-
-            # Снимаем замок при любых завершениях
             cleanup() { sudo rm -f "$LOCK_FILE"; }
             trap cleanup EXIT INT TERM
 
-            # Начало деплоя
             mkdir -p ~/scripts/backups ~/scripts/logs
- 
-            # Права на все скрипты
-            chmod +x ~/scripts/*.sh
-            chmod +x ~/scripts/backups/*.sh
+            chmod +x ~/scripts/*.sh ~/scripts/backups/*.sh
 
-            # CRON задачи (ежедневно в 00:00 по МСК → значит 21:00 по UTC)
             (crontab -l 2>/dev/null; echo "*/20 * * * * ~/scripts/restart_containers.sh >> ~/scripts/logs/restart_containers.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "*/15 * * * * ~/scripts/restart_nginx.sh >> ~/scripts/logs/restart_nginx.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "*/10 * * * * ~/scripts/check_cert_and_renew.sh >> ~/scripts/logs/check_cert_and_renew.log 2>&1") | sort -u | crontab -
@@ -248,72 +298,126 @@ jobs:
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_mongo_backup.sh >> ~/scripts/logs/mongo_backup.log 2>&1") | sort -u | crontab -
             (crontab -l 2>/dev/null; echo "0 21 * * * ~/scripts/backups/create_media_backup_script.sh >> ~/scripts/logs/media_backup.log 2>&1") | sort -u | crontab -
 
-              
             sudo docker system prune -a -f
-
-            # Останавливаем старые контейнеры, чистим образы
             sudo docker-compose -f ~/docker-compose.yml down --remove-orphans
 
-            # Создаём .env файл
-            touch .env 
+            if [[ "${HOST}" == "localhost" || "${HOST}" == "127.0.0.1" ]]; then
+              PROTO="http"
+            else
+              PROTO="https"
+            fi
+            FRAPPE_PORT=8001
+            FRONTEND_PORT=3000
+
+            # .env для compose
+            touch .env
             cat > .env << EOF
             DOLLAR='$'
             HOST=${{ env.HOST }}
+
+            # Core
             REDIS_URL=${{ env.REDIS_URL }}
             MONGO_URL=${{ env.MONGO_URL }}
             MONGO_DB_NAME=${{ env.MONGO_DB_NAME }}
+
+            # AI
             OPENAI_API_KEY=${{ env.OPENAI_API_KEY }}
             GEMINI_API_KEY=${{ env.GEMINI_API_KEY }}
+
             REDIS_STORAGE_URL=${{ env.REDIS_STORAGE_URL }}
             CHANNEL_USERNAME=${{ env.CHANNEL_USERNAME }}
             SERVICE_NAME=${{ env.SERVICE_NAME }}
             BOT_LINK=${{ env.BOT_LINK }}
+
             TOKEN=$([ "${{ env.ENV }}" = "prod" ] && echo '${{ secrets.TOKEN }}' || echo '${{ secrets.DEV_TOKEN }}')
+            TELEGRAM_BOT_ID=${{ env.TELEGRAM_BOT_ID }}
             ADMIN_CHAT_ID=${{ env.ADMIN_CHAT_ID }}
             CERTBOT_EMAIL=${{ env.CERTBOT_EMAIL }}
             WEATHER_API_KEY=${{ env.WEATHER_API_KEY }}
+
             INSTAGRAM_ACCESS_TOKEN=${{ env.INSTAGRAM_ACCESS_TOKEN }}
             INSTAGRAM_APP_ID=${{ env.INSTAGRAM_APP_ID }}
             INSTAGRAM_APP_SECRET=${{ env.INSTAGRAM_APP_SECRET }}
             INSTAGRAM_VERIFY_TOKEN=${{ env.INSTAGRAM_VERIFY_TOKEN }}
             INSTAGRAM_BOT_NAME=${{ env.INSTAGRAM_BOT_NAME }}
             INSTAGRAM_BOT_ID=${{ env.INSTAGRAM_BOT_ID }}
+
             WHATSAPP_ACCESS_TOKEN=${{ env.WHATSAPP_ACCESS_TOKEN }}
             WHATSAPP_BOT_NUMBER_ID=${{ env.WHATSAPP_BOT_NUMBER_ID }}
             WHATSAPP_BOT_NUMBER=${{ env.WHATSAPP_BOT_NUMBER }}
             WHATSAPP_APP_SECRET=${{ env.WHATSAPP_APP_SECRET }}
             WHATSAPP_BUSINESS_ACCOUNT_ID=${{ env.WHATSAPP_BUSINESS_ACCOUNT_ID }}
             WHATSAPP_VERIFY_TOKEN=${{ env.WHATSAPP_VERIFY_TOKEN }}
+
             FACEBOOK_ACCESS_TOKEN=${{ env.FACEBOOK_ACCESS_TOKEN }}
             FACEBOOK_PAGE_ID=${{ env.FACEBOOK_PAGE_ID }}
             FACEBOOK_APP_SECRET=${{ env.FACEBOOK_APP_SECRET }}
             FACEBOOK_VERIFY_TOKEN=${{ env.FACEBOOK_VERIFY_TOKEN }}
             FACEBOOK_BUSINESS_ACCOUNT_ID=${{ env.FACEBOOK_BUSINESS_ACCOUNT_ID }}
+
+            APPLICATION_ACCESS_TOKEN=${{ env.APPLICATION_ACCESS_TOKEN }}
+            APPLICATION_PAGE_ID=${{ env.APPLICATION_PAGE_ID }}
+
             CONSTRUCTOR_TOKEN=${{ env.CONSTRUCTOR_TOKEN }}
             CONSTRUCTOR_ASSISTANT_ID=${{ env.CONSTRUCTOR_ASSISTANT_ID }}
+
             CRM_API_URL=${{ env.CRM_API_URL }}
             CRM_CLIENT_ID=${{ env.CRM_CLIENT_ID }}
             CRM_CLIENT_SECRET=${{ env.CRM_CLIENT_SECRET }}
+
             SMS_API_URL=${{ env.SMS_API_URL }}
             SMS_API_KEY=${{ env.SMS_API_KEY }}
             SMS_API_SENDER=${{ env.SMS_API_SENDER }}
+            SMTP_USERNAME=${{ env.SMTP_USERNAME }}
+            SMTP_PASSWORD=${{ env.SMTP_PASSWORD }}
+
+            SECRET_KEY=${{ env.SECRET_KEY }}
+
+            # ===== PUBLIC URLs =====
+            # Frappe внешний API теперь за /admin/api
+            FRAPPE_PUBLIC_BASE=${PROTO}://${HOST}/admin/api
+            # iFrame должен указывать на старую админку:
+            FRONTEND_IFRAME_URL=${PROTO}://${HOST}/legacy-admin
+            # origin без пути (для CSP / postMessage)
+            FRONTEND_PUBLIC_ORIGIN=${PROTO}://${HOST}
+
+            # ===== INTERNAL URLs (межконтейнерные) =====
+            FRAPPE_API_BASE_INTERNAL=http://frappe:8001/api
+            DANTIST_BASE_URL_INTERNAL=http://backend:8000/api
+
+            # ===== Frappe API creds =====
+            FRAPPE_API_KEY=${{ env.FRAPPE_API_KEY }}
+            FRAPPE_API_SECRET=${{ env.FRAPPE_API_SECRET }}
+            FRAPPE_SHARED_SECRET=${{ env.FRAPPE_SHARED_SECRET }}
+
+            # ===== Frappe / MariaDB =====
+            SITE_NAME=${{ env.SITE_NAME }}
+            APP_ENV=$([ "${{ env.ENV }}" = "prod" ] && echo 'prod' || echo 'dev')
+
+            MARIADB_ROOT_PASSWORD=${{ env.MARIADB_ROOT_PASSWORD }}
+            FRAPPE_DB_ROOT_PASSWORD=${{ env.FRAPPE_DB_ROOT_PASSWORD }}
+            FRAPPE_ADMIN_PASSWORD=${{ env.FRAPPE_ADMIN_PASSWORD }}
+
+            # site_config patch (дефолты, можно переопределить)
+            DANTIST_INTEGRATION_AUD=frappe
+            DANTIST_EXCLUDED_USERS=Guest,Administrator,test@mail.ru,test,demo@example.com,Integration,integrations@admin.ru
+            DEVELOPER_MODE=1
+            LOG_LEVEL=DEBUG
             EOF
 
-            # Подтягиваем свежие образы (те, что мы успели запушить)
             sudo docker-compose -f ~/docker-compose.yml pull
             sudo docker-compose -f ~/docker-compose.yml up -d
 
-            # Инициализация Mongo (реплика, если нужно)
-            echo "Инициализируем MongoDB..."
-            sudo docker-compose exec -T mongo mongosh --eval '
-            if (rs.status().ok === 0) {
-              rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})
-            } else {
-              print("✅ Репликация уже инициализирована.")
-            }
-            '
-
-  # ============== Уведомления в Telegram =============
+            # Mongo rs инициализация при наличии сервиса
+            if sudo docker-compose ps mongo >/dev/null 2>&1; then
+              echo "Инициализируем MongoDB..."
+              sudo docker-compose exec -T mongo mongosh --eval '
+              if (rs.status().ok === 0) {
+                rs.initiate({_id: "rs0", members: [{ _id: 0, host: "mongo:27017" }]})
+              } else {
+                print("✅ Репликация уже инициализирована.")
+              }'
+            fi
 
   send_message:
     runs-on: ubuntu-latest
@@ -335,7 +439,7 @@ jobs:
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN }} 
+          token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             ❌ Workflow ${{ github.workflow }} завершился с ошибкой!
             Ветка: ${{ github.ref_name }}

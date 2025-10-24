@@ -1,0 +1,1 @@
+ln -s ../frappe_gui/sites/tgtask.localhost/site_config.json site_config.json

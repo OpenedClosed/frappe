@@ -1,4 +1,4 @@
-# Python 3.10 slim (Debian trixie)
+# Python 3.10 slim (Debian)
 FROM python:3.10-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV=/opt/bench-env \
     PATH="/opt/bench-env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# --- Базовые пакеты и фронт ---
+# --- Base packages + node/yarn + mysqlclient deps ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates \
     build-essential pkg-config \
@@ -21,52 +21,47 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mariadb-client \
  && rm -rf /var/lib/apt/lists/*
 
-
-# --- wkhtmltopdf 0.12.6-1 (.deb с fallback) ---
+# --- wkhtmltopdf 0.12.6-1 ---
 RUN set -eux; \
     apt-get update; \
     for url in \
       "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.bookworm_amd64.deb" \
       "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.bullseye_amd64.deb" \
     ; do \
-      echo "Downloading: $url"; \
       if curl -fsSL -o /tmp/wkhtml.deb "$url"; then break; fi; \
     done; \
     dpkg -i /tmp/wkhtml.deb || apt-get -y -f install; \
     rm -rf /var/lib/apt/lists/* /tmp/wkhtml.deb
 
-# --- Bench дерево ---
+# --- Workspace + seed ---
 RUN mkdir -p /workspace /opt/seed-sites
 WORKDIR /workspace
-# Контекст билда — ./frappe_gui
 COPY . /workspace/
 
-# --- Venv + bench CLI (совместимо с bench 5.25.x) ---
+# --- venv + bench ---
 RUN python3 -m venv "$VENV" \
  && "$VENV/bin/pip" install -U pip setuptools wheel \
  && "$VENV/bin/pip" install "frappe-bench==5.25.9"
 
-# --- Ссылка на venv туда, где bench его ожидает (/workspace/env) ---
+# bench ожидает env-ссылку
 RUN ln -s "$VENV" /workspace/env
 
-# --- Yarn для node-зависимостей ---
+# --- yarn ---
 RUN npm i -g yarn
 
-# --- Патч common_site_config: не дропаем права на локального macOS-пользователя ---
+# --- базовый common_site_config патч на билде ---
 RUN python3 - <<'PY'
 import json, pathlib
 p = pathlib.Path("/workspace/sites/common_site_config.json")
 cfg = {}
 if p.exists():
-    try:
-        cfg = json.loads(p.read_text() or "{}")
-    except Exception:
-        cfg = {}
+    try: cfg = json.loads(p.read_text() or "{}")
+    except Exception: cfg = {}
 cfg.update({"frappe_user": "root", "live_reload": False})
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 PY
 
-# --- Инициализация git в apps/* (Bench/GitPython требуют валидный репозиторий) ---
+# --- инициализация git в apps/* (bench reqs) ---
 RUN git config --global user.email "build@local" && git config --global user.name "Build User" \
  && for d in /workspace/apps/*; do \
       if [ -d "$d" ]; then \
@@ -77,22 +72,22 @@ RUN git config --global user.email "build@local" && git config --global user.nam
       fi; \
     done
 
-# --- Установка зависимостей всех приложений (Python + Node) ---
+# --- зависимости всех приложений (python+node) ---
 RUN bench setup requirements
 
-# --- Устанавливаем сами приложения (editable), чтобы появились команды serve/worker/... ---
+# --- editable install приложений ---
 RUN set -eux; \
-  for app in frappe erpnext task_tracker; do \
+  for app in frappe erpnext dantist_app; do \
     if [ -d "apps/$app" ]; then "$VENV/bin/pip" install -e "apps/$app"; fi; \
   done
 
-# --- Предсборка ассетов (на этапе билда) ---
+# --- предсборка ассетов на билде (best-effort) ---
 RUN bench build || bench build || true
 
-# --- Seed для пустого тома sites/ ---
+# --- seed для пустого тома sites ---
 RUN cp -a /workspace/sites/. /opt/seed-sites/ || true
 
-# --- Стартовый скрипт ---
+# --- start script ---
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 

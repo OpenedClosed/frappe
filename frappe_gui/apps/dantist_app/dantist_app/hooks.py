@@ -9,7 +9,7 @@ app_license = "mit"
 # ------------------
 
 fixtures = [
-    # Кастомизации ядра
+    # --- Кастомизации ядра ---
     "Custom Field",
     "Property Setter",
     "Client Script",
@@ -18,10 +18,26 @@ fixtures = [
     "Workspace",
     "Print Format",
     "Report",
-    
-    {"doctype": "DocType", "filters": {"name": ["in", ["Bot Settings"]]}},
-    {"doctype": "Bot Settings"},
-    {"doctype": "Workspace"},
+
+    # --- Ключевые модели проекта ---
+    {"doctype": "DocType", "filters": {"name": ["in", [
+        "Bot Settings",
+        "Engagement Case",
+        "ToDo"
+    ]]}},
+
+    # --- Настройки ролей и прав доступа ---
+    "Role",
+    "Role Permission for Page and Report",
+    "User Group",
+    "User Group Member",
+    "User Permission",
+    "Has Role",
+
+    # --- Канбаны и вёркспейсы (без данных задач) ---
+    "Kanban Board",
+    "Workspace Shortcut",
+    "Workspace Link",
 ]
 
 # required_apps = []

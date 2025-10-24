@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # ===== Datastores =====
   mongo:
     image: 89639339335/mongo:latest
     hostname: mongo
@@ -10,17 +11,54 @@ services:
     env_file:
       - ./.env
 
-
   redis:
     image: 89639339335/redis:latest
+    hostname: redis
+    restart: always
     volumes:
       - redis_data:/data
 
   redis_storage:
     image: 89639339335/redis:latest
+    hostname: redis-storage
+    restart: always
     volumes:
       - redis_storage_data:/data
 
+  mariadb:
+    image: 89639339335/mariadb:latest
+    hostname: mariadb
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      # оф. образ ожидает именно это имя
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  # ===== Frappe =====
+  frappe:
+    image: 89639339335/dantist_frappe:latest
+    hostname: frappe
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      SITE_NAME: ${SITE_NAME}
+      DB_HOST: mariadb
+      FRAPPE_PORT: 8001
+      FRONTEND_PORT: 3000
+    depends_on:
+      - mariadb
+      - redis
+    volumes:
+      - frappe_sites:/workspace/sites
+    expose:
+      - "8001"
+      - "9000"
+
+  # ===== твои сервисы =====
   backend:
     image: 89639339335/dentist_backend:latest
     restart: always
@@ -29,34 +67,43 @@ services:
     depends_on:
       - redis
       - mongo
+      - frappe
     env_file:
       - .env
-
 
   bot:
     image: 89639339335/dentist_bot:latest
     ports:
       - "9999:9999"
-    # restart: always
+    restart: unless-stopped
     volumes:
       - media_value:/app/media
     depends_on:
       - backend
+      - frappe
     env_file:
       - .env
 
+  # ===== фронтенды =====
   frontend_admin:
     image: 89639339335/dentist_frontend_admin:latest
     command: node .output/server/index.mjs
     restart: always
+    # ПОРТЫ НЕ ПУБЛИКУЕМ — закрыт извне (доступ блокируется в nginx)
 
   frontend_chat:
     image: 89639339335/dentist_frontend_chat:latest
     command: node .output/server/index.mjs
     restart: always
+    # ПОРТЫ НЕ ПУБЛИКУЕМ — доступ через nginx по /chat/ и /personal_account/
 
+  # ===== Nginx (внешняя точка входа) =====
   nginx:
     image: 89639339335/dentist_nginx:latest
+    hostname: nginx
+    restart: always
+    env_file:
+      - .env
     ports:
       - "80:80"
       - "443:443"
@@ -64,15 +111,19 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
       - static_value:/var/html/static
       - media_value:/var/html/media
+      - frappe_sites:/workspace/sites:ro
     depends_on:
       - backend
-    env_file:
-      - .env
+      - frappe
+      - frontend_chat
+      - frontend_admin
     command: sh -c "/app/certbot_script.sh"
 
 volumes:
   mongo_data:
   redis_data:
   redis_storage_data:
+  mariadb_data:
   static_value:
   media_value:
+  frappe_sites:
