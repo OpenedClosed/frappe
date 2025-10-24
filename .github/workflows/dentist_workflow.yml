@@ -146,15 +146,15 @@ jobs:
       #     context: ./redis
       #     tags: ${{ secrets.DOCKER_USERNAME }}/redis:latest
 
-      # # Backend (FastAPI + Celery)
-      # - name: Build and push Backend
-      #   if: contains( steps.changes.outputs.all_modified_files, 'backend/')
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     context: ./backend
-      #     file: ./backend/Dockerfile
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
+      # Backend (FastAPI + Celery)
+      - name: Build and push Backend
+        if: contains( steps.changes.outputs.all_modified_files, 'backend/')
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          context: ./backend
+          file: ./backend/Dockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
       # # Bot
       # - name: Build and push Bot
@@ -166,16 +166,16 @@ jobs:
       #     file: ./backend/telegram_bot/TelegramBotDockerfile
       #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
 
-      # Frappe
-      - name: Build and push Frappe (dantist_frappe)
-        if: contains(steps.changes.outputs.all_modified_files, 'frappe_gui/')
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frappe_gui
-          file: ./frappe_gui/docker/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/dantist_frappe:latest
+      # # Frappe
+      # - name: Build and push Frappe (dantist_frappe)
+      #   if: contains(steps.changes.outputs.all_modified_files, 'frappe_gui/')
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: ./frappe_gui
+      #     file: ./frappe_gui/docker/Dockerfile
+      #     push: true
+      #     tags: |
+      #       ${{ secrets.DOCKER_USERNAME }}/dantist_frappe:latest
 
       # # MariaDB
       # - name: Build and push MariaDB
