@@ -14,7 +14,7 @@ paths:
       operationId: Issue token
       summary: Obtain OAuth 2.0 Access Token using Client Credentials grant type
       description: >
-        This endpoint issues an access token using the client credentials grant type.
+        This endpoint issues an access token using the client credentials grant type. 
         The client must provide its client ID and secret.
       tags:
         - OAuth 2.0
@@ -445,9 +445,8 @@ components:
           example: "1990-01-01"
         phone:
           type: string
-          description: "Patient phone number (E.164 format, e.g. +14155552671)"
-          pattern: '^\+[1-9]\d{1,14}$'
-          example: "+48600111222"
+          description: "Patient's POLISH phone number, format: +48-XXX-XXX-XXX"
+          example: "+48-000-000-000"
         email:
           type: string
           description: "Patient's email address"
@@ -476,9 +475,8 @@ components:
       properties:
         phone:
           type: string
-          description: "Patient phone number (E.164 format, e.g. +14155552671)"
-          pattern: '^\+[1-9]\d{1,14}$'
-          example: "+48600111222"
+          description: "Patient's POLISH phone number, format: +48-XXX-XXX-XXX"
+          example: "+48-000-000-000"
         email:
           type: string
           description: "Patient's email address"
@@ -534,9 +532,8 @@ components:
           example: "1990-01-01"
         phone:
           type: string
-          description: "Patient phone number (E.164 format, e.g. +14155552671)"
-          pattern: '^\+[1-9]\d{1,14}$'
-          example: "+48600111222"
+          description: "Patient's POLISH phone number, format: +48-XXX-XXX-XXX"
+          example: "+48-000-000-000"
         email:
           type: string
           description: "Patient's email address"

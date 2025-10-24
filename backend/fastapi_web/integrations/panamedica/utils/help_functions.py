@@ -26,30 +26,52 @@ import re
 import phonenumbers
 from phonenumbers import NumberParseException
 
+# def format_crm_phone(number_raw: str) -> str:
+#     """
+#     Преобразует любой номер телефона в формат: +CC-XXX-XXX-XXXX с дефисами.
+#     Бросает исключение при некорректном номере.
+#     """
+#     print(number_raw)
+#     if number_raw.isdigit() and not number_raw.startswith("+"):
+#         number_raw = "+" + number_raw
+#     try:
+#         parsed = phonenumbers.parse(number_raw, None)
+#         if not phonenumbers.is_possible_number(parsed):
+#             raise ValueError("Невозможный номер.")
+
+#         international = phonenumbers.format_number(
+#             parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL
+#         )
+
+#         digits_only = international.replace("+", "").replace("(", "").replace(")", "")
+#         parts = digits_only.split()
+
+#         if len(parts) < 2:
+#             raise ValueError("Невозможно отформатировать номер.")
+
+#         return "+" + "-".join(parts)
+
+#     except NumberParseException:
+#         raise ValueError("Невозможно распознать номер.")
+
+
+import phonenumbers
+from phonenumbers import NumberParseException
+from infra import settings
+
 def format_crm_phone(number_raw: str) -> str:
-    """
-    Преобразует любой номер телефона в формат: +CC-XXX-XXX-XXXX с дефисами.
-    Бросает исключение при некорректном номере.
-    """
-    print(number_raw)
-    if number_raw.isdigit() and not number_raw.startswith("+"):
-        number_raw = "+" + number_raw
+    """Вернуть номер в формате E.164 (+XXXXXXXXXXXX). Бросает ValueError при ошибке."""
+    s = (number_raw or "").strip()
+    if not s:
+        raise ValueError("Empty phone number")
+
+    default_region = getattr(settings, "DEFAULT_PHONE_REGION", "PL")
+
     try:
-        parsed = phonenumbers.parse(number_raw, None)
-        if not phonenumbers.is_possible_number(parsed):
-            raise ValueError("Невозможный номер.")
+        parsed = phonenumbers.parse(s, None if s.startswith("+") else default_region)
+        if not phonenumbers.is_possible_number(parsed) or not phonenumbers.is_valid_number(parsed):
+            raise ValueError("Invalid phone number")
 
-        international = phonenumbers.format_number(
-            parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL
-        )
-
-        digits_only = international.replace("+", "").replace("(", "").replace(")", "")
-        parts = digits_only.split()
-
-        if len(parts) < 2:
-            raise ValueError("Невозможно отформатировать номер.")
-
-        return "+" + "-".join(parts)
-
-    except NumberParseException:
-        raise ValueError("Невозможно распознать номер.")
+        return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+    except NumberParseException as e:
+        raise ValueError("Failed to parse phone") from e

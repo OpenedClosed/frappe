@@ -33,8 +33,8 @@ RUN set -eux; \
     dpkg -i /tmp/wkhtml.deb || apt-get -y -f install; \
     rm -rf /var/lib/apt/lists/* /tmp/wkhtml.deb
 
-# --- Workspace + seed ---
-RUN mkdir -p /workspace /opt/seed-sites
+# --- Workspace ---
+RUN mkdir -p /workspace
 WORKDIR /workspace
 COPY . /workspace/
 
@@ -83,9 +83,6 @@ RUN set -eux; \
 
 # --- предсборка ассетов на билде (best-effort) ---
 RUN bench build || bench build || true
-
-# --- seed для пустого тома sites ---
-RUN cp -a /workspace/sites/. /opt/seed-sites/ || true
 
 # --- start script ---
 COPY docker/start.sh /usr/local/bin/start.sh
