@@ -226,17 +226,19 @@
 
   function buildMetaMaps(doctype){
     const meta = frappe.get_meta(doctype);
-    const label2fn = {}, fn2label = {};
+    const label2fn = {}, fn2label = {}, fn2df = {};
     (meta?.fields||[]).forEach(f=>{
       const lbl = CLEAN(f?.label||"");
       if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; }
+      fn2df[f.fieldname] = f;
     });
     (frappe.model.std_fields||[]).forEach(f=>{
       const lbl = CLEAN(f?.label||"");
       if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; }
+      fn2df[f.fieldname] = fn2df[f.fieldname] || f;
     });
     LABEL_ALIASES.display_name.forEach(a=> label2fn[a] = "display_name");
-    return { label2fn, fn2label };
+    return { label2fn, fn2label, fn2df };
   }
 
   /* ===== parse native rows ===== */
@@ -370,6 +372,27 @@
     return parts.length ? parts.join(" ") : (CLEAN(v.title) || "");
   }
 
+  /* ===== value i18n ===== */
+  function isTranslatableField(fn, df){
+    if (!fn) return false;
+    if (/^status_/.test(fn)) return true;
+    if (fn === "channel_platform" || fn === "channel_type" || fn === "priority") return true;
+    const ty = (df?.fieldtype || "").toLowerCase();
+    if (ty === "select") return true;
+    return false;
+  }
+  function translateValue(dt, fn, val, df){
+    const v = CLEAN(val);
+    if (!v) return v;
+    if (FULL_DT.test(v) || DATE_LIKE.test(v)) return v; // даты/время не трогаем
+    if (isTranslatableField(fn, df)) {
+      try { return t(v); } catch { return v; }
+    }
+    // частые текстовые маркеры
+    if (/^(Yes|No|Open|Closed)$/i.test(v)) { try { return t(v); } catch {} }
+    return v;
+  }
+
   /* ===== chips ===== */
   function makeChip(label, value, showLabel){
     const kv = document.createElement("div");
@@ -396,7 +419,7 @@
 
   /* ===== backfill + de-dup (только board.fields) ===== */
   async function backfillAll(container, ctx, labelsOn, orderMap){
-    const { fn2label, label2fn } = buildMetaMaps(ctx.doctype);
+    const { fn2label, label2fn, fn2df } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
 
     // убрать чипы с label вне board.fields
@@ -417,17 +440,18 @@
     if (labelsOn){
       boardFields.forEach(fn=>{
         const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
-        const value = CLEAN(normalizeDateish(v[fn])) || "";
+        const rawVal = CLEAN(normalizeDateish(v[fn])) || "";
+        const locVal = translateValue(ctx.doctype, fn, rawVal, fn2df[fn]) || "";
         let chip = Array.from(container.querySelectorAll(":scope > .dnt-kv")).find(ch=>{
           const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
           const f = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
           return f === fn;
         });
         if (!chip){
-          chip = makeChip(human, value, true);
+          chip = makeChip(human, locVal, true);
           insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         } else {
-          const sv = chip.querySelector(".dnt-v"); if (sv && !CLEAN(sv.textContent)) sv.textContent = value || "—";
+          const sv = chip.querySelector(".dnt-v"); if (sv) sv.textContent = locVal || "—"; // ← ВСЕГДА перезаписываем (локализация)
           const sk = chip.querySelector(".dnt-k"); if (sk) sk.textContent = t(STRIP_COLON(human)) + ":";
         }
       });
@@ -466,17 +490,19 @@
 
     boardFields.forEach(fn=>{
       const raw = v[fn];
-      const value = CLEAN(normalizeDateish(raw));
-      if (!value) return;
-      const pool = valueIndex.get(value) || [];
+      const norm = CLEAN(normalizeDateish(raw));
+      const locVal = translateValue(ctx.doctype, fn, norm, fn2df[fn]);
+      if (!locVal) return;
+      const pool = valueIndex.get(norm) || valueIndex.get(locVal) || [];
       const pick = pool.shift?.();
       if (pick){
+        const sv = pick.querySelector(".dnt-v"); if (sv) sv.textContent = locVal; // ← локализация существующего чипа
         insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0);
-        assignedValues.add(value);
+        assignedValues.add(locVal);
       } else {
-        const chip = makeChip("", value, false);
+        const chip = makeChip("", locVal, false);
         insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
-        assignedValues.add(value);
+        assignedValues.add(locVal);
       }
     });
 
