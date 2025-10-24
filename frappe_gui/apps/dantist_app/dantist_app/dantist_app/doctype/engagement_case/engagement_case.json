@@ -1,0 +1,416 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2025-10-18 20:44:34.466856",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "title",
+  "channel_section",
+  "channel_type",
+  "channel_platform",
+  "cb_channel_right",
+  "mongo_chat_id",
+  "mongo_client_id",
+  "external_user_id",
+  "identity_section",
+  "avatar",
+  "display_name",
+  "first_name",
+  "last_name",
+  "middle_name",
+  "cb_identity_right",
+  "phone",
+  "email",
+  "preferred_language",
+  "timezone",
+  "country",
+  "client_portal_section",
+  "priority",
+  "portal_service",
+  "portal_appointment_datetime",
+  "specialist",
+  "portal_card_link",
+  "link_section",
+  "linked_engagements",
+  "boards_status_section",
+  "show_board_crm",
+  "status_crm_board",
+  "show_board_leads",
+  "status_leads",
+  "show_board_deals",
+  "status_deals",
+  "show_board_patients",
+  "status_patients",
+  "signals_section",
+  "first_event_at",
+  "last_event_at",
+  "events_count",
+  "unanswered_count",
+  "last_actor_role",
+  "runtime_status",
+  "sync_section",
+  "sync_enabled",
+  "last_synced_at",
+  "do_not_sync_fields",
+  "notes_section",
+  "internal_notes"
+ ],
+ "fields": [
+  {
+   "default": "IE-.YYYY.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "IE Series",
+   "options": "IE-.YYYY.-.#####",
+   "read_only": 1,
+   "set_only_once": 1
+  },
+  {
+   "description": "Short human-readable title (e.g. name/channel/context)",
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title"
+  },
+  {
+   "fieldname": "channel_section",
+   "fieldtype": "Section Break",
+   "label": "Primary Channel"
+  },
+  {
+   "default": "Chat",
+   "fieldname": "channel_type",
+   "fieldtype": "Select",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Channel Type",
+   "options": "Chat\nCall\nPersonal Account\nSMS\nEmail\nWeb Form",
+   "reqd": 1
+  },
+  {
+   "fieldname": "channel_platform",
+   "fieldtype": "Select",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Channel Platform",
+   "options": "Internal\nInstagram\nFacebook\nWhatsApp\nTelegram\nTelegram Mini-App\nTelephony\nSMS\nEmail"
+  },
+  {
+   "fieldname": "cb_channel_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Session ID in Service",
+   "fieldname": "mongo_chat_id",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "label": "Mongo ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mongo_client_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Mongo Client ID"
+  },
+  {
+   "fieldname": "external_user_id",
+   "fieldtype": "Data",
+   "label": "External User ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Contact Identity"
+  },
+  {
+   "fieldname": "avatar",
+   "fieldtype": "Attach Image",
+   "label": "Avatar"
+  },
+  {
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Display Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_identity_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "default": "ru",
+   "fieldname": "preferred_language",
+   "fieldtype": "Select",
+   "label": "Preferred Language",
+   "options": "ru\nen\npl\nuk\nka\nbe"
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "Timezone"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Data",
+   "label": "Country"
+  },
+  {
+   "default": "Normal",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Low\nNormal\nHigh\nUrgent"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "boards_status_section",
+   "fieldtype": "Section Break",
+   "label": "Boards & Status"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_board_crm",
+   "fieldtype": "Check",
+   "label": "Show on: CRM Board"
+  },
+  {
+   "depends_on": "show_board_crm",
+   "description": "Used by Kanban \u00abCRM Board\u00bb",
+   "fieldname": "status_crm_board",
+   "fieldtype": "Select",
+   "label": "CRM Board \u2014 Status",
+   "mandatory_depends_on": "show_board_crm",
+   "options": "New\nQualification\nBriefing\nScheduled\nIn Work\nOn Hold\nWon\nLost\nArchived"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_board_leads",
+   "fieldtype": "Check",
+   "label": "Show on: Leads \u2013 Contact Center"
+  },
+  {
+   "depends_on": "show_board_leads",
+   "description": "Used by Kanban \u00abLeads \u2013 Contact Center\u00bb",
+   "fieldname": "status_leads",
+   "fieldtype": "Select",
+   "label": "Leads \u2013 Contact Center \u2014 Status",
+   "mandatory_depends_on": "show_board_leads",
+   "options": "Bot Active / New Inquiry\nIn Progress\nWaiting List\nCall Later\nFailed / No Show (lead)\nClosed \u2013 Not Converted\nConverted to Deal"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_board_deals",
+   "fieldtype": "Check",
+   "label": "Show on: Deals \u2013 Contact Center"
+  },
+  {
+   "depends_on": "show_board_deals",
+   "description": "Used by Kanban \u00abDeals \u2013 Contact Center\u00bb",
+   "fieldname": "status_deals",
+   "fieldtype": "Select",
+   "label": "Deals \u2013 Contact Center \u2014 Status",
+   "mandatory_depends_on": "show_board_deals",
+   "options": "Appointment Scheduled\nPost-Visit Check\nRecommended Recall Added\nTransferred to Care\nDeal Completed\nNo-show (deal)"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_board_patients",
+   "fieldtype": "Check",
+   "label": "Show on: Patients \u2013 Care Department"
+  },
+  {
+   "depends_on": "show_board_patients",
+   "description": "Used by Kanban \u00abPatients \u2013 Care Department\u00bb",
+   "fieldname": "status_patients",
+   "fieldtype": "Select",
+   "label": "Patients \u2013 Care Dept. \u2014 Status",
+   "mandatory_depends_on": "show_board_patients",
+   "options": "New Patient\nReturning Patient\nStage Appointment Scheduled\nIn Treatment\nStage Checked\nControl X-ray\nTreatment Completed\nNo-show (patient)"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "signals_section",
+   "fieldtype": "Section Break",
+   "label": "Signals"
+  },
+  {
+   "fieldname": "first_event_at",
+   "fieldtype": "Datetime",
+   "label": "First Event At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_event_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Last Event At",
+   "read_only": 1
+  },
+  {
+   "description": "Messages for Chat, etc.",
+   "fieldname": "events_count",
+   "fieldtype": "Int",
+   "label": "Events Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unanswered_count",
+   "fieldtype": "Int",
+   "label": "Unanswered Tail Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_actor_role",
+   "fieldtype": "Select",
+   "label": "Last Actor Role",
+   "options": "Client\nAI Assistant\nConsultant\nAgent",
+   "read_only": 1
+  },
+  {
+   "description": "Computed by backend from source systems",
+   "fieldname": "runtime_status",
+   "fieldtype": "Select",
+   "label": "Runtime Status",
+   "options": "New Session\nBrief In Progress\nBrief Completed\nWaiting for AI\nWaiting for Client (AI)\nWaiting for Consultant\nRead by Consultant\nWaiting for Client\nClosed \u2013 No Messages\nClosed by Timeout\nClosed by Operator",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sync_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Sync"
+  },
+  {
+   "default": "0",
+   "description": "Disable to take full manual control in Frappe",
+   "fieldname": "sync_enabled",
+   "fieldtype": "Check",
+   "label": "Sync Enabled"
+  },
+  {
+   "fieldname": "last_synced_at",
+   "fieldtype": "Datetime",
+   "label": "Last Synced At",
+   "read_only": 1
+  },
+  {
+   "default": "[]",
+   "fieldname": "do_not_sync_fields",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Do Not Sync Fields (JSON)",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "internal_notes",
+   "fieldtype": "Text Editor",
+   "label": "Internal Notes"
+  },
+  {
+   "fieldname": "link_section",
+   "fieldtype": "Section Break",
+   "label": "Linked Cases"
+  },
+  {
+   "description": "Related cases. Optionally hide attached cases from general lists.",
+   "fieldname": "linked_engagements",
+   "fieldtype": "Table",
+   "label": "Linked Engagements",
+   "options": "Engagement Link Item"
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "label": "First Name"
+  },
+  {
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "label": "Last Name"
+  },
+  {
+   "fieldname": "middle_name",
+   "fieldtype": "Data",
+   "label": "Middle Name"
+  },
+  {
+   "fieldname": "client_portal_section",
+   "fieldtype": "Section Break",
+   "label": "Client Portal"
+  },
+  {
+   "fieldname": "portal_service",
+   "fieldtype": "Select",
+   "label": "Service",
+   "options": "\u0423\u0441\u043b\u0443\u0433\u0430 1\n\u0423\u0441\u043b\u0443\u0433\u0430 2"
+  },
+  {
+   "fieldname": "portal_appointment_datetime",
+   "fieldtype": "Datetime",
+   "label": "Appointment Date & Time"
+  },
+  {
+   "fieldname": "specialist",
+   "fieldtype": "Select",
+   "label": "Specialist",
+   "options": "\u0414\u043e\u043a\u0442\u043e\u0440 1\n\u0414\u043e\u043a\u0442\u043e\u0440 2"
+  },
+  {
+   "fieldname": "portal_card_link",
+   "fieldtype": "Data",
+   "label": "Portal Card Link",
+   "options": "URL",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "image_field": "avatar",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-23 22:44:39.046743",
+ "modified_by": "Administrator",
+ "module": "Dantist App",
+ "name": "Engagement Case",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "title, display_name, phone, email, mongo_client_id, mongo_chat_id, external_user_id",
+ "show_preview_popup": 1,
+ "sort_field": "last_event_at",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

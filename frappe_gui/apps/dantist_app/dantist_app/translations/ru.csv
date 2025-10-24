@@ -1,0 +1,794 @@
+"About","О системе",
+"Action","Действие",
+"Actions","Действия",
+"Active","Активен",
+"Add","Добавить",
+"Add {0}","Добавить {0}",
+"+ Add","+ Добавить",
+"Add New","Добавить новый",
+"Add New {0}","Добавить новый {0}",
+"Add New {}","Добавить новый {}",
+"Add a Filter","Добавить фильтр",
+"Add/Update Filter","Добавить/обновить фильтр",
+"Add Column","Добавить колонку",
+"Add Field","Добавить поле",
+"Add Row","Добавить строку",
+"Add Rows","Добавить строки",
+"Add Child","Добавить дочернюю",
+"Add Tab","Добавить вкладку",
+
+"AI Settings","ИИ Настройки",
+"Application","Приложение",
+"App Logo","Логотип приложения",
+"App Name","Имя приложения",
+
+"Archived","Архивные",
+"Archive","Архивировать",
+"Unarchive","Разархивировать",
+
+"Avatar","Аватар",
+
+"Basic Info","Основная информация",
+"Beta","Бета",
+"Begin typing for results.","Начните ввод для поиска",
+"Begin typing for results..","Начните ввод для поиска результатов.",
+
+"Bot Settings","Настройки бота",
+"Bot Settings Images","Изображения настроек бота",
+
+"Bulk Transaction","Массовая операция",
+
+"Call","Звонок",
+"Cancel","Отмена",
+"Cancel Changes","Отменить изменения",
+"Case","Кейс",
+"Change Password","Изменить пароль",
+"Chat","Чат",
+"Chats","Чаты",
+"Child Tables are shown as tables in other documents.","Дочерние таблицы отображаются в виде таблицы в других документах.",
+
+"Clear","Очистить",
+"Clear Filters","Очистить фильтры",
+
+"Client","Клиент",
+"Client Portal","Клиентский портал",
+"Close","Закрыть",
+"Closed – Not Converted","Закрыто — не конвертирован",
+"Closed by Operator","Закрыто оператором",
+"Closed by Timeout","Закрыто по таймауту",
+"Closed – No Messages","Закрыто — нет сообщений",
+
+"Compact Item Print","Компактная печать позиции",
+"Community","Сообщество",
+"Communication","Коммуникация",
+"Company","Компания",
+"Copied to clipboard","Скопировано в буфер обмена",
+"Copy","Копировать",
+"Copy Link","Скопировать ссылку",
+"Copy to Clipboard","Скопировать в буфер обмена",
+
+"Consultant","Консультант",
+"Contacts","Контакты",
+"Control Center","Центр управления",
+"Control X-ray","Контрольный снимок",
+
+"Country","Страна",
+"Create","Создать",
+"Create {0}","Создать {0}",
+"Create user","Создать пользователя",
+"Create User","Создать пользователя",
+"Create User Email","Создать письмо пользователю",
+"Created By","Создано пользователем",
+"Created On","Создано",
+
+"CRM","CRM",
+"CRM Space","CRM-пространство",
+"CRM Board","Доска CRM",
+
+"Customize","Настроить",
+"Customize Form","Настроить форму",
+"Customization","Пользовательский",
+
+"Dashboard View","Панель",
+"Date ranges","Диапазоны дат",
+"Days","Дни",
+
+"Deal Completed","Сделка завершена",
+"Deals","Сделки",
+"Deals – Contact Center","Сделки – Контакт-центр",
+
+"Default","По умолчанию",
+"Delete","Удалить",
+"Delete Row","Удалить строку",
+"Description","Описание",
+
+"DocType","Тип документа",
+"Document States","Состояния документа",
+"Documentation","Документация",
+"Documentation Link","Ссылка на документацию",
+
+"Duplicate","Дублировать",
+
+"EDI","Электронный обмен данными",
+"Edit","Редактировать",
+"Edit DocType","Редактировать DocType",
+"Edit Filters","Изменить фильтры",
+"Edit Settings","Изменить настройки",
+
+"Email","Эл. адрес",
+"Email Settings","Настройки электронной почты",
+"Employee Name","Имя сотрудника",
+
+"Enable","Включить",
+"Disable","Отключить",
+
+"Enables Calendar and Gantt views.","Включает представления Календарь и Гант.",
+
+"Engagement Boards","Доски взаимодействий",
+"Engagement Case","Кейс взаимодействия",
+"Engineering","Инжиниринг",
+
+"Enter","Ввод",
+
+"ERPNext Integration","Интеграция ERPNext",
+
+"Error","Ошибка",
+"Error Message","Сообщение об ошибке",
+
+"Experimental","Экспериментально",
+"External User ID","Внешний ID пользователя",
+
+"Facebook","Facebook",
+
+"Failed / No Show (lead)","Срыв/Не пришёл (лид)",
+"Filter","Фильтр",
+"Filter By","Фильтровать по",
+"Filters","Фильтры",
+
+"First","Первое",
+"First:","Первое:",
+"First Event At","Время первого события",
+"First Name","Имя",
+
+"Follow","Подписаться",
+"Follow Document","Следить за документом",
+
+"Form Settings","Настройки формы",
+
+"From","От",
+
+"Geo","Гео",
+"General","Общие",
+"Go to {}","Перейти к {}",
+"Go to Workspace","Перейти к рабочему пространству",
+"Go to {0}","Перейти к {0}",
+
+"Grid Empty State No Data","Нет данных",
+
+"Has Web View","Имеет веб-представление",
+"Hide","Скрыть",
+"Hide Filters","Скрыть фильтры",
+
+"High","Высокий",
+
+"Icon","Иконка",
+"If you just want to customize for your site, use Customize Form instead.","Если вы хотите изменить только для этого сайта, используйте «Настроить форму».",
+"Image","Изображение",
+
+"In Create","При создании",
+"In Progress","Выполняется",
+"In Treatment","В лечении",
+"Index web pages for search","Индексировать веб-страницы для поиска",
+
+"Integration","Интеграция",
+"Internal","Внутренний",
+"internal","внутренний",
+
+"Invalid","Недопустимо",
+"Is Billing Contact","Контакт для выставления счетов",
+"Is Calendar and Gantt","Это календарь и диаграмма Ганта",
+"Is Child Table","Это дочерняя таблица",
+"Is Single","Единственный",
+"Is Tree","Дерево",
+"Is Virtual","Виртуальный",
+
+"Keyboard Shortcuts","Горячие клавиши",
+
+"Kanban View","Канбан",
+"Kanban Settings","Настройки Канбана",
+"Select Kanban","Выбрать Канбан",
+
+"Knowledge Base","База знаний",
+
+"Label","Ярлык",
+"Language","Язык",
+
+"Last","Последнее",
+"Last:","Последнее:",
+"Last Actor Role","Роль последнего участника",
+"Last Edited","Последнее изменение",
+"Last Event At","Время последнего события",
+"Last Name","Фамилия",
+"Last Synced At","Время последней синхронизации",
+"Last Updated On","Последнее обновление",
+
+"Leads","Лиды",
+"Leads – Contact Center","Лиды – Контакт-центр",
+
+"Level","Уровень",
+"Link","Ссылка",
+"Linked Cases","Связанные кейсы",
+"Linked Documents","Связанные документы",
+"Linked engagements","Связанные кейсы",
+"List","Список",
+"List Settings","Настройки списка",
+"List View","Список",
+"List of Users","Список пользователей",
+"List of {0}","Список {0}",
+
+"Loading...","Загрузка...",
+
+"Log Out","Выйти",
+"Login","Войти",
+
+"Lost","Проиграно",
+
+"Low","Низкий",
+
+"Menu","Меню",
+"Middle Name","Второе имя",
+
+"Module","Модуль",
+"Module Profile","Модуль профиля",
+
+"Mongo ID","Идентификатор Mongo",
+"Mongo Client ID","Идентификатор клиента Mongo",
+
+"Most Used","Часто используемые",
+
+"My Profile","Мой профиль",
+"My Settings","Мои настройки",
+
+"Name","Название",
+"Naming Rule","Правило именования",
+"Navigation Settings","Настройки навигации",
+"New","Новый",
+"New Email","Новый Email",
+"New Case","Новый кейс",
+"New Engagement Case","Новый кейс взаимодействия",
+"New Patient","Новый пациент",
+"New Reminder","Новое напоминание",
+"New Session","Новая сессия",
+"New {0}","Новый {0}",
+
+"Next","Далее",
+"Next Document","Следующий документ",
+
+"No","Нет",
+"No Data","Нет данных",
+"No records found","Записей не найдено",
+"No filters selected","Фильтры не выбраны",
+"No filters found","Фильтры не найдены",
+"No filters fount","Фильтры не найдены",
+"No Tags","Нет тегов",
+
+"Notes","Заметки",
+"Internal Notes","Внутренние заметки",
+"Notification","Уведомление",
+
+"On Hold","Отложено",
+
+"Open Kanban","Открыть Канбан",
+"Open Kanban Board","Открыть Канбан доску",
+"Open full list","Открыть полный список",
+
+"Operations","Операции",
+
+"Owner","Владелец",
+
+"Parents (where this case is linked)","Родительские записи (куда прикреплён кейс)",
+"Password","Пароль",
+
+"Patients","Пациенты",
+"Patients – Care Department","Пациенты – Отдел лечения",
+
+"Pending","В ожидании",
+
+"Phone","Телефон",
+"Platform","Платформа",
+
+"Portal","Портал",
+"Portal Card Link","Ссылка на карточку портала",
+
+"Post-Visit Check","Пост-визитный контроль",
+
+"Preferred Language","Предпочитаемый язык",
+"Preview","Предпросмотр",
+"Previous","Назад",
+"Previous Document","Предыдущий документ",
+
+"Print","Распечатать",
+"Printing","Печать",
+"Priority","Приоритет",
+"P: {0}","Приор.: {0}",
+"P: Normal","Приор.: Нормальный",
+"P: High","Приор.: Высокий",
+"P: Urgent","Приор.: Срочно",
+
+"Product","Продукт",
+"Profile","Профиль",
+"Project Name","Название проекта",
+
+"Public","Публично",
+
+"Qualification","Квалификация",
+"Quick Entry","Быстрый доступ",
+"Quick overview & jump","Быстрый обзор и переход",
+
+"Reader","Читатель",
+"Read","Чтение",
+"Read Only","Только для чтения",
+
+"Recent","Недавние",
+"Record","Запись",
+"Records","Записи",
+
+"Redo","Повторить",
+"Refresh","Обновить",
+"Refresh Events","Обновить события",
+"Refresh List","Обновить список",
+"Reload","Обновить страницу",
+"Reload List","Перезагрузить список",
+
+"Relations","Связи",
+"Remove","Удалить",
+"Remove Filter","Удалить фильтр",
+"Rename","Переименовать",
+"Report View","Отчёт",
+"Report an Issue","Сообщить об ошибке",
+"Reset","Сброс",
+"Reset Chart","Сбросить график",
+
+"Restrict To Domain","Ограничить доменом",
+"Restrict to Domain","Ограничить доменом",
+
+"Return","Вернуться",
+"Returning Patient","Повторный пациент",
+
+"Role","Роль",
+"Roles & Permission","Роли и разрешения",
+"Roles & Permissions","Роли и права",
+"Route","Маршрут",
+
+"Runtime Status","Статус выполнения",
+
+"Save","Сохранить",
+"Save Filter","Сохранить фильтр",
+
+"Scheduled","Запланировано",
+"Search","Поиск",
+"Search Settings","Настройки поиска",
+"Search or type a command","Найти или написать команду",
+"Search properties...","Поиск свойств...",
+
+"Section","Секция",
+"Select","Выбрать",
+"Select All","Выбрать всё",
+"Unselect All","Снять выбор",
+
+"Selling","Продажа",
+"Sequence ID","Идентификатор последовательности",
+
+"Service","Услуга",
+"Session Defaults","Параметры сеанса по умолчанию",
+
+"Settings","Настройки",
+"Setup","Настройки",
+
+"Share","Поделиться",
+"Show","Показать",
+"Show Filters","Показать фильтры",
+"Show Preview","Показать предпросмотр",
+"Show Tags","Показать теги",
+
+"Signals","Сигналы",
+
+"Single","Одиночный",
+"Single DocTypes have only one record stored in tabSingles.","Типы с одной записью хранятся в таблице tabSingles.",
+
+"Site is running in developer mode","Сайт запущен в режиме разработчика",
+"This site is running in developer mode.","Этот сайт запущен в режиме разработчика.",
+"Any change made here will be updated in code.","Любые изменения здесь будут сохранены в коде.",
+
+"SMS","SMS",
+"Stage Appointment Scheduled","Этап: запись назначена",
+"Stage Checked","Этап проверен",
+"Status","Статус",
+"Status (current board)","Статус (текущая доска)",
+
+"Stock","Склад",
+"Subcontracting","Субподряд",
+"Subscribe","Подписаться",
+"Support","Поддержка",
+"Sync","Синхронизация",
+"Sync Enabled","Синхронизация включена",
+"Disable to take full manual control in Frappe","Отключите, чтобы полностью управлять вручную во Frappe",
+
+"System Manager","Системный менеджер",
+
+"Tag","Тег",
+"Tags","Теги",
+"Tax Category","Налоговая категория",
+"Telephony","Телефония",
+"Telegram","Telegram",
+"Telegram Mini-App","Telegram Mini-приложение",
+
+"Theme","Тема",
+"Timezone","Часовой пояс",
+
+"Title","Заголовок",
+"Toggle Full Width","Во всю ширину",
+"Toggle Theme","Сменить тему",
+"Toggle Sidebar","Показать/скрыть боковую панель",
+
+"Today","Сегодня",
+
+"Topic","Тема",
+"To","К",
+"Transferred to Care","Передано в лечение",
+"Treatment Completed","Лечение завершено",
+
+"Type a reply / comment","Напишите ответ или комментарий",
+
+"Undo","Отменить",
+"Unanswered Tail Count","Количество непрочитанных хвостов",
+
+"Update Details","Обновить данные",
+"Updated","Обновлено",
+
+"Urgent","Срочно",
+"User","Пользователь",
+"User Cannot Create","Пользователь не может создавать",
+"User Cannot Search","Пользователь не может искать",
+"User Details","Данные пользователя",
+"User Forum","Форум пользователей",
+"User Permissions","Права пользователя",
+"Users","Пользователи",
+"Users By Day","Пользователи по дням",
+
+"Utilities","Утилиты",
+"View","Просмотр",
+"View List","Посмотреть список",
+"View Settings","Просмотр параметров",
+"View Website","Посмотреть сайт",
+
+"Waiting List","Лист ожидания",
+"Waiting for AI","Ожидание ИИ",
+"Waiting for Client","Ожидание клиента",
+"Waiting for Client (AI)","Ожидание клиента (ИИ)",
+"Waiting for Consultant","Ожидание консультанта",
+
+"Warn","Предупреждение",
+"Website","Сайт",
+"Web Form","Веб-форма",
+"Web View","Веб-представление",
+"WhatsApp","WhatsApp",
+"Workspace","Рабочее пространство",
+
+"Won","Выиграно",
+"Workflow","Рабочий процесс",
+"What's New","Что нового",
+
+"You attached","Вы прикрепили",
+"You changed the value of","Вы изменили значение поля",
+"You created this","Вы создали этот документ",
+"You created this document","Вы создали этот документ",
+"You last edited this","Вы отредактировали запись",
+"last edited this","внёс изменения",
+"created this","создал(а) запись",
+"just now","прямо сейчас",
+"edited this","внёс изменения",
+"Discard","Отменить",
+"Expand","Развернуть",
+
+"Zap","Зет",
+
+
+"— Кастом «Engagement» —","— Кастом «Engagement» —",
+"Quick overview & jump","Быстрый обзор и переход",
+"New Case","Новый кейс",
+"Open Kanban","Открыть Канбан",
+"Open full list","Открыть полный список",
+"All","Всего",
+"Last","Последнее",
+"First","Первое",
+"Upd","Обновлено",
+"Upd:","Обновлено:",
+
+"Leads – Contact Center","Лиды – Контакт-центр",
+"Bot Active / New Inquiry","Новая заявка (бот активен)",
+"Call Later","Перезвонить позже",
+"Closed – Not Converted","Закрыто — не конвертирован",
+"Converted to Deal","Сконвертирован в сделку",
+
+"Appointment Scheduled","Запись назначена",
+"Recommended Recall Added","Рекомендован возврат добавлен",
+"Deal Completed","Сделка завершена",
+"No-show (deal)","Неявка (сделка)",
+
+"New Patient","Новый пациент",
+"Returning Patient","Повторный пациент",
+"In Treatment","В лечении",
+"Control X-ray","Контрольный снимок",
+"Treatment Completed","Лечение завершено",
+"No-show (patient)","Неявка (пациент)",
+
+"Tasks","Задачи",
+"Primary Channel","Основной канал",
+"Channel Type","Тип канала",
+"Channel Platform","Платформа канала",
+"Session ID in Service","ID сессии в сервисе",
+"External User ID","Внешний ID пользователя",
+"Contact Identity","Идентификатор контакта",
+"Display Name","Отображаемое имя",
+"Preferred Language","Предпочитаемый язык",
+"Linked Cases","Связанные кейсы",
+"No linked engagements yet.","Пока нет связанных кейсов.",
+"Parents (where this case is linked)","Родительские записи (куда прикреплён кейс)",
+"Boards & Status","Доски и статусы",
+"Signals","Сигналы",
+"Internal Notes","Внутренние заметки",
+"Runtime Status","Статус выполнения",
+
+"Filters","Фильтры",
+"Status (current board)","Статус (текущая доска)",
+"Tip: unselect a status to hide that column.","Подсказка: снимите статус, чтобы скрыть колонку.",
+"Platform","Платформа",
+"Priority","Приоритет",
+"Modified","Изменено",
+"From","От",
+"To","К",
+
+
+"{0} created this","{0} создал(а) это",
+"Computed by backend from source systems","вычислено",
+"Disable to take full manual control in Frappe","Отключите если хотите получить полный ручной контроль",
+
+"Me","Мне",
+"ascending","в прямом напрвлении",
+"descending","в обратном напрвлении",
+"Assign to me ({0})","Назначить на себя ({0})",
+"Reminder at","Когда напомнить?",
+"You can set Target and optional Reminder on Save","При сохранении будет предложена форма автозадачи",
+"Assign To (multiple)","Назначить нескольких человек",
+"Send reminder","Отправить напоминание?",
+"Target at","Срок задачи",
+"Optional; saved into custom_target_datetime","Необязательно; Выберите срок задачи",
+"Open","Открыть",
+"Not Saved","Не сохранено",
+
+"No parents.","Нет родительских кейсов",
+
+
+"# time — minutes","minutes",
+"{0} minute","{0} минута",
+"{0} minutes","{0} минут",
+"{0} minute ago","{0} минуту назад",
+"{0} minutes ago","{0} минут назад",
+"a minute ago","минуту назад",
+"minute ago","минуту назад",
+
+"# time — hours","hours",
+"{0} hour","{0} час",
+"{0} hours","{0} часов",
+"{0} hour ago","{0} час назад",
+"{0} hours ago","{0} часов назад",
+"an hour ago","час назад",
+"hour ago","час назад",
+
+"# time — days","days",
+"{0} day","{0} день",
+"{0} days","{0} дней",
+"{0} day ago","{0} день назад",
+"{0} days ago","{0} дней назад",
+"a day ago","день назад",
+"yesterday","вчера",
+"Today","Сегодня",
+"just now","только что",
+
+"# time — weeks","weeks",
+"{0} week","{0} неделя",
+"{0} weeks","{0} недель",
+"{0} week ago","{0} неделю назад",
+"{0} weeks ago","{0} недель назад",
+"a week ago","неделю назад",
+
+"# time — months","months",
+"{0} month","{0} месяц",
+"{0} months","{0} месяцев",
+"{0} month ago","{0} месяц назад",
+"{0} months ago","{0} месяцев назад",
+"a month ago","месяц назад",
+
+"# time — years","years",
+"{0} year","{0} год",
+"{0} years","{0} лет",
+"{0} year ago","{0} год назад",
+"{0} years ago","{0} лет назад",
+"a year ago","год назад",
+
+
+"Wellcome!","Добро Пожаловать!",
+"Events","События",
+"What's New","Что нового?",
+"Briefing","Бриф",
+"In Work","В работе",
+"Auto-tasks for this case","Авто-задачи для кейса",
+"No tasks.","Нет задач.",
+"No open tasks","Нет активных задач",
+"Show all {0}","Показать все {0}",
+"Assigned To","Назначены",
+"Go to {0}","Перейти к {0}",
+"Form","Форма",
+"Connection","Соединение",
+"Connections","Соединения",
+"You {0}","Вы {0}",
+"Set {0}","Установить {0}",
+"Set User Permissions","Установить Пользовательские Права",
+"Reset Password","Сбросить Пароль",
+"View Permitted Document","Посмотреть Разрешенный документ",
+"Jump to field","Перейти к полю",
+"Remind Me","Напомнить Мне",
+"Add {0}","Добавить {0}",
+"Appointment Date & Time","Место и время встречи",
+"Specialist","Специалист",
+"Search & Link","Найти и Привязать",
+"Unlink","Отвязать",
+"Add Task","Добавить Задачу",
+"Open All","Открыть Все",
+"total","всего",
+"per page","на страницу",
+"Normal","Нормальный",
+"Prev","Назад",
+"by","от",
+"on {0}","при {0}",
+"AI Knowledge","ИИ Знания",
+"Chat Sessions","Сессии Чатов",
+"yesterday","вчера",
+"Target Datetime","Целевая Дата и Время",
+"Choose Color","Выберите цвет",
+"Due Datetime","Напомнить когда?",
+"Reminder Sent At","Напоминание отправлено в",
+"Send Reminder","Отправить напоминание?",
+"Virtual","Виртуальный",
+"In List Filter","В фильтре списка",
+
+"Short human-readable title (e.g. name/channel/context)","Название карточки",
+
+"AIHub Admin","AIHub Админ",
+"AIHub Super Admin","AIHub Суперадмин",
+"AIHub Demo","AIHub Демо",
+
+
+"Show on: CRM Board","Показывать на доске Базовой CRM Доске",
+"CRM Board — Status","Базовая CRM Доска – Статус",
+"Used by Kanban «CRM Board»","Использован Канбан Базовая «CRM Доска»",
+
+"Show on: Leads – Contact Center","Показывать на доске Лиды – Контакт-центр",
+"Leads – Contact Center — Status","Лиды – Контакт-центр – Статус",
+"Used by Kanban «Leads – Contact Center»","Использован Канбан «Лиды – Контакт-центр»",
+
+"Show on: Deals – Contact Center","Показывать на доске Сделки – Контакт-центр",
+"Deals – Contact Center — Status","Сделки – Контакт-центр – Статус",
+"Used by Kanban «Deals – Contact Center»","Использован Канбан «Сделки – Контакт-центр»",
+
+"Show on: Patients – Care Department","Показывать на доске Пациенты – Отдел лечения",
+"Patients – Care Department — Status","Пациенты – Отдел лечения – Статус",
+"Used by Kanban «Patients – Care Department»","Использован Канбан «Пациенты – Отдел лечения»",
+
+
+"App Logo","Логотип приложения",
+"PaNa Medica","PaNa Medica",
+"Applications","Приложения",
+
+"How to Use (Quick Help)","Как пользоваться (быстрая помощь)",
+"Basic Settings","Базовые настройки",
+"Define basic bot information","Задайте базовую информацию о боте",
+
+"The name of the employee that the bot represents.","Имя сотрудника, которого представляет бот.",
+"employee_name","employee_name",
+
+"Mention Bot Name in Conversation","Упоминать имя бота в диалоге",
+"Should the bot mention its name?","Должен ли бот упоминать своё имя?",
+
+"Upload an image for the bot’s avatar.","Загрузите изображение для аватара бота.",
+"Bot Color","Цвет бота",
+"If you don’t have time to customize the bot, we can do it for you.","Если у вас нет времени на настройку, мы сделаем это за вас.",
+
+"Character and Behavior","Характер и поведение",
+"Set how the bot interacts with users","Определите, как бот взаимодействует с пользователями",
+"Choose Communication Tone","Выберите тон общения",
+"Choose the bot’s communication style.","Выберите стиль общения бота.",
+"Personality Traits","Черты личности",
+"Define key personality traits for the bot.","Определите ключевые черты личности бота.",
+
+"Target Action","Целевое действие",
+"What the bot is designed to perform (multiple allowed).","Какие действия должен выполнять бот (можно несколько).",
+
+"Additional Instructions","Дополнительные инструкции",
+"Provide any additional guidelines for bot behavior.","Добавьте дополнительные рекомендации по поведению бота.",
+
+"Topics and Restrictions","Темы и ограничения",
+"Define allowed and restricted topics","Определите разрешённые и запрещённые темы",
+"Special Instructions","Особые инструкции",
+"Additional functionality settings.","Дополнительные настройки функциональности.",
+"Forbidden Topics","Запрещённые темы",
+"Topics the bot should avoid.","Темы, которых боту следует избегать.",
+
+"Core Principles","Базовые принципы",
+"Fundamental principles guiding the bot’s responses.","Фундаментальные принципы, определяющие ответы бота.",
+
+"Interaction Guidelines","Правила взаимодействия",
+"Set the bot’s predefined messages","Задайте предустановленные сообщения бота",
+
+"Artificial Intelligence","Искусственный интеллект",
+"Choose the AI model for your bot","Выберите модель ИИ для бота",
+"AI Model","Модель ИИ",
+"AI model the bot is using.","Модель ИИ, которую использует бот.",
+
+"Comments","Комментарии",
+"comment","комментарий",
+"Activity","Активность",
+
+"Administrator last edited this","Administrator внёс изменения",
+"Administrator created this","Administrator создал(а) это",
+"{0} last edited this","{0} внёс изменения",
+"{0} changed the value of {1} from {2} to {3}","{0} изменил(а) значение {1} с {2} на {3}",
+"changed the value of","изменил(а) значение",
+"Last edited","Последнее изменение",
+"Created","Создано",
+
+
+"Greeting","Приветствие",
+"Default greeting messages in different languages.","Приветственные сообщения по умолчанию на разных языках.",
+"Error Message","Сообщение об ошибке",
+"Message displayed when the bot cannot answer.","Сообщение, которое показывается, когда бот не может ответить.",
+"Farewell Message","Прощальное сообщение",
+"Bot’s goodbye message.","Сообщение бота при завершении диалога.",
+"AI Error Fallback","Резервное сообщение об ошибке ИИ",
+"Message shown if AI fails to generate a response.","Сообщение, если ИИ не смог сгенерировать ответ.",
+
+"App Name","Имя приложения",
+"Filled automatically in some flows (optional).","Заполняется автоматически в некоторых сценариях (необязательно).",
+"Created At","Создано",
+"Timestamp when the bot settings were created.","Время создания настроек бота.",
+
+
+"Soft Red","Мягкий красный",
+"Warm Orange","Тёплый оранжевый",
+"Sunny Yellow","Солнечный жёлтый",
+"Fresh Green","Свежий зелёный",
+"Teal Blue","Бирюзовый",
+"Sky Blue","Небесно-голубой",
+"Lavender Purple","Лавандовый",
+"Rose Pink","Розовый",
+
+"Friendly","Дружелюбный",
+"Formal","Официальный",
+"Casual","Неформальный",
+"Professional","Профессиональный",
+"Humorous","С юмором",
+"Business","Деловой",
+"Strictly from additional description","Строго по дополнительному описанию",
+
+"Highly structured and predictable","Очень структурный и предсказуемый",
+"Logical and precise","Логичный и точный",
+"Balanced and well-reasoned","Сбалансированный и продуманный",
+"Adaptive and slightly creative","Адаптивный и немного креативный",
+"Highly creative and free-thinking","Очень креативный и свободомыслящий",
+
+"gpt-4o","gpt-4o",
+"gpt-4o-mini","gpt-4o-mini",
+"gemini-2.0-flash","gemini-2.0-flash",
+
+"Is Custom","Кастомный?"

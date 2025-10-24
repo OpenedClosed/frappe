@@ -1,0 +1,214 @@
+@charset "UTF-8";
+@import "https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap";
+
+/* ../../../../../../../../var/folders/wb/5mgksxg16b95tllmsys0_y7w0000gp/T/tmp-51987-t4bpgpMlOnOD/dantist_app/dantist_app/public/scss/desk/theme.bundle.css */
+html,
+body {
+  font-family:
+    "Manrope",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    sans-serif;
+}
+:root {
+  --brand-primary: #488a5b;
+  --brand-primary-strong: #1c7e50;
+  --brand-contrast: #ffffff;
+  --ink-base: #1f3a40;
+  --btn-primary: var(--brand-primary);
+  --checkbox-color: var(--brand-contrast);
+  --checkbox-gradient: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
+  --checkbox-disabled-gradient: linear-gradient(180deg, #d1d5db 0%, #d1d5db 100%);
+  --checkbox-focus-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-primary) 28%, transparent);
+}
+[data-theme=dark] {
+  --neutral: var(--neutral-black);
+  --invert-neutral: var(--neutral-white);
+  --bg-color: #15282b;
+  --fg-color: var(--bg-color);
+  --subtle-accent: #20353a;
+  --subtle-fg: #1a2d31;
+  --navbar-bg: var(--bg-color);
+  --fg-hover-color:#2b4349;
+  --card-bg: #1d2f33;
+  --disabled-text-color: #aeb7bb;
+  --disabled-control-bg: #1f3438;
+  --control-bg: #243a3f;
+  --control-bg-on-gray: var(--control-bg);
+  --awesomebar-focus-bg: var(--control-bg);
+  --awesomplete-hover-bg: var(--fg-hover-color);
+  --modal-bg: var(--bg-color);
+  --toast-bg: var(--modal-bg);
+  --popover-bg: var(--bg-color);
+  --text-neutral: #f4f8f9;
+  --text-dark: #0e1112;
+  --text-muted: #c9d1d4;
+  --text-light: #d9dfe3;
+  --text-color: #f4f8f9;
+  --heading-color: #ffffff;
+  --icon-fill: transparent;
+  --icon-stroke: #e9eef0;
+  --error-bg: var(--red-800);
+  --error-border: var(--red-400);
+  --btn-default-bg: var(--control-bg);
+  --btn-default-hover-bg: var(--fg-hover-color);
+  --btn-primary: var(--brand-primary);
+  --border-primary: #3e555a;
+  --border-color: var(--border-primary);
+  --dark-border-color: #2f474c;
+  --table-border-color: var(--border-color);
+  --bg-blue: #1a2a3d;
+  --bg-light-blue: #1f3238;
+  --bg-dark-blue: #0c254f;
+  --bg-green: #1c2f26;
+  --bg-yellow: #332c1d;
+  --bg-orange: #35261b;
+  --bg-red: #311d1e;
+  --bg-gray: #243a3f;
+  --bg-grey: #6b7280;
+  --bg-darkgrey: #6b7280;
+  --bg-dark-gray: #4b5563;
+  --bg-light-gray: var(--control-bg);
+  --bg-purple: #2b223c;
+  --bg-pink: #34222b;
+  --bg-cyan: #155e75;
+  --text-on-blue:#eff6ff;
+  --text-on-light-blue:#eff6ff;
+  --text-on-dark-blue:#93c5fd;
+  --text-on-green:#dcfce7;
+  --text-on-yellow:#fff7ed;
+  --text-on-orange:#ffedd5;
+  --text-on-red:#fee2e2;
+  --text-on-gray:#f9fafb;
+  --text-on-grey:#f9fafb;
+  --text-on-darkgrey:#e5e7eb;
+  --text-on-dark-gray:#e5e7eb;
+  --text-on-light-gray:#e5e7eb;
+  --text-on-purple:#e9d5ff;
+  --text-on-pink:#fbcfe8;
+  --text-on-cyan:#cffafe;
+  --alert-text-danger:#fecaca;
+  --alert-text-warning:#fde68a;
+  --alert-text-info:#bfdbfe;
+  --alert-text-success:#bbf7d0;
+  --alert-bg-danger:#7f1d1d;
+  --alert-bg-warning:#713f12;
+  --alert-bg-info:#0c254f;
+  --alert-bg-success:#14532d;
+  --sidebar-select-color: var(--control-bg);
+  --scrollbar-thumb-color: #556c72;
+  --scrollbar-track-color: #1b2e32;
+  --timeline-badge-color: #8fa2a7;
+  --timeline-badge-bg: var(--bg-color);
+  --shadow-inset: var(--fg-color);
+  --highlight-color: #233b41;
+  --yellow-highlight-color: #a16207;
+  --btn-group-border-color: #3a5157;
+  --placeholder-color: #8ba0a6;
+  --highlight-shadow: 1px 1px 10px #0c254f, 0 0 4px #3b82f6;
+  --shadow-base: 0 4px 8px rgba(31,58,64,.10), 0 0 4px rgba(31,58,64,.16);
+  --checkbox-color: var(--brand-contrast);
+  --checkbox-gradient: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
+  --checkbox-disabled-gradient: linear-gradient(180deg, #6b7280 0%, #6b7280 100%);
+  --checkbox-focus-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-primary) 24%, transparent);
+  --switch-bg: #92a4a9;
+  --date-active-text: #e5e7eb;
+  --date-active-bg: #2b444a;
+  --date-range-bg: var(--subtle-fg);
+  color-scheme: dark;
+}
+[data-theme=dark] .grid-body .editable-row {
+  --control-bg: var(--bg-color);
+  --input-disabled-bg: var(--control-bg);
+}
+[data-theme=dark] .frappe-card .btn-default {
+  background-color: var(--control-bg);
+}
+[data-theme=dark] .frappe-card .btn-default:hover {
+  background-color: var(--fg-hover-color);
+}
+[data-theme=dark] .modal,
+[data-theme=dark] .form-in-grid {
+  --control-bg: var(--control-bg);
+  --border-color: var(--border-color);
+}
+[data-theme=dark] .print-format {
+  --text-color: #0e1112;
+  --border-color: #e5e7eb;
+}
+[data-theme=dark] .ql-editor {
+  color: var(--text-on-gray);
+}
+[data-theme=dark] .ql-editor.read-mode span:not(.mention),
+[data-theme=dark] .ql-editor.read-mode p,
+[data-theme=dark] .ql-editor.read-mode u,
+[data-theme=dark] .ql-editor.read-mode strong {
+  background-color: inherit !important;
+  color: inherit !important;
+}
+[data-theme=dark] .comment-input-wrapper .ql-editor.ql-blank::before {
+  color: var(--text-color);
+}
+[data-theme=dark] .chart-container {
+  --charts-label-color: #e9eef0;
+  --charts-axis-line-color: var(--subtle-fg);
+  --charts-stroke-width: 5px;
+  --charts-dataset-circle-stroke: #ffffff;
+  --charts-dataset-circle-stroke-width: var(--charts-stroke-width);
+  --charts-tooltip-title: var(--charts-label-color);
+  --charts-tooltip-label: var(--charts-label-color);
+  --charts-tooltip-value: white;
+  --charts-tooltip-bg: var(--bg-color);
+  --charts-legend-label: var(--charts-label-color);
+}
+[data-theme=dark] .heatmap-chart g > rect[fill="#ebedf0"] {
+  fill: var(--highlight-color);
+}
+[data-theme=dark] .rating {
+  --star-fill: #92a4a9;
+}
+[data-theme=dark] .rating .star-hover {
+  --star-fill: #c9d1d4;
+}
+[data-theme=dark] ::-moz-selection {
+  color: var(--text-color);
+  background: #607b80;
+}
+[data-theme=dark] ::selection {
+  color: var(--text-color);
+  background: #607b80;
+}
+[data-theme=dark] .btn.active,
+[data-theme=dark] .btn:active,
+[data-theme=dark] .btn-check:checked + .btn,
+[data-theme=dark] .btn-check:active + .btn,
+[data-theme=dark] .btn-default.active,
+[data-theme=dark] .btn-default:active {
+  background-color: var(--fg-hover-color) !important;
+  border-color: var(--dark-border-color) !important;
+  color: var(--text-color) !important;
+}
+.list-sidebar .sidebar-item {
+  border-radius: 0.5rem;
+}
+.list-sidebar .sidebar-item:hover,
+.list-sidebar .sidebar-item.active {
+  background: var(--brand-primary) !important;
+  color: var(--brand-contrast) !important;
+}
+.list-sidebar .sidebar-item:hover .sidebar-item-icon .icon,
+.list-sidebar .sidebar-item.active .sidebar-item-icon .icon,
+.list-sidebar .sidebar-item:hover svg,
+.list-sidebar .sidebar-item.active svg {
+  color: var(--brand-contrast) !important;
+}
+.list-sidebar .sidebar-item:hover .sidebar-item-label,
+.list-sidebar .sidebar-item.active .sidebar-item-label {
+  color: var(--brand-contrast) !important;
+}
+/*# sourceMappingURL=theme.bundle.TUC36WIL.css.map */

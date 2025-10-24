@@ -1,0 +1,794 @@
+"About","Про систему",
+"Action","Дія",
+"Actions","Дії",
+"Active","Активний",
+"Add","Додати",
+"Add {0}","Додати {0}",
+"+ Add","+ Додати",
+"Add New","Додати новий",
+"Add New {0}","Додати новий {0}",
+"Add New {}","Додати новий {}",
+"Add a Filter","Додати фільтр",
+"Add/Update Filter","Додати/оновити фільтр",
+"Add Column","Додати стовпець",
+"Add Field","Додати поле",
+"Add Row","Додати рядок",
+"Add Rows","Додати рядки",
+"Add Child","Додати дочірній",
+"Add Tab","Додати вкладку",
+
+"AI Settings","Налаштування ІІ",
+"Application","Додаток",
+"App Logo","Логотип додатка",
+"App Name","Ім’я додатка",
+
+"Archived","Архівні",
+"Archive","Архівувати",
+"Unarchive","Розархівувати",
+
+"Avatar","Аватар",
+
+"Basic Info","Основна інформація",
+"Beta","Бета",
+"Begin typing for results.","Почніть вводити для пошуку",
+"Begin typing for results..","Почніть вводити для пошуку результатів.",
+
+"Bot Settings","Налаштування бота",
+"Bot Settings Images","Зображення налаштувань бота",
+
+"Bulk Transaction","Масова операція",
+
+"Call","Дзвінок",
+"Cancel","Скасувати",
+"Cancel Changes","Скасувати зміни",
+"Case","Кейс",
+"Change Password","Змінити пароль",
+"Chat","Чат",
+"Chats","Чати",
+"Child Tables are shown as tables in other documents.","Дочірні таблиці відображаються як таблиці в інших документах.",
+
+"Clear","Очистити",
+"Clear Filters","Очистити фільтри",
+
+"Client","Клієнт",
+"Client Portal","Портал клієнта",
+"Close","Закрити",
+"Closed – Not Converted","Закрито — не конвертовано",
+"Closed by Operator","Закрито оператором",
+"Closed by Timeout","Закрито через тайм-аут",
+"Closed – No Messages","Закрито — немає повідомлень",
+
+"Compact Item Print","Компактний друк позиції",
+"Community","Спільнота",
+"Communication","Комунікація",
+"Company","Компанія",
+"Copied to clipboard","Скопійовано в буфер обміну",
+"Copy","Копіювати",
+"Copy Link","Копіювати посилання",
+"Copy to Clipboard","Копіювати в буфер обміну",
+
+"Consultant","Консультант",
+"Contacts","Контакти",
+"Control Center","Центр керування",
+"Control X-ray","Контрольний знімок",
+
+"Country","Країна",
+"Create","Створити",
+"Create {0}","Створити {0}",
+"Create user","Створити користувача",
+"Create User","Створити користувача",
+"Create User Email","Створити лист користувачу",
+"Created By","Створено користувачем",
+"Created On","Створено",
+
+"CRM","CRM",
+"CRM Space","CRM-простір",
+"CRM Board","Дошка CRM",
+
+"Customize","Налаштувати",
+"Customize Form","Налаштувати форму",
+"Customization","Користувацький",
+
+"Dashboard View","Панель",
+"Date ranges","Діапазони дат",
+"Days","Дні",
+
+"Deal Completed","Угоду завершено",
+"Deals","Угоди",
+"Deals – Contact Center","Угоди – Контакт-центр",
+
+"Default","За замовчуванням",
+"Delete","Видалити",
+"Delete Row","Видалити рядок",
+"Description","Опис",
+
+"DocType","Тип документа",
+"Document States","Стани документа",
+"Documentation","Документація",
+"Documentation Link","Посилання на документацію",
+
+"Duplicate","Дублювати",
+
+"EDI","Електронний обмін даними",
+"Edit","Редагувати",
+"Edit DocType","Редагувати DocType",
+"Edit Filters","Змінити фільтри",
+"Edit Settings","Змінити налаштування",
+
+"Email","Ел. адреса",
+"Email Settings","Налаштування електронної пошти",
+"Employee Name","Ім’я співробітника",
+
+"Enable","Увімкнути",
+"Disable","Вимкнути",
+
+"Enables Calendar and Gantt views.","Увімкнути подання Календар і Ганта.",
+
+"Engagement Boards","Дошки взаємодій",
+"Engagement Case","Кейс взаємодії",
+"Engineering","Інжиніринг",
+
+"Enter","Ввід",
+
+"ERPNext Integration","Інтеграція ERPNext",
+
+"Error","Помилка",
+"Error Message","Повідомлення про помилку",
+
+"Experimental","Експериментально",
+"External User ID","Зовнішній ID користувача",
+
+"Facebook","Facebook",
+
+"Failed / No Show (lead)","Зрив/Не прийшов (лід)",
+"Filter","Фільтр",
+"Filter By","Фільтрувати за",
+"Filters","Фільтри",
+
+"First","Перше",
+"First:","Перше:",
+"First Event At","Час першої події",
+"First Name","Ім’я",
+
+"Follow","Стежити",
+"Follow Document","Стежити за документом",
+
+"Form Settings","Налаштування форми",
+
+"From","Від",
+
+"Geo","Гео",
+"General","Загальні",
+"Go to {}","Перейти до {}",
+"Go to Workspace","Перейти до робочого простору",
+"Go to {0}","Перейти до {0}",
+
+"Grid Empty State No Data","Немає даних",
+
+"Has Web View","Має веб-представлення",
+"Hide","Сховати",
+"Hide Filters","Сховати фільтри",
+
+"High","Високий",
+
+"Icon","Іконка",
+"If you just want to customize for your site, use Customize Form instead.","Якщо хочете змінити лише для цього сайту, використовуйте «Налаштувати форму».",
+"Image","Зображення",
+
+"In Create","При створенні",
+"In Progress","В процесі",
+"In Treatment","У лікуванні",
+"Index web pages for search","Індексувати веб-сторінки для пошуку",
+
+"Integration","Інтеграція",
+"Internal","Внутрішній",
+"internal","внутрішній",
+
+"Invalid","Недопустимо",
+"Is Billing Contact","Контакт для виставлення рахунків",
+"Is Calendar and Gantt","Це Календар і Гант",
+"Is Child Table","Це дочірня таблиця",
+"Is Single","Одинарний",
+"Is Tree","Дерево",
+"Is Virtual","Віртуальний",
+
+"Keyboard Shortcuts","Гарячі клавіші",
+
+"Kanban View","Канбан",
+"Kanban Settings","Налаштування Канбану",
+"Select Kanban","Обрати Канбан",
+
+"Knowledge Base","База знань",
+
+"Label","Ярлик",
+"Language","Мова",
+
+"Last","Останнє",
+"Last:","Останнє:",
+"Last Actor Role","Роль останнього учасника",
+"Last Edited","Остання зміна",
+"Last Event At","Час останньої події",
+"Last Name","Прізвище",
+"Last Synced At","Час останньої синхронізації",
+"Last Updated On","Останнє оновлення",
+
+"Leads","Ліди",
+"Leads – Contact Center","Ліди – Контакт-центр",
+
+"Level","Рівень",
+"Link","Посилання",
+"Linked Cases","Пов’язані кейси",
+"Linked Documents","Пов’язані документи",
+"Linked engagements","Пов’язані взаємодії",
+"List","Список",
+"List Settings","Налаштування списку",
+"List View","Список",
+"List of Users","Список користувачів",
+"List of {0}","Список {0}",
+
+"Loading...","Завантаження...",
+
+"Log Out","Вийти",
+"Login","Увійти",
+
+"Lost","Програно",
+
+"Low","Низький",
+
+"Menu","Меню",
+"Middle Name","По батькові",
+
+"Module","Модуль",
+"Module Profile","Профіль модуля",
+
+"Mongo ID","Mongo ID",
+"Mongo Client ID","Mongo Client ID клієнта",
+
+"Most Used","Найчастіше використовувані",
+
+"My Profile","Мій профіль",
+"My Settings","Мої налаштування",
+
+"Name","Назва",
+"Naming Rule","Правило іменування",
+"Navigation Settings","Налаштування навігації",
+"New","Новий",
+"New Email","Новий Email",
+"New Case","Новий кейс",
+"New Engagement Case","Новий кейс взаємодії",
+"New Patient","Новий пацієнт",
+"New Reminder","Нове нагадування",
+"New Session","Нова сесія",
+"New {0}","Новий {0}",
+
+"Next","Далі",
+"Next Document","Наступний документ",
+
+"No","Ні",
+"No Data","Немає даних",
+"No records found","Записів не знайдено",
+"No filters selected","Фільтри не вибрані",
+"No filters found","Фільтри не знайдено",
+"No filters fount","Фільтри не знайдено",
+"No Tags","Немає тегів",
+
+"Notes","Нотатки",
+"Internal Notes","Внутрішні нотатки",
+"Notification","Сповіщення",
+
+"On Hold","Відкладено",
+
+"Open Kanban","Відкрити Канбан",
+"Open Kanban Board","Відкрити дошку Канбан",
+"Open full list","Відкрити повний список",
+
+"Operations","Операції",
+
+"Owner","Власник",
+
+"Parents (where this case is linked)","Батьківські записи (куди прикріплено кейс)",
+"Password","Пароль",
+
+"Patients","Пацієнти",
+"Patients – Care Department","Пацієнти – Відділ лікування",
+
+"Pending","В очікуванні",
+
+"Phone","Телефон",
+"Platform","Платформа",
+
+"Portal","Портал",
+"Portal Card Link","Посилання на картку порталу",
+
+"Post-Visit Check","Післявізитний контроль",
+
+"Preferred Language","Бажана мова",
+"Preview","Попередній перегляд",
+"Previous","Назад",
+"Previous Document","Попередній документ",
+
+"Print","Друк",
+"Printing","Друкування",
+"Priority","Пріоритет",
+"P: {0}","Пріор.: {0}",
+"P: Normal","Пріор.: Нормальний",
+"P: High","Пріор.: Високий",
+"P: Urgent","Пріор.: Терміново",
+
+"Product","Продукт",
+"Profile","Профіль",
+"Project Name","Назва проєкту",
+
+"Public","Публічно",
+
+"Qualification","Кваліфікація",
+"Quick Entry","Швидкий доступ",
+"Quick overview & jump","Швидкий огляд і перехід",
+
+"Reader","Читач",
+"Read","Читання",
+"Read Only","Лише читання",
+
+"Recent","Нещодавні",
+"Record","Запис",
+"Records","Записи",
+
+"Redo","Повторити",
+"Refresh","Оновити",
+"Refresh Events","Оновити події",
+"Refresh List","Оновити список",
+"Reload","Перезавантажити сторінку",
+"Reload List","Перезавантажити список",
+
+"Relations","Зв’язки",
+"Remove","Видалити",
+"Remove Filter","Видалити фільтр",
+"Rename","Перейменувати",
+"Report View","Звіт",
+"Report an Issue","Повідомити про проблему",
+"Reset","Скинути",
+"Reset Chart","Скинути графік",
+
+"Restrict To Domain","Обмежити доменом",
+"Restrict to Domain","Обмежити доменом",
+
+"Return","Повернутися",
+"Returning Patient","Повторний пацієнт",
+
+"Role","Роль",
+"Roles & Permission","Ролі та дозволи",
+"Roles & Permissions","Ролі та права",
+"Route","Маршрут",
+
+"Runtime Status","Статус виконання",
+
+"Save","Зберегти",
+"Save Filter","Зберегти фільтр",
+
+"Scheduled","Заплановано",
+"Search","Пошук",
+"Search Settings","Налаштування пошуку",
+"Search or type a command","Знайти або ввести команду",
+"Search properties...","Пошук властивостей...",
+
+"Section","Секція",
+"Select","Вибрати",
+"Select All","Вибрати все",
+"Unselect All","Зняти вибір",
+
+"Selling","Продаж",
+"Sequence ID","Ідентифікатор послідовності",
+
+"Service","Послуга",
+"Session Defaults","Параметри сеансу за замовчуванням",
+
+"Settings","Налаштування",
+"Setup","Налаштування",
+
+"Share","Поділитися",
+"Show","Показати",
+"Show Filters","Показати фільтри",
+"Show Preview","Показати передперегляд",
+"Show Tags","Показати теги",
+
+"Signals","Сигнали",
+
+"Single","Одинарний",
+"Single DocTypes have only one record stored in tabSingles.","Типи з одним записом зберігаються в tabSingles.",
+
+"Site is running in developer mode","Сайт запущено в режимі розробника",
+"This site is running in developer mode.","Цей сайт запущено в режимі розробника.",
+"Any change made here will be updated in code.","Будь-які зміни тут будуть збережені в коді.",
+
+"SMS","SMS",
+"Stage Appointment Scheduled","Етап: запис назначено",
+"Stage Checked","Етап перевірено",
+"Status","Статус",
+"Status (current board)","Статус (поточна дошка)",
+
+"Stock","Склад",
+"Subcontracting","Субпідряд",
+"Subscribe","Підписатися",
+"Support","Підтримка",
+"Sync","Синхронізація",
+"Sync Enabled","Синхронізацію увімкнено",
+"Disable to take full manual control in Frappe","Вимкніть, щоб повністю керувати вручну у Frappe",
+
+"System Manager","Системний менеджер",
+
+"Tag","Тег",
+"Tags","Теги",
+"Tax Category","Податкова категорія",
+"Telephony","Телефонія",
+"Telegram","Telegram",
+"Telegram Mini-App","Міні-додаток Telegram",
+
+"Theme","Тема",
+"Timezone","Часовий пояс",
+
+"Title","Заголовок",
+"Toggle Full Width","На всю ширину",
+"Toggle Theme","Змінити тему",
+"Toggle Sidebar","Показати/сховати бічну панель",
+
+"Today","Сьогодні",
+
+"Topic","Тема",
+"To","До",
+"Transferred to Care","Передано в лікування",
+"Treatment Completed","Лікування завершено",
+
+"Type a reply / comment","Напишіть відповідь або коментар",
+
+"Undo","Скасувати",
+"Unanswered Tail Count","Кількість непрочитаних хвостів",
+
+"Update Details","Оновити дані",
+"Updated","Оновлено",
+
+"Urgent","Терміново",
+"User","Користувач",
+"User Cannot Create","Користувач не може створювати",
+"User Cannot Search","Користувач не може шукати",
+"User Details","Дані користувача",
+"User Forum","Форум користувачів",
+"User Permissions","Права користувача",
+"Users","Користувачі",
+"Users By Day","Користувачі за днями",
+
+"Utilities","Утиліти",
+"View","Перегляд",
+"View List","Переглянути список",
+"View Settings","Перегляд налаштувань",
+"View Website","Переглянути сайт",
+
+"Waiting List","Список очікування",
+"Waiting for AI","Очікування ІІ",
+"Waiting for Client","Очікування клієнта",
+"Waiting for Client (AI)","Очікування клієнта (ІІ)",
+"Waiting for Consultant","Очікування консультанта",
+
+"Warn","Попередження",
+"Website","Сайт",
+"Web Form","Веб-форма",
+"Web View","Веб-представлення",
+"WhatsApp","WhatsApp",
+"Workspace","Робочий простір",
+
+"Won","Виграно",
+"Workflow","Робочий процес",
+"What's New","Що нового",
+
+"You attached","Ви прикріпили",
+"You changed the value of","Ви змінили значення поля",
+"You created this","Ви створили цей документ",
+"You created this document","Ви створили цей документ",
+"You last edited this","Ви відредагували запис",
+"last edited this","вніс(ла) зміни",
+"created this","створив(ла) запис",
+"just now","щойно",
+"edited this","вніс(ла) зміни",
+"Discard","Скасувати",
+"Expand","Розгорнути",
+
+"Zap","Зет",
+
+
+"— Кастом «Engagement» —","— Кастом «Engagement» —",
+"Quick overview & jump","Швидкий огляд і перехід",
+"New Case","Новий кейс",
+"Open Kanban","Відкрити Канбан",
+"Open full list","Відкрити повний список",
+"All","Усього",
+"Last","Останнє",
+"First","Перше",
+"Upd","Оновлено",
+"Upd:","Оновлено:",
+
+"Leads – Contact Center","Ліди – Контакт-центр",
+"Bot Active / New Inquiry","Нова заявка (бот активний)",
+"Call Later","Передзвонити пізніше",
+"Closed – Not Converted","Закрито — не конвертовано",
+"Converted to Deal","Сконвертовано в угоду",
+
+"Appointment Scheduled","Запис призначено",
+"Recommended Recall Added","Рекомендований повернення додано",
+"Deal Completed","Угоду завершено",
+"No-show (deal)","Неявка (угода)",
+
+"New Patient","Новий пацієнт",
+"Returning Patient","Повторний пацієнт",
+"In Treatment","У лікуванні",
+"Control X-ray","Контрольний знімок",
+"Treatment Completed","Лікування завершено",
+"No-show (patient)","Неявка (пацієнт)",
+
+"Tasks","Завдання",
+"Primary Channel","Основний канал",
+"Channel Type","Тип каналу",
+"Channel Platform","Платформа каналу",
+"Session ID in Service","ID сесії в сервісі",
+"External User ID","Зовнішній ID користувача",
+"Contact Identity","Ідентифікатор контакту",
+"Display Name","Відображуване ім’я",
+"Preferred Language","Бажана мова",
+"Linked Cases","Пов’язані кейси",
+"No linked engagements yet.","Немає пов’язаних кейсів.",
+"Parents (where this case is linked)","Батьківські записи (куди прикріплено кейс)",
+"Boards & Status","Дошки та статуси",
+"Signals","Сигнали",
+"Internal Notes","Внутрішні нотатки",
+"Runtime Status","Статус виконання",
+
+"Filters","Фільтри",
+"Status (current board)","Статус (поточна дошка)",
+"Tip: unselect a status to hide that column.","Підказка: зніміть статус, щоб приховати колонку.",
+"Platform","Платформа",
+"Priority","Пріоритет",
+"Modified","Змінено",
+"From","Від",
+"To","До",
+
+
+"{0} created this","{0} створив(ла) це",
+"Computed by backend from source systems","обчислено",
+"Disable to take full manual control in Frappe","Вимкніть, якщо хочете отримати повний ручний контроль",
+
+"Me","Мені",
+"ascending","у прямому напрямку",
+"descending","у зворотному напрямку",
+"Assign to me ({0})","Призначити на себе ({0})",
+"Reminder at","Коли нагадати?",
+"You can set Target and optional Reminder on Save","Під час збереження буде запропонована форма автозавдання",
+"Assign To (multiple)","Призначити кількох людей",
+"Send reminder","Надіслати нагадування?",
+"Target at","Строк завдання",
+"Optional; saved into custom_target_datetime","Необов’язково; Виберіть строк завдання",
+"Open","Відкрити",
+"Not Saved","Не збережено",
+
+"No parents.","Немає батьківських кейсів",
+
+
+"# time — minutes","minutes",
+"{0} minute","{0} хвилина",
+"{0} minutes","{0} хвилин",
+"{0} minute ago","{0} хвилину тому",
+"{0} minutes ago","{0} хвилин тому",
+"a minute ago","хвилину тому",
+"minute ago","хвилину тому",
+
+"# time — hours","hours",
+"{0} hour","{0} година",
+"{0} hours","{0} годин",
+"{0} hour ago","{0} годину тому",
+"{0} hours ago","{0} годин тому",
+"an hour ago","годину тому",
+"hour ago","годину тому",
+
+"# time — days","days",
+"{0} day","{0} день",
+"{0} days","{0} днів",
+"{0} day ago","{0} день тому",
+"{0} days ago","{0} днів тому",
+"a day ago","день тому",
+"yesterday","вчора",
+"Today","Сьогодні",
+"just now","щойно",
+
+"# time — weeks","weeks",
+"{0} week","{0} тиждень",
+"{0} weeks","{0} тижнів",
+"{0} week ago","{0} тиждень тому",
+"{0} weeks ago","{0} тижнів тому",
+"a week ago","тиждень тому",
+
+"# time — months","months",
+"{0} month","{0} місяць",
+"{0} months","{0} місяців",
+"{0} month ago","{0} місяць тому",
+"{0} months ago","{0} місяців тому",
+"a month ago","місяць тому",
+
+"# time — years","years",
+"{0} year","{0} рік",
+"{0} years","{0} років",
+"{0} year ago","{0} рік тому",
+"{0} years ago","{0} років тому",
+"a year ago","рік тому",
+
+
+"Wellcome!","Ласкаво просимо!",
+"Events","Події",
+"What's New","Що нового?",
+"Briefing","Брифінг",
+"In Work","В роботі",
+"Auto-tasks for this case","Автозавдання для цього кейсу",
+"No tasks.","Немає завдань.",
+"No open tasks","Немає активних завдань",
+"Show all {0}","Показати всі {0}",
+"Assigned To","Призначені",
+"Go to {0}","Перейти до {0}",
+"Form","Форма",
+"Connection","З’єднання",
+"Connections","З’єднання",
+"You {0}","Ви {0}",
+"Set {0}","Встановити {0}",
+"Set User Permissions","Встановити права користувача",
+"Reset Password","Скинути пароль",
+"View Permitted Document","Переглянути дозволений документ",
+"Jump to field","Перейти до поля",
+"Remind Me","Нагадати мені",
+"Add {0}","Додати {0}",
+"Appointment Date & Time","Дата й час зустрічі",
+"Specialist","Спеціаліст",
+"Search & Link","Знайти та прив’язати",
+"Unlink","Відв’язати",
+"Add Task","Додати завдання",
+"Open All","Відкрити все",
+"total","всього",
+"per page","на сторінку",
+"Normal","Нормальний",
+"Prev","Назад",
+"by","від",
+"on {0}","при {0}",
+"AI Knowledge","ІІ Знання",
+"Chat Sessions","Сесії чатів",
+"yesterday","вчора",
+"Target Datetime","Цільова дата й час",
+"Choose Color","Виберіть колір",
+"Due Datetime","Коли нагадати?",
+"Reminder Sent At","Нагадування надіслано о",
+"Send Reminder","Надіслати нагадування?",
+"Virtual","Віртуальний",
+"In List Filter","У фільтрі списку",
+
+"Short human-readable title (e.g. name/channel/context)","Назва картки",
+
+"AIHub Admin","AIHub Адмін",
+"AIHub Super Admin","AIHub Суперадмін",
+"AIHub Demo","AIHub Демо",
+
+
+"Show on: CRM Board","Показувати на дошці Базовій CRM Дошці",
+"CRM Board — Status","Базова CRM Дошка – Статус",
+"Used by Kanban «CRM Board»","Використано Канбан Базова «CRM Дошка»",
+
+"Show on: Leads – Contact Center","Показувати на дошці Ліди – Контакт-центр",
+"Leads – Contact Center — Status","Ліди – Контакт-центр – Статус",
+"Used by Kanban «Leads – Contact Center»","Використано Канбан «Ліди – Контакт-центр»",
+
+"Show on: Deals – Contact Center","Показувати на дошці Угоди – Контакт-центр",
+"Deals – Contact Center — Status","Угоди – Контакт-центр – Статус",
+"Used by Kanban «Deals – Contact Center»","Використано Канбан «Угоди – Контакт-центр»",
+
+"Show on: Patients – Care Department","Показувати на дошці Пацієнти – Відділ лікування",
+"Patients – Care Department — Status","Пацієнти – Відділ лікування – Статус",
+"Used by Kanban «Patients – Care Department»","Використано Канбан «Пацієнти – Відділ лікування»",
+
+
+"App Logo","Логотип додатка",
+"PaNa Medica","PaNa Medica",
+"Applications","Додатки",
+
+"How to Use (Quick Help)","Як користуватися (швидка допомога)",
+"Basic Settings","Базові налаштування",
+"Define basic bot information","Задайте базову інформацію про бота",
+
+"The name of the employee that the bot represents.","Ім’я співробітника, якого представляє бот.",
+"employee_name","employee_name",
+
+"Mention Bot Name in Conversation","Згадувати ім’я бота в діалозі",
+"Should the bot mention its name?","Чи має бот згадувати своє ім’я?",
+
+"Upload an image for the bot’s avatar.","Завантажте зображення для аватара бота.",
+"Bot Color","Колір бота",
+"If you don’t have time to customize the bot, we can do it for you.","Якщо у вас немає часу на налаштування, ми зробимо це за вас.",
+
+"Character and Behavior","Характер і поведінка",
+"Set how the bot interacts with users","Визначте, як бот взаємодіє з користувачами",
+"Choose Communication Tone","Виберіть тон спілкування",
+"Choose the bot’s communication style.","Виберіть стиль спілкування бота.",
+"Personality Traits","Риси особистості",
+"Define key personality traits for the bot.","Визначте ключові риси особистості бота.",
+
+"Target Action","Цільова дія",
+"What the bot is designed to perform (multiple allowed).","Які дії має виконувати бот (можна кілька).",
+
+"Additional Instructions","Додаткові інструкції",
+"Provide any additional guidelines for bot behavior.","Додайте додаткові рекомендації щодо поведінки бота.",
+
+"Topics and Restrictions","Теми та обмеження",
+"Define allowed and restricted topics","Визначте дозволені та заборонені теми",
+"Special Instructions","Особливі інструкції",
+"Additional functionality settings.","Додаткові налаштування функціональності.",
+"Forbidden Topics","Заборонені теми",
+"Topics the bot should avoid.","Теми, яких боту слід уникати.",
+
+"Core Principles","Базові принципи",
+"Fundamental principles guiding the bot’s responses.","Фундаментальні принципи, що визначають відповіді бота.",
+
+"Interaction Guidelines","Правила взаємодії",
+"Set the bot’s predefined messages","Задайте передвстановлені повідомлення бота",
+
+"Artificial Intelligence","Штучний інтелект",
+"Choose the AI model for your bot","Виберіть модель ІІ для бота",
+"AI Model","Модель ІІ",
+"AI model the bot is using.","Модель ІІ, яку використовує бот.",
+
+"Comments","Коментарі",
+"comment","коментар",
+"Activity","Активність",
+
+"Administrator last edited this","Administrator вніс(ла) зміни",
+"Administrator created this","Administrator створив(ла) це",
+"{0} last edited this","{0} вніс(ла) зміни",
+"{0} changed the value of {1} from {2} to {3}","{0} змінив(ла) значення {1} з {2} на {3}",
+"changed the value of","змінив(ла) значення",
+"Last edited","Остання зміна",
+"Created","Створено",
+
+
+"Greeting","Привітання",
+"Default greeting messages in different languages.","Привітальні повідомлення за замовчуванням різними мовами.",
+"Error Message","Повідомлення про помилку",
+"Message displayed when the bot cannot answer.","Повідомлення, яке показується, коли бот не може відповісти.",
+"Farewell Message","Прощальне повідомлення",
+"Bot’s goodbye message.","Повідомлення бота при завершенні діалогу.",
+"AI Error Fallback","Резервне повідомлення про помилку ІІ",
+"Message shown if AI fails to generate a response.","Повідомлення, якщо ІІ не зміг згенерувати відповідь.",
+
+"App Name","Ім’я додатка",
+"Filled automatically in some flows (optional).","Заповнюється автоматично в деяких сценаріях (необов’язково).",
+"Created At","Створено",
+"Timestamp when the bot settings were created.","Час створення налаштувань бота.",
+
+
+"Soft Red","Ніжно-червоний",
+"Warm Orange","Теплий помаранчевий",
+"Sunny Yellow","Сонячно-жовтий",
+"Fresh Green","Свіжий зелений",
+"Teal Blue","Бірюзовий",
+"Sky Blue","Небесно-блакитний",
+"Lavender Purple","Лавандовий",
+"Rose Pink","Рожевий",
+
+"Friendly","Дружній",
+"Formal","Офіційний",
+"Casual","Неформальний",
+"Professional","Професійний",
+"Humorous","З гумором",
+"Business","Діловий",
+"Strictly from additional description","Суворо за додатковим описом",
+
+"Highly structured and predictable","Дуже структурований і передбачуваний",
+"Logical and precise","Логічний і точний",
+"Balanced and well-reasoned","Збалансований і продуманий",
+"Adaptive and slightly creative","Адаптивний і трохи креативний",
+"Highly creative and free-thinking","Дуже креативний і вільнодумний",
+
+"gpt-4o","gpt-4o",
+"gpt-4o-mini","gpt-4o-mini",
+"gemini-2.0-flash","gemini-2.0-flash",
+
+"Is Custom","Кастомний?"

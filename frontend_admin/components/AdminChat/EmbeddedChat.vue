@@ -12,10 +12,6 @@
               <span class="text-xs sm: text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.allLabel") }} </span>
               <InputSwitch
                 v-model="unreadOnly"
-                :onLabel="t('EmbeddedChat.unreadLabel')"
-                :offLabel="t('EmbeddedChat.allLabel')"
-                onIcon="pi pi-envelope-open"
-                offIcon="pi pi-inbox"
                 class="h-6 w-11 shrink-0 cursor-pointer outline-none transition-colors duration-200"
               />
               <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300"> {{ t("EmbeddedChat.unreadLabel") }} </span>
@@ -240,8 +236,22 @@ import { debounce } from "lodash";
 const { t, locale } = useI18n();
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 const route = useRoute();
-const currentGroup = computed(() => route.params.group); // :group
-const currentEntity = computed(() => route.params.entity); // :entity
+
+// Define props
+const props = defineProps({
+  group: {
+    type: String,
+    default: null
+  },
+  entity: {
+    type: String,
+    default: null
+  }
+});
+
+// Use route params if available, otherwise fall back to props
+const currentGroup = computed(() => route.params.group || props.group);
+const currentEntity = computed(() => route.params.entity || props.entity);
 const { currentPageName, currentPageInstances } = usePageState();
 register();
 const colorMode = useColorMode();
@@ -1342,18 +1352,9 @@ defineExpose({
 </script>
 
 <style>
-.vue-advanced-chat {
-  box-shadow: none !important;
-}
-/* global stylesheet (or <style> block without "scoped") */
-.vac-image-buttons .vac-button-download {
-  display: none !important; /* hides the ⬇️ button everywhere */
-}
+
 </style>
 <style scoped>
-:deep(.vac-button-download) {
-  display: none !important;
-}
 
 /* Custom slide-down animation similar to PrimeFlex */
 .slide-down-enter-active {

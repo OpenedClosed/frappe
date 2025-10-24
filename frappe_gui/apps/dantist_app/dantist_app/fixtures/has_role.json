@@ -1,0 +1,552 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:28.756133",
+  "name": "6hvair7obn",
+  "parent": "permission-manager",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:35.870899",
+  "name": "6k6lvri8km",
+  "parent": "ToDo",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:35.813434",
+  "name": "6k6111243r",
+  "parent": "setup-wizard",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:28.810248",
+  "name": "6i0jp36rb7",
+  "parent": "Permitted Documents For User",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:37.803514",
+  "name": "6kqpb57gmc",
+  "parent": "print-format-builder",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:28.816942",
+  "name": "6i01ra5suv",
+  "parent": "Document Share Report",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:35.839596",
+  "name": "6k6nfr95b6",
+  "parent": "backups",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:58.752015",
+  "name": "7e3t826b5q",
+  "parent": "Asset Maintenance",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:33.202506",
+  "name": "7648ravsi9",
+  "parent": "Share Ledger",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "Administrator"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:33.238618",
+  "name": "764l9vbt3a",
+  "parent": "Share Balance",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:28.805757",
+  "name": "6i0flt0ist",
+  "parent": "Transaction Log Report",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "Administrator"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:56:00.046515",
+  "name": "7eg4u25l92",
+  "parent": "IRS 1099",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:56:01.534913",
+  "name": "7evqtiiu56",
+  "parent": "Review",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:35.852458",
+  "name": "6k6ds7oj0r",
+  "parent": "user-profile",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "All"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:47.511409",
+  "name": "7ajng06mbp",
+  "parent": "bom-comparison-tool",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-23 21:03:50.356663",
+  "name": "avgld4aakp",
+  "parent": "Users",
+  "parentfield": "roles",
+  "parenttype": "Workspace",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:30.930555",
+  "name": "6il6c8465d",
+  "parent": "Website Analytics",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:47.561827",
+  "name": "7aj0tap3u2",
+  "parent": "Downtime Analysis",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:56.427420",
+  "name": "7dcn3907bk",
+  "parent": "YouTube Interactions",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "All"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:47.590655",
+  "name": "7ajrtu10kl",
+  "parent": "Cost of Poor Quality Report",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:37.824036",
+  "name": "6kqcds2auh",
+  "parent": "print-format-builder-beta",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:54.891470",
+  "name": "7csfi8eh7s",
+  "parent": "Stock Ledger Invariant Check",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:54.886376",
+  "name": "7cso50cutq",
+  "parent": "FIFO Queue vs Qty After Transaction Comparison",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "Administrator"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:28.813915",
+  "name": "6i00s88dhm",
+  "parent": "Database Storage Usage By Tables",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:33.518785",
+  "name": "6jfjqvvc71",
+  "parent": "Audit System Hooks",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:31.645115",
+  "name": "6isjng2g19",
+  "parent": "workflow-builder",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:54.823772",
+  "name": "7cs5b6ff04",
+  "parent": "Serial and Batch Summary",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:58.755377",
+  "name": "7e32or77dp",
+  "parent": "Asset Activity",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:54.878503",
+  "name": "7csbjh9evb",
+  "parent": "Reserved Stock",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:28.820106",
+  "name": "6i07s1kjg4",
+  "parent": "Prepared Report Analytics",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:33.198404",
+  "name": "763t9jrduj",
+  "parent": "Calculated Discount Mismatch",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-23 23:19:00.319181",
+  "name": "6vje2jqqed",
+  "parent": "opendoor200179@gmail.com",
+  "parentfield": "roles",
+  "parenttype": "User",
+  "role": "AIHub Super Admin"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-23 23:37:12.700131",
+  "name": "6lmrcrt8eg",
+  "parent": "Administrator",
+  "parentfield": "roles",
+  "parenttype": "User",
+  "role": "Script Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:40.437732",
+  "name": "6lks9vurdu",
+  "parent": "Guest",
+  "parentfield": "roles",
+  "parenttype": "User",
+  "role": "Guest"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-07 17:28:39.792368",
+  "name": "pq38kigqal",
+  "parent": "Clients By Day",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "Desk User"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-09 21:06:15.827429",
+  "name": "peei8tcbcm",
+  "parent": "integrations@admin.ru",
+  "parentfield": "roles",
+  "parenttype": "User",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-10 10:11:38.632133",
+  "name": "5ka7pvvu0t",
+  "parent": "mongo@test.ru",
+  "parentfield": "roles",
+  "parenttype": "User",
+  "role": "AIHub Super Admin"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:55.950175",
+  "name": "7d7rjkbb6u",
+  "parent": "Support Hour Distribution",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:33.202506",
+  "name": "764cnthmf1",
+  "parent": "Share Ledger",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:54:28.805757",
+  "name": "6i0p73oer7",
+  "parent": "Transaction Log Report",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-23 21:03:50.356663",
+  "name": "avg1asstdo",
+  "parent": "Users",
+  "parentfield": "roles",
+  "parenttype": "Workspace",
+  "role": "AIHub Super Admin"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:56.427420",
+  "name": "7dcdtglffn",
+  "parent": "YouTube Interactions",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:33.198404",
+  "name": "7639hd4rjd",
+  "parent": "Calculated Discount Mismatch",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "Administrator"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-23 23:19:00.319181",
+  "name": "bnbd3b1a4q",
+  "parent": "opendoor200179@gmail.com",
+  "parentfield": "roles",
+  "parenttype": "User",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-23 23:37:12.700131",
+  "name": "6lmhve2iqa",
+  "parent": "Administrator",
+  "parentfield": "roles",
+  "parenttype": "User",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-07 17:28:39.792368",
+  "name": "pq3vpkelut",
+  "parent": "Clients By Day",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:35.521021",
+  "name": "76rmp1nuc9",
+  "parent": "Lead Details",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:35.513062",
+  "name": "76rapv43mf",
+  "parent": "Prospects Engaged But Not Converted",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:35.524535",
+  "name": "76rsh0lphs",
+  "parent": "Campaign Efficiency",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:35.528438",
+  "name": "76ricj6aro",
+  "parent": "Lead Owner Efficiency",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:40.148162",
+  "name": "78907b2lvs",
+  "parent": "Customers Without Any Sales Transactions",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:47.533276",
+  "name": "7ajvtrai8u",
+  "parent": "visual-plant-floor",
+  "parentfield": "roles",
+  "parenttype": "Page",
+  "role": "Operator"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-07 17:28:39.792368",
+  "name": "pq3f6cgf7b",
+  "parent": "Clients By Day",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "AIHub Super Admin"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-01 16:55:54.818729",
+  "name": "7cs150s9eh",
+  "parent": "Incorrect Serial and Batch Bundle",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "System Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Has Role",
+  "modified": "2025-10-07 17:28:39.792368",
+  "name": "pq39mdqt2o",
+  "parent": "Clients By Day",
+  "parentfield": "roles",
+  "parenttype": "Report",
+  "role": "AIHub Admin"
+ }
+]

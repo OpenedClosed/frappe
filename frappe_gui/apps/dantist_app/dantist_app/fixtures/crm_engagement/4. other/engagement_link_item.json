@@ -1,0 +1,17 @@
+{
+  "doctype": "DocType",
+  "name": "Engagement Link Item",
+  "module": "Dantist App",
+  "istable": 1,
+  "track_changes": 1,
+  "autoname": "hash",
+  "fields": [
+    { "fieldtype": "Link", "fieldname": "engagement", "label": "Engagement Case", "options": "Engagement Case", "reqd": 1, "in_list_view": 1 },
+    { "fieldtype": "Data", "fieldname": "note", "label": "Note / Reason" },
+    { "fieldtype": "Check", "fieldname": "hide_in_lists", "label": "Hide linked from global lists", "default": "1" }
+  ],
+  "permissions": [],
+  "links": [],
+  "actions": [],
+  "states": []
+}

@@ -93,9 +93,16 @@ export default defineNuxtConfig({
     // }
   },
 
-  nitro: {
+ nitro: {
     routeRules: {
-      "/chat": { headers: { "X-Frame-Options": "ALLOWALL" } },
+      // Разрешаем ВСЕ страницы Nuxt встраивать во фреймы из Frappe (порт 8001)
+      "/**": {
+        headers: {
+          "X-Frame-Options": "", // убираем блокировку
+          "Content-Security-Policy":
+            "frame-ancestors 'self' http://localhost:8001 http://127.0.0.1:8001"
+        }
+      }
     },
   },
 

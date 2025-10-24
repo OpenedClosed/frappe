@@ -1,5 +1,6 @@
 """Схемы приложения Пользователи для работы с БД MongoDB."""
 from datetime import datetime
+import re
 from typing import Optional
 
 from passlib.context import CryptContext
@@ -21,15 +22,26 @@ class Settings(BaseModel):
     authjwt_refresh_token_expires: int = 604800
 
 
-class User(BaseValidatedModel):
-    """Пользователь."""
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+class UserOut(BaseValidatedModel):
     username: Optional[str] = Field(None)
-    password: str = Field("", min_length=5)
     role: RoleEnum = RoleEnum.CLIENT
-    is_active: bool = Field(default=True) 
+    is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    full_name: Optional[str] = Field(None)
+    full_name: Optional[str] = None
+
+    # НОВОЕ:
+    email: Optional[str] = Field(default=None)
     avatar: Optional[Photo] = None
+
+    # НОВОЕ (опционально): дата обновления (если нет — ориентируемся на created_at)
+    updated_at: Optional[datetime] = None
+
+
+class User(UserOut):
+    """Пользователь."""
+    password: str = Field("", min_length=5)
 
     @field_validator("username")
     def validate_username(cls, v):
@@ -39,23 +51,25 @@ class User(BaseValidatedModel):
 
     @field_validator("password")
     def validate_password(cls, v):
-        """Проверка структуры пароля."""
         if v is not None and len(v) < 5:
             raise ValueError("Password must be at least 5 characters long")
         return v
 
+    @field_validator("email")
+    def validate_email(cls, v):
+        if not v:
+            return v
+        v = v.strip().lower()
+        if not EMAIL_RE.match(v):
+            raise ValueError("Invalid email format")
+        return v
+
     def set_password(self):
-        """
-        Хеширует пароль.
-        """
         if not self.password:
             return
         self.password = pwd_context.hash(self.password)
 
     def check_password(self, raw_password: str) -> bool:
-        """
-        Проверка Пароля.
-        """
         if not self.password:
             return False
         return pwd_context.verify(raw_password, self.password)

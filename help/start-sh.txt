@@ -1,0 +1,1 @@
+./start.sh --both --bench-dir ./frappe_gui --clean-site

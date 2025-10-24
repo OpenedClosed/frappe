@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2025-10-18 20:45:04.832098",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "engagement",
+  "note",
+  "hide_in_lists"
+ ],
+ "fields": [
+  {
+   "fieldname": "engagement",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Engagement Case",
+   "options": "Engagement Case",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Data",
+   "label": "Note / Reason"
+  },
+  {
+   "default": "1",
+   "fieldname": "hide_in_lists",
+   "fieldtype": "Check",
+   "label": "Hide linked from global lists"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-18 20:53:20.750081",
+ "modified_by": "Administrator",
+ "module": "Dantist App",
+ "name": "Engagement Link Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

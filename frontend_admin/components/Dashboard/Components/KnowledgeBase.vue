@@ -6,10 +6,10 @@
     <div class="flex flex-col flex-1 overflow-hidden">
       <!-- Main block: 3 columns -->
       <div class="flex flex-1 flex-row rounded-md overflow-hidden">
-        <div class="flex flex-col xl:flex-row flex-1 justify-between overflow-hidden">
+        <div class="flex flex-row flex-1 justify-between overflow-hidden">
           <!-- LEFT COLUMN -->
           <div
-            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-thicc m-4"
+            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden outline outline-[1px] m-4"
           >
             <section>
               <header
@@ -309,7 +309,7 @@
 
           <!-- CENTER COLUMN -->
           <div
-            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full"
+            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl outline outline-[1px] m-4 max-h-full"
           >
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header
@@ -618,7 +618,7 @@
 
           <!-- RIGHT COLUMN (Readonly Copy) -->
           <div
-            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-thicc m-4 max-h-full"
+            class="flex-0 xl:flex-1 min-w-[60px] max-h-screen flex flex-col bg-white dark:bg-gray-800 rounded-xl outline outline-[1px] m-4 max-h-full"
           >
             <section class="rounded-xl flex flex-col flex-1 overflow-hidden">
               <header

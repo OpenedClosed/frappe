@@ -1,0 +1,69 @@
+/* ui_restrict.css — фоллбеки без ломки логики */
+
+.hidden-by-dantist { display: none !important; visibility: hidden !important; }
+
+footer.web-footer { display: none !important; }
+
+#tg-project-link {
+  margin-left: 14px;
+  font-weight: 600;
+  color: var(--gray-600);
+  text-decoration: none;
+}
+#tg-project-link:hover { text-decoration: underline; }
+
+.empty-header-block { display: none !important; }
+
+use[href="#icon-dot-horizontal"] {
+  fill: #fff !important; stroke: #fff !important; color: #fff !important; opacity: .9 !important;
+}
+
+/* ===== фоллбеки для обычных пользователей ===== */
+html.is-user {
+  /* New */
+  button.btn-new-workspace,
+  button[data-label="New"],
+  button[data-label="New%20Workspace"],
+  button:has(span[data-label="New"]),
+  button:has(span[data-label="New%20Workspace"]) { display: none !important; }
+
+  /* Change User */
+  button[data-label="Change User"],
+  button[data-label="Change%20User"],
+  button:has(use[href="#icon-change"]) { display: none !important; }
+
+  /* левый сайдбар списка */
+  .layout-side-section .list-sidebar .views-section,
+  .layout-side-section .list-sidebar .filter-section,
+  .layout-side-section .list-sidebar .list-tags,
+  .layout-side-section .list-sidebar .save-filter-section,
+  button.filter-button,
+  button.filter-x-button { display: none !important; }
+
+  /* Apps — скрыт, если не System Manager/Administrator (JS тоже чистит) */
+  #toolbar-user a[href="/apps"] { display: none !important; }
+}
+
+/* Всегда скрываем эти пункты меню */
+#toolbar-user button[onclick*="setup_session_defaults"],
+#toolbar-user button[onclick*="view_website"] { display: none !important; }
+
+/* профиль: метрики/графики/активность */
+.user-stats-detail,
+.user-stats,
+.performance-graphs,
+.heatmap-container,
+.percentage-chart-container,
+.line-chart-container,
+.recent-activity,
+.new-timeline,
+.timeline,
+.dashboard-graph,
+.activity-graph,
+.user-activity { display: none !important; }
+
+/* соц-элементы form-sidebar */
+.form-sidebar .form-sidebar-stats,
+.form-sidebar .followed-by-section,
+.form-sidebar .document-follow,
+.form-sidebar .form-shared { display: none !important; }

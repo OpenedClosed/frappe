@@ -1,0 +1,19 @@
+{
+  "doctype": "DocType",
+  "name": "Bot Special Instruction Item",
+  "module": "Dantist App",
+  "istable": 1,
+  "editable_grid": 1,
+  "track_changes": 0,
+  "fields": [
+    {
+      "fieldtype": "Link",
+      "fieldname": "instruction",
+      "label": "Instruction",
+      "options": "Bot Special Instruction",
+      "reqd": 1,
+      "in_list_view": 1
+    }
+  ],
+  "permissions": []
+}

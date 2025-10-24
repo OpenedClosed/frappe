@@ -1,0 +1,13 @@
+{
+  "doctype": "DocType",
+  "name": "Bot Target Action",
+  "module": "Dantist App",
+  "istable": 0,
+  "track_changes": 1,
+  "autoname": "field:title",
+  "title_field": "title",
+  "fields": [
+    { "fieldtype": "Data", "fieldname": "title", "label": "Title", "reqd": 1, "in_list_view": 1 }
+  ],
+  "permissions": []
+}

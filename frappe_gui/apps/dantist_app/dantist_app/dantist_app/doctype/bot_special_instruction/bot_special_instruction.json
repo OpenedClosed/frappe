@@ -1,0 +1,37 @@
+{
+ "actions": [],
+ "autoname": "field:title",
+ "creation": "2025-10-07 18:42:10.564752",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title"
+ ],
+ "fields": [
+  {
+   "__unsaved": 1,
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1,
+   "unique": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-07 18:42:10.564752",
+ "modified_by": "Administrator",
+ "module": "Dantist App",
+ "name": "Bot Special Instruction",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

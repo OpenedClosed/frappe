@@ -785,7 +785,7 @@ async def build_sender_data_map(
             "client_id": master.client_id,
         }
 
-        if master and master.user_id and is_valid_object_id(master.user_id):
+        if master.user_id and is_valid_object_id(master.user_id):
             user_doc = users.get(master.user_id)
             user_name = None
             if user_doc:
