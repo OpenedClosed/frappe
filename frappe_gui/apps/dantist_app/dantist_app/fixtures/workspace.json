@@ -4642,13 +4642,13 @@
     "parent": "Users",
     "parentfield": "roles",
     "parenttype": "Workspace",
-    "role": "System Manager"
+    "role": "AIHub Super Admin"
    },
    {
     "parent": "Users",
     "parentfield": "roles",
     "parenttype": "Workspace",
-    "role": "AIHub Super Admin"
+    "role": "System Manager"
    }
   ],
   "sequence_id": 2.0,

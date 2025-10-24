@@ -28,11 +28,9 @@ fixtures = [
 
     # --- Настройки ролей и прав доступа ---
     "Role",
-    "Role Permission for Page and Report",
     "User Group",
     "User Group Member",
     "User Permission",
-    "Has Role",
 
     # --- Канбаны и вёркспейсы (без данных задач) ---
     "Kanban Board",

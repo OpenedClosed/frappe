@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ultra-verbose bootstrap for Frappe in Docker (prod-first, idempotent)
+# Idempotent bootstrap for Frappe in Docker (prod-first; no loops)
 
 set -Eeuo pipefail
 
@@ -14,7 +14,7 @@ fatal() { err "$*"; exit 1; }
 mask() { local s="${1:-}"; local n=${#s}; if ((n==0)); then echo ""; elif ((n<=6)); then echo "***"; else echo "${s:0:2}***${s: -2}"; fi; }
 
 # ===== env & paths =====
-export PATH="/opt/bench-env/bin:$PATH"
+export PATH="/opt/bench-env/bin:/usr/bin:/usr/local/bin:$PATH"
 export BENCH_DIR="/workspace"
 cd "$BENCH_DIR"
 
@@ -39,9 +39,9 @@ FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"   # через пробел
 PRUNE_SEEDED_SITE="${PRUNE_SEEDED_SITE:-1}"      # 1 — чистить только реально битый локальный сайт
 APP_ENV="${APP_ENV:-prod}"                       # prod|dev
-DISABLE_FIXTURE_HAS_ROLE="${DISABLE_FIXTURE_HAS_ROLE:-1}"  # 1 — временно отключить проблемную фикстуру
+DISABLE_FIXTURE_HAS_ROLE="${DISABLE_FIXTURE_HAS_ROLE:-0}"  # подстраховка, если вернёшь фикстуру
 
-# mysql client без SSL
+# mysql client без SSL (устраняет sporadic HY000/2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
 bench()    { (cd "$BENCH_DIR" && command bench "$@"); }
@@ -146,7 +146,7 @@ cfg.update({
     "use_redis_auth": False,
     "live_reload": os.getenv("APP_ENV","dev")=="dev",
     "frappe_user": "root",
-    "node": "/usr/bin/node",       # важно: не подтягивать локальный путь из nvm
+    "node": "/usr/bin/node",  # не брать путь из host nvm
 })
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 print(f"OK {p}")
@@ -254,11 +254,11 @@ step "🗂️ Регистрация приложений в sites/apps.txt"
 ensure_apps_txt_has frappe
 for app in ${APP_LIST}; do ensure_app_present_and_registered "$app"; done
 
-# ===== 7) Migrate ядра =====
+# ===== 7) migrate ядра =====
 step "📦 Migrate ядра"
 site_cmd migrate || true
 
-# ===== 8) (опционально) отключаем проблемную фикстуру has_role.json, чтобы не падать
+# ===== 8) (опционально) отключаем проблемную фикстуру has_role.json =====
 if [[ "$DISABLE_FIXTURE_HAS_ROLE" == "1" && -f "apps/dantist_app/dantist_app/fixtures/has_role.json" ]]; then
   step "🩹 Временно отключаю fixtures/has_role.json (DISABLE_FIXTURE_HAS_ROLE=1)"
   mv apps/dantist_app/dantist_app/fixtures/has_role.json apps/dantist_app/dantist_app/fixtures/has_role.json.disabled || true
@@ -310,6 +310,7 @@ site_cmd list-apps | sed 's/^/• /' || true
 say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
 ok "Bootstrap завершён. Запускаю процессы…"
 
+# Procfile: НЕ стартуем redis из этого контейнера; socketio оставляю как раньше (node в образе есть)
 if [[ ! -f /workspace/Procfile ]]; then
   cat > /workspace/Procfile <<'PROC'
 web: cd /workspace && bench serve --port 8001

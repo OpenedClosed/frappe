@@ -3197,12 +3197,6 @@
     "parent": "Clients By Day",
     "parentfield": "roles",
     "parenttype": "Report",
-    "role": "Desk User"
-   },
-   {
-    "parent": "Clients By Day",
-    "parentfield": "roles",
-    "parenttype": "Report",
     "role": "System Manager"
    },
    {

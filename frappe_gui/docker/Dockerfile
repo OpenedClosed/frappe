@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV=/opt/bench-env \
     PATH="/opt/bench-env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# --- Base packages + node/yarn + mysqlclient deps + удобства ---
+# базовые зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates \
     build-essential pkg-config \
@@ -19,38 +19,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs npm \
     jq nano less procps iproute2 netcat-openbsd file \
     mariadb-client \
-    redis-server \
  && rm -rf /var/lib/apt/lists/*
 
-# --- wkhtmltopdf 0.12.6-1 ---
+# wkhtmltopdf 0.12.6-1 (bookworm/bullseye fallback)
 RUN set -eux; \
     apt-get update; \
     for url in \
       "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.bookworm_amd64.deb" \
-      "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/bullseye/wkhtmltox_0.12.6-1.bullseye_amd64.deb" \
+      "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.bullseye_amd64.deb" \
     ; do \
       if curl -fsSL -o /tmp/wkhtml.deb "$url"; then break; fi; \
     done; \
     dpkg -i /tmp/wkhtml.deb || apt-get -y -f install; \
     rm -rf /var/lib/apt/lists/* /tmp/wkhtml.deb
 
-# --- Workspace (+seed holder) ---
+# Workspace
 RUN mkdir -p /workspace /workspace/sites /opt/seed-sites
 WORKDIR /workspace
 COPY . /workspace/
 
-# --- venv + bench ---
+# venv + bench
 RUN python3 -m venv "$VENV" \
  && "$VENV/bin/pip" install -U pip setuptools wheel \
  && "$VENV/bin/pip" install "frappe-bench==5.25.9"
 
-# bench ожидает env-ссылку
+# bench ожидает /workspace/env
 RUN ln -s "$VENV" /workspace/env
 
-# --- yarn ---
+# yarn
 RUN npm i -g yarn
 
-# --- минимальный common_site_config на билде ---
+# минимальный common_site_config на билде (без привязки к окружению)
 RUN python3 - <<'PY'
 import json, pathlib
 p = pathlib.Path("/workspace/sites/common_site_config.json")
@@ -63,7 +62,7 @@ cfg.update({"frappe_user": "root", "live_reload": False})
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 PY
 
-# --- инициализация git в apps/* (bench reqs) ---
+# инициализация git в apps/* (bench reqs)
 RUN git config --global user.email "build@local" && git config --global user.name "Build User" \
  && for d in /workspace/apps/*; do \
       if [ -d "$d" ]; then \
@@ -74,10 +73,10 @@ RUN git config --global user.email "build@local" && git config --global user.nam
       fi; \
     done
 
-# --- зависимости всех приложений (python+node) ---
+# зависимости всех приложений (python+node)
 RUN bench setup requirements || true
 
-# --- стартовый скрипт ---
+# стартовый скрипт
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
