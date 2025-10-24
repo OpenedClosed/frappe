@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Ultra-verbose bootstrap for Frappe in Docker (prod-first, idempotent)
-# Создаёт сайт на проде, лечит ядро, ставит app, тянет фикстуры, билдит ассеты.
-# Пишет подробные логи с эмодзи на каждом шаге.
+# Создаёт/лечит сайт, регистрирует app, импортирует фикстуры, билдит ассеты, стартует Frappe.
 
 set -Eeuo pipefail
 
@@ -14,10 +13,7 @@ err()   { say "❌ $*" >&2; }
 step()  { echo -e "\n[$(ts)] ── $*"; }
 fatal() { err "$*"; exit 1; }
 
-mask() {
-  local s="${1:-}"; local n=${#s}
-  if (( n == 0 )); then echo ""; elif (( n <= 6 )); then echo "***"; else echo "${s:0:2}***${s: -2}"; fi
-}
+mask() { local s="${1:-}"; local n=${#s}; if ((n==0)); then echo ""; elif ((n<=6)); then echo "***"; else echo "${s:0:2}***${s: -2}"; fi; }
 
 # ===== env & paths =====
 export PATH="/opt/bench-env/bin:$PATH"
@@ -30,6 +26,7 @@ SITE="${SITE_NAME:-dantist.localhost}"
 SITE_DIR="$BENCH_DIR/sites/${SITE}"
 SITE_CFG="${SITE_DIR}/site_config.json"
 COMMON_CFG="$BENCH_DIR/sites/common_site_config.json"
+APPS_TXT="$BENCH_DIR/sites/apps.txt"
 
 DB_HOST="${DB_HOST:-mariadb}"
 DB_PORT="${DB_PORT:-3306}"
@@ -41,30 +38,28 @@ PROTO=$([[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]] && echo http || e
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
-APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"   # можно перечислить через пробел
-PRUNE_SEEDED_SITE="${PRUNE_SEEDED_SITE:-1}"      # 1 = вырезать «зашитый» локальный сайт, если мешает
-APP_ENV="${APP_ENV:-prod}"
+APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"   # через пробел
+PRUNE_SEEDED_SITE="${PRUNE_SEEDED_SITE:-1}"      # 1 — чистить только реально битый локальный сайт
+APP_ENV="${APP_ENV:-prod}"                       # prod|dev
 
-# mysql client w/o SSL (иногда HY000/2026 в докере)
+# mysql client без SSL (иногда HY000/2026 в докере)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
 bench()    { (cd "$BENCH_DIR" && command bench "$@"); }
 site_cmd() { (cd "$BENCH_DIR" && command bench --site "$SITE" "$@"); }
 
-# ------ helpers: читаем db_name/db_host (для логов) ------
+# ------ helpers ------
 read_db_creds() {
   python3 - "$SITE_CFG" <<'PY'
 import json,sys
-p=sys.argv[1]
 try:
-  d=json.loads(open(p).read())
-except:
+  d=json.load(open(sys.argv[1]))
+except Exception:
   d={}
-print(d.get("db_name","")); print(d.get("db_password","")); print(d.get("db_host",""))
+print(d.get("db_name","")); print(d.get("db_password","")); print(d.get("db_host","")); print(d.get("dantist_env",""))
 PY
 }
 
-# ------ root-проверки БД ------
 db_exists() {
   local name="$1"
   mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" \
@@ -75,7 +70,10 @@ core_tables_ok() {
   [[ -f "$SITE_CFG" ]] || return 1
   local DB_NAME
   DB_NAME="$(python3 - "$SITE_CFG" <<'PY'
-import json,sys; d=json.load(open(sys.argv[1])); print(d.get("db_name",""))
+import json,sys; 
+try: d=json.load(open(sys.argv[1]))
+except: d={}
+print(d.get("db_name",""))
 PY
 )"
   [[ -z "$DB_NAME" ]] && return 1
@@ -86,18 +84,35 @@ PY
 quick_diag() {
   step "🧪 Диагностика"
   if [[ -f "$SITE_CFG" ]]; then
-    read -r DB_NAME DB_PASS DBH < <(read_db_creds || echo "  ")
+    read -r DB_NAME DB_PASS DBH DENV < <(read_db_creds || echo "    ")
     say "• site: $SITE"
+    say "• dantist_env: ${DENV:-<none>}"
     say "• db_name: ${DB_NAME:-<none>}  db_pass: $(mask "${DB_PASS:-}")  db_host: ${DBH:-<unset>}"
     say "• MariaDB ping (${DB_HOST}:${DB_PORT})…"
     (echo > /dev/tcp/${DB_HOST}/${DB_PORT}) >/dev/null 2>&1 && ok "ping ok" || warn "нет TCP-подключения"
     if [[ -n "${DB_NAME:-}" ]]; then
-      # проверим root-ом, что таблицы существуют
-      if core_tables_ok; then ok "таблицы ядра на месте (tabDefaultValue)"; else warn "таблицы ядра не найдены root-проверкой"; fi
+      core_tables_ok && ok "таблицы ядра на месте (tabDefaultValue)" || warn "таблицы ядра не найдены root-проверкой"
     fi
   else
     warn "site_config.json отсутствует"
   fi
+}
+
+ensure_apps_txt_has() {
+  local app="$1"
+  touch "$APPS_TXT"
+  if ! grep -Fqx "$app" "$APPS_TXT"; then
+    echo "$app" >> "$APPS_TXT"
+    ok "добавил '$app' в sites/apps.txt"
+  fi
+}
+
+ensure_app_present_and_registered() {
+  local app="$1"
+  if [[ ! -d "$BENCH_DIR/apps/$app" ]]; then
+    fatal "Не найдено приложение $app в /workspace/apps/$app. Убедись, что оно копируется в образ (git submodule/копирование)."
+  fi
+  ensure_apps_txt_has "$app"
 }
 
 # ===== 0) ждём MariaDB =====
@@ -107,9 +122,9 @@ for i in $(seq 1 "$DB_WAIT"); do
   sleep 1
   [[ "$i" == "$DB_WAIT" ]] && fatal "MariaDB не доступна за ${DB_WAIT}s"
 done
-mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" -e "SELECT VERSION() AS version;" >/dev/null 2>&1 \
+mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" -e "SELECT VERSION();" >/dev/null 2>&1 \
   && ok "root-доступ к MariaDB подтверждён" \
-  || warn "root-доступ не проверился (продолжим, но new-site/reinstall требуют root пароль)"
+  || warn "root-доступ не проверился (new-site/reinstall требуют root пароль в ENV)"
 
 # ===== 1) common_site_config.json =====
 step "🛠️  Общий конфиг: $COMMON_CFG"
@@ -142,26 +157,27 @@ ok "common_site_config.json записан"
 
 mkdir -p "$SITE_DIR" || true
 
-# ===== 2) чистка «зашитого» локального сайта при конфликте =====
+# ===== 2) мягкая чистка только реально битого «зашитого» сайта =====
 step "🧹 Проверка на «локальный/зашитый» сайт и конфликты"
 if [[ -f "$SITE_CFG" && "$PRUNE_SEEDED_SITE" == "1" ]]; then
-  read -r CUR_DB CUR_PASS CUR_DBHOST < <(read_db_creds || echo "  ")
-  BAD_DH=0
-  [[ -z "${CUR_DBHOST:-}" || "$CUR_DBHOST" == "localhost" || "$CUR_DBHOST" == "127.0.0.1" ]] && BAD_DH=1
-
-  # считаем сайт подозрительным только если db_host локальный ИЛИ схемы БД нет ИЛИ нет базовых таблиц
-  if (( BAD_DH == 1 )) || { [[ -n "${CUR_DB:-}" ]] && ! db_exists "${CUR_DB}"; } || ! core_tables_ok; then
-    warn "Обнаружен подозрительный сайт (${SITE}) → удаляю для чистого прод-развёртывания"
-    if [[ -n "${CUR_DB:-}" ]] && db_exists "${CUR_DB}"; then
-      say "• drop-site --force (non-interactive)"
-      bench drop-site "$SITE" --force \
-        --mariadb-root-username root \
-        --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" || true
-    fi
-    rm -rf "$SITE_DIR"
-    ok "Локальный остаток удалён"
+  read -r CUR_DB CUR_PASS CUR_DBHOST CUR_ENV < <(read_db_creds || echo "    ")
+  if [[ "${CUR_ENV:-}" == "prod" ]]; then
+    ok "Маркер dantist_env=prod найден → существующий сайт считаем продовым, НЕ удаляю"
   else
-    ok "Существующий сайт выглядит валидным — не трогаю"
+    # Удаляем ТОЛЬКО если нет схемы БД или нет базовых таблиц
+    if { [[ -n "${CUR_DB:-}" ]] && ! db_exists "${CUR_DB}"; } || ! core_tables_ok; then
+      warn "Сайт выглядит битым (нет схемы БД или базовых таблиц) → удаляю"
+      if [[ -n "${CUR_DB:-}" ]] && db_exists "${CUR_DB}"; then
+        say "• drop-site --force (non-interactive)"
+        bench drop-site "$SITE" --force \
+          --mariadb-root-username root \
+          --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" || true
+      fi
+      rm -rf "$SITE_DIR"
+      ok "Локальный остаток удалён"
+    else
+      ok "Сайт валиден (ядро/схема на месте) — не трогаю"
+    fi
   fi
 else
   say "site_config.json отсутствует или PRUNE_SEEDED_SITE=0 — чистка пропущена"
@@ -186,7 +202,7 @@ else
   step "♻️  Сайт уже существует — пропускаю создание"
 fi
 
-# ===== 4) патчим site_config из ENV (каждый старт) =====
+# ===== 4) патчим site_config из ENV (каждый старт) + маркер окружения =====
 step "🧩 Актуализация site_config.json из ENV"
 python3 - <<PY
 import os, json, pathlib
@@ -207,6 +223,7 @@ cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}")
 cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://backend:8000/api")
 cfg["dantist_iframe_origin"] = os.getenv("FRONTEND_PUBLIC_ORIGIN") or f"{proto}://{host}"
 cfg["server_script_enabled"] = True
+cfg["dantist_env"] = os.getenv("APP_ENV","prod")  # <-- МАРКЕР ОКРУЖЕНИЯ
 
 devmode = os.getenv("DEVELOPER_MODE")
 if devmode is not None:
@@ -233,54 +250,58 @@ if ! core_tables_ok; then
     --mariadb-root-username root \
     --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}"
 fi
-
-# повторная проверка
 core_tables_ok && ok "Ядро сайта валидно (tabDefaultValue найдено)" || fatal "После reinstall базовые таблицы отсутствуют"
 
-# ===== 6) миграции ядра =====
+# ===== 6) гарантируем регистрацию приложений в apps.txt =====
+step "🗂️ Регистрация приложений в sites/apps.txt"
+ensure_apps_txt_has frappe
+for app in ${APP_LIST}; do
+  ensure_app_present_and_registered "$app"
+done
+
+# ===== 7) миграции ядра =====
 step "📦 Migrate ядра"
 site_cmd migrate || true
 
-# ===== 7) установка ваших приложений (безопасно к повтору) =====
+# ===== 8) установка ваших приложений (без падения скрипта) =====
 step "🧩 Установка приложений: ${APP_LIST}"
 for app in ${APP_LIST}; do
   if ! site_cmd list-apps 2>/dev/null | grep -Fqx "$app"; then
     say "• install-app $app"
-    if ! site_cmd install-app "$app"; then
-      warn "install-app $app не прошёл → пробую migrate и повтор"
-      site_cmd migrate || true
-      site_cmd install-app "$app"
-    fi
+    site_cmd install-app "$app" \
+      && ok "установлен $app" \
+      || { warn "install-app $app не прошёл (смотри стек выше). Продолжаю bootstrap, сайт не трогаю."; }
   else
     say "• $app уже установлен"
   fi
 done
 
-# ===== 8) финальные миграции + фикстуры =====
+# ===== 9) финальные миграции + фикстуры =====
 step "🔁 Финальная migrate"
-site_cmd migrate
+site_cmd migrate || true
 
 step "📥 Импорт фикстур"
-site_cmd import-fixtures || warn "import-fixtures вернул ненулевой код (продолжаю)"
+site_cmd import-fixtures \
+  && ok "фикстуры импортированы" \
+  || warn "import-fixtures вернул ненулевой код (продолжаю)"
 
-# ===== 9) build ассетов (prod) =====
+# ===== 10) build ассетов =====
 step "🧱 Сборка ассетов"
 bench build --apps ${APP_LIST} || bench build || warn "bench build с предупреждением"
 chmod -R a+rX /workspace/sites/assets || true
 
-# ===== 10) быстрая проверка Administrator =====
-step "🔐 Проверка, что пользователь Administrator существует"
+# ===== 11) проверка Administrator =====
+step "🔐 Проверка пользователя Administrator"
 site_cmd execute "frappe.db.exists" --kwargs "{'doctype':'User','name':'Administrator'}" \
-  && ok "Администратор в БД найден" \
-  || warn "Не обнаружен Administrator? Проверь миграции/логи"
+  && ok "Администратор найден" \
+  || warn "Administrator не найден? Проверь миграции/фикстуры"
 
-# ===== 11) сводка и запуск =====
+# ===== 12) сводка и запуск =====
 step "📋 Финальная сводка"
-site_cmd list-apps | sed 's/^/• /'
+site_cmd list-apps | sed 's/^/• /' || true
 say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
-ok "Bootstrap завершён. Передаю управление основному процессу…"
+ok "Bootstrap завершён. Запускаю процессы…"
 
-# Procfile по умолчанию (если нет)
 if [[ ! -f /workspace/Procfile ]]; then
   cat > /workspace/Procfile <<'PROC'
 web: cd /workspace && bench serve --port 8001
