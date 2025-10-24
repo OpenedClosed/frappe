@@ -1,4 +1,4 @@
-# Python 3.10 slim (Debian)
+# Python 3.10 (Debian slim)
 FROM python:3.10-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV=/opt/bench-env \
     PATH="/opt/bench-env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# --- Base packages + node/yarn + mysqlclient deps ---
+# --- Base packages + node/yarn + mysqlclient deps + удобства ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates \
     build-essential pkg-config \
@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fontconfig libxrender1 libxext6 libx11-6 libxcb1 xfonts-base xfonts-75dpi \
     nodejs npm \
     file \
+    jq nano less procps iproute2 netcat-openbsd \
     mariadb-client \
  && rm -rf /var/lib/apt/lists/*
 
@@ -76,7 +77,7 @@ RUN git config --global user.email "build@local" && git config --global user.nam
 # --- зависимости всех приложений (python+node) ---
 RUN bench setup requirements || true
 
-# ВАЖНО: bench build убран на этапе билда — делаем на рантайме (когда сайт уже есть)
+# Сборку ассетов делаем на рантайме, когда сайт уже есть
 
 # --- start script ---
 COPY docker/start.sh /usr/local/bin/start.sh

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Выполнится один раз при первичном старте пустого volume.
-# Делает root@'%' с паролем из MARIADB_ROOT_PASSWORD (= наш секрет FRAPPE_DB_ROOT_PASSWORD).
+# Однократно при первичном старте пустого volume.
+# Разрешаем root@'%' с паролем из MARIADB_ROOT_PASSWORD.
 
 echo "[init] enabling root@'%' for remote containers..."
 

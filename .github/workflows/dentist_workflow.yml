@@ -399,6 +399,8 @@ jobs:
             FRAPPE_ADMIN_PASSWORD=${{ env.FRAPPE_ADMIN_PASSWORD }}
 
             # site_config patch (дефолты, можно переопределить)
+            DEVELOPER_MODE=1
+
             DANTIST_INTEGRATION_AUD=frappe
             DANTIST_EXCLUDED_USERS=Guest,Administrator,test@mail.ru,test,demo@example.com,Integration,integrations@admin.ru
             DEVELOPER_MODE=1
