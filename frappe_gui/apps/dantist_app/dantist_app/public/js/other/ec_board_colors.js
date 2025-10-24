@@ -1,4 +1,4 @@
-// EC_BOARD_COLORS: цвета колонок из Kanban Board (+ утилиты чипов), с поддержкой тёмной темы
+// EC_BOARD_COLORS: цвета колонок из Kanban Board (+ утилиты чипов), готово к тёмной теме
 (function () {
   // --- палитры под светлую и тёмную темы ---
   const IND_LIGHT = {
@@ -13,7 +13,7 @@
     "Gray":   { bg: "#f3f4f6", bd: "#e5e7eb" }
   };
 
-  // тёмные аналоги, согласованы с твоей темой
+  // тёмные аналоги
   const IND_DARK = {
     "Pink":   { bg: "#34222b", bd: "#6b3a57" },
     "Yellow": { bg: "#332c1d", bd: "#6f5b28" },
@@ -27,43 +27,50 @@
   };
 
   function isDark() {
-    try {
-      return (document.documentElement.getAttribute("data-theme") || "").toLowerCase() === "dark";
-    } catch { return false; }
+    try { return (document.documentElement.getAttribute("data-theme") || "").toLowerCase() === "dark"; }
+    catch { return false; }
   }
   function PAL() { return isDark() ? IND_DARK : IND_LIGHT; }
 
-  const CACHE = {};
+  const CACHE = Object.create(null);
+
   async function loadBoard(boardName) {
     const paletteTag = isDark() ? "dark" : "light";
-    if (CACHE[boardName] && CACHE[boardName].__palette === paletteTag) {
-      return CACHE[boardName];
-    }
+    const cached = CACHE[boardName];
+    if (cached && cached.__palette === paletteTag) return cached;
+
     try {
       const { message: kb } = await frappe.call({
         method: "frappe.client.get",
         args: { doctype: "Kanban Board", name: boardName }
       });
+
       const pal = PAL();
-      const map = {};
+      const map = Object.create(null);
+
       (kb?.columns || []).forEach(c => {
         if ((c.status || "Active") !== "Active") return;
-        const ind = c.indicator && pal[c.indicator] ? c.indicator : "Gray";
-        map[c.column_name] = pal[ind];
+        const ind = (c.indicator && pal[c.indicator]) ? c.indicator : "Gray";
+        if (c.column_name) map[c.column_name] = pal[ind];
       });
-      map.__palette = paletteTag;
+
+      // ❗ Сделать метку палитры НЕперечислимой → не всплывёт в Object.keys()
+      Object.defineProperty(map, "__palette", { value: paletteTag, enumerable: false, configurable: true });
+
       CACHE[boardName] = map;
       return map;
     } catch (e) {
       console.warn("[EC_BOARD_COLORS] load failed", boardName, e);
-      const m = { __palette: paletteTag };
-      CACHE[boardName] = m;
-      return m;
+      const map = Object.create(null);
+      Object.defineProperty(map, "__palette", { value: paletteTag, enumerable: false, configurable: true });
+      CACHE[boardName] = map;
+      return map;
     }
   }
 
   // публичный API
-  window.EC_BOARD_COLORS = window.EC_BOARD_COLORS || {};
+  window.EC_BOARD_COLORS = window.EC_BOARD_COLORS || Object.create(null);
+
   window.getBoardColors = async (boardName) => {
     const paletteTag = isDark() ? "dark" : "light";
     const cached = window.EC_BOARD_COLORS[boardName];
@@ -85,12 +92,15 @@
   } catch {}
 
   const esc = (s)=>frappe.utils.escape_html(s||"");
-  // dashed=true → только цветной пунктир (без заливки)
+
+  // dashed=true → только пунктир границы (без заливки)
   window.boardChip = function (boardName, status, dashed=false) {
     const pal = PAL();
     const m = window.EC_BOARD_COLORS[boardName] || {};
     const st = status || "";
     const currentPalette = isDark() ? "dark" : "light";
+    // на всякий случай защищаемся от «служебных» ключей
+    if (!st || st.startsWith?.("__")) return `<span class="crm-chip -kanban">${esc(st.replace(/^__+/, ""))}</span>`;
     const c  = (m[st] && m.__palette === currentPalette) ? m[st] : pal.Gray;
     const base = `border-color:${c.bd} !important;`;
     const fill = dashed

@@ -1,10 +1,6 @@
-// === FILE 1 (final) ===
-// Engagement Case — Form UX (i18n + Kanban colors + one-line header chips + no overlap)
-// Изменения к прошлой версии:
-// - Чипы в шапке всегда в ОДНУ строку и начинаются сразу после названия (с небольшим отступом).
-// - НИКАКОГО налезания на заголовок: чипы — сосед .title-text, а не внутри.
-// - Цвет текста во всех статус-чипах теперь контрастный тёмно-серый (#111827), чтобы не сливаться с цветом статуса.
-// - Цвет подложки/границы по-прежнему тянется из Kanban (window.EC_BOARD_COLORS).
+// === FILE 1 (final, patched) ===
+// Engagement Case — Form UX (i18n + Kanban colors + one-line header chips + dark-ready)
+// Ничего не ломаем, только нейтральные цвета и мелкие правки отображения.
 
 (function () {
   const DOCTYPE = "Engagement Case";
@@ -47,7 +43,7 @@
   function colorMetaFor(board, status) {
     const map = (window.EC_BOARD_COLORS && window.EC_BOARD_COLORS[board]) || {};
     const key = status || "";
-    const v = map[key] ?? map[key.toLowerCase?.()] ?? null;
+    const v = map[key] ?? map[key?.toLowerCase?.()] ?? null;
     if (!v) return { bd: "#2563eb" };
     if (typeof v === "string") return { bd: v };
     const bd = v.bd || v.bg || v.tx || "#2563eb";
@@ -63,19 +59,49 @@
   }
 
   // ---------- Chips (переводимый текст; lookup цвета — по raw status) ----------
-  const TEXT_DARK = "#111827"; // единый контрастный цвет текста для всех статусов
+  const TEXT_DARK = "var(--text-color,#111827)"; // контрастный текст — читабелен и в дарке, и в лайте
+
+  // Аккуратная замена текста внутри готового HTML чипа (не трогаем иконки/атрибуты)
+  function translateValueInChipHTML(html, rawVal) {
+    const disp = __(String(rawVal)) || String(rawVal);
+    try {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html || "";
+      const root = tmp.firstElementChild || tmp;
+
+      // если есть явный контейнер чипа — работаем в нём
+      const scope = root.querySelector?.(".crm-chip") || root;
+
+      // пройтись по всем текстовым узлам и заменить точные совпадения
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+      const texts = [];
+      while (walker.nextNode()) texts.push(walker.currentNode);
+
+      const raw = String(rawVal).trim();
+      texts.forEach(node => {
+        const curTrim = node.nodeValue.trim();
+        if (!curTrim) return;
+
+        if (curTrim === raw) {
+          node.nodeValue = node.nodeValue.replace(raw, disp);
+        } else {
+          const re = new RegExp(`\\b${raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
+          if (re.test(node.nodeValue)) node.nodeValue = node.nodeValue.replace(re, disp);
+        }
+      });
+
+      return (root.outerHTML || tmp.innerHTML || html);
+    } catch {
+      // Фолбэк: простой чип
+      return `<span class="crm-chip">${esc(disp)}</span>`;
+    }
+  }
 
   function chipTag(bucket, val, dashed=false){
     if (!val) return "";
     if (typeof window.tagChip === "function") {
       const html = window.tagChip(bucket, String(val), dashed);
-      try {
-        const tmp = document.createElement("div"); tmp.innerHTML = html || "";
-        const el = tmp.firstElementChild || tmp;
-        const target = (el.querySelector?.(".crm-chip") || el);
-        if (target) target.textContent = __(String(val));
-        return el.outerHTML || el.innerHTML || html;
-      } catch { return html; }
+      return translateValueInChipHTML(html, val);
     }
     return `<span class="crm-chip${dashed?" -dashed":""}">${esc(__(String(val)))}</span>`;
   }
@@ -84,19 +110,17 @@
     if (!rawStatus) return "";
     const { bd } = colorMetaFor(boardName, rawStatus);
     if (dashed) {
-      // неактивные — пунктир, текст тёмно-серый
       const st = `border-color:${bd};border-style:dashed;background:transparent;color:${TEXT_DARK}`;
       return `<span class="crm-chip" style="${st}">${esc(__(rawStatus))}</span>`;
     }
-    // активные — мягкая подложка по цвету доски, ГРАНИЦА по цвету доски, ТЕКСТ тёмно-серый
-    const st = `background:${rgba(bd,.12)};border-color:${rgba(bd,.25)};color:${TEXT_DARK}`;
+    const st = `background:${rgba(bd,.15)};border-color:${rgba(bd,.25)};color:${TEXT_DARK}`;
     return `<span class="crm-chip" style="${st}">${esc(__(rawStatus))}</span>`;
   }
 
   const timeChip  = (lbl, dt)=> dt ? `<span class="crm-chip -ghost"><span class="lbl">${esc(__(lbl))}:</span> ${frappe.datetime.comment_when(dt)}</span>` : "";
   const sepChip   = `<span class="crm-vsep" aria-hidden="true"></span>`;
   const fullPath  = (p)=> p ? (p.startsWith("/") ? p : `/${p}`) : "";
-  const pickAvatar= (row)=> fullPath(row.avatar || "/assets/frappe/images/ui/user-avatar.svg");
+  const pickAvatar = (row) => fullPath(row.avatar || "/assets/dantist_app/files/egg.png");
 
   // ---------- Hidden mark ----------
   let HIDDEN_SET=null;
@@ -118,72 +142,65 @@
     const s = document.createElement("style");
     s.id = CSS_ID;
     s.textContent = `
-    /* скрываем стандартный индикатор только на нашей форме */
+    /* === Engagement Case Form UX === */
     .ec-suppress-title-indicator .page-head .indicator-pill { display:none !important; }
-
-    /* Локальный layout шапки: одна строка, без налезания на заголовок */
     .ec-title-layout .page-head .title-area { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
     .ec-title-layout .page-head .title-area .title-text{ display:flex; align-items:center; gap:8px; min-width:0; }
     .ec-title-badges{ display:flex; gap:6px; flex-wrap:nowrap; white-space:nowrap; margin-left:8px; overflow:hidden; }
-    /* чипы не переносятся */
     .ec-title-badges .crm-chip{ white-space:nowrap; }
 
-    /* Остальные стили */
     .form-dashboard .ec-progress-section .section-head{
-      font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);
+      font-weight:600;padding:8px 12px;
+      border-bottom:1px solid var(--border-color,#e5e7eb);
       display:flex; align-items:center; gap:6px; cursor:pointer;
+      color:var(--text-color,#111827);
     }
-    .form-dashboard .ec-progress-section .section-head .collapse-indicator{
-      margin-left:6px; display:inline-flex; align-items:center;
-      transform: rotate(0deg); transition: transform .12s ease;
-    }
-    .form-dashboard .ec-progress-section .section-head.collapsed .collapse-indicator{ transform: rotate(-90deg); }
     .form-dashboard .ec-progress-section .section-body{ padding:12px; }
-    .form-dashboard .ec-progress-section .section-body.hide{ display:none; }
 
     .ec-pipes{ display:flex; flex-direction:column; gap:12px; }
-    .ec-pipe{ border:1px solid var(--border-color,#e5e7eb); border-radius:10px; padding:10px; background:#fff; }
+    .ec-pipe{ border:1px solid var(--border-color,#e5e7eb); border-radius:10px; padding:10px;
+      background:var(--card-bg,#fff); transition:background .15s ease,border-color .15s ease; }
     .ec-pipe.-disabled{ opacity:.9; }
     .ec-pipe .head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; justify-content:space-between; }
     .ec-pipe .head .l{display:flex;align-items:center;gap:8px}
     .ec-pipe .dot{ width:10px; height:10px; border-radius:50%; flex:0 0 10px; }
     .ec-pipe .title{ font-weight:600; }
-    .ec-open-kanban{ margin-left:auto }
 
     .ec-steps{ display:flex; gap:6px; align-items:center; }
-    .ec-step{
-      position:relative; flex:1; height:10px; border-radius:999px; cursor:pointer;
-      background:#eef2f7; outline:1px solid rgba(0,0,0,.03);
+    .ec-step{ position:relative; flex:1; height:10px; border-radius:999px; cursor:pointer;
+      background:var(--control-bg,#eef2f7); outline:1px solid rgba(0,0,0,.03);
       transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
     }
     .ec-step.-past{ opacity:.95 }
     .ec-step.-current{ transform: translateY(-1px); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
     .ec-step.-future{ opacity:.6 }
-    .ec-step.-disabled { background: transparent !important; border:1px dashed #d1d5db; outline:none; cursor:default; }
+    .ec-step.-disabled { background: transparent !important; border:1px dashed var(--border-color,#d1d5db); outline:none; cursor:default; }
     .ec-step:hover{ box-shadow: 0 1px 6px rgba(0,0,0,.12); }
 
-    .ec-names{ display:flex; gap:6px; margin-top:4px; font-size:11px; color:#6b7280; }
+    .ec-names{ display:flex; gap:6px; margin-top:4px; font-size:11px; color:var(--text-muted,#6b7280); }
     .ec-name{ flex:1; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-    .ec-name.-current{ color:#111827; font-weight:600; }
+    .ec-name.-current{ color:var(--text-color,#111827); font-weight:600; }
     .ec-names.-disabled .ec-name{ color:#9ca3af; }
 
-    .crm-chip{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:transparent}
-    .crm-chip.-ghost{background:#f8fafc}
+    .crm-chip{font-size:10px;padding:2px 6px;border-radius:999px;
+      border:1px solid var(--border-color,#e5e7eb);
+      background:var(--control-bg,#f8fafc);color:var(--text-color,#111827);}
+    .crm-chip.-ghost{background:var(--control-bg,#f8fafc)}
     .crm-chip.-dashed{border-style:dashed;background:transparent}
-    .crm-vsep{display:inline-block;width:0;border-left:1px dashed #d1d5db;margin:0 6px;align-self:stretch}
+    .crm-vsep{display:inline-block;width:0;border-left:1px dashed var(--border-color,#d1d5db);margin:0 6px;align-self:stretch}
 
-    .ec-linked-preview{margin-top:8px;border-top:1px solid #eef2f7;padding-top:6px}
-    .ec-parents-preview{margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:6px}
-    .ec-linked-header{font-size:12px;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
-    .ec-card{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px;border:1px solid #eef2f7;border-radius:10px;margin-top:8px;transition:background .15s}
-    .ec-card:hover{background:#fafafa}
+    .ec-linked-preview{margin-top:8px;border-top:1px solid var(--border-color,#eef2f7);padding-top:6px}
+    .ec-parents-preview{margin-top:8px;border-top:1px dashed var(--border-color,#e5e7eb);padding-top:6px}
+    .ec-linked-header{font-size:12px;color:var(--text-muted,#6b7280);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+    .ec-card{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--border-color,#eef2f7);border-radius:10px;margin-top:8px;transition:background .15s}
+    .ec-card:hover{background:var(--fg-hover-color,#fafafa)}
     .ec-card.-parent{border-style:dashed}
     .ec-left{display:flex;gap:10px;align-items:flex-start;min-width:0}
-    .ec-avatar{width:28px;height:28px;border-radius:8px;background:#e5e7eb;flex:0 0 auto;overflow:hidden}
+    .ec-avatar{width:28px;height:28px;border-radius:8px;background:var(--bg-light-gray,#e5e7eb);flex:0 0 auto;overflow:hidden}
     .ec-avatar img{width:100%;height:100%;object-fit:cover;display:block}
     .ec-body{min-width:0}
-    .ec-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-    .ec-meta{color:#6b7280;font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;max-width:100%}
+    .ec-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;color:var(--text-color,#111827)}
+    .ec-meta{color:var(--text-muted,#6b7280);font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;max-width:100%}
     .ec-meta.-time .frappe-timestamp{opacity:.9}
     .ec-right{display:flex;align-items:center;gap:6px}
 
@@ -193,6 +210,12 @@
     .ec-grid-hidden .form-grid-container,
     .ec-grid-hidden .grid-heading-row,
     .ec-grid-hidden .grid-footer { display:none !important; }
+
+    /* Темная тема — мягкие подложки */
+    [data-theme="dark"] .ec-pipe{background:var(--card-bg,#1d2f33);}
+    [data-theme="dark"] .ec-step{background:var(--control-bg,#243a3f);outline:none;}
+    [data-theme="dark"] .ec-card{background:var(--card-bg,#1d2f33);border-color:var(--border-color,#3e555a);}
+    [data-theme="dark"] .ec-card:hover{background:var(--fg-hover-color,#2b4349);}
     `;
     document.head.appendChild(s);
   }
@@ -203,7 +226,7 @@
     const root = pageWrap(frm);
     if (!root) return;
     root.classList.toggle("ec-suppress-title-indicator", !!on);
-    root.classList.toggle("ec-title-layout", !!on); // включает наш локальный layout заголовка (одна строка)
+    root.classList.toggle("ec-title-layout", !!on); // наш layout заголовка (одна строка)
   }
   function findFirstExistingField(frm, list) {
     for (const fn of list) if (frm.fields_dict[fn]) return fn;
@@ -290,12 +313,12 @@
     const div = document.createElement("div");
     div.className = "ec-step " + (i < currentIdx ? "-past" : i === currentIdx ? "-current" : "-future");
     if (enabled) {
-      div.style.background = i <= currentIdx ? (color + "22") : "#eef2f7";
+      div.style.background = i <= currentIdx ? (rgba(color,.2)) : "var(--control-bg,#eef2f7)";
       div.addEventListener("click", () => frm.set_value(fieldname, label));
     } else {
       div.classList.add("-disabled");
       div.style.background = "transparent";
-      div.style.border = "1px dashed #d1d5db";
+      div.style.border = "1px dashed var(--border-color,#d1d5db)";
       div.style.cursor = "default";
     }
     div.title = __(label);

@@ -1,29 +1,37 @@
-// Engagement Case — Tasks UI — v4.19 (newest first, page=5, overdue highlight) + i18n
+// ==============================
+// Engagement Case — Tasks UI — v4.21
+// (newest first, page=5, overdue highlight) + i18n + theme-ready + RBAC for assignees (hide multi field)
+// ==============================
 (function () {
   const DOCTYPE = "Engagement Case";
-  const PAGE_LEN = 5; // <= по запросу
+  const PAGE_LEN = 5;
   const SEC_ID = "ec-tasks-area";
   const SEC_TITLE = "Tasks";
   const LS_KEY_COLLAPSE = "ec_tasks_collapsed"; // "1" collapsed, "0" expanded
 
-  // ======== Rules (как было) ========
+  // ---------- RBAC (только эти роли видят мультивыбор исполнителей) ----------
+  const PRIV_ROLES = ["System Manager", "Super Admin"];
+  function userHasRole(role) {
+    try {
+      if (window.frappe?.user?.has_role) return !!frappe.user.has_role(role);
+      const roles = window.frappe?.boot?.user?.roles || [];
+      return roles.includes(role);
+    } catch (_) { return false; }
+  }
+  function isPrivileged() { return PRIV_ROLES.some(userHasRole); }
+
+  // ======== Rules ========
   const FORM_RULES = {
     status_leads: {
       "Call Later": {
         showDialog: true,
         title: __("Call Later"),
-        baseFields: ["due", "assignees", "assign_me", "priority"],
+        baseFields: ["due","assignees","assign_me","priority"],
         extraFields: () => [],
         shouldTrigger: ({ prev, cur }) => prev !== "Call Later" && cur === "Call Later",
         makePayload: (vals, me) => {
-          let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
-          if (vals.assign_me && me && !a.includes(me)) a.push(me);
-          return {
-            description: __("Manual Callback"),
-            due: vals.due,
-            priority: vals.priority || "Medium",
-            assignees: a
-          };
+          const a = composeAssignees(vals, me);
+          return { description: __("Manual Callback"), due: vals.due, priority: vals.priority || "Medium", assignees: a };
         },
       },
     },
@@ -32,26 +40,16 @@
         showDialog: false,
         shouldTrigger: ({ prev, cur }) => prev !== "Appointment Scheduled" && cur === "Appointment Scheduled",
         makePayload: (_vals, me) => {
-          const due = moment().add(1, "day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return {
-            description: __("Next-Day Feedback call"),
-            due,
-            priority: "Medium",
-            assignees: me ? [me] : []
-          };
+          const due = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          return { description: __("Next-Day Feedback call"), due, priority: "Medium", assignees: me ? [me] : [] };
         },
       },
       "Treatment Completed": {
         showDialog: false,
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
-          const due = moment().add(5, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return {
-            description: __("Recall: schedule prophylaxis"),
-            due,
-            priority: "Medium",
-            assignees: me ? [me] : []
-          };
+          const due = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          return { description: __("Recall: schedule prophylaxis"), due, priority: "Medium", assignees: me ? [me] : [] };
         },
       },
     },
@@ -59,39 +57,28 @@
       "Stage Checked": {
         showDialog: true,
         title: __("Schedule control X-ray"),
-        baseFields: ["assignees", "assign_me", "priority"],
+        baseFields: ["assignees","assign_me","priority"],
         extraFields: () => ([
-          { fieldtype: "Section Break", label: __("This rule (control)") },
-          { fieldtype: "Select", fieldname: "treatment_type", label: __("Treatment Type"), reqd: 1,
-            options: "Standard Implant\nSinus Lift\nAugmentation\nOther", default: "Standard Implant" },
+          { fieldtype:"Section Break", label: __("This rule (control)") },
+          { fieldtype:"Select", fieldname:"treatment_type", label: __("Treatment Type"), reqd:1,
+            options:"Standard Implant\nSinus Lift\nAugmentation\nOther", default:"Standard Implant" },
         ]),
         shouldTrigger: ({ prev, cur }) => prev !== "Stage Checked" && cur === "Stage Checked",
         makePayload: (vals, me) => {
           const tt = (vals.treatment_type || "Standard Implant").toLowerCase();
           const months = (tt.includes("sinus") || tt.includes("augment")) ? 6 : 3;
-          const due = moment().add(months, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
-          if (vals.assign_me && me && !a.includes(me)) a.push(me);
+          const due = moment().add(months,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          const a = composeAssignees(vals, me);
           const note = ` (${__("type")}: ${vals.treatment_type}, +${months}m)`;
-          return {
-            description: __("Schedule control X-ray") + note,
-            due,
-            priority: vals.priority || "High",
-            assignees: a
-          };
+          return { description: __("Schedule control X-ray") + note, due, priority: vals.priority || "High", assignees: a };
         },
       },
       "Treatment Completed": {
         showDialog: false,
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
-          const due = moment().add(5, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return {
-            description: __("Recall: schedule prophylaxis"),
-            due,
-            priority: "Medium",
-            assignees: me ? [me] : []
-          };
+          const due = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          return { description: __("Recall: schedule prophylaxis"), due, priority: "Medium", assignees: me ? [me] : [] };
         },
       },
     },
@@ -101,47 +88,31 @@
     "Call Later": {
       showDialog: true,
       title: __("Call Later"),
-      baseFields: ["due", "assignees", "assign_me", "priority"],
+      baseFields: ["due","assignees","assign_me","priority"],
       extraFields: () => [],
       makePayload: (vals, me) => {
-        let a = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
-        if (vals.assign_me && me && !a.includes(me)) a.push(me);
-        return {
-          description: __("Manual Callback"),
-          due: vals.due,
-          priority: vals.priority || "Medium",
-          assignees: a
-        };
+        const a = composeAssignees(vals, me);
+        return { description: __("Manual Callback"), due: vals.due, priority: vals.priority || "Medium", assignees: a };
       },
     },
     "Appointment Scheduled": {
       showDialog: false,
       makePayload: (_vals, me) => {
-        const due = moment().add(1, "day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return {
-          description: __("Next-Day Feedback call"),
-          due,
-          priority: "Medium",
-          assignees: me ? [me] : []
-        };
+        const due = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+        return { description: __("Next-Day Feedback call"), due, priority: "Medium", assignees: me ? [me] : [] };
       },
     },
     "Treatment Completed": {
       showDialog: false,
       makePayload: (_vals, me) => {
-        const due = moment().add(5, "month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return {
-          description: __("Recall: schedule prophylaxis"),
-          due,
-          priority: "Medium",
-          assignees: me ? [me] : []
-        };
+        const due = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+        return { description: __("Recall: schedule prophylaxis"), due, priority: "Medium", assignees: me ? [me] : [] };
       },
     },
     "Stage Checked": {
       showDialog: true,
       title: __("Schedule control X-ray"),
-      baseFields: ["assignees", "assign_me", "priority"],
+      baseFields: ["assignees","assign_me","priority"],
       extraFields: FORM_RULES.status_patients["Stage Checked"].extraFields,
       makePayload: FORM_RULES.status_patients["Stage Checked"].makePayload,
     },
@@ -152,7 +123,7 @@
     page: 1,
     total: 0,
     frm: null,
-    baseline: { status_leads: null, status_deals: null, status_patients: null },
+    baseline: { status_leads:null, status_deals:null, status_patients:null },
     pendingRule: null,
     saveGuard: false,
     kanbanSeen: new Set(),
@@ -170,23 +141,30 @@
     try { return moment(dStr).format("YYYY-MM-DD"); }
     catch { return String(dStr); }
   }
-
-  // просрочено по «назначенной дате» (target) — только для Open
+  // «просрочено» только для открытых
   function isOverdue(t) {
     if ((t.status || "Open") !== "Open") return false;
     const now = moment();
-    if (t.custom_target_datetime) {
-      return moment(t.custom_target_datetime).isBefore(now);
-    }
-    if (t.date) {
-      // конец дня локально
-      const endOfDay = moment(t.date).endOf("day");
-      return endOfDay.isBefore(now);
-    }
+    if (t.custom_target_datetime) return moment(t.custom_target_datetime).isBefore(now);
+    if (t.date) return moment(t.date).endOf("day").isBefore(now);
     return false;
   }
 
-  // ===== Dashboard section (ядровой коллапс) =====
+  // compose assignees list (RBAC-aware)
+  function composeAssignees(vals, me){
+    const arr = [];
+    if (isPrivileged()) {
+      const multi = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
+      multi.forEach(u => { if (u && !arr.includes(u)) arr.push(u); });
+    } else {
+      const one = vals.assignee_one || "";
+      if (one && !arr.includes(one)) arr.push(one);
+    }
+    if (vals.assign_me && me && !arr.includes(me)) arr.push(me);
+    return arr;
+  }
+
+  // ===== Dashboard section =====
   function getOrCreateDashSection(frm, id, title) {
     const host = frm?.page?.wrapper?.[0];
     if (!host) return null;
@@ -206,17 +184,12 @@
         <span class="t">${frappe.utils.escape_html(__(title))}</span>
         <span class="ml-2 ec-red-dot" hidden></span>
         <span class="ml-2 collapse-indicator mb-1" tabindex="0">
-          <svg class="es-icon es-line icon-sm" aria-hidden="true">
-            <use class="mb-1" href="#es-line-down"></use>
-          </svg>
-        </span>
-      `;
+          <svg class="es-icon es-line icon-sm" aria-hidden="true"><use class="mb-1" href="#es-line-down"></use></svg>
+        </span>`;
       const body = document.createElement("div");
       body.className = "section-body";
 
-      row.appendChild(head);
-      row.appendChild(body);
-
+      row.appendChild(head); row.appendChild(body);
       if (dash.firstChild) dash.insertBefore(row, dash.firstChild.nextSibling);
       else dash.appendChild(row);
 
@@ -238,10 +211,8 @@
   }
   function sectionBody(sec) { return sec?.querySelector(".section-body") || null; }
   function sectionHead(sec) { return sec?.querySelector(".section-head") || null; }
-
   function setCollapsed(sec, collapsed) {
-    const head = sectionHead(sec);
-    const body = sectionBody(sec);
+    const head = sectionHead(sec), body = sectionBody(sec);
     if (head) head.classList.toggle("collapsed", !!collapsed);
     if (body) body.classList.toggle("hide", !!collapsed);
     sec.classList.toggle("is-collapsed", !!collapsed);
@@ -255,8 +226,7 @@
   function setRedDot(frm, on) {
     const sec = getOrCreateDashSection(frm, SEC_ID, SEC_TITLE);
     const dot = sec?.querySelector(".ec-red-dot");
-    if (!dot) return;
-    dot.hidden = !on;
+    if (dot) dot.hidden = !on;
   }
 
   // ===== список задач =====
@@ -268,7 +238,7 @@
     const target = target_dt ? fmtUserDT(target_dt) : (t.date ? fmtUserD(t.date) : null);
 
     const who = t.allocated_to || t.owner || "";
-    const st  = t.status || "Open";
+       const st  = t.status || "Open";
     const cls = st === "Open" ? "" : " -muted";
     const pcls = priorityClass(t.priority || "Medium");
     const overdue = isOverdue(t);
@@ -384,9 +354,7 @@
     const info = pager.querySelector(".info");
     if (prevBtn) prevBtn.disabled = (UI.page <= 1);
     if (nextBtn) nextBtn.disabled = (UI.page >= totalPages);
-    if (info) {
-      info.textContent = `${__("Page")} ${UI.page} / ${totalPages} • ${UI.total} ${__("total")} • ${PAGE_LEN} ${__("per page")}`;
-    }
+    if (info) info.textContent = `${__("Page")} ${UI.page} / ${totalPages} • ${UI.total} ${__("total")} • ${PAGE_LEN} ${__("per page")}`;
   }
 
   async function loadTasks(frm) {
@@ -403,7 +371,7 @@
       let rows = (message && message.rows) || [];
       UI.total = (message && message.total) || rows.length;
 
-      // newest first на странице
+      // newest first внутри страницы
       rows = rows.slice().reverse();
 
       // красная точка — по «open на странице»
@@ -433,21 +401,25 @@
       { fieldtype:"Section Break", label: __("Assignment") },
     ];
 
-    if (baseKeys?.includes("assignees")) fields.push({
-      fieldtype:"MultiSelectList", fieldname:"assignees", label:__("Assign To (multiple)"), options:"User",
-      get_data: (txt)=> frappe.db.get_link_options("User", txt || "")
-    });
+    // 🔒 ВАЖНО: мультивыбор вообще не добавляем, если не привилегирован
+    if (isPrivileged() && baseKeys?.includes("assignees")) {
+      fields.push({
+        fieldtype:"MultiSelectList", fieldname:"assignees", label:__("Assign To (multiple)"), options:"User",
+        get_data: (txt)=> frappe.db.get_link_options("User", txt || "")
+      });
+    } else {
+      fields.push({
+        fieldtype:"Link", fieldname:"assignee_one", label:__("Assign To"), options:"User",
+        description: __("Only privileged roles can assign multiple users")
+      });
+    }
 
     if (baseKeys?.includes("assign_me")) {
-      fields.push({
-        fieldtype: "Check",
-        fieldname: "assign_me",
-        label: __("Assign to me ({0})", [me]),
-        default: 1
-      });
-    };
-    if (baseKeys?.includes("priority")) fields.push({ fieldtype:"Select", fieldname:"priority", label:__("Priority"), options:"Low\nMedium\nHigh", default:"Medium" });
-
+      fields.push({ fieldtype:"Check", fieldname:"assign_me", label: __("Assign to me ({0})", [me]), default: 1 });
+    }
+    if (baseKeys?.includes("priority")) {
+      fields.push({ fieldtype:"Select", fieldname:"priority", label:__("Priority"), options:"Low\nMedium\nHigh", default:"Medium" });
+    }
     if (Array.isArray(extra) && extra.length) fields.push(...extra);
     return fields;
   }
@@ -494,18 +466,16 @@
       if (!guard()) return;
       const v = d.get_values();
       try {
-        let a = Array.isArray(v.assignees) ? v.assignees.slice() : (v.assignees || []);
-        if (v.assign_me && me && !a.includes(me)) a.push(me);
-
         const payload = { description: v.description, priority: v.priority };
         if (v.target_at) payload.custom_target_datetime = v.target_at;
 
         if (v.send_reminder) {
           payload.send_reminder = 1;
-          if (v.reminder_at) payload.due = v.reminder_at; // уйдет в due_datetime/custom_due_datetime на бэке
+          if (v.reminder_at) payload.due = v.reminder_at;
         } else {
           payload.send_reminder = 0;
         }
+        const a = composeAssignees(v, me);
         if (a.length) payload.assignees = a;
 
         await createTask(frm.doc.name, payload, "manual");
@@ -527,7 +497,7 @@
     frappe.show_alert({ message: status==="Closed"?__("Completed"):__("Cancelled"), indicator:"green" });
   }
 
-  // ===== перехват Save =====
+  // ===== перехват Save (правила) =====
   function patchFormSave(frm){
     if (frm.__ecSavePatched) return;
     frm.__ecSavePatched = true;
@@ -570,6 +540,9 @@
           payload.send_reminder = 0;
           if ("due" in payload) delete payload.due;
         }
+
+        // RBAC — финализируем список исполнителей
+        payload.assignees = composeAssignees(vals, me);
 
         Promise.resolve()
           .then(() => createTask(frm.doc.name, payload, "manual"))
@@ -642,7 +615,7 @@
 
   // ===== Kanban hook =====
   (function patchKanban(){
-    if (frappe.__ec_call_patched_v419) return;
+    if (frappe.__ec_call_patched_v421) return;
     const orig = frappe.call;
 
     frappe.call = function(opts){
@@ -695,6 +668,9 @@
             payload.send_reminder = 0;
             if ("due" in payload) delete payload.due;
           }
+          // RBAC — финальный список исполнителей
+          payload.assignees = composeAssignees(vals, me);
+
           createTask(card, payload, "manual")
             .then(()=> frappe.show_alert({ message: __("Task created"), indicator:"green" }))
             .catch(e => console.warn("[EC Kanban] create failed", e));
@@ -706,54 +682,136 @@
       return p;
     };
 
-    frappe.__ec_call_patched_v419 = true;
+    frappe.__ec_call_patched_v421 = true;
   })();
 
-  // ===== styles =====
+  // ===== styles (theme-ready; дарк для табов; видимые бордеры и НЕ-яркий фокус в дарке) =====
   const css = document.createElement("style");
   css.textContent = `
   .ec-tasks-section .section-head{
     display:flex;align-items:center;gap:6px;
     font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);
-    cursor:pointer;
+    cursor:pointer; color: var(--text-color, #111827); background: var(--card-bg, #fff);
   }
   .ec-tasks-section .section-head .t{flex:0 1 auto}
   .ec-tasks-section .collapse-indicator .es-icon{transition: transform .15s ease;}
   .ec-tasks-section .section-head.collapsed .collapse-indicator .es-icon{transform: rotate(-90deg);}
   .ec-tasks-section .ec-red-dot{width:8px;height:8px;border-radius:999px;background:#ef4444;display:inline-block}
-  .ec-tasks-section .section-body{padding:12px}
+  .ec-tasks-section .section-body{padding:12px; background: var(--card-bg, #fff); color: var(--text-color, #111827);}
   .ec-tasks-section .section-body.hide{display:none!important}
 
+  /* Tabs — light/dark */
   .ec-tabs-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  .ec-tabs .nav-link{ padding:6px 10px; }
-  .ml-1{margin-left:6px}.ml-2{margin-left:8px}
-  .ec-tasks-hint{ margin:8px 0 10px; padding:8px 10px; border-left:3px solid #e5e7eb; background:#fafafa; border-radius:6px; font-size:12px; color:#4b5563; }
-  .ec-tasks-hint .h-title{font-weight:600; margin-bottom:4px; color:#374151}
-  .ec-tasks-hint .h-list{margin:0; padding-left:18px}
-  .ec-tasks-hint .h-list li{margin:1px 0}
-  .ec-task{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #eef2f7}
-  .ec-task:first-child{border-top:none}
-  .ec-task.-muted{opacity:.78}
-  .ec-task .title{font-weight:600;font-size:13px}
-  .ec-task .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;color:#6b7280;font-size:11px}
-  .ec-task .chip{border:1px solid #e5e7eb;border-radius:999px;padding:2px 6px;background:#f3f4f6}
-  .ec-task .chip.-ghost{background:#f8fafc}
-  .ec-task .chip.-p-high{ background:#fee2e2; border-color:#fecaca; }
-  .ec-task .chip.-p-med{  background:#e5f0ff; border-color:#dbeafe; }
-  .ec-task .chip.-p-low{  background:#e8f5e9; border-color:#d7f0da; }
-
-  /* мягкая подсветка просроченной целевой даты */
-  .ec-task .chip-target.-overdue{
-    background: #fee2e2;
-    border-color: #fecaca;
-    color: #991b1b;
+  .ec-tabs .nav-link{
+    padding:6px 10px; border:1px solid var(--border-color,#e5e7eb)!important;
+    background: var(--control-bg,#f8fafc)!important; color: var(--text-color,#111827)!important;
+    border-bottom-color: var(--border-color,#e5e7eb)!important;
+  }
+  .ec-tabs .nav-link:not(.active):hover{ background: var(--fg-hover-color,#f0f2f5)!important; }
+  .ec-tabs .nav-link.active{
+    background: var(--subtle-accent,#eef2ff)!important;
+    border-color: var(--border-color,#c7d2fe)!important;
+    color: var(--text-color,#111827)!important;
   }
 
+  .ml-1{margin-left:6px}.ml-2{margin-left:8px}
+
+  .ec-tasks-hint{
+    margin:8px 0 10px; padding:8px 10px; border-left:3px solid var(--border-color,#e5e7eb);
+    background: var(--control-bg,#fafafa); border-radius:6px; font-size:12px; color: var(--text-muted,#4b5563);
+  }
+  .ec-tasks-hint .h-title{font-weight:600; margin-bottom:4px; color: var(--text-color,#374151)}
+  .ec-tasks-hint .h-list{margin:0; padding-left:18px}
+  .ec-tasks-hint .h-list li{margin:1px 0}
+
+  .ec-task{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--table-border-color, var(--border-color,#eef2f7))}
+  .ec-task:first-child{border-top:none}
+  .ec-task.-muted{opacity:.78}
+  .ec-task .title{font-weight:600;font-size:13px;color: var(--text-color, #111827)}
+  .ec-task .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;color:var(--text-muted,#6b7280);font-size:11px}
+
+  .ec-task .chip{
+    border:1px solid var(--border-color,#e5e7eb);
+    border-radius:999px; padding:2px 6px;
+    background: var(--bg-light-gray,#f3f4f6);
+    color: var(--text-color,#111827);
+  }
+  .ec-task .chip.-ghost{background: var(--control-bg,#f8fafc); color: var(--text-color,#111827);}
+
+  /* Priority chips — theme-aware */
+  .ec-task .chip.-p-high{
+    background: var(--alert-bg-danger, #fee2e2);
+    border-color: color-mix(in oklab, var(--alert-bg-danger, #fee2e2) 60%, #ffffff);
+    color: var(--alert-text-danger, #991b1b);
+  }
+  .ec-task .chip.-p-med{
+    background: var(--bg-light-blue, #e5f0ff);
+    border-color: var(--text-on-light-blue, #dbeafe);
+    color: color-mix(in oklab, var(--text-on-light-blue, #1e3a8a) 80%, #111);
+  }
+  .ec-task .chip.-p-low{
+    background: var(--bg-green, #e8f5e9);
+    border-color: color-mix(in oklab, var(--bg-green, #e8f5e9) 60%, #ffffff);
+    color: var(--text-on-green, #14532d);
+  }
+
+  /* мягкая подсветка просроченной цели */
+  .ec-task .chip-target.-overdue{
+    background: var(--alert-bg-danger, #fee2e2);
+    border-color: color-mix(in oklab, var(--alert-bg-danger, #fecaca) 70%, #ffffff);
+    color: var(--alert-text-danger, #991b1b);
+  }
+
+  /* Диалоги — НЕ-яркий дарк-фокус и видимые бордеры/плейсхолдеры */
   .ec-task-dialog .modal-body{padding:14px 16px}
   .ec-task-dialog .frappe-control{margin-bottom:8px}
   .ec-task-dialog .control-label{margin-bottom:4px}
+
+  .ec-task-dialog .form-control,
+  .ec-task-dialog input[type="text"],
+  .ec-task-dialog input[type="datetime-local"],
+  .ec-task-dialog textarea,
+  .ec-task-dialog .awesomplete > input{
+    background: var(--control-bg,#ffffff);
+    border: 1px solid var(--border-color,#e5e7eb);
+    color: var(--text-color,#111827);
+  }
+  /* дарк-оверы */
+  [data-theme="dark"] .ec-task-dialog .form-control,
+  [data-theme="dark"] .ec-task-dialog input[type="text"],
+  [data-theme="dark"] .ec-task-dialog input[type="datetime-local"],
+  [data-theme="dark"] .ec-task-dialog textarea,
+  [data-theme="dark"] .ec-task-dialog .awesomplete > input{
+    background: var(--control-bg, #243a3f);
+    border-color: var(--dark-border-color, #2f474c);
+    color: var(--text-color, #f4f8f9);
+  }
+  [data-theme="dark"] .ec-task-dialog .form-control::placeholder,
+  [data-theme="dark"] .ec-task-dialog input::placeholder,
+  [data-theme="dark"] .ec-task-dialog textarea::placeholder{
+    color: var(--placeholder-color, #8ba0a6);
+    opacity: .95;
+  }
+  .ec-task-dialog .form-control:focus,
+  .ec-task-dialog input[type="text"]:focus,
+  .ec-task-dialog input[type="datetime-local"]:focus,
+  .ec-task-dialog textarea:focus{
+    outline: 2px solid color-mix(in oklab, var(--brand-primary,#488a5b) 28%, transparent);
+    outline-offset: 0;
+    border-color: var(--border-color,#c7d2fe);
+    box-shadow: none;
+    background: var(--fg-hover-color, #f0f2f5);
+  }
+  [data-theme="dark"] .ec-task-dialog .form-control:focus,
+  [data-theme="dark"] .ec-task-dialog input[type="text"]:focus,
+  [data-theme="dark"] .ec-task-dialog input[type="datetime-local"]:focus,
+  [data-theme="dark"] .ec-task-dialog textarea:focus{
+    border-color: var(--dark-border-color, #2f474c);
+    background: var(--fg-hover-color, #2b4349);
+  }
+
   .ec-tasks-pager{ display:flex; align-items:center; gap:8px; justify-content:space-between; margin-top:8px; }
-  .ec-tasks-pager .info{ font-size:11px; color:#6b7280; }
+  .ec-tasks-pager .info{ font-size:11px; color: var(--text-muted,#6b7280); }
   `;
   document.head.appendChild(css);
 })();

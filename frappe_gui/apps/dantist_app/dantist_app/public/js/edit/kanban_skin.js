@@ -1,9 +1,7 @@
-/* Dantist Kanban skin — v25.18.1
+/* Dantist Kanban skin — v25.18.1 • THEME-READY
    (visual parity with v25.15, i18n labels in chips, mini-tasks fallback to get_list)
-   — Labels ON: строго порядок по board.fields, пустые → "—"
-   — Labels OFF: апгрейд безымянных чипов ТОЛЬКО под board.fields, дубли и лишние — в очистку
-   — Единый формат дат: DD-MM-YYYY HH:mm:ss; фильтр хвостов времени
-   — Мини-задачи с фолбэком (без due_* в get_list), hover-actions, inline title, Assigned/Like внизу
+   — Все статичные цвета заменены на CSS-переменные темы
+   — Светлая/тёмная тема подхватывается мгновенно без перерисовок
 */
 (() => {
   const CFG = {
@@ -68,7 +66,7 @@
   };
   const isDisplayName = (s)=> LABEL_ALIASES.display_name.has(LBL_KEY(s));
 
-  /* ===== CSS (как v25.15) ===== */
+  /* ===== THEME CSS ===== */
   function injectCSS(){
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
@@ -78,52 +76,94 @@
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; }
 
       html.${CFG.htmlClass} .kanban-card.content{
-        border-radius:14px; border:1px solid var(--border-color,rgba(0,0,0,.06));
-        background:#fff; padding:12px; box-shadow:0 1px 2px rgba(0,0,0,.06);
+        border-radius:14px;
+        border:1px solid var(--border-color, rgba(0,0,0,.06));
+        background: var(--card-bg, #ffffff);
+        padding:12px;
+        box-shadow: var(--shadow-base, 0 1px 2px rgba(0,0,0,.06));
         transition:transform .12s, box-shadow .12s;
         display:flex !important; flex-direction:column; gap:0;
+        color: var(--text-color, #111827);
       }
-      html.${CFG.htmlClass} .kanban-card.content:hover{ transform:translateY(-1px); box-shadow:0 8px 22px rgba(0,0,0,.08); }
+      html.${CFG.htmlClass} .kanban-card.content:hover{
+        transform:translateY(-1px);
+        box-shadow: 0 8px 22px color-mix(in oklab, var(--shadow-color, rgba(0,0,0,.16)) 70%, transparent);
+      }
 
       html.${CFG.htmlClass} .dnt-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; margin-bottom:10px; }
       html.${CFG.htmlClass} .dnt-head-left{ display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 auto; }
 
       html.${CFG.htmlClass} .kanban-image{
-        width:40px !important; height:40px !important; border-radius:10px; overflow:hidden; background:#eef2f7;
+        width:40px !important; height:40px !important; border-radius:10px; overflow:hidden;
+        background: var(--bg-light-gray, #eef2f7);
         display:flex; align-items:center; justify-content:center; float:none !important; margin:0 !important; flex:0 0 40px; position:static !important;
       }
       html.${CFG.htmlClass} .kanban-image img{ display:block !important; width:100% !important; height:100% !important; object-fit:cover !important; object-position:center; }
 
       html.${CFG.htmlClass} .kanban-title-area{ margin:0 !important; min-width:0; }
-      html.${CFG.htmlClass} .kanban-card-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      html.${CFG.htmlClass} .kanban-card-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text-color, #111827); }
       html.${CFG.htmlClass} .dnt-title{ font-weight:600; line-height:1.25; cursor:text; }
       html.${CFG.htmlClass} .dnt-title[contenteditable="true"]{ outline:none; border-radius:6px; padding:0 2px; }
-      html.${CFG.htmlClass} .dnt-title[contenteditable="true"]:focus{ background:#f3f4f6; }
+      html.${CFG.htmlClass} .dnt-title[contenteditable="true"]:focus{
+        background: var(--fg-hover-color, #f3f4f6);
+      }
 
-      html.${CFG.htmlClass} .kanban-card-meta{ margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+      html.${CFG.htmlClass} .kanban-card-meta{ margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; color: var(--text-muted, #6b7280); }
 
       html.${CFG.htmlClass} .kanban-card-doc{ padding:0; }
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-kv{ 
-        display:flex; align-items:center; gap:6px; 
-        background:#f3f4f6; border:1px solid #e5e7eb; border-radius:10px; padding:4px 8px; 
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-kv{
+        display:flex; align-items:center; gap:6px;
+        background: var(--control-bg, #f3f4f6);
+        border:1px solid var(--border-color, #e5e7eb);
+        border-radius:10px; padding:4px 8px;
         font-size:12px; min-height:24px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        color: var(--text-color, #111827);
       }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-kv + .dnt-kv { margin-top:6px; }
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ opacity:.7; }
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ opacity:.72; color: var(--text-muted, #6b7280); }
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; color: var(--text-color, #111827); }
 
       html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-      html.${CFG.htmlClass} .dnt-tasks-mini{ margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px; border-top:1px solid #eef2f7; padding-top:6px; }
-      html.${CFG.htmlClass} .dnt-taskline{ display:flex; gap:6px; align-items:center; font-size:11px; color:#4b5563; padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
-      html.${CFG.htmlClass} .dnt-taskline .ttl{ font-weight:600; color:#111827; overflow:hidden; text-overflow:ellipsis; }
-      html.${CFG.htmlClass} .dnt-chip{ border:1px solid #e5e7eb; border-radius:999px; padding:1px 6px; background:#f8fafc; font-size:10px; }
-      html.${CFG.htmlClass} .dnt-overdue{ background:#fee2e2; border-color:#fecaca; }
+      html.${CFG.htmlClass} .dnt-tasks-mini{
+        margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px;
+        border-top:1px solid var(--table-border-color, var(--border-color, #eef2f7));
+        padding-top:6px;
+      }
+      html.${CFG.htmlClass} .dnt-taskline{
+        display:flex; gap:6px; align-items:center; font-size:11px;
+        color: var(--text-muted, #4b5563); padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+      }
+      html.${CFG.htmlClass} .dnt-taskline .ttl{ font-weight:600; color: var(--text-color, #111827); overflow:hidden; text-overflow:ellipsis; }
+      html.${CFG.htmlClass} .dnt-chip{
+        border:1px solid var(--border-color, #e5e7eb);
+        border-radius:999px; padding:1px 6px;
+        background: var(--control-bg, #f8fafc);
+        font-size:10px; color: var(--text-color, #111827);
+      }
+      html.${CFG.htmlClass} .dnt-overdue{
+        background: var(--alert-bg-danger, #fee2e2);
+        border-color: color-mix(in oklab, var(--alert-bg-danger, #fee2e2) 60%, #ffffff);
+        color: var(--alert-text-danger, #991b1b);
+      }
 
-      html.${CFG.htmlClass} .dnt-card-actions{ position:absolute; top:12px; right:12px; display:flex; gap:6px; opacity:0; pointer-events:none; transition:opacity .12s; }
+      html.${CFG.htmlClass} .dnt-card-actions{
+        position:absolute; top:12px; right:12px; display:flex; gap:6px;
+        opacity:0; pointer-events:none; transition:opacity .12s;
+      }
       html.${CFG.htmlClass} .kanban-card-wrapper:hover .dnt-card-actions{ opacity:1; pointer-events:auto; }
-      html.${CFG.htmlClass} .dnt-icon-btn{ height:28px; min-width:28px; padding:0 6px; display:grid; place-items:center; border-radius:8px; border:1px solid rgba(0,0,0,.12); background:#f8f9fa; cursor:pointer; }
-      html.${CFG.htmlClass} .dnt-icon-btn:hover{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+      html.${CFG.htmlClass} .dnt-icon-btn{
+        height:28px; min-width:28px; padding:0 6px; display:grid; place-items:center;
+        border-radius:8px;
+        border:1px solid var(--border-color, rgba(0,0,0,.12));
+        background: var(--control-bg, #f8f9fa);
+        cursor:pointer; color: var(--text-color, #111827);
+      }
+      html.${CFG.htmlClass} .dnt-icon-btn:hover{
+        background: var(--card-bg, #ffffff);
+        box-shadow: 0 2px 8px color-mix(in oklab, var(--shadow-color, rgba(0,0,0,.22)) 60%, transparent);
+      }
 
+      /* ограничения интерфейса по ролям */
       html.${CFG.htmlClass}.no-color .kanban-column .column-options .button-group{ display:none !important; }
       html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .menu,
       html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .dropdown,
@@ -140,8 +180,8 @@
 
   function normalizeDateish(raw){
     let v = CLEAN(raw || "");
-    if (!v) return v;
     v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1");
+    if (!v) return v;
     if (FULL_DT.test(v) || DATE_LIKE.test(v)) {
       try {
         const m = moment(frappe.datetime.convert_to_user_tz(v));
@@ -334,11 +374,10 @@
   function makeChip(label, value, showLabel){
     const kv = document.createElement("div");
     kv.className = "dnt-kv text-truncate";
-    kv.dataset.dntLabel = showLabel ? CLEAN(label||"") : ""; // OFF — пусто (как в v25.15)
+    kv.dataset.dntLabel = showLabel ? CLEAN(label||"") : "";
     if (showLabel && CLEAN(label)){
       const sk = document.createElement("span");
       sk.className = "dnt-k";
-      // i18n:
       sk.textContent = t(STRIP_COLON(label)) + ":";
       kv.appendChild(sk);
     }
@@ -385,7 +424,7 @@
           return f === fn;
         });
         if (!chip){
-          chip = makeChip(human, value, true);         // t(human) — внутри
+          chip = makeChip(human, value, true);
           insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         } else {
           const sv = chip.querySelector(".dnt-v"); if (sv && !CLEAN(sv.textContent)) sv.textContent = value || "—";
@@ -521,7 +560,6 @@
   /* ===== mini tasks (fallback) ===== */
   const miniCache = new Map();
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
-  // читаем приоритетные пользовательские поля, затем обычную date (как в твоём примере ToDo)
   const planDT = (t) => t.custom_target_datetime || t.due_datetime || t.custom_due_datetime || t.date || null;
 
   function miniHtml(rows, total){
@@ -544,8 +582,8 @@
       args: { name: caseName, status: "Open", limit_start: 0, limit_page_length: CFG.tasksLimit, order: "desc" }
     });
     const rows  = (message && message.rows) || [];
-    const total = (message && message.total) || rows.length;
-    return { rows, total };
+    aconst_total = (message && message.total) || rows.length; // keep old varname behavior
+    return { rows, total: aconst_total };
   }
   async function fetchMiniFallback(caseName){
     try{
@@ -558,7 +596,6 @@
             reference_name: caseName,
             status: "Open"
           },
-          // ВАЖНО: никаких due_date/due_datetime — их выкидываем из fields
           fields: ["name","description","status","date","custom_due_datetime","custom_target_datetime"],
           limit_page_length: CFG.tasksLimit,
           order_by: "modified desc"
@@ -586,7 +623,6 @@
       container.innerHTML = html;
       bindMini(container, caseName);
     } catch {
-      // последний шанс — фолбэк
       try{
         const data = await fetchMiniFallback(caseName);
         const html  = miniHtml(data.rows || [], data.total || 0);
