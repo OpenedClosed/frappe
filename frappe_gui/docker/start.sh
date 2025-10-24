@@ -41,17 +41,17 @@ PROTO=$([[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]] && echo http || e
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
-APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"   # можно через ENV перечислить через пробел
-
-PRUNE_SEEDED_SITE="${PRUNE_SEEDED_SITE:-1}"      # 1 = агрессивно лечим/вырезаем локальный «зашитый» сайт
+APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"   # можно перечислить через пробел
+PRUNE_SEEDED_SITE="${PRUNE_SEEDED_SITE:-1}"      # 1 = вырезать «зашитый» локальный сайт, если мешает
 APP_ENV="${APP_ENV:-prod}"
 
-# mysql client w/o SSL (бывает HY000/2026 в докере)
+# mysql client w/o SSL (иногда HY000/2026 в докере)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
 bench()    { (cd "$BENCH_DIR" && command bench "$@"); }
 site_cmd() { (cd "$BENCH_DIR" && command bench --site "$SITE" "$@"); }
 
+# ------ helpers: читаем db_name/db_host (для логов) ------
 read_db_creds() {
   python3 - "$SITE_CFG" <<'PY'
 import json,sys
@@ -64,18 +64,23 @@ print(d.get("db_name","")); print(d.get("db_password","")); print(d.get("db_host
 PY
 }
 
-core_tables_ok() {
-  [[ -f "$SITE_CFG" ]] || return 1
-  read -r DB_NAME DB_PASS DBH < <(read_db_creds || echo "  ")
-  [[ -z "${DB_NAME:-}" || -z "${DB_PASS:-}" ]] && return 1
-  mysql -h "${DBH:-$DB_HOST}" -P "$DB_PORT" -u"$DB_NAME" -p"$DB_PASS" "$DB_NAME" \
-    -Nse "SHOW TABLES LIKE 'tabDefaultValue';" >/dev/null 2>&1
-}
-
+# ------ root-проверки БД ------
 db_exists() {
   local name="$1"
   mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" \
-    -Nse "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='${name}';" 2>/dev/null | grep -Fxq "$name"
+    -Nse "SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='${name}' LIMIT 1;" 2>/dev/null | grep -q 1
+}
+
+core_tables_ok() {
+  [[ -f "$SITE_CFG" ]] || return 1
+  local DB_NAME
+  DB_NAME="$(python3 - "$SITE_CFG" <<'PY'
+import json,sys; d=json.load(open(sys.argv[1])); print(d.get("db_name",""))
+PY
+)"
+  [[ -z "$DB_NAME" ]] && return 1
+  mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" \
+    -Nse "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME='tabDefaultValue' LIMIT 1;" 2>/dev/null | grep -q 1
 }
 
 quick_diag() {
@@ -87,8 +92,8 @@ quick_diag() {
     say "• MariaDB ping (${DB_HOST}:${DB_PORT})…"
     (echo > /dev/tcp/${DB_HOST}/${DB_PORT}) >/dev/null 2>&1 && ok "ping ok" || warn "нет TCP-подключения"
     if [[ -n "${DB_NAME:-}" ]]; then
-      local any=$(mysql -h "${DBH:-$DB_HOST}" -P "$DB_PORT" -u"$DB_NAME" -p"$DB_PASS" "$DB_NAME" -Nse "SHOW TABLES LIMIT 1;" 2>/dev/null || true)
-      if [[ -n "$any" ]]; then ok "таблицы доступны (показана 1-я есть)"; else warn "таблицы не прочитались этим пользователем"; fi
+      # проверим root-ом, что таблицы существуют
+      if core_tables_ok; then ok "таблицы ядра на месте (tabDefaultValue)"; else warn "таблицы ядра не найдены root-проверкой"; fi
     fi
   else
     warn "site_config.json отсутствует"
@@ -102,11 +107,9 @@ for i in $(seq 1 "$DB_WAIT"); do
   sleep 1
   [[ "$i" == "$DB_WAIT" ]] && fatal "MariaDB не доступна за ${DB_WAIT}s"
 done
-
-# пробуем root доступ (не фатально — просто лог)
 mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" -e "SELECT VERSION() AS version;" >/dev/null 2>&1 \
   && ok "root-доступ к MariaDB подтверждён" \
-  || warn "root-доступ не проверился (продолжим, но new-site потребует root пароль)"
+  || warn "root-доступ не проверился (продолжим, но new-site/reinstall требуют root пароль)"
 
 # ===== 1) common_site_config.json =====
 step "🛠️  Общий конфиг: $COMMON_CFG"
@@ -139,33 +142,29 @@ ok "common_site_config.json записан"
 
 mkdir -p "$SITE_DIR" || true
 
-# ===== 2) если «локальный» сайт зашит в образе — вырежем (один раз) =====
+# ===== 2) чистка «зашитого» локального сайта при конфликте =====
 step "🧹 Проверка на «локальный/зашитый» сайт и конфликты"
-LOCAL_WAS_REMOVED=0
-if [[ -f "$SITE_CFG" ]]; then
+if [[ -f "$SITE_CFG" && "$PRUNE_SEEDED_SITE" == "1" ]]; then
   read -r CUR_DB CUR_PASS CUR_DBHOST < <(read_db_creds || echo "  ")
-  if [[ "$PRUNE_SEEDED_SITE" == "1" ]]; then
-    # критерии локального мусора: db_host пустой/localhost/127.*, или DB не существует на проде, или нет базовых таблиц
-    BAD_DH=0
-    [[ -z "${CUR_DBHOST:-}" || "$CUR_DBHOST" == "localhost" || "$CUR_DBHOST" == "127.0.0.1" ]] && BAD_DH=1
-    if (( BAD_DH == 1 )) || ! db_exists "${CUR_DB:-_NO_}" || ! core_tables_ok; then
-      warn "Обнаружен подозрительный сайт (${SITE}) → удаляю для чистого прод-развёртывания"
-      # Чистое удаление: если база существует — прибьём её корректно
-      if [[ -n "${CUR_DB:-}" ]] && db_exists "${CUR_DB}"; then
-        say "• drop-site --force"
-        bench drop-site "$SITE" --force || true
-      fi
-      rm -rf "$SITE_DIR"
-      LOCAL_WAS_REMOVED=1
-      ok "Локальный остаток удалён"
-    else
-      ok "Существующий сайт выглядит валидным"
+  BAD_DH=0
+  [[ -z "${CUR_DBHOST:-}" || "$CUR_DBHOST" == "localhost" || "$CUR_DBHOST" == "127.0.0.1" ]] && BAD_DH=1
+
+  # считаем сайт подозрительным только если db_host локальный ИЛИ схемы БД нет ИЛИ нет базовых таблиц
+  if (( BAD_DH == 1 )) || { [[ -n "${CUR_DB:-}" ]] && ! db_exists "${CUR_DB}"; } || ! core_tables_ok; then
+    warn "Обнаружен подозрительный сайт (${SITE}) → удаляю для чистого прод-развёртывания"
+    if [[ -n "${CUR_DB:-}" ]] && db_exists "${CUR_DB}"; then
+      say "• drop-site --force (non-interactive)"
+      bench drop-site "$SITE" --force \
+        --mariadb-root-username root \
+        --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" || true
     fi
+    rm -rf "$SITE_DIR"
+    ok "Локальный остаток удалён"
   else
-    say "PRUNE_SEEDED_SITE=0 → пропускаю агрессивную чистку"
+    ok "Существующий сайт выглядит валидным — не трогаю"
   fi
 else
-  say "site_config.json не найден — ничего чистить"
+  say "site_config.json отсутствует или PRUNE_SEEDED_SITE=0 — чистка пропущена"
 fi
 
 # ===== 3) создаём сайт, если нет =====
@@ -174,7 +173,6 @@ if [[ ! -f "$SITE_CFG" ]]; then
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
   [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
   bench new-site "${SITE}" \
-    --no-mariadb-socket \
     --mariadb-root-username root \
     --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
     --admin-password "${FRAPPE_ADMIN_PASSWORD}" \
@@ -231,7 +229,9 @@ quick_diag
 if ! core_tables_ok; then
   step "🩺 Самолечение ядра (reinstall)"
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD для reinstall"
-  site_cmd reinstall --yes
+  site_cmd reinstall --yes \
+    --mariadb-root-username root \
+    --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}"
 fi
 
 # повторная проверка
@@ -241,7 +241,7 @@ core_tables_ok && ok "Ядро сайта валидно (tabDefaultValue най
 step "📦 Migrate ядра"
 site_cmd migrate || true
 
-# ===== 7) установка твоих приложений (безопасно к повтору) =====
+# ===== 7) установка ваших приложений (безопасно к повтору) =====
 step "🧩 Установка приложений: ${APP_LIST}"
 for app in ${APP_LIST}; do
   if ! site_cmd list-apps 2>/dev/null | grep -Fqx "$app"; then
@@ -268,22 +268,20 @@ step "🧱 Сборка ассетов"
 bench build --apps ${APP_LIST} || bench build || warn "bench build с предупреждением"
 chmod -R a+rX /workspace/sites/assets || true
 
-# ===== 10) быстрая проверка входа администратора (не раскроем пароль) =====
+# ===== 10) быстрая проверка Administrator =====
 step "🔐 Проверка, что пользователь Administrator существует"
 site_cmd execute "frappe.db.exists" --kwargs "{'doctype':'User','name':'Administrator'}" \
   && ok "Администратор в БД найден" \
   || warn "Не обнаружен Administrator? Проверь миграции/логи"
 
-# ===== 11) финальная сводка =====
+# ===== 11) сводка и запуск =====
 step "📋 Финальная сводка"
 site_cmd list-apps | sed 's/^/• /'
 say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
 ok "Bootstrap завершён. Передаю управление основному процессу…"
 
-# ===== 12) запуск процессов =====
-if [[ -f /workspace/Procfile ]]; then
-  say "Procfile найден — оставляю как есть"
-else
+# Procfile по умолчанию (если нет)
+if [[ ! -f /workspace/Procfile ]]; then
   cat > /workspace/Procfile <<'PROC'
 web: cd /workspace && bench serve --port 8001
 socketio: cd /workspace && node apps/frappe/socketio.js
