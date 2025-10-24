@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-log() { echo -e "[$(date +'%F %T')] $*"; }
+log()   { echo -e "[$(date +'%F %T')] $*"; }
 fatal() { echo -e "[$(date +'%F %T')] ERROR: $*" >&2; exit 1; }
 
+# === Базовые пути ===
 export PATH="/opt/bench-env/bin:$PATH"
-cd /workspace
+export BENCH_DIR="/workspace"          # <— ВАЖНО: говорим bench, где его «корень»
+cd "$BENCH_DIR"
+
+# На всякий создадим «скелет» бенча (bench проверяет эти каталоги)
+mkdir -p "$BENCH_DIR/apps" "$BENCH_DIR/sites" "$BENCH_DIR/logs"
 
 SITE="${SITE_NAME:-dantist.localhost}"
-SITE_PATH="/workspace/sites/${SITE}"
-COMMON_PATH="/workspace/sites/common_site_config.json"
+SITE_PATH="$BENCH_DIR/sites/${SITE}"
+COMMON_PATH="$BENCH_DIR/sites/common_site_config.json"
 SITE_CONFIG="${SITE_PATH}/site_config.json"
 
 DB_HOST="${DB_HOST:-mariadb}"
 DB_WAIT_SECONDS="${DB_WAIT_SECONDS:-60}"
 
-# ---- PUBLIC HOST/PROTO (для формирования ссылок) ----
 HOST="${HOST:-localhost}"
 if [[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]]; then
   PROTOCOL="http"
@@ -26,27 +30,25 @@ fi
 FRAPPE_PORT="${FRAPPE_PORT:-8001}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
-# Публичные
 FRAPPE_PUBLIC_BASE="${FRAPPE_PUBLIC_BASE:-${PROTOCOL}://${HOST}/admin/api}"
 FRONTEND_PUBLIC_ORIGIN_DEFAULT="${PROTOCOL}://${HOST}"
 FRONTEND_PUBLIC_ORIGIN="${FRONTEND_PUBLIC_ORIGIN:-$FRONTEND_PUBLIC_ORIGIN_DEFAULT}"
 FRONTEND_IFRAME_URL_DEFAULT="${PROTOCOL}://${HOST}/legacy-admin"
 FRONTEND_IFRAME_URL="${FRONTEND_IFRAME_URL:-$FRONTEND_IFRAME_URL_DEFAULT}"
 
-# Внутренние (service-to-service)
 FRAPPE_API_BASE_INTERNAL="${FRAPPE_API_BASE_INTERNAL:-http://frappe:8001/api}"
 DANTIST_BASE_URL_INTERNAL="${DANTIST_BASE_URL_INTERNAL:-http://backend:8000/api}"
 
 mkdir -p "${SITE_PATH}" || true
 
-# ===== 0) Клиентский my.cnf: глобально отключаем SSL для mysql-клиента =====
+# Глобально отключаем SSL у mysql-клиента (чтобы не ловить HY000 2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
-# Алиасы паролей (совместимость)
+# Алиасы паролей
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
-# ===== 1) Ждём MariaDB =====
+# === Ждём MariaDB ===
 log "[frappe] waiting for MariaDB at ${DB_HOST}:3306 (timeout ${DB_WAIT_SECONDS}s)"
 for i in $(seq 1 "${DB_WAIT_SECONDS}"); do
   (echo > /dev/tcp/${DB_HOST}/3306) >/dev/null 2>&1 && break || true
@@ -54,7 +56,7 @@ for i in $(seq 1 "${DB_WAIT_SECONDS}"); do
   [[ "$i" = "${DB_WAIT_SECONDS}" ]] && fatal "MariaDB is not reachable"
 done
 
-# ===== 2) Базовый common_site_config до любых bench-команд =====
+# === common_site_config.json (идемпотентно) ===
 python3 - <<'PY'
 import os, json, pathlib
 p = pathlib.Path("/workspace/sites/common_site_config.json")
@@ -63,8 +65,8 @@ cfg = {}
 if p.exists():
     try: cfg = json.loads(p.read_text() or "{}")
     except Exception: cfg = {}
-redis_base = os.getenv("REDIS_URL","redis://redis:6379").split("/",3)
-redis_base = f"{redis_base[0]}//{redis_base[2]}"
+redis = os.getenv("REDIS_URL","redis://redis:6379")
+redis_base = f"{redis.split('/',3)[0]}//{redis.split('/',3)[2]}"
 cfg.update({
     "default_site": os.getenv("SITE_NAME","dantist.localhost"),
     "webserver_port": 8001,
@@ -81,11 +83,11 @@ p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 print("[common] written", p)
 PY
 
-bench() { command bench "$@"; }
-site_cmd() { bench --site "$SITE" "$@"; }
-
-# ===== helper: проверка, установлено ли приложение =====
+# === ВАЖНО: обёртки для bench всегда с cd в BENCH_DIR ===
+bench()    { (cd "$BENCH_DIR" && command bench "$@"); }
+site_cmd() { (cd "$BENCH_DIR" && command bench --site "$SITE" "$@"); }
 is_app_installed() { site_cmd list-apps 2>/dev/null | grep -Fqx "$1"; }
+
 
 # ===== 3) Если сайт ещё не создан — создаём =====
 if [ ! -f "${SITE_CONFIG}" ]; then
