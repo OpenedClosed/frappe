@@ -20,14 +20,16 @@ else
   PROTOCOL="https"
 fi
 
-# Порты: внешне мы прячем за Nginx, но публичные адреса нужны для iFrame
+# Порты: внешне за Nginx, но публичные адреса нужны для iFrame
 FRAPPE_PORT="${FRAPPE_PORT:-8001}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
-# Публичные (через Nginx)
+# Публичные (через Nginx / для браузера)
 FRAPPE_PUBLIC_BASE="${FRAPPE_PUBLIC_BASE:-${PROTOCOL}://${HOST}/admin/api}"
-FRONTEND_PUBLIC_ORIGIN="${FRONTEND_PUBLIC_ORIGIN:-${PROTOCOL}://${HOST}}"
-FRONTEND_IFRAME_URL="${FRONTEND_IFRAME_URL:-${PROTOCOL}://${HOST}/legacy-admin}"
+FRONTEND_PUBLIC_ORIGIN_DEFAULT="${PROTOCOL}://${HOST}"
+FRONTEND_PUBLIC_ORIGIN="${FRONTEND_PUBLIC_ORIGIN:-$FRONTEND_PUBLIC_ORIGIN_DEFAULT}"
+FRONTEND_IFRAME_URL_DEFAULT="${PROTOCOL}://${HOST}/legacy-admin"
+FRONTEND_IFRAME_URL="${FRONTEND_IFRAME_URL:-$FRONTEND_IFRAME_URL_DEFAULT}"
 
 # Внутренние (межконтейнерные)
 FRAPPE_API_BASE_INTERNAL="${FRAPPE_API_BASE_INTERNAL:-http://frappe:8001/api}"
@@ -38,6 +40,7 @@ mkdir -p "${SITE_PATH}" || true
 # ===== 0) Нормализуем REDIS_URL в базу + /0 /1 /2 =====
 # Позволяет задавать REDIS_URL без DB-суффикса, например redis://redis:6379
 REDIS_BASE="$(printf '%s' "${REDIS_URL:-redis://redis:6379}" | awk -F/ '{print $1"//"$3}')"
+export REDIS_BASE
 
 # ===== 1) Ждём MariaDB =====
 echo "[frappe] waiting for MariaDB at ${DB_HOST}:3306 (timeout ${DB_WAIT_SECONDS}s)"
@@ -113,6 +116,37 @@ if [ ! -f "${SITE_CONFIG}" ]; then
   bench --site "${SITE}" migrate
 fi
 
+# ===== 3.5) Self-heal БД-пользователя/пароля/прав (если site_config есть) =====
+if [ -f "${SITE_CONFIG}" ] && [ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]; then
+  python3 - "$SITE_CONFIG" <<'PY'
+import sys, json, pathlib, os, subprocess, shlex
+p = pathlib.Path(sys.argv[1])
+try:
+    cfg = json.loads(p.read_text())
+except Exception:
+    cfg = {}
+db_host = os.getenv("DB_HOST","mariadb")
+db_root_pwd = os.getenv("FRAPPE_DB_ROOT_PASSWORD","")
+db_name = cfg.get("db_name")
+db_pwd  = cfg.get("db_password")
+db_user = db_name  # frappe использует имя БД как имя пользователя
+if db_name and db_pwd and db_root_pwd:
+    sql = f"""
+    CREATE DATABASE IF NOT EXISTS `{db_name}` DEFAULT CHARACTER SET utf8mb4;
+    CREATE USER IF NOT EXISTS '{db_user}'@'%' IDENTIFIED BY '{db_pwd}';
+    ALTER USER '{db_user}'@'%' IDENTIFIED BY '{db_pwd}';
+    GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{db_user}'@'%';
+    FLUSH PRIVILEGES;
+    """
+    cmd = ["mysql","-h",db_host,"-uroot",f"-p{db_root_pwd}","-e",sql]
+    try:
+        subprocess.run(cmd, check=True)
+        print("[self-heal] ensured db/user/grants for", db_name, file=sys.stderr)
+    except subprocess.CalledProcessError as e:
+        print("[self-heal] skip / not first run:", e, file=sys.stderr)
+PY
+fi
+
 # ===== 4) Патч site_config.json из ENV на каждом старте =====
 python3 - <<'PY'
 import os, json, pathlib
@@ -137,7 +171,6 @@ def parse_list_csv(v):
 site = os.getenv("SITE_NAME","dantist.localhost")
 host = os.getenv("HOST","localhost")
 proto = "http" if host in {"localhost","127.0.0.1"} else "https"
-frappe_port = os.getenv("FRAPPE_PORT","8001")
 
 common_path = "/workspace/sites/common_site_config.json"
 site_path   = f"/workspace/sites/{site}/site_config.json"
@@ -147,8 +180,8 @@ site_cfg = read_json(site_path)
 # DB хост
 site_cfg["db_host"] = os.getenv("DB_HOST","mariadb")
 
-# Полный публичный хост для формирования ссылок
-site_cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}:{frappe_port}")
+# Полный публичный хост для формирования ссылок (без :8001 — работаем за Nginx)
+site_cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}")
 
 # Внутренний URL для сервер-сайд интеграции Frappe -> FastAPI
 site_cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://backend:8000/api")
@@ -157,10 +190,15 @@ site_cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://ba
 iframe_url = os.getenv("FRONTEND_IFRAME_URL")
 if iframe_url:
     site_cfg["dantist_iframe_url"] = iframe_url
+else:
+    # дефолт собран из HOST
+    site_cfg["dantist_iframe_url"] = f"{proto}://{host}/legacy-admin"
 
 iframe_origin = os.getenv("FRONTEND_PUBLIC_ORIGIN")
 if iframe_origin:
     site_cfg["dantist_iframe_origin"] = iframe_origin
+else:
+    site_cfg["dantist_iframe_origin"] = f"{proto}://{host}"
 
 # Ауд
 site_cfg["dantist_integration_aud"] = os.getenv("DANTIST_INTEGRATION_AUD","frappe")
@@ -194,7 +232,7 @@ if env_key and site_cfg.get("encryption_key") != env_key:
 write_json(site_path, site_cfg)
 PY
 
-# ===== 5) Наш Procfile: без внутренних redis-процессов и без абсолютного пути к node =====
+# ===== 5) Наш Procfile: без внутренних redis-процессов и без локальных путей к node =====
 cat > /workspace/Procfile <<'PROC'
 web: cd /workspace && bench serve --port 8001
 socketio: cd /workspace && node apps/frappe/socketio.js

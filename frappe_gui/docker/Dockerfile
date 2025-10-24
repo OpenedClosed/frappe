@@ -33,7 +33,7 @@ RUN set -eux; \
     dpkg -i /tmp/wkhtml.deb || apt-get -y -f install; \
     rm -rf /var/lib/apt/lists/* /tmp/wkhtml.deb
 
-# --- Workspace + seed holder ---
+# --- Workspace (+seed holder) ---
 RUN mkdir -p /workspace /workspace/sites /opt/seed-sites
 WORKDIR /workspace
 COPY . /workspace/
@@ -76,8 +76,7 @@ RUN git config --global user.email "build@local" && git config --global user.nam
 # --- зависимости всех приложений (python+node) ---
 RUN bench setup requirements || true
 
-# ВАЖНО: bench build убран с этапа билда — делаем его только на рантайме,
-# когда bench-директория и сайт гарантированно существуют.
+# ВАЖНО: bench build убран на этапе билда — делаем на рантайме (когда сайт уже есть)
 
 # --- start script ---
 COPY docker/start.sh /usr/local/bin/start.sh
