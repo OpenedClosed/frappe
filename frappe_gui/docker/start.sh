@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Ultra-verbose bootstrap for Frappe in Docker (prod-first, idempotent)
-# Создаёт/лечит сайт, регистрирует app, импортирует фикстуры, билдит ассеты, стартует Frappe.
 
 set -Eeuo pipefail
 
@@ -12,7 +11,6 @@ warn()  { say "⚠️  $*" >&2; }
 err()   { say "❌ $*" >&2; }
 step()  { echo -e "\n[$(ts)] ── $*"; }
 fatal() { err "$*"; exit 1; }
-
 mask() { local s="${1:-}"; local n=${#s}; if ((n==0)); then echo ""; elif ((n<=6)); then echo "***"; else echo "${s:0:2}***${s: -2}"; fi; }
 
 # ===== env & paths =====
@@ -41,8 +39,9 @@ FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"   # через пробел
 PRUNE_SEEDED_SITE="${PRUNE_SEEDED_SITE:-1}"      # 1 — чистить только реально битый локальный сайт
 APP_ENV="${APP_ENV:-prod}"                       # prod|dev
+DISABLE_FIXTURE_HAS_ROLE="${DISABLE_FIXTURE_HAS_ROLE:-1}"  # 1 — временно отключить проблемную фикстуру
 
-# mysql client без SSL (иногда HY000/2026 в докере)
+# mysql client без SSL
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
 bench()    { (cd "$BENCH_DIR" && command bench "$@"); }
@@ -52,10 +51,8 @@ site_cmd() { (cd "$BENCH_DIR" && command bench --site "$SITE" "$@"); }
 read_db_creds() {
   python3 - "$SITE_CFG" <<'PY'
 import json,sys
-try:
-  d=json.load(open(sys.argv[1]))
-except Exception:
-  d={}
+try: d=json.load(open(sys.argv[1]))
+except Exception: d={}
 print(d.get("db_name","")); print(d.get("db_password","")); print(d.get("db_host","")); print(d.get("dantist_env",""))
 PY
 }
@@ -70,7 +67,7 @@ core_tables_ok() {
   [[ -f "$SITE_CFG" ]] || return 1
   local DB_NAME
   DB_NAME="$(python3 - "$SITE_CFG" <<'PY'
-import json,sys; 
+import json,sys
 try: d=json.load(open(sys.argv[1]))
 except: d={}
 print(d.get("db_name",""))
@@ -110,7 +107,7 @@ ensure_apps_txt_has() {
 ensure_app_present_and_registered() {
   local app="$1"
   if [[ ! -d "$BENCH_DIR/apps/$app" ]]; then
-    fatal "Не найдено приложение $app в /workspace/apps/$app. Убедись, что оно копируется в образ (git submodule/копирование)."
+    fatal "Не найдено приложение $app в /workspace/apps/$app. Проверь сборку/копирование."
   fi
   ensure_apps_txt_has "$app"
 }
@@ -124,9 +121,9 @@ for i in $(seq 1 "$DB_WAIT"); do
 done
 mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" -e "SELECT VERSION();" >/dev/null 2>&1 \
   && ok "root-доступ к MariaDB подтверждён" \
-  || warn "root-доступ не проверился (new-site/reinstall требуют root пароль в ENV)"
+  || warn "root-доступ не проверился (new-site/reinstall потребуют root пароль в ENV)"
 
-# ===== 1) common_site_config.json =====
+# ===== 1) common_site_config.json (+ правильный путь к node) =====
 step "🛠️  Общий конфиг: $COMMON_CFG"
 python3 - <<'PY'
 import os, json, pathlib
@@ -149,6 +146,7 @@ cfg.update({
     "use_redis_auth": False,
     "live_reload": os.getenv("APP_ENV","dev")=="dev",
     "frappe_user": "root",
+    "node": "/usr/bin/node",       # важно: не подтягивать локальный путь из nvm
 })
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 print(f"OK {p}")
@@ -164,9 +162,8 @@ if [[ -f "$SITE_CFG" && "$PRUNE_SEEDED_SITE" == "1" ]]; then
   if [[ "${CUR_ENV:-}" == "prod" ]]; then
     ok "Маркер dantist_env=prod найден → существующий сайт считаем продовым, НЕ удаляю"
   else
-    # Удаляем ТОЛЬКО если нет схемы БД или нет базовых таблиц
     if { [[ -n "${CUR_DB:-}" ]] && ! db_exists "${CUR_DB}"; } || ! core_tables_ok; then
-      warn "Сайт выглядит битым (нет схемы БД или базовых таблиц) → удаляю"
+      warn "Сайт выглядит битым (нет схемы БД или табличек ядра) → удаляю"
       if [[ -n "${CUR_DB:-}" ]] && db_exists "${CUR_DB}"; then
         say "• drop-site --force (non-interactive)"
         bench drop-site "$SITE" --force \
@@ -223,7 +220,7 @@ cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}")
 cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://backend:8000/api")
 cfg["dantist_iframe_origin"] = os.getenv("FRONTEND_PUBLIC_ORIGIN") or f"{proto}://{host}"
 cfg["server_script_enabled"] = True
-cfg["dantist_env"] = os.getenv("APP_ENV","prod")  # <-- МАРКЕР ОКРУЖЕНИЯ
+cfg["dantist_env"] = os.getenv("APP_ENV","prod")  # маркер окружения
 
 devmode = os.getenv("DEVELOPER_MODE")
 if devmode is not None:
@@ -242,7 +239,7 @@ PY
 ok "site_config.json обновлён"
 quick_diag
 
-# ===== 5) самолечение ядра, если нужно =====
+# ===== 5) самолечение ядра при необходимости =====
 if ! core_tables_ok; then
   step "🩺 Самолечение ядра (reinstall)"
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD для reinstall"
@@ -252,18 +249,22 @@ if ! core_tables_ok; then
 fi
 core_tables_ok && ok "Ядро сайта валидно (tabDefaultValue найдено)" || fatal "После reinstall базовые таблицы отсутствуют"
 
-# ===== 6) гарантируем регистрацию приложений в apps.txt =====
+# ===== 6) регистрация приложений в apps.txt =====
 step "🗂️ Регистрация приложений в sites/apps.txt"
 ensure_apps_txt_has frappe
-for app in ${APP_LIST}; do
-  ensure_app_present_and_registered "$app"
-done
+for app in ${APP_LIST}; do ensure_app_present_and_registered "$app"; done
 
-# ===== 7) миграции ядра =====
+# ===== 7) Migrate ядра =====
 step "📦 Migrate ядра"
 site_cmd migrate || true
 
-# ===== 8) установка ваших приложений (без падения скрипта) =====
+# ===== 8) (опционально) отключаем проблемную фикстуру has_role.json, чтобы не падать
+if [[ "$DISABLE_FIXTURE_HAS_ROLE" == "1" && -f "apps/dantist_app/dantist_app/fixtures/has_role.json" ]]; then
+  step "🩹 Временно отключаю fixtures/has_role.json (DISABLE_FIXTURE_HAS_ROLE=1)"
+  mv apps/dantist_app/dantist_app/fixtures/has_role.json apps/dantist_app/dantist_app/fixtures/has_role.json.disabled || true
+fi
+
+# ===== 9) установка приложений (без падения скрипта) =====
 step "🧩 Установка приложений: ${APP_LIST}"
 for app in ${APP_LIST}; do
   if ! site_cmd list-apps 2>/dev/null | grep -Fqx "$app"; then
@@ -276,27 +277,34 @@ for app in ${APP_LIST}; do
   fi
 done
 
-# ===== 9) финальные миграции + фикстуры =====
+# ===== 10) финальная migrate + sync fixtures корректным способом =====
 step "🔁 Финальная migrate"
 site_cmd migrate || true
 
-step "📥 Импорт фикстур"
-site_cmd import-fixtures \
-  && ok "фикстуры импортированы" \
-  || warn "import-fixtures вернул ненулевой код (продолжаю)"
+step "📥 Синхронизация фикстур через frappe.utils.fixtures.sync_fixtures"
+site_cmd execute "frappe.utils.fixtures.sync_fixtures" \
+  && ok "фикстуры синхронизированы" \
+  || warn "sync_fixtures вернул ненулевой код (см. лог выше)"
 
-# ===== 10) build ассетов =====
+# ===== 11) build ассетов =====
 step "🧱 Сборка ассетов"
 bench build --apps ${APP_LIST} || bench build || warn "bench build с предупреждением"
 chmod -R a+rX /workspace/sites/assets || true
 
-# ===== 11) проверка Administrator =====
+# ===== 12) проверка Administrator через SQL =====
 step "🔐 Проверка пользователя Administrator"
-site_cmd execute "frappe.db.exists" --kwargs "{'doctype':'User','name':'Administrator'}" \
-  && ok "Администратор найден" \
-  || warn "Administrator не найден? Проверь миграции/фикстуры"
+read -r DB_NAME DB_PASS _junk _envmark < <(read_db_creds || echo "    ")
+if [[ -n "${DB_NAME:-}" && -n "${DB_PASS:-}" ]]; then
+  if mysql -h "$DB_HOST" -P "$DB_PORT" -u"$DB_NAME" -p"$DB_PASS" "$DB_NAME" -Nse "SELECT 1 FROM tabUser WHERE name='Administrator' LIMIT 1;" 2>/dev/null | grep -q 1; then
+    ok "Администратор найден"
+  else
+    warn "Administrator не найден"
+  fi
+else
+  warn "Не удалось прочитать креды БД сайта для проверки Administrator"
+fi
 
-# ===== 12) сводка и запуск =====
+# ===== 13) сводка и запуск =====
 step "📋 Финальная сводка"
 site_cmd list-apps | sed 's/^/• /' || true
 say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
