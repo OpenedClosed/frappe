@@ -33,8 +33,8 @@ RUN set -eux; \
     dpkg -i /tmp/wkhtml.deb || apt-get -y -f install; \
     rm -rf /var/lib/apt/lists/* /tmp/wkhtml.deb
 
-# --- Workspace ---
-RUN mkdir -p /workspace
+# --- Workspace + seed holder ---
+RUN mkdir -p /workspace /workspace/sites /opt/seed-sites
 WORKDIR /workspace
 COPY . /workspace/
 
@@ -49,10 +49,11 @@ RUN ln -s "$VENV" /workspace/env
 # --- yarn ---
 RUN npm i -g yarn
 
-# --- базовый common_site_config патч на билде ---
+# --- минимальный common_site_config на билде (без привязки к окружению) ---
 RUN python3 - <<'PY'
 import json, pathlib
 p = pathlib.Path("/workspace/sites/common_site_config.json")
+p.parent.mkdir(parents=True, exist_ok=True)
 cfg = {}
 if p.exists():
     try: cfg = json.loads(p.read_text() or "{}")
@@ -73,16 +74,10 @@ RUN git config --global user.email "build@local" && git config --global user.nam
     done
 
 # --- зависимости всех приложений (python+node) ---
-RUN bench setup requirements
+RUN bench setup requirements || true
 
-# --- editable install приложений ---
-RUN set -eux; \
-  for app in frappe erpnext dantist_app; do \
-    if [ -d "apps/$app" ]; then "$VENV/bin/pip" install -e "apps/$app"; fi; \
-  done
-
-# --- предсборка ассетов на билде (best-effort) ---
-RUN bench build || bench build || true
+# ВАЖНО: bench build убран с этапа билда — делаем его только на рантайме,
+# когда bench-директория и сайт гарантированно существуют.
 
 # --- start script ---
 COPY docker/start.sh /usr/local/bin/start.sh

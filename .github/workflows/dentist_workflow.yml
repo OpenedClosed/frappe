@@ -128,43 +128,43 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Mongo
-      - name: Build and push Mongo
-        if: contains( steps.changes.outputs.all_modified_files, 'mongo/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./mongo
-          tags: ${{ secrets.DOCKER_USERNAME }}/mongo:latest
+      # # Mongo
+      # - name: Build and push Mongo
+      #   if: contains( steps.changes.outputs.all_modified_files, 'mongo/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./mongo
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/mongo:latest
 
-      # Redis
-      - name: Build and push Redis
-        if: contains( steps.changes.outputs.all_modified_files, 'redis/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./redis
-          tags: ${{ secrets.DOCKER_USERNAME }}/redis:latest
+      # # Redis
+      # - name: Build and push Redis
+      #   if: contains( steps.changes.outputs.all_modified_files, 'redis/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./redis
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/redis:latest
 
-      # Backend (FastAPI + Celery)
-      - name: Build and push Backend
-        if: contains( steps.changes.outputs.all_modified_files, 'backend/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./backend
-          file: ./backend/Dockerfile
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
+      # # Backend (FastAPI + Celery)
+      # - name: Build and push Backend
+      #   if: contains( steps.changes.outputs.all_modified_files, 'backend/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./backend
+      #     file: ./backend/Dockerfile
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
-      # Bot
-      - name: Build and push Bot
-        if: contains( steps.changes.outputs.all_modified_files, 'backend/telegram_bot/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./backend
-          file: ./backend/telegram_bot/TelegramBotDockerfile
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
+      # # Bot
+      # - name: Build and push Bot
+      #   if: contains( steps.changes.outputs.all_modified_files, 'backend/telegram_bot/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./backend
+      #     file: ./backend/telegram_bot/TelegramBotDockerfile
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_bot:latest
 
       # Frappe
       - name: Build and push Frappe (dantist_frappe)
@@ -177,31 +177,31 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/dantist_frappe:latest
 
-      # MariaDB
-      - name: Build and push MariaDB
-        if: contains( steps.changes.outputs.all_modified_files, 'mariadb/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./mariadb
-          tags: ${{ secrets.DOCKER_USERNAME }}/mariadb:latest
+      # # MariaDB
+      # - name: Build and push MariaDB
+      #   if: contains( steps.changes.outputs.all_modified_files, 'mariadb/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./mariadb
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/mariadb:latest
 
-      # Frontends
-      - name: Build and push Frontend admin
-        if: contains( steps.changes.outputs.all_modified_files, 'frontend_admin/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./frontend_admin
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
+      # # Frontends
+      # - name: Build and push Frontend admin
+      #   if: contains( steps.changes.outputs.all_modified_files, 'frontend_admin/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./frontend_admin
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_admin:latest
 
-      - name: Build and push Frontend chat
-        if: contains( steps.changes.outputs.all_modified_files, 'frontend_chat/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./frontend_chat
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
+      # - name: Build and push Frontend chat
+      #   if: contains( steps.changes.outputs.all_modified_files, 'frontend_chat/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./frontend_chat
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_frontend_chat:latest
 
       # Nginx
       - name: Build and push Nginx proxy
