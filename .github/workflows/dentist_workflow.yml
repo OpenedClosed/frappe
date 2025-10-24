@@ -146,15 +146,15 @@ jobs:
       #     context: ./redis
       #     tags: ${{ secrets.DOCKER_USERNAME }}/redis:latest
 
-      # Backend (FastAPI + Celery)
-      - name: Build and push Backend
-        if: contains( steps.changes.outputs.all_modified_files, 'backend/')
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: ./backend
-          file: ./backend/Dockerfile
-          tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
+      # # Backend (FastAPI + Celery)
+      # - name: Build and push Backend
+      #   if: contains( steps.changes.outputs.all_modified_files, 'backend/')
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     context: ./backend
+      #     file: ./backend/Dockerfile
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/dentist_backend:latest
 
       # # Bot
       # - name: Build and push Bot
