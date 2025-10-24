@@ -77,8 +77,6 @@ RUN git config --global user.email "build@local" && git config --global user.nam
 # --- зависимости всех приложений (python+node) ---
 RUN bench setup requirements || true
 
-# Сборку ассетов делаем на рантайме, когда сайт уже есть
-
 # --- start script ---
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
