@@ -6,7 +6,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV=/opt/bench-env \
     PATH="/opt/bench-env/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# --- Base packages + node/yarn + mysqlclient deps + удобства ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates \
     build-essential pkg-config \
@@ -17,12 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ghostscript \
     fontconfig libxrender1 libxext6 libx11-6 libxcb1 xfonts-base xfonts-75dpi \
     nodejs npm \
-    file \
-    jq nano less procps iproute2 netcat-openbsd \
+    jq nano less procps iproute2 netcat-openbsd file \
     mariadb-client \
  && rm -rf /var/lib/apt/lists/*
 
-# --- wkhtmltopdf 0.12.6-1 ---
+# wkhtmltopdf 0.12.6-1
 RUN set -eux; \
     apt-get update; \
     for url in \
@@ -34,23 +32,23 @@ RUN set -eux; \
     dpkg -i /tmp/wkhtml.deb || apt-get -y -f install; \
     rm -rf /var/lib/apt/lists/* /tmp/wkhtml.deb
 
-# --- Workspace (+seed holder) ---
+# Workspace
 RUN mkdir -p /workspace /workspace/sites /opt/seed-sites
 WORKDIR /workspace
 COPY . /workspace/
 
-# --- venv + bench ---
+# venv + bench
 RUN python3 -m venv "$VENV" \
  && "$VENV/bin/pip" install -U pip setuptools wheel \
  && "$VENV/bin/pip" install "frappe-bench==5.25.9"
 
-# bench ожидает env-ссылку
+# bench expects /workspace/env
 RUN ln -s "$VENV" /workspace/env
 
-# --- yarn ---
+# yarn
 RUN npm i -g yarn
 
-# --- минимальный common_site_config на билде (без привязки к окружению) ---
+# минимальный common_site_config на билде (без привязки к окружению)
 RUN python3 - <<'PY'
 import json, pathlib
 p = pathlib.Path("/workspace/sites/common_site_config.json")
@@ -63,7 +61,7 @@ cfg.update({"frappe_user": "root", "live_reload": False})
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 PY
 
-# --- инициализация git в apps/* (bench reqs) ---
+# инициализация git в apps/* (bench reqs)
 RUN git config --global user.email "build@local" && git config --global user.name "Build User" \
  && for d in /workspace/apps/*; do \
       if [ -d "$d" ]; then \
@@ -74,10 +72,10 @@ RUN git config --global user.email "build@local" && git config --global user.nam
       fi; \
     done
 
-# --- зависимости всех приложений (python+node) ---
+# зависимости всех приложений (python+node)
 RUN bench setup requirements || true
 
-# --- start script ---
+# стартовый скрипт (из этого ответа)
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
