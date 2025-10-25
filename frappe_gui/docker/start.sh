@@ -1,17 +1,42 @@
 #!/usr/bin/env bash
-# Lean bootstrap for Frappe in Docker (prod-first)
+# Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
 
 set -Eeuo pipefail
 
 # ===== pretty logs =====
 ts() { date +'%F %T'; }
-say()   { echo -e "[$(ts)] $*"; }
-ok()    { say "✅ $*"; }
-warn()  { say "⚠️  $*" >&2; }
-err()   { say "❌ $*" >&2; }
-step()  { echo -e "\n[$(ts)] ── $*"; }
-fatal() { err "$*"; exit 1; }
-mask() { local s="${1:-}"; local n=${#s}; if ((n==0)); then echo ""; elif ((n<=6)); then echo "***"; else echo "${s:0:2}***${s: -2}"; fi; }
+say()
+{
+  echo -e "[$(ts)] $*";
+}
+ok()
+{
+  say "✅ $*";
+}
+warn()
+{
+  say "⚠️  $*" >&2;
+}
+err()
+{
+  say "❌ $*" >&2;
+}
+step()
+{
+  echo -e "\n[$(ts)] ── $*";
+}
+fatal()
+{
+  err "$*"; exit 1;
+}
+mask()
+{
+  local s="${1:-}"; local n=${#s};
+  if ((n==0)); then echo "";
+  elif ((n<=6)); then echo "***";
+  else echo "${s:0:2}***${s: -2}";
+  fi
+}
 
 # ===== env & paths =====
 export PATH="/opt/bench-env/bin:/usr/bin:/usr/local/bin:$PATH"
@@ -36,21 +61,34 @@ PROTO=$([[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]] && echo http || e
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
-APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"     # через пробел
-APP_ENV="${APP_ENV:-prod}"                          # prod|dev
-PROCFILE_MODE="${PROCFILE_MODE:-container}"         # container|local
+APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"    # через пробел
+APP_ENV="${APP_ENV:-prod}"                         # prod|dev
+PROCFILE_MODE="${PROCFILE_MODE:-container}"        # container|local
 WEB_PORT="${WEB_PORT:-8001}"
 SOCKETIO_NODE_BIN="${SOCKETIO_NODE_BIN:-/usr/bin/node}"
 BENCH_BIN="${BENCH_BIN:-bench}"
 
+# ===== Ручка для тяжёлых шагов =====
+# HEAVY=1 (по умолчанию) — migrate/install/build
+# HEAVY=0 — быстрый прогон: только конфиги, фикстуры, пароль Administrator
+HEAVY="${HEAVY:-1}"
+HEAVY="0"
+
 # mysql client без SSL (устраняет sporadic HY000/2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
-bench()    { (cd "$BENCH_DIR" && command bench "$@"); }
-site_cmd() { (cd "$BENCH_DIR" && command bench --site "$SITE" "$@"); }
+bench()
+{
+  (cd "$BENCH_DIR" && command bench "$@");
+}
+site_cmd()
+{
+  (cd "$BENCH_DIR" && command bench --site "$SITE" "$@");
+}
 
 # ------ helpers ------
-read_db_creds() {
+read_db_creds()
+{
   python3 - "$SITE_CFG" <<'PY'
 import json,sys
 p = sys.argv[1]
@@ -66,7 +104,8 @@ print(d.get("dantist_env",""))
 PY
 }
 
-core_tables_ok() {
+core_tables_ok()
+{
   [[ -f "$SITE_CFG" ]] || return 1
   local DB_NAME
   DB_NAME="$(python3 - "$SITE_CFG" <<'PY'
@@ -81,7 +120,8 @@ PY
     -Nse "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME='tabDefaultValue' LIMIT 1;" 2>/dev/null | grep -q 1
 }
 
-quick_diag() {
+quick_diag()
+{
   step "🧪 Диагностика"
   if [[ -f "$SITE_CFG" ]]; then
     read -r DB_NAME DB_PASS DBH DENV < <(read_db_creds || echo "    ")
@@ -98,19 +138,103 @@ quick_diag() {
   fi
 }
 
-ensure_apps_txt_has() {
+ensure_apps_txt_has()
+{
   local app="$1"
   touch "$APPS_TXT"
-  grep -Fqx "$app" "$APPS_TXT" || { echo "$app" >> "$APPS_TXT"; ok "добавил '$app' в sites/apps.txt"; }
+  if ! grep -Fqx "$app" "$APPS_TXT"; then
+    echo "$app" >> "$APPS_TXT"
+    ok "добавил '$app' в sites/apps.txt"
+  fi
 }
 
-ensure_app_present_and_registered() {
+ensure_app_present_and_registered()
+{
   local app="$1"
   if [[ ! -d "$BENCH_DIR/apps/$app" ]]; then
     warn "Приложение $app не найдено в /workspace/apps/$app — пропускаю установку (проверь образ)."
   else
     ensure_apps_txt_has "$app"
   fi
+}
+
+need_assets_rebuild()
+{
+  # ключевой бандл frappe-web.bundle — если его нет, то сборка нужна
+  ls /workspace/sites/assets/frappe/dist/js/frappe-web.bundle*.js >/dev/null 2>&1 || return 0
+  return 1
+}
+
+do_install_apps()
+{
+  if [[ "$HEAVY" != "1" ]]; then
+    warn "HEAVY=0 → пропускаю install-app"
+    return 0
+  fi
+  step "🧩 Установка приложений (HEAVY=1)"
+  for app in ${APP_LIST}; do
+    if site_cmd list-apps 2>/dev/null | grep -Fqx "$app"; then
+      say "• $app уже установлен"
+    else
+      say "• install-app $app"
+      site_cmd install-app "$app" && ok "установлен $app" || warn "install-app $app не прошёл"
+    fi
+  done
+}
+
+do_migrate()
+{
+  if [[ "$HEAVY" != "1" ]]; then
+    warn "HEAVY=0 → пропускаю migrate"
+    return 0
+  fi
+  step "🔁 Migrate (HEAVY=1)"
+  site_cmd migrate || warn "migrate завершился с предупреждением"
+}
+
+do_fixtures()
+{
+  step "📥 Синхронизация фикстур"
+  site_cmd execute "frappe.utils.fixtures.sync_fixtures" \
+    && ok "фикстуры синхронизированы" \
+    || warn "sync_fixtures вернул ненулевой код"
+}
+
+do_assets()
+{
+  if [[ "$HEAVY" != "1" ]]; then
+    warn "HEAVY=0 → пропускаю сборку ассетов"
+    return 0
+  fi
+  if need_assets_rebuild; then
+    step "🧱 Сборка ассетов"
+    # сначала попробуем собрать указанные приложения (frappe + твои)
+    if ! bench build --apps "frappe ${APP_LIST}"; then
+      warn "scoped build вернул ошибку — пробую полную сборку"
+      bench build || true
+    fi
+  else
+    ok "Ассеты уже на месте — сборка не требуется"
+  fi
+  chmod -R a+rX /workspace/sites/assets || true
+}
+
+do_admin_password()
+{
+  local PASS="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
+  if [[ -z "$PASS" ]]; then
+    say "FRAPPE_ADMIN_PASSWORD не задан — пропускаю установку пароля Administrator"
+    return 0
+  fi
+  step "🔐 Проверка/установка пароля Administrator"
+  # даже если пользователя ещё нет/пароль не читабелен из site_config — bench сам выставит пароль
+  read -r DB_NAME DB_PASS DBH _ < <(read_db_creds || echo "    ")
+  if [[ -z "${DB_NAME:-}" || -z "${DB_PASS:-}" ]]; then
+    warn "Не удалось прочитать db_name/db_password — всё равно проставлю пароль через bench"
+  fi
+  site_cmd set-admin-password "$PASS" \
+    && ok "Пароль Administrator установлен" \
+    || warn "Не удалось установить пароль Administrator (см. лог bench)"
 }
 
 # ===== 0) ждём MariaDB =====
@@ -132,8 +256,10 @@ p = pathlib.Path("/workspace/sites/common_site_config.json")
 p.parent.mkdir(parents=True, exist_ok=True)
 cfg = {}
 if p.exists():
-    try: cfg = json.loads(p.read_text() or "{}")
-    except Exception: cfg = {}
+    try:
+        cfg = json.loads(p.read_text() or "{}")
+    except Exception:
+        cfg = {}
 redis = os.getenv("REDIS_URL","redis://redis:6379")
 redis_base = f"{redis.split('/',3)[0]}//{redis.split('/',3)[2]}"
 cfg.update({
@@ -156,7 +282,7 @@ ok "common_site_config.json записан"
 
 mkdir -p "$SITE_DIR" || true
 
-# ===== 2) существующий сайт (без разрушений) / создание если нет =====
+# ===== 2) создание сайта (если его ещё нет) =====
 if [[ ! -f "$SITE_CFG" ]]; then
   step "🏗️  Создание сайта: ${SITE}"
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
@@ -175,7 +301,7 @@ else
   step "♻️  Сайт уже существует — пропускаю создание"
 fi
 
-# ===== 3) патчим site_config из ENV (каждый старт) + фиксим origin =====
+# ===== 3) патчим site_config из ENV (каждый старт) =====
 step "🧩 Актуализация site_config.json из ENV"
 python3 - <<PY
 import os, json, pathlib
@@ -211,72 +337,42 @@ if devmode is not None:
     cfg["developer_mode"] = 1 if str(devmode).strip().lower() in {"1","true","yes","on"} else 0
 
 log_level = os.getenv("LOG_LEVEL")
-if log_level: cfg["log_level"] = log_level
+if log_level:
+    cfg["log_level"] = log_level
 
 enc = os.getenv("ENCRYPTION_KEY")
-if enc: cfg["encryption_key"] = enc
+if enc:
+    cfg["encryption_key"] = enc
 
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 print(f"OK {p}")
 PY
 ok "site_config.json обновлён"
 
+# Быстрая диагностика
 quick_diag
 core_tables_ok || fatal "База сайта неконсистентна (нет tabDefaultValue)"
 
-# ===== 4) регистрация приложений (без лишних install) =====
+# ===== 4) регистрация приложений в apps.txt =====
 step "🗂️ Регистрация приложений в sites/apps.txt"
 ensure_apps_txt_has frappe
-for app in ${APP_LIST}; do ensure_app_present_and_registered "$app"; done
-
-# Установка только если реально не установлено
 for app in ${APP_LIST}; do
-  if ! site_cmd list-apps 2>/dev/null | grep -Fqx "$app"; then
-    say "• install-app $app"
-    site_cmd install-app "$app" && ok "установлен $app" || warn "install-app $app не прошёл (см. стек выше)"
-  else
-    say "• $app уже установлен — пропускаю install-app"
-  fi
+  ensure_app_present_and_registered "$app"
 done
 
-# ===== 5) миграция (один раз) =====
-step "🔁 Финальная migrate"
-site_cmd migrate || warn "migrate завершилась с предупреждением"
+# ===== 5) тяжёлые шаги (по флагу HEAVY) =====
+do_migrate
+do_install_apps
+do_migrate
 
-# ===== 6) фикстуры =====
-step "📥 Синхронизация фикстур"
-site_cmd execute "frappe.utils.fixtures.sync_fixtures" \
-  && ok "фикстуры синхронизированы" \
-  || warn "sync_fixtures вернул ненулевой код"
+# ===== 6) фикстуры (всегда) =====
+do_fixtures
 
-# ===== 7) build ассетов (один общий) =====
-step "🧱 Сборка ассетов"
-if ! bench build; then
-  warn "bench build вернул ошибку — пробую форсированный rebuild"
-  bench build --force || warn "bench build с предупреждением"
-fi
-chmod -R a+rX /workspace/sites/assets || true
+# ===== 7) сборка ассетов (только при HEAVY=1 и если нет ключевых бандлов) =====
+do_assets
 
-# ===== 8) Administrator — проставить пароль, если задан в ENV =====
-step "🔐 Проверка/установка пароля Administrator"
-if [[ -n "${FRAPPE_ADMIN_PASSWORD:-}" ]]; then
-  # Если пользователя нет — bench всё равно проставит пароль, но сначала проверим наличия БД-кредов
-  read -r DB_NAME DB_PASS DBH _ < <(read_db_creds || echo "    ")
-  if [[ -n "${DB_NAME:-}" && -n "${DB_PASS:-}" ]]; then
-    if ! mysql -h "$DB_HOST" -P "$DB_PORT" -u"$DB_NAME" -p"$DB_PASS" "$DB_NAME" -Nse "SELECT 1 FROM tabUser WHERE name='Administrator' LIMIT 1;" 2>/dev/null | grep -q 1; then
-      warn "Administrator не найден — попытаюсь создать/починить через bench"
-    fi
-  else
-    warn "Не удалось прочитать db_name/db_password — всё равно проставлю пароль через bench"
-  fi
-  if site_cmd set-admin-password "$FRAPPE_ADMIN_PASSWORD"; then
-    ok "Пароль Administrator установлен"
-  else
-    warn "Не удалось установить пароль Administrator (см. лог bench)"
-  fi
-else
-  say "FRAPPE_ADMIN_PASSWORD не задан — пропускаю установку пароля Administrator"
-fi
+# ===== 8) пароль Administrator (всегда, если задан) =====
+do_admin_password
 
 # ===== 9) Procfile =====
 step "🗂️  Procfile генерация"
