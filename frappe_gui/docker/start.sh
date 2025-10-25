@@ -164,13 +164,24 @@ ensure_app_present_and_registered()
 need_assets_rebuild()
 {
   # если нет ключевых бандлов — нужна сборка
-  ls /workspace/sites/assets/frappe/dist/js/desk.bundle.*.js >/dev/null 2>&1 || return 0
+  ls /workspace/sites/assets/frappe/dist/js/desk.bundle.*.js  >/dev/null 2>&1 || return 0
   ls /workspace/sites/assets/frappe/dist/css/desk.bundle.*.css >/dev/null 2>&1 || return 0
   # если у кастом-приложения есть dist/css — минимально проверим тему
   if ls /workspace/sites/assets/dantist_app/dist/css >/dev/null 2>&1; then
     ls /workspace/sites/assets/dantist_app/dist/css/*.css >/dev/null 2>&1 || return 0
   fi
   return 1
+}
+
+admin_exists_mysql()
+{
+  # 0 = существует, 1 = не существует, 2 = не удалось проверить
+  read -r DB_NAME DB_PASS DBH _ < <(read_db_creds || echo "    ")
+  if [[ -n "${DB_NAME:-}" && -n "${DB_PASS:-}" ]]; then
+    mysql -h "${DB_HOST}" -P "${DB_PORT}" -u"${DB_NAME}" -p"${DB_PASS}" "${DB_NAME}" \
+      -Nse "SELECT 1 FROM tabUser WHERE name='Administrator' LIMIT 1;" 2>/dev/null | grep -q 1 && return 0 || return 1
+  fi
+  return 2
 }
 
 do_install_apps()
@@ -210,9 +221,8 @@ do_fixtures()
 
 do_assets()
 {
-  # ЛОГИКА:
-  # - HEAVY=1 → всегда build (полный прогон)
-  # - HEAVY=0 → build ТОЛЬКО если не хватает ключевых бандлов (автоспасалка от 404)
+  # HEAVY=1 → всегда build
+  # HEAVY=0 → build только если не хватает ключевых бандлов
   if [[ "$HEAVY" == "1" ]]; then
     step "🧱 Сборка ассетов (HEAVY=1)"
     if ! bench build --apps "frappe ${APP_LIST}"; then
@@ -241,11 +251,21 @@ do_admin_password()
     say "FRAPPE_ADMIN_PASSWORD не задан — пропускаю установку пароля Administrator"
     return 0
   fi
+
   step "🔐 Проверка/установка пароля Administrator"
-  read -r DB_NAME DB_PASS DBH _ < <(read_db_creds || echo "    ")
-  if [[ -z "${DB_NAME:-}" || -z "${DB_PASS:-}" ]]; then
-    warn "Не удалось прочитать db_name/db_password — всё равно проставлю пароль через bench"
+
+  if admin_exists_mysql; then
+    local rc=$?
+    if [[ $rc -eq 0 ]]; then
+      ok "Administrator уже существует — пропускаю смену пароля"
+      return 0
+    elif [[ $rc -eq 2 ]]; then
+      say "Не удалось проверить наличие Administrator (нет кредов БД) — безопасно пропускаю смену пароля"
+      return 0
+    fi
   fi
+
+  # сюда попадём только если удалось проверить и пользователя нет (rc==1)
   site_cmd set-admin-password "$PASS" \
     && ok "Пароль Administrator установлен" \
     || warn "Не удалось установить пароль Administrator (см. лог bench)"
@@ -338,10 +358,9 @@ cfg["db_host"] = os.getenv("DB_HOST","mariadb")
 cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}")
 cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://backend:8000/api")
 
-cur = cfg.get("dantist_iframe_origin")
-desired = os.getenv("FRONTEND_PUBLIC_ORIGIN")
-default = f"{proto}://{host}"
-cfg["dantist_iframe_origin"] = (desired if good_origin(desired or "") else (cur if good_origin(cur or "") else default))
+# dantist_iframe_origin → legacy admin
+legacy = os.getenv("LEGACY_ADMIN_PUBLIC_ORIGIN", f"{proto}://{host}/legacy-admin")
+cfg["dantist_iframe_origin"] = legacy if good_origin(legacy) else f"{proto}://{host}/legacy-admin"
 
 cfg["server_script_enabled"] = True
 cfg["dantist_env"] = os.getenv("APP_ENV","prod")
@@ -385,7 +404,7 @@ do_fixtures
 # ===== 7) ассеты (смарт-сборка для HEAVY=0) =====
 do_assets
 
-# ===== 8) пароль Administrator (всегда, если задан) =====
+# ===== 8) пароль Administrator (всегда, если задан, но только если пользователя ещё нет) =====
 do_admin_password
 
 # ===== 9) Procfile =====
