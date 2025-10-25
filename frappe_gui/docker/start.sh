@@ -190,10 +190,11 @@ fi
 if [[ ! -f "$SITE_CFG" ]]; then
   step "🏗️  Создание нового сайта: ${SITE}"
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
-  [[ -н "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
+  [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
+
   bench new-site "${SITE}" \
-    --мariadb-root-username root \
-    --мariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
+    --mariadb-root-username root \
+    --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
     --admin-password "${FRAPPE_ADMIN_PASSWORD}" \
     --db-host "${DB_HOST}" \
     --db-port "${DB_PORT}" \
