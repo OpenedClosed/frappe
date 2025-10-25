@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
-# Версия: 2025-10-25
+# Версия: 2025-10-25 (final)
 
 set -Eeuo pipefail
 
@@ -43,9 +43,10 @@ PROTO=$([[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]] && echo http || e
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
-APP_LIST="${FRAPPE_INSTALL_APPS:-dantist_app}"    # список через пробел
-APP_ENV="${APP_ENV:-prod}"                        # prod|dev
-PROCFILE_MODE="${PROCFILE_MODE:-container}"       # container|local
+# По умолчанию ставим ERPNext и твой dantist_app
+APP_LIST="${FRAPPE_INSTALL_APPS:-"erpnext dantist_app"}"   # список через пробел
+APP_ENV="${APP_ENV:-prod}"                                # prod|dev
+PROCFILE_MODE="${PROCFILE_MODE:-container}"               # container|local
 WEB_PORT="${WEB_PORT:-8001}"
 SOCKETIO_NODE_BIN="${SOCKETIO_NODE_BIN:-/usr/bin/node}"
 BENCH_BIN="${BENCH_BIN:-bench}"
@@ -62,6 +63,8 @@ bench(){ (cd "$BENCH_DIR" && command bench "$@"); }
 site_cmd(){ (cd "$BENCH_DIR" && command bench --site "$SITE" "$@"); }
 
 # ------ helpers ------
+has_app(){ [[ -d "$BENCH_DIR/apps/$1" ]]; }
+
 read_db_creds(){
   python3 - "$SITE_CFG" <<'PY'
 import json,sys
@@ -94,7 +97,6 @@ PY
 }
 
 dump_config_masked(){
-  # $1 = путь к json
   local P="$1"
   if [[ ! -f "$P" ]]; then
     warn "конфиг ${P} отсутствует"
@@ -104,7 +106,6 @@ dump_config_masked(){
 import json,sys
 P=sys.argv[1]
 S=json.loads(open(P).read() or "{}")
-# маскируем некоторые ключи
 MASK_KEYS={"db_password","encryption_key","admin_password","smtp_server_password","password","token","secret"}
 def m(v):
     if not isinstance(v,str): return v
@@ -145,10 +146,10 @@ ensure_apps_txt_has(){
 
 ensure_app_present_and_registered(){
   local app="$1"
-  if [[ ! -d "$BENCH_DIR/apps/$app" ]]; then
-    warn "Приложение $app не найдено в /workspace/apps/$app — пропускаю установку (проверь образ)."
-  else
+  if has_app "$app"; then
     ensure_apps_txt_has "$app"
+  else
+    warn "Приложение $app не найдено в /workspace/apps/$app — пропускаю установку (проверь образ/том)."
   fi
 }
 
@@ -199,6 +200,10 @@ do_install_apps(){
   fi
   step "🧩 Установка приложений (HEAVY=1)"
   for app in ${APP_LIST}; do
+    if ! has_app "$app"; then
+      warn "• $app отсутствует в /workspace/apps — пропуск install-app"
+      continue
+    fi
     if site_cmd list-apps 2>/dev/null | grep -Fqx "$app"; then
       say "• $app уже установлен"
     else
@@ -289,11 +294,6 @@ print_configs(){
   dump_config_masked "$SITE_CFG" || true
 }
 
-print_procfile(){
-  step "📄 Procfile (print)"
-  sed 's/^/    /' "$PROCFILE_PATH" || true
-}
-
 # ===== 0) ждём MariaDB =====
 step "⏳ Ожидание MariaDB ${DB_HOST}:${DB_PORT} (до ${DB_WAIT}s)"
 for i in $(seq 1 "$DB_WAIT"); do
@@ -344,6 +344,14 @@ if [[ ! -f "$SITE_CFG" ]]; then
   step "🏗️  Создание сайта: ${SITE}"
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
   [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
+
+  INSTALL_APPS_ON_CREATE="frappe"
+  has_app erpnext && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} erpnext"
+  for app in ${APP_LIST}; do
+    has_app "$app" && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} ${app}"
+  done
+  say "• install on create: ${INSTALL_APPS_ON_CREATE}"
+
   bench new-site "${SITE}" \
     --mariadb-root-username root \
     --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
@@ -351,7 +359,7 @@ if [[ ! -f "$SITE_CFG" ]]; then
     --db-host "${DB_HOST}" \
     --db-port "${DB_PORT}" \
     --mariadb-user-host-login-scope='%' \
-    --install-app frappe \
+    $(for a in ${INSTALL_APPS_ON_CREATE}; do printf -- " --install-app %s" "$a"; done) \
     --force
   ok "Сайт создан"
 else
@@ -408,7 +416,7 @@ print(f"OK {p}")
 PY
 ok "site_config.json обновлён"
 
-# дублируем socket.io-ключи (страховка)
+# страховка: socket.io ключи
 ensure_socketio_settings
 
 # Быстрая диагностика
@@ -418,6 +426,7 @@ core_tables_ok || fatal "База сайта неконсистентна (не�
 # ===== 4) регистрация приложений в apps.txt =====
 step "🗂️ Регистрация приложений в sites/apps.txt"
 ensure_apps_txt_has frappe
+has_app erpnext && ensure_apps_txt_has erpnext
 for app in ${APP_LIST}; do
   ensure_app_present_and_registered "$app"
 done
@@ -460,7 +469,8 @@ ok "Procfile готов (${PROCFILE_MODE})"
 # ===== 10) Сводки для отладки =====
 print_env_summary
 print_configs
-print_procfile
+step "📄 Procfile (print)"
+sed 's/^/    /' "$PROCFILE_PATH" || true
 
 # ===== 11) финал и старт =====
 step "📋 Финальная сводка"

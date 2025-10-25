@@ -46,36 +46,37 @@ fixtures = [
     "Server Script",
     "Custom DocPerm",
     "Workspace",
-    "Workspace Shortcut",
-    "Workspace Link",
     "Print Format",
     "Report",
 
-    # --- Ключевые модели проекта ---
-    {"doctype": "DocType", "filters": {"name": ["in", [
-        "Bot Settings",
-        "Engagement Case",
-        "ToDo",
-    ]]}},
+    # --- Ключевые модели проекта (оставляем выборочно через filters) ---
+    {
+        "doctype": "DocType",
+        "filters": {
+            "name": ["in", [
+                "Bot Settings",
+                "Engagement Case",
+                "ToDo",
+            ]]
+        },
+    },
 
-    # --- Роли и права ---
+    # --- Настройки ролей и прав доступа ---
     "Role",
     "User Group",
     "User Group Member",
     "User Permission",
 
-    # --- Канбаны ---
+    # --- Канбаны и вёркспейсы (без данных задач) ---
     "Kanban Board",
+    "Workspace Shortcut",
+    "Workspace Link",
 
-    # --- Website Builder / портальные вещи ---
-    # HTML-блоки (из конструктора страниц)
-    {"doctype": "Block", "filters": {"name": ["like", "dantist-%"]}},
-    # Шаблоны компонентов/фрагментов
-    {"doctype": "Web Template", "filters": {"module": ["in", ["Dantist App"]]}},
-    # Если используете готовые страницы с блоками
-    {"doctype": "Web Page", "filters": {"name": ["like", "dantist-%"]}},
-    # Если есть меню портала/линки в ЛК
-    {"doctype": "Portal Menu Item", "filters": {"name": ["like", "dantist-%"]}},
+    # --- Контент сайта / HTML-блоки (БЕЗ filters) ---
+    "Block",               # отдельные блоки конструктора
+    "Web Template",        # шаблоны блоков
+    "Web Page",            # страницы сайта
+    "Custom HTML Block",   # твой кастомный DocType с HTML
 ]
 
 # required_apps = []

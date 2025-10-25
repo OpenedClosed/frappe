@@ -175,7 +175,7 @@ jobs:
           file: ./frappe_gui/docker/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/dantist_frappe:latest
+            ${{ secrets.DOCKER_USERNAME }}/dantist_frappe:latest 
 
       # # MariaDB
       # - name: Build and push MariaDB
