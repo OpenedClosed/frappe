@@ -72,10 +72,6 @@ fixtures = [
     "Workspace Shortcut",
     "Workspace Link",
 
-    # --- Контент сайта / HTML-блоки (БЕЗ filters) ---
-    "Block",               # отдельные блоки конструктора
-    "Web Template",        # шаблоны блоков
-    "Web Page",            # страницы сайта
     "Custom HTML Block",   # твой кастомный DocType с HTML
 ]
 

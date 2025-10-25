@@ -55,6 +55,7 @@ BENCH_BIN="${BENCH_BIN:-bench}"
 # HEAVY=1 — migrate/install/build всегда
 # HEAVY=0 — быстрый старт: конфиги, фикстуры, умная сборка ассетов, пароль Admin только если нужно
 HEAVY="${HEAVY:-1}"
+HEAVY=0
 
 # mysql client без SSL (устраняет sporadic HY000/2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
