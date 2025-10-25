@@ -394,8 +394,8 @@ cfg["db_host"] = os.getenv("DB_HOST","mariadb")
 cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}")
 cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://backend:8000/api")
 
-legacy = os.getenv("LEGACY_ADMIN_PUBLIC_ORIGIN", f"{proto}://{host}/legacy-admin")
-cfg["dantist_iframe_origin"] = legacy if good_origin(legacy) else f"{proto}://{host}/legacy-admin"
+legacy = os.getenv("LEGACY_ADMIN_PUBLIC_ORIGIN", f"{proto}://{host}/admin")
+cfg["dantist_iframe_origin"] = legacy if good_origin(legacy) else f"{proto}://{host}/admin"
 
 cfg["server_script_enabled"] = True
 cfg["dantist_env"] = os.getenv("APP_ENV","prod")
