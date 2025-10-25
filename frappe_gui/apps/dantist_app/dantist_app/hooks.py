@@ -8,6 +8,36 @@ app_license = "mit"
 # Apps
 # ------------------
 
+# fixtures = [
+#     # --- Кастомизации ядра ---
+#     "Custom Field",
+#     "Property Setter",
+#     "Client Script",
+#     "Server Script",
+#     "Custom DocPerm",
+#     "Workspace",
+#     "Print Format",
+#     "Report",
+
+#     # --- Ключевые модели проекта ---
+#     {"doctype": "DocType", "filters": {"name": ["in", [
+#         "Bot Settings",
+#         "Engagement Case",
+#         "ToDo"
+#     ]]}},
+
+#     # --- Настройки ролей и прав доступа ---
+#     "Role",
+#     "User Group",
+#     "User Group Member",
+#     "User Permission",
+
+#     # --- Канбаны и вёркспейсы (без данных задач) ---
+#     "Kanban Board",
+#     "Workspace Shortcut",
+#     "Workspace Link",
+# ]
+
 fixtures = [
     # --- Кастомизации ядра ---
     "Custom Field",
@@ -16,6 +46,8 @@ fixtures = [
     "Server Script",
     "Custom DocPerm",
     "Workspace",
+    "Workspace Shortcut",
+    "Workspace Link",
     "Print Format",
     "Report",
 
@@ -23,19 +55,27 @@ fixtures = [
     {"doctype": "DocType", "filters": {"name": ["in", [
         "Bot Settings",
         "Engagement Case",
-        "ToDo"
+        "ToDo",
     ]]}},
 
-    # --- Настройки ролей и прав доступа ---
+    # --- Роли и права ---
     "Role",
     "User Group",
     "User Group Member",
     "User Permission",
 
-    # --- Канбаны и вёркспейсы (без данных задач) ---
+    # --- Канбаны ---
     "Kanban Board",
-    "Workspace Shortcut",
-    "Workspace Link",
+
+    # --- Website Builder / портальные вещи ---
+    # HTML-блоки (из конструктора страниц)
+    {"doctype": "Block", "filters": {"name": ["like", "dantist-%"]}},
+    # Шаблоны компонентов/фрагментов
+    {"doctype": "Web Template", "filters": {"module": ["in", ["Dantist App"]]}},
+    # Если используете готовые страницы с блоками
+    {"doctype": "Web Page", "filters": {"name": ["like", "dantist-%"]}},
+    # Если есть меню портала/линки в ЛК
+    {"doctype": "Portal Menu Item", "filters": {"name": ["like", "dantist-%"]}},
 ]
 
 # required_apps = []
