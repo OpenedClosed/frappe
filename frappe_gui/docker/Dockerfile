@@ -49,16 +49,12 @@ RUN ln -s "$VENV" /workspace/env
 # yarn
 RUN npm i -g yarn
 
-# минимальный common_site_config на билде (без привязки к окружению)
+# минимальный common_site_config на билде (фиксируем node бинарь)
 RUN python3 - <<'PY'
 import json, pathlib
 p = pathlib.Path("/workspace/sites/common_site_config.json")
 p.parent.mkdir(parents=True, exist_ok=True)
-cfg = {}
-if p.exists():
-    try: cfg = json.loads(p.read_text() or "{}")
-    except Exception: cfg = {}
-cfg.update({"frappe_user": "root", "live_reload": False})
+cfg = {"frappe_user": "root", "live_reload": False, "node": "/usr/bin/node"}
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 PY
 

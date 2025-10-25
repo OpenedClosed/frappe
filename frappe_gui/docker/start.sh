@@ -41,6 +41,12 @@ PRUNE_SEEDED_SITE="${PRUNE_SEEDED_SITE:-1}"      # 1 — чистить толь
 APP_ENV="${APP_ENV:-prod}"                       # prod|dev
 DISABLE_FIXTURE_HAS_ROLE="${DISABLE_FIXTURE_HAS_ROLE:-0}"  # подстраховка, если вернёшь фикстуру
 
+# Procfile / bench / node настройки
+PROCFILE_MODE="${PROCFILE_MODE:-container}"      # container|local
+WEB_PORT="${WEB_PORT:-8001}"
+SOCKETIO_NODE_BIN="${SOCKETIO_NODE_BIN:-/usr/bin/node}"
+BENCH_BIN="${BENCH_BIN:-bench}"
+
 # mysql client без SSL (устраняет sporadic HY000/2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
@@ -184,10 +190,10 @@ fi
 if [[ ! -f "$SITE_CFG" ]]; then
   step "🏗️  Создание нового сайта: ${SITE}"
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
-  [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
+  [[ -н "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
   bench new-site "${SITE}" \
-    --mariadb-root-username root \
-    --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
+    --мariadb-root-username root \
+    --мariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
     --admin-password "${FRAPPE_ADMIN_PASSWORD}" \
     --db-host "${DB_HOST}" \
     --db-port "${DB_PORT}" \
@@ -304,20 +310,40 @@ else
   warn "Не удалось прочитать креды БД сайта для проверки Administrator"
 fi
 
-# ===== 13) сводка и запуск =====
+# ===== 13) Procfile (динамически, без redis_*) =====
+step "🗂️  Procfile генерация"
+PROCFILE_PATH="/workspace/Procfile"
+
+write_procfile_container() {
+cat > "$PROCFILE_PATH" <<PROC
+web: cd /workspace && $BENCH_BIN serve --port $WEB_PORT
+socketio: cd /workspace && $SOCKETIO_NODE_BIN apps/frappe/socketio.js
+schedule: cd /workspace && $BENCH_BIN schedule
+worker: cd /workspace && $BENCH_BIN worker
+PROC
+}
+
+write_procfile_local() {
+cat > "$PROCFILE_PATH" <<PROC
+web: $BENCH_BIN serve --port $WEB_PORT
+socketio: $SOCKETIO_NODE_BIN apps/frappe/socketio.js
+watch: $BENCH_BIN watch
+schedule: $BENCH_BIN schedule
+worker: OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES NO_PROXY=* $BENCH_BIN worker 1>> logs/worker.log 2>> logs/worker.error.log
+PROC
+}
+
+if [[ "$PROCFILE_MODE" == "local" ]]; then
+  write_procfile_local
+else
+  write_procfile_container
+fi
+ok "Procfile готов ($PROCFILE_MODE)"
+
+# ===== 14) сводка и запуск =====
 step "📋 Финальная сводка"
 site_cmd list-apps | sed 's/^/• /' || true
 say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
 ok "Bootstrap завершён. Запускаю процессы…"
-
-# Procfile: НЕ стартуем redis из этого контейнера; socketio оставляю как раньше (node в образе есть)
-if [[ ! -f /workspace/Procfile ]]; then
-  cat > /workspace/Procfile <<'PROC'
-web: cd /workspace && bench serve --port 8001
-socketio: cd /workspace && node apps/frappe/socketio.js
-schedule: cd /workspace && bench schedule
-worker: cd /workspace && bench worker
-PROC
-fi
 
 exec bench start
