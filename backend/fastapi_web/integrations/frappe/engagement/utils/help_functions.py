@@ -817,7 +817,7 @@ async def sync_recent(minutes: int, limit: Optional[int] = None) -> Dict[str, An
     Берём свежие чаты. Временно форсим limit=50.
     Обрабатываем от старых к новым; перед обработкой мерджим дубли по (client_id, platform).
     """
-    limit = 50
+    # limit = 50
     dt_limit = datetime.now(tz=timezone.utc) - timedelta(minutes=int(minutes))
     ts_limit = dt_limit.timestamp()
 
