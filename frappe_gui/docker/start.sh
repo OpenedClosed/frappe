@@ -293,9 +293,19 @@ site_cmd execute "frappe.utils.fixtures.sync_fixtures" \
   && ok "фикстуры синхронизированы" \
   || warn "sync_fixtures вернул ненулевой код (см. лог выше)"
 
-# ===== 11) build ассетов =====
+# ===== 11) build ассетов (ОБЯЗАТЕЛЬНО сборка frappe) =====
 step "🧱 Сборка ассетов"
-bench build --apps ${APP_LIST} || bench build || warn "bench build с предупреждением"
+if ! bench build --apps "frappe ${APP_LIST}"; then
+  warn "scoped build вернул ошибку — пробую полную сборку"
+  bench build || warn "bench build с предупреждением"
+fi
+
+# sanity-check ключевого бандла → форсированный rebuild при необходимости
+if ! ls /workspace/sites/assets/frappe/dist/js/frappe-web.bundle*.js >/dev/null 2>&1; then
+  warn "frappe-web.bundle не найден, форсирую rebuild"
+  bench build --force || true
+fi
+
 chmod -R a+rX /workspace/sites/assets || true
 
 # ===== 12) проверка Administrator через SQL =====
