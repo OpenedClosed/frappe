@@ -289,7 +289,7 @@ print_env_summary(){
   say "• FRAPPE_ADMIN_PASSWORD=$(mask "${FRAPPE_ADMIN_PASSWORD:-}")"
   say "• FRAPPE_SHARED_SECRET (для dantist_shared_secret) = $(mask "${FRAPPE_SHARED_SECRET:-}")"
   say "• DANTIST_INTEGRATION_AUD = $(mask "${DANTIST_INTEGRATION_AUD:-}")"
-  say "• APP_LIST=${APP_LIST}"
+  say "• APP_LIST=${APP_LIST}" 
   say "• APP_ENV=${APP_ENV}  HEAVY=${HEAVY}  PROCFILE_MODE=${PROCFILE_MODE}"
 }
 
