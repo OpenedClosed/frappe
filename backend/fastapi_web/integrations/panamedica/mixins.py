@@ -64,6 +64,8 @@ class CRMIntegrationMixin:
                 contact_data=contact,
             )
         except CRMError as e:
+            print('ошибка')
+            print(e)
             raise HTTPException(e.status_code, "CRM error during creation") from e
 
         valid["patient_id"] = crm_data.get("externalId")
@@ -105,6 +107,10 @@ class CRMIntegrationMixin:
         # Телефон
         if phone := patch.get("phone"):
             normalized_numbers = normalize_numbers(phone)
+            print("*"*100)
+            print("номер")
+            print(format_crm_phone(normalized_numbers))
+            print("*"*100)
             allowed["phone"] = format_crm_phone(normalized_numbers)
 
         # Email

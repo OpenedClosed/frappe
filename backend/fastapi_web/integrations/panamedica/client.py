@@ -306,6 +306,7 @@ class CRMClient:
             "pesel": pesel,
             "referralId": referral_id,
         }
+        print(payload)
         data = await self.call("POST", "/patients", json=payload)
         # CRM может не вернуть externalId — добавляем сами
         data.setdefault("externalId", external_id)

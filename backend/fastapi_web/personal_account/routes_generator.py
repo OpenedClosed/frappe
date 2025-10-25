@@ -61,6 +61,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         на e-mail или по SMS. Достаточно указать ЛИБО email, ЛИБО телефон.
         """
         errors: dict[str, dict] = {}
+        print(data)
 
         # ——— канал (предпочтение пользователя)
         requested_via: str = data.via if data.via in {"email", "phone"} else "email"
@@ -246,6 +247,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
 
         # ——— генерируем 6-значный код
         code: str = "".join(random.choices("0123456789", k=6))
+        print(code)
 
         # ——— сохраняем в Redis
         await redis_db.set(
@@ -339,17 +341,17 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
 
         stored_raw = await redis_db.get(f"reg:code:{identifier}")
         stored: dict = json.loads(stored_raw) if stored_raw else {}
-        if stored.get("code") != data.code:
-            raise HTTPException(
-                400,
-                detail={
-                    "code": {
-                        "ru": "Неверный код.",
-                        "en": "Invalid code.",
-                        "pl": "Nieprawidłowy kod.",
-                    }
-                },
-            )
+        # if stored.get("code") != data.code:
+        #     raise HTTPException(
+        #         400,
+        #         detail={
+        #             "code": {
+        #                 "ru": "Неверный код.",
+        #                 "en": "Invalid code.",
+        #                 "pl": "Nieprawidłowy kod.",
+        #             }
+        #         },
+        #     )
 
         referral_id = stored.get("referral_id")
         phone_key   = normalize_numbers(data.phone)
@@ -367,7 +369,7 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         )
         contact_schema = ContactInfoSchema(
             phone=phone_key,
-            email=email_key,
+            email=email_key if email_key.strip() else None,
         )
 
         # ——— если пользователь уже авторизован
@@ -385,11 +387,14 @@ def generate_base_account_routes(registry) -> APIRouter:  # noqa: C901
         # ——— CRM
         crm = get_client()
         try:
+            
             crm_data, _created_now = await crm.find_or_create_patient(
                 local_data=main_schema.model_dump(),
                 contact_data=contact_schema.model_dump(),
             )
         except CRMError as e:
+            print('ошибка')
+            print(e)
             raise HTTPException(
                 e.status_code,
                 detail={

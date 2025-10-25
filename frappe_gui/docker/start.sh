@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
-# Версия: 2025-10-25 (final)
+# Версия: 2025-10-25 (final+admin-check+secrets)
 
 set -Eeuo pipefail
 
@@ -254,6 +254,7 @@ do_assets(){
 
 do_admin_password(){
   local PASS="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
+
   if [[ -z "$PASS" ]]; then
     say "FRAPPE_ADMIN_PASSWORD не задан — пропускаю установку пароля Administrator"
     return 0
@@ -263,18 +264,20 @@ do_admin_password(){
   if admin_exists_mysql; then
     local rc=$?
     if [[ $rc -eq 0 ]]; then
-      ok "Administrator уже существует — пропускаю смену пароля"
+      ok "Administrator уже существует — смена пароля НЕ нужна, пропускаю."
       return 0
     elif [[ $rc -eq 2 ]]; then
-      say "Не удалось проверить наличие Administrator (нет кредов БД) — безопасно пропускаю смену пароля"
+      warn "Не удалось проверить наличие Administrator (нет/пустые креды БД в site_config.json). Пароль НЕ меняю."
       return 0
     fi
   fi
 
-  # сюда попадём только если удалось проверить и пользователя нет (rc==1)
-  site_cmd set-admin-password "$PASS" \
-    && ok "Пароль Administrator установлен" \
-    || warn "Не удалось установить пароль Administrator (см. лог bench)"
+  say "• Пользователь Administrator не найден (по SQL) — выставляю пароль через bench."
+  if site_cmd set-admin-password "$PASS"; then
+    ok "Пароль Administrator установлен"
+  else
+    warn "Не удалось установить пароль Administrator (см. лог bench)"
+  fi
 }
 
 print_env_summary(){
@@ -284,6 +287,8 @@ print_env_summary(){
   say "• DB_HOST=${DB_HOST}:${DB_PORT}"
   say "• FRAPPE_DB_ROOT_PASSWORD=$(mask "${FRAPPE_DB_ROOT_PASSWORD:-}")"
   say "• FRAPPE_ADMIN_PASSWORD=$(mask "${FRAPPE_ADMIN_PASSWORD:-}")"
+  say "• FRAPPE_SHARED_SECRET (для dantist_shared_secret) = $(mask "${FRAPPE_SHARED_SECRET:-}")"
+  say "• DANTIST_INTEGRATION_AUD = $(mask "${DANTIST_INTEGRATION_AUD:-}")"
   say "• APP_LIST=${APP_LIST}"
   say "• APP_ENV=${APP_ENV}  HEAVY=${HEAVY}  PROCFILE_MODE=${PROCFILE_MODE}"
 }
@@ -399,6 +404,15 @@ cfg["dantist_env"] = os.getenv("APP_ENV","prod")
 cfg["socketio_protocol"] = "https" if proto=="https" else "http"
 cfg["socketio_port"] = 443 if proto=="https" else 80
 cfg["socketio_path"] = "/socket.io"
+
+# Интеграционные ключи (ВАЖНО: берём из ENV как ты просил)
+secret_env = os.getenv("FRAPPE_SHARED_SECRET")
+if secret_env:
+    cfg["dantist_shared_secret"] = secret_env
+
+aud_env = os.getenv("DANTIST_INTEGRATION_AUD")
+if aud_env:
+    cfg["dantist_integration_aud"] = aud_env
 
 devmode = os.getenv("DEVELOPER_MODE")
 if devmode is not None:

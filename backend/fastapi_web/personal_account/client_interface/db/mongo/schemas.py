@@ -1,6 +1,7 @@
 """Схемы приложения Административная зона для работы с БД MongoDB."""
 from datetime import date, datetime, time
 import re
+from token import OP
 from typing import Any, Dict, List, Literal, Optional
 
 from passlib.hash import bcrypt
@@ -27,8 +28,9 @@ class RegistrationSchema(BaseModel):
     Шаг 1: Данные для регистрации (телефон обязателен).
     """
     via: Literal["email", "phone"] = "email"
-    phone: str
-    email: EmailStr
+    phone: Optional[str] = None
+    # email: Optional[EmailStr] = None
+    email: Optional[str] = None
     first_name: str
     last_name: str
     birth_date: Optional[datetime] = None
@@ -108,7 +110,7 @@ class LoginSchema(BaseModel):
     Шаг 1 входа: e-mail/телефон + пароль + канал `via`.
     """
     via: Literal["email", "phone"] = "email"
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     password: str
 
@@ -263,8 +265,8 @@ class ContactInfoSchema(BaseModel):
     Схема для вкладки 'Контактная информация'.
     """
 
-    email: EmailStr = Field(
-        ...,
+    email: Optional[EmailStr] = Field(
+        None,
         json_schema_extra={
             "settings": {
                 "type": "email",
@@ -277,8 +279,8 @@ class ContactInfoSchema(BaseModel):
         }
     )
 
-    phone: str = Field(
-        ...,
+    phone: Optional[str] = Field(
+        None,
         json_schema_extra={
             "settings": {
                 "type": "phone",
