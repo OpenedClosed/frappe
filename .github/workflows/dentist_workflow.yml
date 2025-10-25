@@ -389,6 +389,7 @@ jobs:
             FRAPPE_API_KEY=${{ env.FRAPPE_API_KEY }}
             FRAPPE_API_SECRET=${{ env.FRAPPE_API_SECRET }}
             FRAPPE_SHARED_SECRET=${{ env.FRAPPE_SHARED_SECRET }}
+            FRAPPE_API_BASE=http://frappe:8001
 
             # ===== Frappe / MariaDB =====
             SITE_NAME=${{ env.SITE_NAME }}
