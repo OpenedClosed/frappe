@@ -17,7 +17,7 @@ function updateTheme() {
   const systemTheme = colorMode.preference != "dark" ? "aura-light-cyan" : "aura-dark-cyan";
   const themeLink = document.getElementById("theme-link");
   themeLink.setAttribute("href", `/${systemTheme}/theme.css`);
-}
+} 
 // function updateTheme() {
 //   // Force light mode
 //   colorMode.preference = "light";
