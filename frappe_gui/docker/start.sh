@@ -209,7 +209,7 @@ fi
 # ===== 4) патчим site_config из ENV (каждый старт) + маркер окружения =====
 step "🧩 Актуализация site_config.json из ENV"
 python3 - <<PY
-import os, json, pathlib
+import os, json, pathlib 
 def read(p):
     p=pathlib.Path(p)
     return json.loads(p.read_text() or "{}") if p.exists() else {}
