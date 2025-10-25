@@ -4,7 +4,10 @@
 set -Eeuo pipefail
 
 # ===== pretty logs =====
-ts() { date +'%F %T'; }
+ts()
+{
+  date +'%F %T';
+}
 say()
 {
   echo -e "[$(ts)] $*";
@@ -69,8 +72,8 @@ SOCKETIO_NODE_BIN="${SOCKETIO_NODE_BIN:-/usr/bin/node}"
 BENCH_BIN="${BENCH_BIN:-bench}"
 
 # ===== Ручка для тяжёлых шагов =====
-# HEAVY=1 (по умолчанию) — migrate/install/build
-# HEAVY=0 — быстрый прогон: только конфиги, фикстуры, пароль Administrator
+# HEAVY=1 — migrate/install/build (полный прогон)
+# HEAVY=0 — быстрый: конфиги, фикстуры, пароль Admin, + авто-build если ассетов нет
 HEAVY="${HEAVY:-1}"
 HEAVY="0"
 
@@ -160,8 +163,13 @@ ensure_app_present_and_registered()
 
 need_assets_rebuild()
 {
-  # ключевой бандл frappe-web.bundle — если его нет, то сборка нужна
-  ls /workspace/sites/assets/frappe/dist/js/frappe-web.bundle*.js >/dev/null 2>&1 || return 0
+  # если нет ключевых бандлов — нужна сборка
+  ls /workspace/sites/assets/frappe/dist/js/desk.bundle.*.js >/dev/null 2>&1 || return 0
+  ls /workspace/sites/assets/frappe/dist/css/desk.bundle.*.css >/dev/null 2>&1 || return 0
+  # если у кастом-приложения есть dist/css — минимально проверим тему
+  if ls /workspace/sites/assets/dantist_app/dist/css >/dev/null 2>&1; then
+    ls /workspace/sites/assets/dantist_app/dist/css/*.css >/dev/null 2>&1 || return 0
+  fi
   return 1
 }
 
@@ -202,19 +210,26 @@ do_fixtures()
 
 do_assets()
 {
-  if [[ "$HEAVY" != "1" ]]; then
-    warn "HEAVY=0 → пропускаю сборку ассетов"
-    return 0
-  fi
-  if need_assets_rebuild; then
-    step "🧱 Сборка ассетов"
-    # сначала попробуем собрать указанные приложения (frappe + твои)
+  # ЛОГИКА:
+  # - HEAVY=1 → всегда build (полный прогон)
+  # - HEAVY=0 → build ТОЛЬКО если не хватает ключевых бандлов (автоспасалка от 404)
+  if [[ "$HEAVY" == "1" ]]; then
+    step "🧱 Сборка ассетов (HEAVY=1)"
     if ! bench build --apps "frappe ${APP_LIST}"; then
       warn "scoped build вернул ошибку — пробую полную сборку"
       bench build || true
     fi
   else
-    ok "Ассеты уже на месте — сборка не требуется"
+    step "🧱 Сборка ассетов (умная проверка, HEAVY=0)"
+    if need_assets_rebuild; then
+      say "• ключевых бандлов нет → запускаю bench build (apps: frappe ${APP_LIST})"
+      if ! bench build --apps "frappe ${APP_LIST}"; then
+        warn "scoped build вернул ошибку — пробую полную сборку"
+        bench build || true
+      fi
+    else
+      say "• ассеты на месте — сборка не требуется"
+    fi
   fi
   chmod -R a+rX /workspace/sites/assets || true
 }
@@ -227,7 +242,6 @@ do_admin_password()
     return 0
   fi
   step "🔐 Проверка/установка пароля Administrator"
-  # даже если пользователя ещё нет/пароль не читабелен из site_config — bench сам выставит пароль
   read -r DB_NAME DB_PASS DBH _ < <(read_db_creds || echo "    ")
   if [[ -z "${DB_NAME:-}" || -z "${DB_PASS:-}" ]]; then
     warn "Не удалось прочитать db_name/db_password — всё равно проставлю пароль через bench"
@@ -368,7 +382,7 @@ do_migrate
 # ===== 6) фикстуры (всегда) =====
 do_fixtures
 
-# ===== 7) сборка ассетов (только при HEAVY=1 и если нет ключевых бандлов) =====
+# ===== 7) ассеты (смарт-сборка для HEAVY=0) =====
 do_assets
 
 # ===== 8) пароль Administrator (всегда, если задан) =====
