@@ -22,7 +22,7 @@ def base_url() -> str:
     if not url:
         frappe.throw("dantist_base_url not configured", exc=frappe.ValidationError)
     return url.rstrip("/")
-
+ 
 def should_skip_sync() -> bool:
     try:
         hdr = (frappe.get_request_header("X-AIHub-No-Sync") or "").strip()
