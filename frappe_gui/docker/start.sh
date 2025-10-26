@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
-# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink)
+# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink+public-url-no-port)
 
 set -Eeuo pipefail
 
@@ -52,8 +52,6 @@ SOCKETIO_NODE_BIN="${SOCKETIO_NODE_BIN:-/usr/bin/node}"
 BENCH_BIN="${BENCH_BIN:-bench}"
 
 # ===== Тумблер тяжёлых шагов =====
-# HEAVY=1 — migrate/install/build всегда
-# HEAVY=0 — быстрый старт: конфиги, фикстуры, умная сборка ассетов, пароль Admin только если нужно
 HEAVY="${HEAVY:-1}"
 HEAVY=0
 
@@ -155,24 +153,12 @@ ensure_app_present_and_registered(){
 }
 
 need_assets_rebuild(){
-  # если нет ключевых бандлов — нужна сборка
   ls /workspace/sites/assets/frappe/dist/js/desk.bundle.*.js  >/dev/null 2>&1 || return 0
   ls /workspace/sites/assets/frappe/dist/css/desk.bundle.*.css >/dev/null 2>&1 || return 0
-  # если у кастом-приложения есть dist/css — минимально проверим тему
   if ls /workspace/sites/assets/dantist_app/dist/css >/dev/null 2>&1; then
     ls /workspace/sites/assets/dantist_app/dist/css/*.css >/dev/null 2>&1 || return 0
   fi
   return 1
-}
-
-admin_exists_mysql(){
-  # 0 = существует, 1 = не существует, 2 = не удалось проверить
-  read -r DB_NAME DB_PASS DBH _ < <(read_db_creds || echo "    ")
-  if [[ -n "${DB_NAME:-}" && -n "${DB_PASS:-}" ]]; then
-    mysql -h "${DB_HOST}" -P "${DB_PORT}" -u"${DB_NAME}" -p"${DB_PASS}" "${DB_NAME}" \
-      -Nse "SELECT 1 FROM tabUser WHERE name='Administrator' LIMIT 1;" 2>/dev/null | grep -q 1 && return 0 || return 1
-  fi
-  return 2
 }
 
 # ==== socket.io: принудительно без внешнего порта, только 443 и путь /socket.io ====
@@ -266,7 +252,6 @@ link_app_public_files(){
     return 0
   fi
 
-  # Сначала — ключевые папки целиком (если есть)
   for dir in source_avatars; do
     if [[ -d "${APP_FILES_DIR}/${dir}" ]]; then
       if [[ -e "${SITE_FILES_DIR}/${dir}" && ! -L "${SITE_FILES_DIR}/${dir}" ]]; then
@@ -278,18 +263,14 @@ link_app_public_files(){
     fi
   done
 
-  # Затем — все элементы верхнего уровня (файлы/папки)
   shopt -s nullglob dotglob
   for item in "${APP_FILES_DIR}/"*; do
     local name="$(basename "$item")"
     local target="${SITE_FILES_DIR}/${name}"
-
-    # если в site уже лежит реальный файл/папка — не трогаем
     if [[ -e "$target" && ! -L "$target" ]]; then
       say "skip (exists real): /files/${name}"
       continue
     fi
-
     ln -sfn "$item" "$target"
     say "linked: /files/${name} -> $item"
   done
@@ -297,9 +278,16 @@ link_app_public_files(){
   chmod -R a+rX "$SITE_FILES_DIR" || true
 }
 
+# ==== Надёжная проверка существования Administrator (root SQL) ====
+admin_exists_mysql(){
+  read -r DB_NAME _ _ < <(read_db_creds || echo "   ")
+  [[ -z "${DB_NAME:-}" ]] && return 2
+  mysql -h "${DB_HOST}" -P "${DB_PORT}" -uroot -p"${FRAPPE_DB_ROOT_PASSWORD}" "${DB_NAME}" \
+    -Nse "SELECT 1 FROM tabUser WHERE name='Administrator' LIMIT 1;" 2>/dev/null | grep -q 1
+}
+
 do_admin_password(){
   local PASS="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
-
   if [[ -z "$PASS" ]]; then
     say "FRAPPE_ADMIN_PASSWORD не задан — пропускаю установку пароля Administrator"
     return 0
@@ -307,17 +295,11 @@ do_admin_password(){
 
   step "🔐 Проверка/установка пароля Administrator"
   if admin_exists_mysql; then
-    local rc=$?
-    if [[ $rc -eq 0 ]]; then
-      ok "Administrator уже существует — смена пароля НЕ нужна, пропускаю."
-      return 0
-    elif [[ $rc -eq 2 ]]; then
-      warn "Не удалось проверить наличие Administrator (нет/пустые креды БД в site_config.json). Пароль НЕ меняю."
-      return 0
-    fi
+    ok "Administrator уже существует — смена пароля НЕ нужна, пропускаю."
+    return 0
   fi
 
-  say "• Пользователь Administrator не найден (по SQL) — выставляю пароль через bench."
+  say "• Пользователь Administrator не найден — выставляю пароль через bench."
   if site_cmd set-admin-password "$PASS"; then
     ok "Пароль Administrator установлен"
   else
@@ -356,7 +338,7 @@ mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" -e "SELECT
   && ok "root-доступ к MariaDB подтверждён" \
   || warn "root-доступ не проверился (new-site потребует root пароль в ENV)"
 
-# ===== 1) common_site_config.json (+ правильный путь к node) =====
+# ===== 1) common_site_config.json (+ node) =====
 step "🛠️  Общий конфиг: $COMMON_CFG"
 python3 - <<'PY'
 import os, json, pathlib
@@ -370,10 +352,12 @@ if p.exists():
         cfg = {}
 redis = os.getenv("REDIS_URL","redis://redis:6379")
 redis_base = f"{redis.split('/',3)[0]}//{redis.split('/',3)[2]}"
+# ВАЖНО: webserver_port=443 (внешний публичный порт для генерации ссылок),
+# внутренний bench serve остаётся на 8001 (см. Procfile).
 cfg.update({
     "default_site": os.getenv("SITE_NAME","dantist.localhost"),
-    "webserver_port": 8001,
-    "socketio_port": 9000,          # внутренний порт сервиса socketio
+    "webserver_port": 443,
+    "socketio_port": 9000,
     "redis_cache":    f"{redis_base}/0",
     "redis_queue":    f"{redis_base}/1",
     "redis_socketio": f"{redis_base}/2",
@@ -417,7 +401,7 @@ else
   step "♻️  Сайт уже существует — пропускаю создание"
 fi
 
-# ===== 3) патчим site_config из ENV (каждый старт) + socket.io (443, /socket.io) =====
+# ===== 3) патчим site_config из ENV (host_name/use_ssl/https) + socket.io =====
 step "🧩 Актуализация site_config.json из ENV"
 python3 - <<PY
 import os, json, pathlib
@@ -432,44 +416,45 @@ def good_origin(v: str) -> bool:
 site = os.getenv("SITE_NAME","dantist.localhost")
 host = os.getenv("HOST","localhost")
 proto = "http" if host in {"localhost","127.0.0.1"} else "https"
+public_origin = os.getenv("HOST_NAME", f"{proto}://{host}")
+
 p = pathlib.Path(f"/workspace/sites/{site}/site_config.json")
 cfg = json.loads(p.read_text() or "{}") if p.exists() else {}
 
 cfg["db_host"] = os.getenv("DB_HOST","mariadb")
-cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}")
+
+# ПУБЛИЧНЫЙ URL для всех ссылок / писем:
+cfg["host_name"] = public_origin
+cfg["use_ssl"] = (proto == "https")
+cfg["preferred_url_protocol"] = proto
+
 cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://backend:8000/api")
 
-legacy = os.getenv("LEGACY_ADMIN_PUBLIC_ORIGIN", f"{proto}://{host}")
-cfg["dantist_iframe_origin"] = legacy if good_origin(legacy) else f"{proto}://{host}"
+legacy = os.getenv("LEGACY_ADMIN_PUBLIC_ORIGIN", public_origin)
+cfg["dantist_iframe_origin"] = legacy if good_origin(legacy) else public_origin
 
 cfg["server_script_enabled"] = True
 cfg["dantist_env"] = os.getenv("APP_ENV","prod")
 
-# socket.io без внешнего порта
 cfg["socketio_protocol"] = "https" if proto=="https" else "http"
 cfg["socketio_port"] = 443 if proto=="https" else 80
 cfg["socketio_path"] = "/socket.io"
 
-# Интеграционные ключи (ВАЖНО: берём из ENV как ты просил)
 secret_env = os.getenv("FRAPPE_SHARED_SECRET")
-if secret_env:
-    cfg["dantist_shared_secret"] = secret_env
+if secret_env: cfg["dantist_shared_secret"] = secret_env
 
 aud_env = os.getenv("DANTIST_INTEGRATION_AUD")
-if aud_env:
-    cfg["dantist_integration_aud"] = aud_env
+if aud_env: cfg["dantist_integration_aud"] = aud_env
 
 devmode = os.getenv("DEVELOPER_MODE")
 if devmode is not None:
     cfg["developer_mode"] = 1 if str(devmode).strip().lower() in {"1","true","yes","on"} else 0
 
 log_level = os.getenv("LOG_LEVEL")
-if log_level:
-    cfg["log_level"] = log_level
+if log_level: cfg["log_level"] = log_level
 
 enc = os.getenv("ENCRYPTION_KEY")
-if enc:
-    cfg["encryption_key"] = enc
+if enc: cfg["encryption_key"] = enc
 
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 print(f"OK {p}")
@@ -539,7 +524,11 @@ sed 's/^/    /' "$PROCFILE_PATH" || true
 step "📋 Финальная сводка"
 (site_cmd list-apps || true) | sed 's/^/• /'
 say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
+
+# Быстрая самопроверка публичного URL (логируем, не фейлим)
+say "• get_url(): $(site_cmd execute 'frappe.utils.get_url' 2>/dev/null || echo '<error>')"
+
 ok "Bootstrap завершён. Запускаю процессы…"
 
 # долговременные процессы
-exec bench start 
+exec bench start
