@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
-# Версия: 2025-10-25 (final+admin-check+secrets)
+# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink)
 
 set -Eeuo pipefail
 
@@ -252,6 +252,51 @@ do_assets(){
   chmod -R a+rX /workspace/sites/assets || true
 }
 
+# ==== 🔗 Публикация файлов приложения в /files (symlink) ====
+link_app_public_files(){
+  step "🔗 Публикация файлов dantist_app в ${SITE}/public/files (symlink)"
+  local APP="dantist_app"
+  local APP_FILES_DIR="$BENCH_DIR/sites/assets/${APP}/files"
+  local SITE_FILES_DIR="$SITE_DIR/public/files"
+
+  mkdir -p "$SITE_FILES_DIR"
+
+  if [[ ! -d "$APP_FILES_DIR" ]]; then
+    warn "Каталог с файлами приложения не найден: $APP_FILES_DIR (возможно, ассеты ещё не собраны)"
+    return 0
+  fi
+
+  # Сначала — ключевые папки целиком (если есть)
+  for dir in source_avatars; do
+    if [[ -d "${APP_FILES_DIR}/${dir}" ]]; then
+      if [[ -e "${SITE_FILES_DIR}/${dir}" && ! -L "${SITE_FILES_DIR}/${dir}" ]]; then
+        warn "Пропускаю каталог /files/${dir}: уже существует реальная директория"
+      else
+        ln -sfn "${APP_FILES_DIR}/${dir}" "${SITE_FILES_DIR}/${dir}"
+        ok "symlink: /files/${dir} -> ${APP_FILES_DIR}/${dir}"
+      fi
+    fi
+  done
+
+  # Затем — все элементы верхнего уровня (файлы/папки)
+  shopt -s nullglob dotglob
+  for item in "${APP_FILES_DIR}/"*; do
+    local name="$(basename "$item")"
+    local target="${SITE_FILES_DIR}/${name}"
+
+    # если в site уже лежит реальный файл/папка — не трогаем
+    if [[ -e "$target" && ! -L "$target" ]]; then
+      say "skip (exists real): /files/${name}"
+      continue
+    fi
+
+    ln -sfn "$item" "$target"
+    say "linked: /files/${name} -> $item"
+  done
+
+  chmod -R a+rX "$SITE_FILES_DIR" || true
+}
+
 do_admin_password(){
   local PASS="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
@@ -289,7 +334,7 @@ print_env_summary(){
   say "• FRAPPE_ADMIN_PASSWORD=$(mask "${FRAPPE_ADMIN_PASSWORD:-}")"
   say "• FRAPPE_SHARED_SECRET (для dantist_shared_secret) = $(mask "${FRAPPE_SHARED_SECRET:-}")"
   say "• DANTIST_INTEGRATION_AUD = $(mask "${DANTIST_INTEGRATION_AUD:-}")"
-  say "• APP_LIST=${APP_LIST}" 
+  say "• APP_LIST=${APP_LIST}"
   say "• APP_ENV=${APP_ENV}  HEAVY=${HEAVY}  PROCFILE_MODE=${PROCFILE_MODE}"
 }
 
@@ -394,8 +439,6 @@ cfg["db_host"] = os.getenv("DB_HOST","mariadb")
 cfg["host_name"] = os.getenv("HOST_NAME", f"{proto}://{host}")
 cfg["dantist_base_url"] = os.getenv("DANTIST_BASE_URL_INTERNAL", "http://backend:8000/api")
 
-# legacy = os.getenv("LEGACY_ADMIN_PUBLIC_ORIGIN", f"{proto}://{host}/admin")
-# cfg["dantist_iframe_origin"] = legacy if good_origin(legacy) else f"{proto}://{host}/admin"
 legacy = os.getenv("LEGACY_ADMIN_PUBLIC_ORIGIN", f"{proto}://{host}")
 cfg["dantist_iframe_origin"] = legacy if good_origin(legacy) else f"{proto}://{host}"
 
@@ -459,6 +502,9 @@ do_fixtures
 # ===== 7) ассеты (смарт-сборка для HEAVY=0) =====
 do_assets
 
+# ===== 7.5) публикуем файлы приложения в /files (symlink) =====
+link_app_public_files
+
 # ===== 8) пароль Administrator (если задан, но только если пользователя ещё нет) =====
 do_admin_password
 
@@ -496,4 +542,4 @@ say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
 ok "Bootstrap завершён. Запускаю процессы…"
 
 # долговременные процессы
-exec bench start
+exec bench start 
