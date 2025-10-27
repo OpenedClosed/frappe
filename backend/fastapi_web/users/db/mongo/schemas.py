@@ -81,7 +81,7 @@ class LoginSchema(BaseModel):
     password: str
 
 
-class UserWithData(User):
+class UserWithData(UserOut):
     """Данные пользователя."""
     data: Optional[dict] = {}
 
