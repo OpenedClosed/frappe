@@ -1,4 +1,4 @@
-/* Dantist Kanban skin — v25.18.1 • THEME-READY
+/* Dantist Kanban skin — v25.18.2 • THEME-READY
    (visual parity with v25.15, i18n labels in chips, mini-tasks fallback to get_list)
    — Все статичные цвета заменены на CSS-переменные темы
    — Светлая/тёмная тема подхватывается мгновенно без перерисовок
@@ -125,9 +125,10 @@
 
       html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
       html.${CFG.htmlClass} .dnt-tasks-mini{
-        margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px;
+        margin-top:6px; width:100%; max-height:72px; overflow-y: scroll; padding-right:4px;
         border-top:1px solid var(--table-border-color, var(--border-color, #eef2f7));
         padding-top:6px;
+        scrollbar-gutter: stable;
       }
       html.${CFG.htmlClass} .dnt-taskline{
         display:flex; gap:6px; align-items:center; font-size:11px;
@@ -384,11 +385,10 @@
   function translateValue(dt, fn, val, df){
     const v = CLEAN(val);
     if (!v) return v;
-    if (FULL_DT.test(v) || DATE_LIKE.test(v)) return v; // даты/время не трогаем
+    if (FULL_DT.test(v) || DATE_LIKE.test(v)) return v;
     if (isTranslatableField(fn, df)) {
       try { return t(v); } catch { return v; }
     }
-    // частые текстовые маркеры
     if (/^(Yes|No|Open|Closed)$/i.test(v)) { try { return t(v); } catch {} }
     return v;
   }
@@ -422,7 +422,6 @@
     const { fn2label, label2fn, fn2df } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
 
-    // убрать чипы с label вне board.fields
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
       if (!lbl) return;
@@ -451,12 +450,11 @@
           chip = makeChip(human, locVal, true);
           insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         } else {
-          const sv = chip.querySelector(".dnt-v"); if (sv) sv.textContent = locVal || "—"; // ← ВСЕГДА перезаписываем (локализация)
+          const sv = chip.querySelector(".dnt-v"); if (sv) sv.textContent = locVal || "—";
           const sk = chip.querySelector(".dnt-k"); if (sk) sk.textContent = t(STRIP_COLON(human)) + ":";
         }
       });
 
-      // сортировка по board.fields
       const chips = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
       chips.sort((a,b)=>{
         const la = CLEAN(a.dataset.dntLabel || a.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
@@ -469,14 +467,12 @@
       });
       chips.forEach(ch => container.appendChild(ch));
 
-      // заполнение дефисами
       Array.from(container.querySelectorAll(":scope > .dnt-kv .dnt-v")).forEach(sv=>{
         if (!CLEAN(sv.textContent)) sv.textContent = "—";
       });
       return;
     }
 
-    // OFF: безымянные чипы только для board.fields
     const assignedValues = new Set();
     const valueIndex = new Map();
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
@@ -496,7 +492,7 @@
       const pool = valueIndex.get(norm) || valueIndex.get(locVal) || [];
       const pick = pool.shift?.();
       if (pick){
-        const sv = pick.querySelector(".dnt-v"); if (sv) sv.textContent = locVal; // ← локализация существующего чипа
+        const sv = pick.querySelector(".dnt-v"); if (sv) sv.textContent = locVal;
         insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0);
         assignedValues.add(locVal);
       } else {
@@ -506,7 +502,6 @@
       }
     });
 
-    // очистка
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
       if (lbl){
@@ -588,6 +583,18 @@
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   const planDT = (t) => t.custom_target_datetime || t.due_datetime || t.custom_due_datetime || t.date || null;
 
+  function plain_text(html_like){
+    const div = document.createElement("div");
+    div.innerHTML = html_like || "";
+    const txt = CLEAN(div.textContent || div.innerText || "");
+    return txt;
+  }
+  function truncate_text(s, max_len=40){
+    const str = s || "";
+    if (str.length <= max_len) return str;
+    return str.slice(0, max_len).trimEnd() + "…";
+  }
+
   function miniHtml(rows, total){
     if (!rows?.length) return `<div class="dnt-taskline"><span class="dnt-chip">${t("Tasks")}</span> <span class="ttl">${t("No open tasks")}</span></div>`;
     const lines = rows.map(ti=>{
@@ -595,10 +602,15 @@
       const open = (ti.status||"Open")==="Open";
       const overdue = p && open && moment(p).isBefore(moment());
       const chip = p ? `<span class="dnt-chip ${overdue?'dnt-overdue':''}" title="${t("Planned")}">${frappe.utils.escape_html(fmtDT(p))}</span>` : ``;
-      const ttl  = frappe.utils.escape_html(ti.description || ti.name);
+      const raw = plain_text(ti.description || ti.name);
+      const ttl  = frappe.utils.escape_html(truncate_text(raw, 40));
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
-    const more = total>rows.length ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(tf("Show all ({0}) →",[total]))}</span></div>` : ``;
+    const needMore = (total > rows.length) || (rows.length >= CFG.tasksLimit);
+    const moreLabel = (total > rows.length)
+      ? tf(t("Open all tasks ({0}) →"), [total])
+      : t("Open all tasks") + " →";
+    const more = needMore ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(moreLabel)}</span></div>` : ``;
     return lines + more;
   }
 
@@ -608,8 +620,8 @@
       args: { name: caseName, status: "Open", limit_start: 0, limit_page_length: CFG.tasksLimit, order: "desc" }
     });
     const rows  = (message && message.rows) || [];
-    aconst_total = (message && message.total) || rows.length; // keep old varname behavior
-    return { rows, total: aconst_total };
+    const total = (message && message.total) || rows.length;
+    return { rows, total };
   }
   async function fetchMiniFallback(caseName){
     try{
@@ -736,7 +748,6 @@
 
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
-    // footer
     let foot = body.querySelector(".dnt-foot");
     if(!foot){ foot = document.createElement("div"); foot.className = "dnt-foot"; body.appendChild(foot); }
     const assign = (meta || body).querySelector(".kanban-assignments");
@@ -745,7 +756,6 @@
     if(like   && !foot.contains(like))   foot.appendChild(like);
     if(meta && !meta.children.length) meta.remove();
 
-    // мини-задачи + inline title
     if (doctype === CFG.caseDoctype && name) {
       if (!body.querySelector(".dnt-tasks-mini")) {
         const mini = document.createElement("div");
@@ -756,7 +766,6 @@
       makeTitleEditable(title, name, doctype);
     }
 
-    // hover-actions
     if (!wrapper.querySelector(".dnt-card-actions")){
       const row = document.createElement("div"); row.className="dnt-card-actions";
 

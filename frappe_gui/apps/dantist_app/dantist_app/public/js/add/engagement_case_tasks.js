@@ -1,16 +1,17 @@
 // ==============================
-// Engagement Case — Tasks UI — v4.21
-// (newest first, page=5, overdue highlight) + i18n + theme-ready + RBAC for assignees (hide multi field)
+// Engagement Case — Tasks UI — v4.25
+// Target -> custom_target_datetime
+// Reminder -> custom_due_datetime (due/date не используем вообще)
+// Клиентский дозапрос полей в loadTasks, если сервер их не вернул
 // ==============================
 (function () {
   const DOCTYPE = "Engagement Case";
   const PAGE_LEN = 5;
   const SEC_ID = "ec-tasks-area";
   const SEC_TITLE = "Tasks";
-  const LS_KEY_COLLAPSE = "ec_tasks_collapsed"; // "1" collapsed, "0" expanded
+  const LS_KEY_COLLAPSE = "ec_tasks_collapsed";
 
-  // ---------- RBAC (только эти роли видят мультивыбор исполнителей) ----------
-  const PRIV_ROLES = ["System Manager", "Super Admin"];
+  const PRIV_ROLES = ["System Manager", "AIHub Super Admin"];
   function userHasRole(role) {
     try {
       if (window.frappe?.user?.has_role) return !!frappe.user.has_role(role);
@@ -20,7 +21,6 @@
   }
   function isPrivileged() { return PRIV_ROLES.some(userHasRole); }
 
-  // ======== Rules ========
   const FORM_RULES = {
     status_leads: {
       "Call Later": {
@@ -31,7 +31,12 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Call Later" && cur === "Call Later",
         makePayload: (vals, me) => {
           const a = composeAssignees(vals, me);
-          return { description: __("Manual Callback"), due: vals.due, priority: vals.priority || "Medium", assignees: a };
+          return {
+            description: __("Manual Callback"),
+            custom_due_datetime: vals.reminder_at || null,
+            priority: vals.priority || "Medium",
+            assignees: a
+          };
         },
       },
     },
@@ -40,16 +45,16 @@
         showDialog: false,
         shouldTrigger: ({ prev, cur }) => prev !== "Appointment Scheduled" && cur === "Appointment Scheduled",
         makePayload: (_vals, me) => {
-          const due = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: __("Next-Day Feedback call"), due, priority: "Medium", assignees: me ? [me] : [] };
+          const when = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          return { description: __("Next-Day Feedback call"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
         },
       },
       "Treatment Completed": {
         showDialog: false,
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
-          const due = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: __("Recall: schedule prophylaxis"), due, priority: "Medium", assignees: me ? [me] : [] };
+          const when = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          return { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
         },
       },
     },
@@ -67,18 +72,18 @@
         makePayload: (vals, me) => {
           const tt = (vals.treatment_type || "Standard Implant").toLowerCase();
           const months = (tt.includes("sinus") || tt.includes("augment")) ? 6 : 3;
-          const due = moment().add(months,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          const when = moment().add(months,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
           const a = composeAssignees(vals, me);
           const note = ` (${__("type")}: ${vals.treatment_type}, +${months}m)`;
-          return { description: __("Schedule control X-ray") + note, due, priority: vals.priority || "High", assignees: a };
+          return { description: __("Schedule control X-ray") + note, custom_due_datetime: when, priority: vals.priority || "High", assignees: a };
         },
       },
       "Treatment Completed": {
         showDialog: false,
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
-          const due = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: __("Recall: schedule prophylaxis"), due, priority: "Medium", assignees: me ? [me] : [] };
+          const when = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+          return { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
         },
       },
     },
@@ -92,21 +97,26 @@
       extraFields: () => [],
       makePayload: (vals, me) => {
         const a = composeAssignees(vals, me);
-        return { description: __("Manual Callback"), due: vals.due, priority: vals.priority || "Medium", assignees: a };
+        return {
+          description: __("Manual Callback"),
+          custom_due_datetime: vals.reminder_at || null,
+          priority: vals.priority || "Medium",
+          assignees: a
+        };
       },
     },
     "Appointment Scheduled": {
       showDialog: false,
       makePayload: (_vals, me) => {
-        const due = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return { description: __("Next-Day Feedback call"), due, priority: "Medium", assignees: me ? [me] : [] };
+        const when = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+        return { description: __("Next-Day Feedback call"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
       },
     },
     "Treatment Completed": {
       showDialog: false,
       makePayload: (_vals, me) => {
-        const due = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return { description: __("Recall: schedule prophylaxis"), due, priority: "Medium", assignees: me ? [me] : [] };
+        const when = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
+        return { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
       },
     },
     "Stage Checked": {
@@ -130,27 +140,18 @@
     openCount: 0,
   };
 
-  // ========== helpers ==========
   function fmtUserDT(dtStr) {
     if (!dtStr) return "";
     try { return moment(frappe.datetime.convert_to_user_tz(dtStr)).format("YYYY-MM-DD HH:mm"); }
     catch { return String(dtStr); }
   }
-  function fmtUserD(dStr) {
-    if (!dStr) return "";
-    try { return moment(dStr).format("YYYY-MM-DD"); }
-    catch { return String(dStr); }
-  }
-  // «просрочено» только для открытых
   function isOverdue(t) {
     if ((t.status || "Open") !== "Open") return false;
     const now = moment();
     if (t.custom_target_datetime) return moment(t.custom_target_datetime).isBefore(now);
-    if (t.date) return moment(t.date).endOf("day").isBefore(now);
     return false;
   }
 
-  // compose assignees list (RBAC-aware)
   function composeAssignees(vals, me){
     const arr = [];
     if (isPrivileged()) {
@@ -164,7 +165,6 @@
     return arr;
   }
 
-  // ===== Dashboard section =====
   function getOrCreateDashSection(frm, id, title) {
     const host = frm?.page?.wrapper?.[0];
     if (!host) return null;
@@ -229,16 +229,16 @@
     if (dot) dot.hidden = !on;
   }
 
-  // ===== список задач =====
   function priorityClass(p){ if (p==="High") return "-p-high"; if (p==="Low") return "-p-low"; return "-p-med"; }
   function taskRow(t) {
-    const reminder_dt = t.due_datetime || t.custom_due_datetime;
+    const reminder_dt = t.custom_due_datetime;
     const reminder = reminder_dt ? fmtUserDT(reminder_dt) : null;
+
     const target_dt = t.custom_target_datetime || null;
-    const target = target_dt ? fmtUserDT(target_dt) : (t.date ? fmtUserD(t.date) : null);
+    const target = target_dt ? fmtUserDT(target_dt) : null;
 
     const who = t.allocated_to || t.owner || "";
-       const st  = t.status || "Open";
+    const st  = t.status || "Open";
     const cls = st === "Open" ? "" : " -muted";
     const pcls = priorityClass(t.priority || "Medium");
     const overdue = isOverdue(t);
@@ -357,6 +357,37 @@
     if (info) info.textContent = `${__("Page")} ${UI.page} / ${totalPages} • ${UI.total} ${__("total")} • ${PAGE_LEN} ${__("per page")}`;
   }
 
+  async function enrichTasksWithCustomFields(rows) {
+    const need = rows.filter(r => (typeof r.custom_target_datetime === "undefined") || (typeof r.custom_due_datetime === "undefined"));
+    if (!need.length) return rows;
+
+    const names = need.map(r => r.name).filter(Boolean);
+    if (!names.length) return rows;
+
+    try {
+      const { message } = await frappe.call({
+        method: "frappe.client.get_list",
+        args: {
+          doctype: "ToDo",
+          fields: ["name", "custom_target_datetime", "custom_due_datetime"],
+          filters: [["name","in", names]],
+          limit_page_length: names.length
+        }
+      });
+      const byName = {};
+      (message || []).forEach(it => { byName[it.name] = it; });
+      rows.forEach(r => {
+        const add = byName[r.name];
+        if (!add) return;
+        if (typeof r.custom_target_datetime === "undefined") r.custom_target_datetime = add.custom_target_datetime || null;
+        if (typeof r.custom_due_datetime === "undefined") r.custom_due_datetime = add.custom_due_datetime || null;
+      });
+    } catch (e) {
+      console.warn("[EC Tasks] enrich failed", e);
+    }
+    return rows;
+  }
+
   async function loadTasks(frm) {
     const listEl = ensureTasksContainer(frm);
     if (!listEl) return;
@@ -371,10 +402,9 @@
       let rows = (message && message.rows) || [];
       UI.total = (message && message.total) || rows.length;
 
-      // newest first внутри страницы
       rows = rows.slice().reverse();
+      rows = await enrichTasksWithCustomFields(rows);
 
-      // красная точка — по «open на странице»
       UI.openCount = rows.filter(r => (r.status || "Open") === "Open").length;
       setRedDot(frm, UI.openCount > 0);
 
@@ -388,7 +418,6 @@
     }
   }
 
-  // ===== Диалоги (Target / Reminder) =====
   function buildFields(baseKeys, extra) {
     const me = frappe.session.user || "";
     const fields = [
@@ -401,7 +430,6 @@
       { fieldtype:"Section Break", label: __("Assignment") },
     ];
 
-    // 🔒 ВАЖНО: мультивыбор вообще не добавляем, если не привилегирован
     if (isPrivileged() && baseKeys?.includes("assignees")) {
       fields.push({
         fieldtype:"MultiSelectList", fieldname:"assignees", label:__("Assign To (multiple)"), options:"User",
@@ -469,12 +497,13 @@
         const payload = { description: v.description, priority: v.priority };
         if (v.target_at) payload.custom_target_datetime = v.target_at;
 
-        if (v.send_reminder) {
+        if (v.send_reminder && v.reminder_at) {
           payload.send_reminder = 1;
-          if (v.reminder_at) payload.due = v.reminder_at;
+          payload.custom_due_datetime = v.reminder_at;
         } else {
           payload.send_reminder = 0;
         }
+
         const a = composeAssignees(v, me);
         if (a.length) payload.assignees = a;
 
@@ -497,7 +526,6 @@
     frappe.show_alert({ message: status==="Closed"?__("Completed"):__("Cancelled"), indicator:"green" });
   }
 
-  // ===== перехват Save (правила) =====
   function patchFormSave(frm){
     if (frm.__ecSavePatched) return;
     frm.__ecSavePatched = true;
@@ -527,21 +555,19 @@
         if (!guard()) return;
         UI.saveGuard = true;
 
-        const compat = Object.assign({}, vals, { due: vals.send_reminder ? vals.reminder_at : null });
-        const draft = rule.makePayload(compat, me, frm) || {};
+        const draft = rule.makePayload(vals, me, frm) || {};
         const payload = Object.assign({}, draft);
 
         if (vals.target_at) payload.custom_target_datetime = vals.target_at;
 
-        if (vals.send_reminder) {
+        if (vals.send_reminder && vals.reminder_at) {
           payload.send_reminder = 1;
-          if (!payload.due && vals.reminder_at) payload.due = vals.reminder_at;
+          if (!payload.custom_due_datetime) payload.custom_due_datetime = vals.reminder_at;
         } else {
           payload.send_reminder = 0;
-          if ("due" in payload) delete payload.due;
+          if ("custom_due_datetime" in payload && !vals.send_reminder) delete payload.custom_due_datetime;
         }
 
-        // RBAC — финализируем список исполнителей
         payload.assignees = composeAssignees(vals, me);
 
         Promise.resolve()
@@ -561,7 +587,6 @@
     };
   }
 
-  // ===== Form bindings =====
   frappe.ui.form.on(DOCTYPE, {
     refresh(frm){
       UI.frm = frm;
@@ -613,9 +638,8 @@
     },
   });
 
-  // ===== Kanban hook =====
   (function patchKanban(){
-    if (frappe.__ec_call_patched_v421) return;
+    if (frappe.__ec_call_patched_v425) return;
     const orig = frappe.call;
 
     frappe.call = function(opts){
@@ -657,18 +681,20 @@
         d.set_primary_action(__("OK"), () => {
           if (!guard()) return;
           const vals = d.get_values();
-          const compat = Object.assign({}, vals, { due: vals.send_reminder ? vals.reminder_at : null });
-          const draft = rule.makePayload(compat, me, { toCol, card }) || {};
+
+          const draft = rule.makePayload(vals, me, { toCol, card }) || {};
           const payload = Object.assign({}, draft);
+
           if (vals.target_at) payload.custom_target_datetime = vals.target_at;
-          if (vals.send_reminder) {
+
+          if (vals.send_reminder && vals.reminder_at) {
             payload.send_reminder = 1;
-            if (!payload.due && vals.reminder_at) payload.due = vals.reminder_at;
+            if (!payload.custom_due_datetime) payload.custom_due_datetime = vals.reminder_at;
           } else {
             payload.send_reminder = 0;
-            if ("due" in payload) delete payload.due;
+            if ("custom_due_datetime" in payload && !vals.send_reminder) delete payload.custom_due_datetime;
           }
-          // RBAC — финальный список исполнителей
+
           payload.assignees = composeAssignees(vals, me);
 
           createTask(card, payload, "manual")
@@ -682,10 +708,9 @@
       return p;
     };
 
-    frappe.__ec_call_patched_v421 = true;
+    frappe.__ec_call_patched_v425 = true;
   })();
 
-  // ===== styles (theme-ready; дарк для табов; видимые бордеры и НЕ-яркий фокус в дарке) =====
   const css = document.createElement("style");
   css.textContent = `
   .ec-tasks-section .section-head{
@@ -700,7 +725,6 @@
   .ec-tasks-section .section-body{padding:12px; background: var(--card-bg, #fff); color: var(--text-color, #111827);}
   .ec-tasks-section .section-body.hide{display:none!important}
 
-  /* Tabs — light/dark */
   .ec-tabs-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .ec-tabs .nav-link{
     padding:6px 10px; border:1px solid var(--border-color,#e5e7eb)!important;
@@ -738,7 +762,6 @@
   }
   .ec-task .chip.-ghost{background: var(--control-bg,#f8fafc); color: var(--text-color,#111827);}
 
-  /* Priority chips — theme-aware */
   .ec-task .chip.-p-high{
     background: var(--alert-bg-danger, #fee2e2);
     border-color: color-mix(in oklab, var(--alert-bg-danger, #fee2e2) 60%, #ffffff);
@@ -755,14 +778,12 @@
     color: var(--text-on-green, #14532d);
   }
 
-  /* мягкая подсветка просроченной цели */
   .ec-task .chip-target.-overdue{
     background: var(--alert-bg-danger, #fee2e2);
     border-color: color-mix(in oklab, var(--alert-bg-danger, #fecaca) 70%, #ffffff);
     color: var(--alert-text-danger, #991b1b);
   }
 
-  /* Диалоги — НЕ-яркий дарк-фокус и видимые бордеры/плейсхолдеры */
   .ec-task-dialog .modal-body{padding:14px 16px}
   .ec-task-dialog .frappe-control{margin-bottom:8px}
   .ec-task-dialog .control-label{margin-bottom:4px}
@@ -776,7 +797,6 @@
     border: 1px solid var(--border-color,#e5e7eb);
     color: var(--text-color,#111827);
   }
-  /* дарк-оверы */
   [data-theme="dark"] .ec-task-dialog .form-control,
   [data-theme="dark"] .ec-task-dialog input[type="text"],
   [data-theme="dark"] .ec-task-dialog input[type="datetime-local"],
@@ -790,7 +810,6 @@
   [data-theme="dark"] .ec-task-dialog input::placeholder,
   [data-theme="dark"] .ec-task-dialog textarea::placeholder{
     color: var(--placeholder-color, #8ba0a6);
-    opacity: .95;
   }
   .ec-task-dialog .form-control:focus,
   .ec-task-dialog input[type="text"]:focus,
