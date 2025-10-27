@@ -4,7 +4,7 @@
    {
     "column_name": "New",
     "indicator": "Pink",
-    "order": "[\n \"IE-2025-00749\",\n \"IE-2025-00743\",\n \"IE-2025-00748\",\n \"IE-2025-00747\",\n \"IE-2025-00745\",\n \"IE-2025-00736\",\n \"IE-2025-00744\",\n \"IE-2025-00730\",\n \"IE-2025-00738\",\n \"IE-2025-00741\",\n \"IE-2025-00735\",\n \"IE-2025-00737\",\n \"IE-2025-00740\",\n \"IE-2025-00739\",\n \"IE-2025-00742\",\n \"IE-2025-00711\",\n \"IE-2025-00733\",\n \"IE-2025-00734\",\n \"IE-2025-00732\",\n \"IE-2025-00731\",\n \"IE-2025-00728\",\n \"IE-2025-00729\",\n \"IE-2025-00713\",\n \"IE-2025-00727\",\n \"IE-2025-00725\",\n \"IE-2025-00724\",\n \"IE-2025-00723\",\n \"IE-2025-00722\",\n \"IE-2025-00719\",\n \"IE-2025-00721\",\n \"IE-2025-00718\",\n \"IE-2025-00717\",\n \"IE-2025-00716\",\n \"IE-2025-00715\",\n \"IE-2025-00714\",\n \"IE-2025-00712\",\n \"IE-2025-00768\",\n \"IE-2025-00770\",\n \"IE-2025-00773\",\n \"IE-2025-00774\",\n \"IE-2025-00777\",\n \"IE-2025-00779\",\n \"IE-2025-00780\",\n \"IE-2025-00781\",\n \"IE-2025-00801\"\n]",
+    "order": "[\"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\", \"IE-2025-00807\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -13,7 +13,7 @@
    {
     "column_name": "Qualification",
     "indicator": "Yellow",
-    "order": "[\n \"IE-2025-00751\",\n \"IE-2025-00746\",\n \"IE-2025-00726\",\n \"IE-2025-00720\",\n \"IE-2025-00757\",\n \"IE-2025-00758\",\n \"IE-2025-00759\",\n \"IE-2025-00760\",\n \"IE-2025-00763\",\n \"IE-2025-00764\",\n \"IE-2025-00766\",\n \"IE-2025-00767\",\n \"IE-2025-00769\",\n \"IE-2025-00771\",\n \"IE-2025-00775\",\n \"IE-2025-00782\",\n \"IE-2025-00795\",\n \"IE-2025-00796\",\n \"IE-2025-00797\",\n \"IE-2025-00798\",\n \"IE-2025-00799\",\n \"IE-2025-00800\"\n]",
+    "order": "[\"IE-2025-00808\", \"IE-2025-00751\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00720\", \"IE-2025-00771\", \"IE-2025-00775\", \"IE-2025-00782\", \"IE-2025-00795\", \"IE-2025-00796\", \"IE-2025-00797\", \"IE-2025-00800\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -22,7 +22,7 @@
    {
     "column_name": "Briefing",
     "indicator": "Orange",
-    "order": "[\n \"IE-2025-00710\",\n \"IE-2025-00765\",\n \"IE-2025-00772\",\n \"IE-2025-00776\",\n \"IE-2025-00783\",\n \"IE-2025-00784\",\n \"IE-2025-00792\",\n \"IE-2025-00802\"\n]",
+    "order": "[\"IE-2025-00710\", \"IE-2025-00772\", \"IE-2025-00776\", \"IE-2025-00783\", \"IE-2025-00784\", \"IE-2025-00792\", \"IE-2025-00802\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -31,7 +31,7 @@
    {
     "column_name": "Scheduled",
     "indicator": "Light Blue",
-    "order": "[\n \"IE-2025-00753\",\n \"IE-2025-00756\",\n \"IE-2025-00750\",\n \"IE-2025-00778\",\n \"IE-2025-00785\",\n \"IE-2025-00786\"\n]",
+    "order": "[\"IE-2025-00753\", \"IE-2025-00756\", \"IE-2025-00750\", \"IE-2025-00778\", \"IE-2025-00785\", \"IE-2025-00786\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -40,7 +40,7 @@
    {
     "column_name": "In Work",
     "indicator": "Blue",
-    "order": "[\n \"IE-2025-00755\",\n \"IE-2025-00754\",\n \"IE-2025-00752\",\n \"IE-2025-00789\",\n \"IE-2025-00793\"\n]",
+    "order": "[\"IE-2025-00752\", \"IE-2025-00789\", \"IE-2025-00793\", \"IE-2025-00755\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -49,7 +49,7 @@
    {
     "column_name": "On Hold",
     "indicator": "Purple",
-    "order": "[\n \"IE-2025-00787\",\n \"IE-2025-00788\"\n]",
+    "order": "[\"IE-2025-00787\", \"IE-2025-00788\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -58,7 +58,7 @@
    {
     "column_name": "Won",
     "indicator": "Green",
-    "order": "[\n \"IE-2025-00790\",\n \"IE-2025-00794\"\n]",
+    "order": "[\"IE-2025-00790\", \"IE-2025-00794\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -67,7 +67,7 @@
    {
     "column_name": "Lost",
     "indicator": "Red",
-    "order": "[\n \"IE-2025-00791\"\n]",
+    "order": "[\"IE-2025-00791\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -86,21 +86,21 @@
   "docstatus": 0,
   "doctype": "Kanban Board",
   "field_name": "status_crm_board",
-  "fields": "[\"channel_type\", \"channel_platform\", \"display_name\", \"mongo_chat_id\", \"last_event_at\", \"modified\"]",
+  "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
   "filters": null,
   "kanban_board_name": "CRM Board",
-  "modified": "2025-10-24 00:24:00.703316",
+  "modified": "2025-10-27 21:56:50.400372",
   "name": "CRM Board",
   "private": 0,
   "reference_doctype": "Engagement Case",
-  "show_labels": 0
+  "show_labels": 1
  },
  {
   "columns": [
    {
     "column_name": "Bot Active / New Inquiry",
     "indicator": "Pink",
-    "order": "[\n \"IE-2025-00753\",\n \"IE-2025-00756\",\n \"IE-2025-00710\",\n \"IE-2025-00751\",\n \"IE-2025-00750\",\n \"IE-2025-00749\",\n \"IE-2025-00746\",\n \"IE-2025-00743\",\n \"IE-2025-00726\",\n \"IE-2025-00748\",\n \"IE-2025-00747\",\n \"IE-2025-00745\",\n \"IE-2025-00736\",\n \"IE-2025-00744\",\n \"IE-2025-00730\",\n \"IE-2025-00738\",\n \"IE-2025-00741\",\n \"IE-2025-00735\",\n \"IE-2025-00737\",\n \"IE-2025-00740\",\n \"IE-2025-00739\",\n \"IE-2025-00742\",\n \"IE-2025-00711\",\n \"IE-2025-00733\",\n \"IE-2025-00734\",\n \"IE-2025-00732\",\n \"IE-2025-00731\",\n \"IE-2025-00728\",\n \"IE-2025-00729\",\n \"IE-2025-00713\",\n \"IE-2025-00727\",\n \"IE-2025-00725\",\n \"IE-2025-00724\",\n \"IE-2025-00723\",\n \"IE-2025-00722\",\n \"IE-2025-00719\",\n \"IE-2025-00721\",\n \"IE-2025-00720\",\n \"IE-2025-00718\",\n \"IE-2025-00717\",\n \"IE-2025-00716\",\n \"IE-2025-00715\",\n \"IE-2025-00714\",\n \"IE-2025-00712\",\n \"IE-2025-00757\",\n \"IE-2025-00758\",\n \"IE-2025-00759\",\n \"IE-2025-00760\",\n \"IE-2025-00763\",\n \"IE-2025-00764\",\n \"IE-2025-00765\",\n \"IE-2025-00766\",\n \"IE-2025-00767\",\n \"IE-2025-00769\",\n \"IE-2025-00770\",\n \"IE-2025-00771\",\n \"IE-2025-00772\",\n \"IE-2025-00773\",\n \"IE-2025-00774\",\n \"IE-2025-00775\",\n \"IE-2025-00776\",\n \"IE-2025-00777\",\n \"IE-2025-00778\",\n \"IE-2025-00779\",\n \"IE-2025-00780\",\n \"IE-2025-00781\",\n \"IE-2025-00782\",\n \"IE-2025-00783\",\n \"IE-2025-00784\",\n \"IE-2025-00785\",\n \"IE-2025-00786\",\n \"IE-2025-00787\",\n \"IE-2025-00788\",\n \"IE-2025-00789\",\n \"IE-2025-00790\",\n \"IE-2025-00791\",\n \"IE-2025-00792\",\n \"IE-2025-00793\",\n \"IE-2025-00794\",\n \"IE-2025-00795\",\n \"IE-2025-00796\",\n \"IE-2025-00797\",\n \"IE-2025-00798\",\n \"IE-2025-00799\",\n \"IE-2025-00800\",\n \"IE-2025-00802\"\n]",
+    "order": "[\"IE-2025-00753\", \"IE-2025-00710\", \"IE-2025-00751\", \"IE-2025-00750\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00720\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\", \"IE-2025-00800\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -109,7 +109,7 @@
    {
     "column_name": "In Progress",
     "indicator": "Yellow",
-    "order": "[\n \"IE-2025-00754\",\n \"IE-2025-00752\",\n \"IE-2025-00801\"\n]",
+    "order": "[\"IE-2025-00752\", \"IE-2025-00801\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -118,7 +118,7 @@
    {
     "column_name": "Waiting List",
     "indicator": "Purple",
-    "order": "[\n \"IE-2025-00768\"\n]",
+    "order": "[\"IE-2025-00804\", \"IE-2025-00803\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -127,7 +127,7 @@
    {
     "column_name": "Call Later",
     "indicator": "Orange",
-    "order": "[\n \"IE-2025-00755\"\n]",
+    "order": "[\"IE-2025-00755\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -136,7 +136,7 @@
    {
     "column_name": "Failed / No Show (lead)",
     "indicator": "Red",
-    "order": "[]",
+    "order": "[\"IE-2025-00805\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -164,10 +164,10 @@
   "docstatus": 0,
   "doctype": "Kanban Board",
   "field_name": "status_leads",
-  "fields": "[\"channel_type\",\"channel_platform\",\"display_name\",\"mongo_chat_id\",\"last_event_at\",\"modified\"]",
+  "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
   "filters": null,
   "kanban_board_name": "Leads – Contact Center",
-  "modified": "2025-10-23 18:04:38.593461",
+  "modified": "2025-10-27 21:56:58.283627",
   "name": "Leads – Contact Center",
   "private": 0,
   "reference_doctype": "Engagement Case",
@@ -178,7 +178,7 @@
    {
     "column_name": "Appointment Scheduled",
     "indicator": "Light Blue",
-    "order": "[\n \"IE-2025-00755\",\n \"IE-2025-00754\",\n \"IE-2025-00753\",\n \"IE-2025-00756\",\n \"IE-2025-00752\",\n \"IE-2025-00710\",\n \"IE-2025-00751\",\n \"IE-2025-00750\",\n \"IE-2025-00749\",\n \"IE-2025-00746\",\n \"IE-2025-00743\",\n \"IE-2025-00726\",\n \"IE-2025-00748\",\n \"IE-2025-00747\",\n \"IE-2025-00745\",\n \"IE-2025-00736\",\n \"IE-2025-00744\",\n \"IE-2025-00730\",\n \"IE-2025-00738\",\n \"IE-2025-00741\",\n \"IE-2025-00735\",\n \"IE-2025-00737\",\n \"IE-2025-00740\",\n \"IE-2025-00739\",\n \"IE-2025-00742\",\n \"IE-2025-00711\",\n \"IE-2025-00733\",\n \"IE-2025-00734\",\n \"IE-2025-00732\",\n \"IE-2025-00731\",\n \"IE-2025-00728\",\n \"IE-2025-00729\",\n \"IE-2025-00713\",\n \"IE-2025-00727\",\n \"IE-2025-00725\",\n \"IE-2025-00724\",\n \"IE-2025-00723\",\n \"IE-2025-00722\",\n \"IE-2025-00719\",\n \"IE-2025-00721\",\n \"IE-2025-00720\",\n \"IE-2025-00718\",\n \"IE-2025-00717\",\n \"IE-2025-00716\",\n \"IE-2025-00715\",\n \"IE-2025-00714\",\n \"IE-2025-00712\",\n \"IE-2025-00757\",\n \"IE-2025-00758\",\n \"IE-2025-00759\",\n \"IE-2025-00760\",\n \"IE-2025-00763\",\n \"IE-2025-00764\",\n \"IE-2025-00765\",\n \"IE-2025-00766\",\n \"IE-2025-00767\",\n \"IE-2025-00768\",\n \"IE-2025-00769\",\n \"IE-2025-00771\",\n \"IE-2025-00772\",\n \"IE-2025-00775\",\n \"IE-2025-00776\",\n \"IE-2025-00777\",\n \"IE-2025-00778\",\n \"IE-2025-00779\",\n \"IE-2025-00780\",\n \"IE-2025-00781\",\n \"IE-2025-00782\",\n \"IE-2025-00783\",\n \"IE-2025-00784\",\n \"IE-2025-00785\",\n \"IE-2025-00786\",\n \"IE-2025-00787\",\n \"IE-2025-00788\",\n \"IE-2025-00789\",\n \"IE-2025-00790\",\n \"IE-2025-00791\",\n \"IE-2025-00792\",\n \"IE-2025-00793\",\n \"IE-2025-00794\",\n \"IE-2025-00795\",\n \"IE-2025-00796\",\n \"IE-2025-00797\",\n \"IE-2025-00798\",\n \"IE-2025-00799\",\n \"IE-2025-00800\",\n \"IE-2025-00802\"\n]",
+    "order": "[\"IE-2025-00756\"]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -187,7 +187,7 @@
    {
     "column_name": "Post-Visit Check",
     "indicator": "Yellow",
-    "order": "[\n \"IE-2025-00770\",\n \"IE-2025-00774\"\n]",
+    "order": "[\"IE-2025-00774\"]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -196,7 +196,7 @@
    {
     "column_name": "Recommended Recall Added",
     "indicator": "Purple",
-    "order": "[\n \"IE-2025-00773\"\n]",
+    "order": "[\"IE-2025-00773\"]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -205,7 +205,7 @@
    {
     "column_name": "Transferred to Care",
     "indicator": "Blue",
-    "order": "[\n \"IE-2025-00801\"\n]",
+    "order": "[\"IE-2025-00801\"]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -233,10 +233,10 @@
   "docstatus": 0,
   "doctype": "Kanban Board",
   "field_name": "status_deals",
-  "fields": "[\"channel_type\", \"channel_platform\", \"display_name\", \"mongo_chat_id\", \"last_event_at\", \"modified\"]",
+  "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
   "filters": null,
   "kanban_board_name": "Deals – Contact Center",
-  "modified": "2025-10-23 18:04:44.513099",
+  "modified": "2025-10-27 19:02:28.361854",
   "name": "Deals – Contact Center",
   "private": 0,
   "reference_doctype": "Engagement Case",
@@ -247,7 +247,7 @@
    {
     "column_name": "New Patient",
     "indicator": "Pink",
-    "order": "[\n \"IE-2025-00755\",\n \"IE-2025-00754\",\n \"IE-2025-00753\",\n \"IE-2025-00756\",\n \"IE-2025-00752\",\n \"IE-2025-00710\",\n \"IE-2025-00751\",\n \"IE-2025-00750\",\n \"IE-2025-00749\",\n \"IE-2025-00746\",\n \"IE-2025-00743\",\n \"IE-2025-00726\",\n \"IE-2025-00748\",\n \"IE-2025-00747\",\n \"IE-2025-00745\",\n \"IE-2025-00736\",\n \"IE-2025-00744\",\n \"IE-2025-00730\",\n \"IE-2025-00738\",\n \"IE-2025-00741\",\n \"IE-2025-00735\",\n \"IE-2025-00737\",\n \"IE-2025-00740\",\n \"IE-2025-00739\",\n \"IE-2025-00742\",\n \"IE-2025-00711\",\n \"IE-2025-00733\",\n \"IE-2025-00734\",\n \"IE-2025-00732\",\n \"IE-2025-00731\",\n \"IE-2025-00728\",\n \"IE-2025-00729\",\n \"IE-2025-00713\",\n \"IE-2025-00727\",\n \"IE-2025-00725\",\n \"IE-2025-00724\",\n \"IE-2025-00723\",\n \"IE-2025-00722\",\n \"IE-2025-00719\",\n \"IE-2025-00721\",\n \"IE-2025-00720\",\n \"IE-2025-00718\",\n \"IE-2025-00717\",\n \"IE-2025-00716\",\n \"IE-2025-00715\",\n \"IE-2025-00714\",\n \"IE-2025-00712\",\n \"IE-2025-00757\",\n \"IE-2025-00758\",\n \"IE-2025-00759\",\n \"IE-2025-00760\",\n \"IE-2025-00763\",\n \"IE-2025-00764\",\n \"IE-2025-00765\",\n \"IE-2025-00766\",\n \"IE-2025-00767\",\n \"IE-2025-00768\",\n \"IE-2025-00769\",\n \"IE-2025-00770\",\n \"IE-2025-00771\",\n \"IE-2025-00772\",\n \"IE-2025-00773\",\n \"IE-2025-00774\",\n \"IE-2025-00775\",\n \"IE-2025-00776\",\n \"IE-2025-00778\",\n \"IE-2025-00782\",\n \"IE-2025-00783\",\n \"IE-2025-00784\",\n \"IE-2025-00785\",\n \"IE-2025-00786\",\n \"IE-2025-00787\",\n \"IE-2025-00788\",\n \"IE-2025-00789\",\n \"IE-2025-00790\",\n \"IE-2025-00791\",\n \"IE-2025-00792\",\n \"IE-2025-00793\",\n \"IE-2025-00794\",\n \"IE-2025-00795\",\n \"IE-2025-00796\",\n \"IE-2025-00797\",\n \"IE-2025-00798\",\n \"IE-2025-00799\",\n \"IE-2025-00800\",\n \"IE-2025-00801\",\n \"IE-2025-00802\"\n]",
+    "order": "[\"IE-2025-00756\"]",
     "parent": "Patients – Care Department",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -256,7 +256,7 @@
    {
     "column_name": "Returning Patient",
     "indicator": "Orange",
-    "order": "[\n \"IE-2025-00777\"\n]",
+    "order": "[\"IE-2025-00806\"]",
     "parent": "Patients – Care Department",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -265,7 +265,7 @@
    {
     "column_name": "Stage Appointment Scheduled",
     "indicator": "Light Blue",
-    "order": "[\n \"IE-2025-00779\",\n \"IE-2025-00781\"\n]",
+    "order": "[]",
     "parent": "Patients – Care Department",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -274,7 +274,7 @@
    {
     "column_name": "In Treatment",
     "indicator": "Blue",
-    "order": "[\n \"IE-2025-00780\"\n]",
+    "order": "[\"IE-2025-00780\", \"IE-2025-00779\"]",
     "parent": "Patients – Care Department",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -320,10 +320,10 @@
   "docstatus": 0,
   "doctype": "Kanban Board",
   "field_name": "status_patients",
-  "fields": "[\"channel_type\",\"channel_platform\",\"display_name\",\"mongo_chat_id\",\"last_event_at\",\"modified\"]",
+  "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
   "filters": null,
   "kanban_board_name": "Patients – Care Department",
-  "modified": "2025-10-23 22:56:18.742554",
+  "modified": "2025-10-27 21:50:11.178941",
   "name": "Patients – Care Department",
   "private": 0,
   "reference_doctype": "Engagement Case",
