@@ -1,8 +1,8 @@
 // ==============================
-// Engagement Case — Tasks UI — v4.25
+// Engagement Case — Tasks UI — v4.28 (no client-side TZ)
 // Target -> custom_target_datetime
-// Reminder -> custom_due_datetime (due/date не используем вообще)
-// Клиентский дозапрос полей в loadTasks, если сервер их не вернул
+// Reminder -> custom_due_datetime
+// + Console logs with emoji
 // ==============================
 (function () {
   const DOCTYPE = "Engagement Case";
@@ -10,6 +10,13 @@
   const SEC_ID = "ec-tasks-area";
   const SEC_TITLE = "Tasks";
   const LS_KEY_COLLAPSE = "ec_tasks_collapsed";
+
+  // ===== debug log helper =====
+  const V = "v4.28";
+  function log(tag, ...args){ try { console.log(`🧩 EC[${V}] ${tag}`, ...args); } catch(_){} }
+  function ok(tag, ...args){ try { console.log(`✅ EC[${V}] ${tag}`, ...args); } catch(_){} }
+  function warn(tag, ...args){ try { console.warn(`⚠️ EC[${V}] ${tag}`, ...args); } catch(_){} }
+  function err(tag, ...args){ try { console.error(`❌ EC[${V}] ${tag}`, ...args); } catch(_){} }
 
   const PRIV_ROLES = ["System Manager", "AIHub Super Admin"];
   function userHasRole(role) {
@@ -21,6 +28,38 @@
   }
   function isPrivileged() { return PRIV_ROLES.some(userHasRole); }
 
+  // ===== utils (без перевода TZ!) =====
+  function fmtUserDT(dtStr) {
+    if (!dtStr) return "";
+    try { return moment(frappe.datetime.convert_to_user_tz(dtStr)).format("YYYY-MM-DD HH:mm"); }
+    catch { return String(dtStr); }
+  }
+  function clean_title(raw){
+    const s = String(raw || "")
+      .replace(/<[^>]*>/g, "")
+      .replace(/\s+/g, " ").trim();
+    return s.length > 40 ? s.slice(0, 40).trimEnd() + "…" : s;
+  }
+  function isOverdue(t) {
+    if ((t.status || "Open") !== "Open") return false;
+    const now = moment();
+    if (t.custom_target_datetime) return moment(t.custom_target_datetime).isBefore(now);
+    return false;
+  }
+  function composeAssignees(vals, me){
+    const arr = [];
+    if (isPrivileged()) {
+      const multi = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
+      multi.forEach(u => { if (u && !arr.includes(u)) arr.push(u); });
+    } else {
+      const one = vals.assignee_one || "";
+      if (one && !arr.includes(one)) arr.push(one);
+    }
+    if (vals.assign_me && me && !arr.includes(me)) arr.push(me);
+    return arr;
+  }
+
+  // ===== Rules (всегда используем custom_* поля, без TZ-конверсии) =====
   const FORM_RULES = {
     status_leads: {
       "Call Later": {
@@ -31,12 +70,14 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Call Later" && cur === "Call Later",
         makePayload: (vals, me) => {
           const a = composeAssignees(vals, me);
-          return {
+          const payload = {
             description: __("Manual Callback"),
             custom_due_datetime: vals.reminder_at || null,
             priority: vals.priority || "Medium",
             assignees: a
           };
+          log("📦 RULE payload (Call Later)", { vals, me, payload });
+          return payload;
         },
       },
     },
@@ -46,7 +87,9 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Appointment Scheduled" && cur === "Appointment Scheduled",
         makePayload: (_vals, me) => {
           const when = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: __("Next-Day Feedback call"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+          const payload = { description: __("Next-Day Feedback call"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+          log("📦 RULE payload (Appointment Scheduled)", payload);
+          return payload;
         },
       },
       "Treatment Completed": {
@@ -54,7 +97,9 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
           const when = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+          const payload = { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+          log("📦 RULE payload (Treatment Completed)", payload);
+          return payload;
         },
       },
     },
@@ -75,7 +120,9 @@
           const when = moment().add(months,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
           const a = composeAssignees(vals, me);
           const note = ` (${__("type")}: ${vals.treatment_type}, +${months}m)`;
-          return { description: __("Schedule control X-ray") + note, custom_due_datetime: when, priority: vals.priority || "High", assignees: a };
+          const payload = { description: __("Schedule control X-ray") + note, custom_due_datetime: when, priority: vals.priority || "High", assignees: a };
+          log("📦 RULE payload (Stage Checked)", { vals, me, payload });
+          return payload;
         },
       },
       "Treatment Completed": {
@@ -83,7 +130,9 @@
         shouldTrigger: ({ prev, cur }) => prev !== "Treatment Completed" && cur === "Treatment Completed",
         makePayload: (_vals, me) => {
           const when = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-          return { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+          const payload = { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+          log("📦 RULE payload (Patients.Treatment Completed)", payload);
+          return payload;
         },
       },
     },
@@ -97,26 +146,32 @@
       extraFields: () => [],
       makePayload: (vals, me) => {
         const a = composeAssignees(vals, me);
-        return {
+        const payload = {
           description: __("Manual Callback"),
           custom_due_datetime: vals.reminder_at || null,
           priority: vals.priority || "Medium",
           assignees: a
         };
+        log("📦 KANBAN RULE payload (Call Later)", { vals, me, payload });
+        return payload;
       },
     },
     "Appointment Scheduled": {
       showDialog: false,
       makePayload: (_vals, me) => {
         const when = moment().add(1,"day").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return { description: __("Next-Day Feedback call"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+        const payload = { description: __("Next-Day Feedback call"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+        log("📦 KANBAN RULE payload (Appointment Scheduled)", payload);
+        return payload;
       },
     },
     "Treatment Completed": {
       showDialog: false,
       makePayload: (_vals, me) => {
         const when = moment().add(5,"month").hour(10).minute(0).second(0).format("YYYY-MM-DD HH:mm:ss");
-        return { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+        const payload = { description: __("Recall: schedule prophylaxis"), custom_due_datetime: when, priority: "Medium", assignees: me ? [me] : [] };
+        log("📦 KANBAN RULE payload (Treatment Completed)", payload);
+        return payload;
       },
     },
     "Stage Checked": {
@@ -140,31 +195,7 @@
     openCount: 0,
   };
 
-  function fmtUserDT(dtStr) {
-    if (!dtStr) return "";
-    try { return moment(frappe.datetime.convert_to_user_tz(dtStr)).format("YYYY-MM-DD HH:mm"); }
-    catch { return String(dtStr); }
-  }
-  function isOverdue(t) {
-    if ((t.status || "Open") !== "Open") return false;
-    const now = moment();
-    if (t.custom_target_datetime) return moment(t.custom_target_datetime).isBefore(now);
-    return false;
-  }
-
-  function composeAssignees(vals, me){
-    const arr = [];
-    if (isPrivileged()) {
-      const multi = Array.isArray(vals.assignees) ? vals.assignees.slice() : (vals.assignees || []);
-      multi.forEach(u => { if (u && !arr.includes(u)) arr.push(u); });
-    } else {
-      const one = vals.assignee_one || "";
-      if (one && !arr.includes(one)) arr.push(one);
-    }
-    if (vals.assign_me && me && !arr.includes(me)) arr.push(me);
-    return arr;
-  }
-
+  // ===== dashboard section helpers =====
   function getOrCreateDashSection(frm, id, title) {
     const host = frm?.page?.wrapper?.[0];
     if (!host) return null;
@@ -229,6 +260,7 @@
     if (dot) dot.hidden = !on;
   }
 
+  // ===== list rendering =====
   function priorityClass(p){ if (p==="High") return "-p-high"; if (p==="Low") return "-p-low"; return "-p-med"; }
   function taskRow(t) {
     const reminder_dt = t.custom_due_datetime;
@@ -242,6 +274,7 @@
     const cls = st === "Open" ? "" : " -muted";
     const pcls = priorityClass(t.priority || "Medium");
     const overdue = isOverdue(t);
+    const title = clean_title(t.description || t.name);
 
     const chips = [];
     chips.push(`<span class="chip">${frappe.utils.escape_html(__(st))}</span>`);
@@ -255,7 +288,7 @@
     return `
       <div class="ec-task${cls}">
         <div class="l">
-          <div class="title">${frappe.utils.escape_html(t.description || t.name)}</div>
+          <div class="title" title="${frappe.utils.escape_html(title)}">${frappe.utils.escape_html(title)}</div>
           <div class="meta">${chips.join(" ")}</div>
         </div>
         <div class="r">
@@ -331,6 +364,7 @@
 
         if (act === "done" || act === "cancel") {
           const name = a.getAttribute("data-name");
+          log("🛠 click status change", { name, act });
           updateTaskStatus(name, act === "done" ? "Closed" : "Cancelled").then(() => loadTasks(frm));
         }
 
@@ -357,6 +391,7 @@
     if (info) info.textContent = `${__("Page")} ${UI.page} / ${totalPages} • ${UI.total} ${__("total")} • ${PAGE_LEN} ${__("per page")}`;
   }
 
+  // Если сервер не вернул кастомные поля, добираем их
   async function enrichTasksWithCustomFields(rows) {
     const need = rows.filter(r => (typeof r.custom_target_datetime === "undefined") || (typeof r.custom_due_datetime === "undefined"));
     if (!need.length) return rows;
@@ -365,6 +400,7 @@
     if (!names.length) return rows;
 
     try {
+      log("🔎 enrich request", { names });
       const { message } = await frappe.call({
         method: "frappe.client.get_list",
         args: {
@@ -374,6 +410,7 @@
           limit_page_length: names.length
         }
       });
+      ok("📥 enrich response", message);
       const byName = {};
       (message || []).forEach(it => { byName[it.name] = it; });
       rows.forEach(r => {
@@ -383,7 +420,7 @@
         if (typeof r.custom_due_datetime === "undefined") r.custom_due_datetime = add.custom_due_datetime || null;
       });
     } catch (e) {
-      console.warn("[EC Tasks] enrich failed", e);
+      warn("enrich failed", e);
     }
     return rows;
   }
@@ -395,10 +432,13 @@
     try {
       const status = UI.statusTab === "All" ? null : UI.statusTab;
       const start = (UI.page - 1) * PAGE_LEN;
+      log("🔁 loadTasks call", { name: frm.doc.name, status, start, PAGE_LEN });
       const { message } = await frappe.call({
         method: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
         args: { name: frm.doc.name, status, limit_start: start, limit_page_length: PAGE_LEN }
       });
+      ok("📥 loadTasks response", message);
+
       let rows = (message && message.rows) || [];
       UI.total = (message && message.total) || rows.length;
 
@@ -413,11 +453,12 @@
         : `<div class="text-muted small">${frappe.utils.escape_html(__("No tasks."))}</div>`;
       updatePagerVisibility(listEl);
     } catch (e) {
-      console.error(e);
+      err("loadTasks failed", e);
       listEl.innerHTML = `<div class="text-danger small">${frappe.utils.escape_html(__("Failed to load tasks."))}</div>`;
     }
   }
 
+  // ===== Dialogs (Target/Reminder) =====
   function buildFields(baseKeys, extra) {
     const me = frappe.session.user || "";
     const fields = [
@@ -475,10 +516,18 @@
   }
 
   async function createTask(caseName, payload, source) {
-    return frappe.call({
-      method: "dantist_app.api.tasks.handlers.create_task_for_case",
-      args: { name: caseName, values: payload, source: source || "auto" }
-    });
+    log("🚀 createTask →", { caseName, source, payload });
+    try {
+      const res = await frappe.call({
+        method: "dantist_app.api.tasks.handlers.create_task_for_case",
+        args: { name: caseName, values: payload, source: source || "auto" }
+      });
+      ok("📬 createTask OK", res);
+      return res;
+    } catch (e) {
+      err("createTask FAIL", e);
+      throw e;
+    }
   }
 
   function openCreateDialog(frm) {
@@ -491,15 +540,15 @@
     const guard = wireReminderValidation(d);
 
     d.set_primary_action(__("Create"), async () => {
-      if (!guard()) return;
       const v = d.get_values();
+      log("📝 Dialog values (manual create)", v);
+      if (!guard()) return;
       try {
         const payload = { description: v.description, priority: v.priority };
-        if (v.target_at) payload.custom_target_datetime = v.target_at;
-
+        if (v.target_at) payload.custom_target_datetime = v.target_at;           // ← без TZ-конверсии
         if (v.send_reminder && v.reminder_at) {
           payload.send_reminder = 1;
-          payload.custom_due_datetime = v.reminder_at;
+          payload.custom_due_datetime = v.reminder_at;                           // ← без TZ-конверсии
         } else {
           payload.send_reminder = 0;
         }
@@ -507,12 +556,13 @@
         const a = composeAssignees(v, me);
         if (a.length) payload.assignees = a;
 
+        log("📦 Payload (manual create)", payload);
         await createTask(frm.doc.name, payload, "manual");
         d.hide();
         frappe.show_alert({ message: __("Task created"), indicator:"green" });
         UI.page = 1; loadTasks(frm);
       } catch (e) {
-        console.error(e);
+        err("manual create failed", e);
         frappe.msgprint({ message: __("Failed to create task"), indicator:"red" });
       }
     });
@@ -522,10 +572,12 @@
   }
 
   async function updateTaskStatus(name, status) {
+    log("🔧 updateTaskStatus →", { name, status });
     await frappe.call({ method: "dantist_app.api.tasks.handlers.update_task_status", args: { name, status } });
     frappe.show_alert({ message: status==="Closed"?__("Completed"):__("Cancelled"), indicator:"green" });
   }
 
+  // ===== Save-hook для правил =====
   function patchFormSave(frm){
     if (frm.__ecSavePatched) return;
     frm.__ecSavePatched = true;
@@ -536,13 +588,16 @@
 
       const { rule } = UI.pendingRule;
       const me = frappe.session.user || "";
+      log("💾 Save intercepted", { ruleTitle: rule.title, showDialog: rule.showDialog });
 
       if (!rule.showDialog) {
         UI.saveGuard = true;
+        const payload = rule.makePayload({}, me, frm);
+        log("📦 Auto RULE payload (no dialog on save)", payload);
         Promise.resolve()
-          .then(() => createTask(frm.doc.name, rule.makePayload({}, me, frm), "auto"))
+          .then(() => createTask(frm.doc.name, payload, "auto"))
           .then(() => frappe.show_alert({ message: __("Auto task created"), indicator: "green" }))
-          .catch(e => console.warn("[EC Form Save] auto create failed", e))
+          .catch(e => { warn("[EC Form Save] auto create failed", e); })
           .finally(() => { UI.pendingRule = null; UI.saveGuard = false; origSave(...args); });
         return Promise.resolve();
       }
@@ -552,28 +607,29 @@
       const guard = wireReminderValidation(d);
 
       d.set_primary_action(__("OK"), (vals) => {
+        log("📝 Dialog values (save rule)", vals);
         if (!guard()) return;
         UI.saveGuard = true;
 
         const draft = rule.makePayload(vals, me, frm) || {};
         const payload = Object.assign({}, draft);
 
-        if (vals.target_at) payload.custom_target_datetime = vals.target_at;
-
+        if (vals.target_at) payload.custom_target_datetime = vals.target_at;     // ← без TZ-конверсии
         if (vals.send_reminder && vals.reminder_at) {
           payload.send_reminder = 1;
-          if (!payload.custom_due_datetime) payload.custom_due_datetime = vals.reminder_at;
+          if (!payload.custom_due_datetime) payload.custom_due_datetime = vals.reminder_at; // ← без TZ-конверсии
         } else {
           payload.send_reminder = 0;
           if ("custom_due_datetime" in payload && !vals.send_reminder) delete payload.custom_due_datetime;
         }
 
         payload.assignees = composeAssignees(vals, me);
+        log("📦 Payload (save rule)", payload);
 
         Promise.resolve()
           .then(() => createTask(frm.doc.name, payload, "manual"))
           .then(() => frappe.show_alert({ message: __("Task created"), indicator:"green" }))
-          .catch(e => console.warn("[EC Form Save] create failed", e))
+          .catch(e => { warn("[EC Form Save] create failed", e); })
           .finally(() => { UI.pendingRule = null; UI.saveGuard = false; origSave(...args); });
 
         d.hide();
@@ -587,6 +643,7 @@
     };
   }
 
+  // ===== Bindings =====
   frappe.ui.form.on(DOCTYPE, {
     refresh(frm){
       UI.frm = frm;
@@ -625,21 +682,17 @@
     status_patients(frm){
       const prev = UI.baseline.status_patients, cur = frm.doc.status_patients || null;
       const r1 = FORM_RULES.status_patients["Stage Checked"];
-      const r2 = FORM_RULES.status_patients["Treatment Completed"];
+      const r2 = FORM_RULES.status_patients["Treatment Completed"] ;
       const rule = (cur==="Stage Checked") ? r1 : (cur==="Treatment Completed" ? r2 : null);
-      const need = rule && rule.shouldTrigger({ prev, cur, frm });
-      UI.pendingRule = need ? { df:"status_patients", rule } : null;
-      if (!need) return;
-      if (rule.showDialog) {
-        frappe.show_alert({ message: __("You can set Target and optional Reminder on Save"), indicator:"blue" });
-      } else {
-        frappe.show_alert({ message: __("An auto task will be created"), indicator:"blue" });
-      }
+      UI.pendingRule = (rule && rule.shouldTrigger({ prev, cur, frm })) ? { df:"status_patients", rule } : null;
+      if (!UI.pendingRule) return;
+      frappe.show_alert({ message: rule.showDialog ? __("You can set Target and optional Reminder on Save") : __("An auto task will be created"), indicator:"blue" });
     },
   });
 
+  // ===== Kanban hook (логируем всё) =====
   (function patchKanban(){
-    if (frappe.__ec_call_patched_v425) return;
+    if (frappe.__ec_call_patched_v428) return;
     const orig = frappe.call;
 
     frappe.call = function(opts){
@@ -660,6 +713,8 @@
         const key   = card && `${card}::${toCol}`;
         const rule  = KANBAN_RULES[toCol];
 
+        log("🧲 Kanban move", { method, args, toCol, card, ruleFound: !!rule });
+
         if (!rule || !card || !toCol) return;
         if (key && UI.kanbanSeen.has(key)) return;
         if (key) UI.kanbanSeen.add(key), setTimeout(()=> UI.kanbanSeen.delete(key), 3000);
@@ -667,9 +722,11 @@
         const me = frappe.session.user || "";
 
         if (!rule.showDialog) {
-          createTask(card, rule.makePayload({}, me, { toCol, card }), "auto")
+          const payload = rule.makePayload({}, me, { toCol, card });
+          log("📦 Auto KANBAN payload (no dialog)", payload);
+          createTask(card, payload, "auto")
             .then(()=> frappe.show_alert({ message: __("Auto task created"), indicator:"green" }))
-            .catch(e => console.warn("[EC Kanban] auto create failed", e));
+            .catch(e => warn("[EC Kanban] auto create failed", e));
           return;
         }
 
@@ -679,27 +736,28 @@
         });
         const guard = wireReminderValidation(d);
         d.set_primary_action(__("OK"), () => {
-          if (!guard()) return;
           const vals = d.get_values();
+          log("📝 Dialog values (kanban rule)", vals);
+          if (!guard()) return;
 
           const draft = rule.makePayload(vals, me, { toCol, card }) || {};
           const payload = Object.assign({}, draft);
 
-          if (vals.target_at) payload.custom_target_datetime = vals.target_at;
-
+          if (vals.target_at) payload.custom_target_datetime = vals.target_at;   // ← без TZ-конверсии
           if (vals.send_reminder && vals.reminder_at) {
             payload.send_reminder = 1;
-            if (!payload.custom_due_datetime) payload.custom_due_datetime = vals.reminder_at;
+            if (!payload.custom_due_datetime) payload.custom_due_datetime = vals.reminder_at; // ← без TZ-конверсии
           } else {
             payload.send_reminder = 0;
             if ("custom_due_datetime" in payload && !vals.send_reminder) delete payload.custom_due_datetime;
           }
 
           payload.assignees = composeAssignees(vals, me);
+          log("📦 Payload (kanban rule)", payload);
 
           createTask(card, payload, "manual")
             .then(()=> frappe.show_alert({ message: __("Task created"), indicator:"green" }))
-            .catch(e => console.warn("[EC Kanban] create failed", e));
+            .catch(e => warn("[EC Kanban] create failed", e));
           d.hide();
         });
         d.$wrapper.addClass("ec-task-dialog");
@@ -708,16 +766,13 @@
       return p;
     };
 
-    frappe.__ec_call_patched_v425 = true;
+    frappe.__ec_call_patched_v428 = true;
   })();
 
+  // ===== styles =====
   const css = document.createElement("style");
   css.textContent = `
-  .ec-tasks-section .section-head{
-    display:flex;align-items:center;gap:6px;
-    font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);
-    cursor:pointer; color: var(--text-color, #111827); background: var(--card-bg, #fff);
-  }
+  .ec-tasks-section .section-head{display:flex;align-items:center;gap:6px;font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border-color,#e5e7eb);cursor:pointer;color: var(--text-color, #111827); background: var(--card-bg, #fff);}
   .ec-tasks-section .section-head .t{flex:0 1 auto}
   .ec-tasks-section .collapse-indicator .es-icon{transition: transform .15s ease;}
   .ec-tasks-section .section-head.collapsed .collapse-indicator .es-icon{transform: rotate(-90deg);}
@@ -726,24 +781,13 @@
   .ec-tasks-section .section-body.hide{display:none!important}
 
   .ec-tabs-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  .ec-tabs .nav-link{
-    padding:6px 10px; border:1px solid var(--border-color,#e5e7eb)!important;
-    background: var(--control-bg,#f8fafc)!important; color: var(--text-color,#111827)!important;
-    border-bottom-color: var(--border-color,#e5e7eb)!important;
-  }
+  .ec-tabs .nav-link{padding:6px 10px; border:1px solid var(--border-color,#e5e7eb)!important;background: var(--control-bg,#f8fafc)!important; color: var(--text-color,#111827)!important;border-bottom-color: var(--border-color,#e5e7eb)!important;}
   .ec-tabs .nav-link:not(.active):hover{ background: var(--fg-hover-color,#f0f2f5)!important; }
-  .ec-tabs .nav-link.active{
-    background: var(--subtle-accent,#eef2ff)!important;
-    border-color: var(--border-color,#c7d2fe)!important;
-    color: var(--text-color,#111827)!important;
-  }
+  .ec-tabs .nav-link.active{ background: var(--subtle-accent,#eef2ff)!important;border-color: var(--border-color,#c7d2fe)!important;color: var(--text-color,#111827)!important; }
 
   .ml-1{margin-left:6px}.ml-2{margin-left:8px}
 
-  .ec-tasks-hint{
-    margin:8px 0 10px; padding:8px 10px; border-left:3px solid var(--border-color,#e5e7eb);
-    background: var(--control-bg,#fafafa); border-radius:6px; font-size:12px; color: var(--text-muted,#4b5563);
-  }
+  .ec-tasks-hint{margin:8px 0 10px; padding:8px 10px; border-left:3px solid var(--border-color,#e5e7eb);background: var(--control-bg,#fafafa); border-radius:6px; font-size:12px; color: var(--text-muted,#4b5563);}
   .ec-tasks-hint .h-title{font-weight:600; margin-bottom:4px; color: var(--text-color,#374151)}
   .ec-tasks-hint .h-list{margin:0; padding-left:18px}
   .ec-tasks-hint .h-list li{margin:1px 0}
@@ -754,35 +798,14 @@
   .ec-task .title{font-weight:600;font-size:13px;color: var(--text-color, #111827)}
   .ec-task .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;color:var(--text-muted,#6b7280);font-size:11px}
 
-  .ec-task .chip{
-    border:1px solid var(--border-color,#e5e7eb);
-    border-radius:999px; padding:2px 6px;
-    background: var(--bg-light-gray,#f3f4f6);
-    color: var(--text-color,#111827);
-  }
+  .ec-task .chip{border:1px solid var(--border-color,#e5e7eb);border-radius:999px; padding:2px 6px;background: var(--bg-light-gray,#f3f4f6);color: var(--text-color,#111827);}
   .ec-task .chip.-ghost{background: var(--control-bg,#f8fafc); color: var(--text-color,#111827);}
 
-  .ec-task .chip.-p-high{
-    background: var(--alert-bg-danger, #fee2e2);
-    border-color: color-mix(in oklab, var(--alert-bg-danger, #fee2e2) 60%, #ffffff);
-    color: var(--alert-text-danger, #991b1b);
-  }
-  .ec-task .chip.-p-med{
-    background: var(--bg-light-blue, #e5f0ff);
-    border-color: var(--text-on-light-blue, #dbeafe);
-    color: color-mix(in oklab, var(--text-on-light-blue, #1e3a8a) 80%, #111);
-  }
-  .ec-task .chip.-p-low{
-    background: var(--bg-green, #e8f5e9);
-    border-color: color-mix(in oklab, var(--bg-green, #e8f5e9) 60%, #ffffff);
-    color: var(--text-on-green, #14532d);
-  }
+  .ec-task .chip.-p-high{background: var(--alert-bg-danger, #fee2e2);border-color: color-mix(in oklab, var(--alert-bg-danger, #fee2e2) 60%, #ffffff);color: var(--alert-text-danger, #991b1b);}
+  .ec-task .chip.-p-med{background: var(--bg-light-blue, #e5f0ff);border-color: var(--text-on-light-blue, #dbeafe);color: color-mix(in oklab, var(--text-on-light-blue, #1e3a8a) 80%, #111);}
+  .ec-task .chip.-p-low{background: var(--bg-green, #e8f5e9);border-color: color-mix(in oklab, var(--bg-green, #e8f5e9) 60%, #ffffff);color: var(--text-on-green, #14532d);}
 
-  .ec-task .chip-target.-overdue{
-    background: var(--alert-bg-danger, #fee2e2);
-    border-color: color-mix(in oklab, var(--alert-bg-danger, #fecaca) 70%, #ffffff);
-    color: var(--alert-text-danger, #991b1b);
-  }
+  .ec-task .chip-target.-overdue{background: var(--alert-bg-danger, #fee2e2);border-color: color-mix(in oklab, var(--alert-bg-danger, #fecaca) 70%, #ffffff);color: var(--alert-text-danger, #991b1b);}
 
   .ec-task-dialog .modal-body{padding:14px 16px}
   .ec-task-dialog .frappe-control{margin-bottom:8px}
@@ -824,7 +847,7 @@
   [data-theme="dark"] .ec-task-dialog .form-control:focus,
   [data-theme="dark"] .ec-task-dialog input[type="text"]:focus,
   [data-theme="dark"] .ec-task-dialog input[type="datetime-local"]:focus,
-  [data-theme="dark"] .ec-task-dialog textarea:focus{
+  [data-theme|="dark"] .ec-task-dialog textarea:focus{
     border-color: var(--dark-border-color, #2f474c);
     background: var(--fg-hover-color, #2b4349);
   }

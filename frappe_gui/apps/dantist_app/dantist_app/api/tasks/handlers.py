@@ -21,6 +21,19 @@ F_SEND     = _todo_fieldname("send_reminder")
 F_SENT_AT  = _todo_fieldname("reminder_sent_at")
 F_ERR      = _todo_fieldname("reminder_error")
 
+# >>> NEW: детектор наличия целевого поля (у него нет базовой версии)
+def _todo_target_field() -> Optional[str]:
+    try:
+        meta = frappe.get_meta("ToDo")
+    except Exception:
+        meta = None
+    # используем именно custom_target_datetime, как договорено
+    return "custom_target_datetime" if (meta and meta.get_field("custom_target_datetime")) else None
+
+F_TARGET = _todo_target_field()
+# <<< NEW
+
+
 def _coerce_values(values: Any) -> frappe._dict:
     if isinstance(values, str):
         try:
@@ -99,9 +112,18 @@ def _mk_todo_doc(v: frappe._dict, ref_type: str, ref_name: str, source: str = "m
     if due_dt:
         data[F_DUE_DT] = due_dt
 
-    # Ключевая логика:
-    # - Если флаг пришёл явным значением -> мы его выставляем (1/0).
-    # - Если НЕ пришёл -> НЕ кладём поле вообще, и сработает стандартный дефолт DocField.
+    # >>> NEW: сохраняем custom_target_datetime, если поле существует и пришло значение
+    if F_TARGET:
+        tgt_raw = v.get("custom_target_datetime") or v.get("target_at")
+        if tgt_raw:
+            try:
+                data[F_TARGET] = get_datetime(tgt_raw)
+            except Exception:
+                # если не парсится – не падаем
+                pass
+    # <<< NEW
+
+    # Если флаг пришёл явным значением -> ставим его (1/0). Иначе не трогаем DocField дефолт.
     if send_raw is not None:
         send_on = 1 if str(send_raw).lower() in ("1", "true", "yes", "on") else 0
         data[F_SEND] = send_on
@@ -126,7 +148,12 @@ def ec_tasks_for_case(name: str, status: Optional[str] = None, limit_start: int 
     flt = {"reference_type": "Engagement Case", "reference_name": name}
     if status: flt["status"] = status
 
+    # >>> CHG: добавили F_TARGET, если оно есть
     fields = ["name","description","status","date","priority","allocated_to","assigned_by", F_DUE_DT, F_SEND, F_SENT_AT, F_ERR]
+    if F_TARGET:
+        fields.append(F_TARGET)
+    # <<< CHG
+
     total = frappe.db.count("ToDo", filters=flt)
     rows = frappe.get_all(
         "ToDo",
@@ -144,6 +171,10 @@ def ec_tasks_for_case(name: str, status: Optional[str] = None, limit_start: int 
         d["send_reminder"]    = d.pop(F_SEND, None)
         d["reminder_sent_at"] = d.pop(F_SENT_AT, None)
         d["reminder_error"]   = d.pop(F_ERR, None)
+        # >>> NEW: отдаём custom_target_datetime в унифицированном ключе
+        if F_TARGET and F_TARGET in d:
+            d["custom_target_datetime"] = d.pop(F_TARGET, None)
+        # <<< NEW
         out.append(d)
 
     print(f"[EC_TASKS] fetch {name} status={status or 'All'} {limit_start}+{limit_page_length} -> {len(out)}/{total}", flush=True)

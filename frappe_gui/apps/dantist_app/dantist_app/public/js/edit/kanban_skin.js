@@ -1,4 +1,4 @@
-/* Dantist Kanban skin — v25.18.2 • THEME-READY
+/* Dantist Kanban skin — v25.18.4 • THEME-READY
    (visual parity with v25.15, i18n labels in chips, mini-tasks fallback to get_list)
    — Все статичные цвета заменены на CSS-переменные темы
    — Светлая/тёмная тема подхватывается мгновенно без перерисовок
@@ -104,9 +104,7 @@
       html.${CFG.htmlClass} .kanban-card-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text-color, #111827); }
       html.${CFG.htmlClass} .dnt-title{ font-weight:600; line-height:1.25; cursor:text; }
       html.${CFG.htmlClass} .dnt-title[contenteditable="true"]{ outline:none; border-radius:6px; padding:0 2px; }
-      html.${CFG.htmlClass} .dnt-title[contenteditable="true"]:focus{
-        background: var(--fg-hover-color, #f3f4f6);
-      }
+      html.${CFG.htmlClass} .dnt-title[contenteditable="true"]:focus{ background: var(--fg-hover-color, #f3f4f6); }
 
       html.${CFG.htmlClass} .kanban-card-meta{ margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; color: var(--text-muted, #6b7280); }
 
@@ -581,7 +579,22 @@
   /* ===== mini tasks (fallback) ===== */
   const miniCache = new Map();
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
-  const planDT = (t) => t.custom_target_datetime || t.due_datetime || t.custom_due_datetime || t.date || null;
+
+  // >>> CHG: выбор "нужного" поля для даты: сейчас только Target (как у тебя);
+  // чтобы вернуть каскад Target → Reminder → Due → Date, раскомментируй две строки ниже.
+  function pickPlan(t){
+    if (t.custom_target_datetime)   return { dt: t.custom_target_datetime, kind: "target" };
+    // if (t.custom_due_datetime)      return { dt: t.custom_due_datetime,  kind: "reminder" };
+    // if (t.date)                     return { dt: t.date,                 kind: "date" };
+    return { dt: null, kind: null };
+  }
+  function planLabel(kind){
+    if (kind === "target")   return t("Target at");
+    if (kind === "reminder") return t("Reminder at");
+    if (kind === "due")      return t("Due");
+    if (kind === "date")     return t("Date");
+    return t("Planned");
+  }
 
   function plain_text(html_like){
     const div = document.createElement("div");
@@ -598,10 +611,14 @@
   function miniHtml(rows, total){
     if (!rows?.length) return `<div class="dnt-taskline"><span class="dnt-chip">${t("Tasks")}</span> <span class="ttl">${t("No open tasks")}</span></div>`;
     const lines = rows.map(ti=>{
-      const p = planDT(ti);
+      const pick = pickPlan(ti);
+      const p = pick.dt;
       const open = (ti.status||"Open")==="Open";
       const overdue = p && open && moment(p).isBefore(moment());
-      const chip = p ? `<span class="dnt-chip ${overdue?'dnt-overdue':''}" title="${t("Planned")}">${frappe.utils.escape_html(fmtDT(p))}</span>` : ``;
+      const label = planLabel(pick.kind);
+      const val = p ? fmtDT(p) : "—";
+      const cls = p && overdue ? "dnt-chip dnt-overdue" : "dnt-chip";
+      const chip = `<span class="${cls}" title="${frappe.utils.escape_html(label)}">${frappe.utils.escape_html(val)}</span>`;
       const raw = plain_text(ti.description || ti.name);
       const ttl  = frappe.utils.escape_html(truncate_text(raw, 40));
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
@@ -620,8 +637,8 @@
       args: { name: caseName, status: "Open", limit_start: 0, limit_page_length: CFG.tasksLimit, order: "desc" }
     });
     const rows  = (message && message.rows) || [];
-    const total = (message && message.total) || rows.length;
-    return { rows, total };
+    the_total = (message && message.total) || rows.length;
+    return { rows, total: the_total };
   }
   async function fetchMiniFallback(caseName){
     try{

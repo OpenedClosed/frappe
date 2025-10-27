@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "naming_series:",
- "creation": "2025-10-18 20:44:34.466856",
+ "creation": "2025-10-24 23:41:52.110999",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -370,9 +370,8 @@
   },
   {
    "fieldname": "portal_service",
-   "fieldtype": "Select",
-   "label": "Service",
-   "options": "\u0423\u0441\u043b\u0443\u0433\u0430 1\n\u0423\u0441\u043b\u0443\u0433\u0430 2"
+   "fieldtype": "Data",
+   "label": "Service"
   },
   {
    "fieldname": "portal_appointment_datetime",
@@ -381,23 +380,21 @@
   },
   {
    "fieldname": "specialist",
-   "fieldtype": "Select",
-   "label": "Specialist",
-   "options": "\u0414\u043e\u043a\u0442\u043e\u0440 1\n\u0414\u043e\u043a\u0442\u043e\u0440 2"
+   "fieldtype": "Data",
+   "label": "Specialist"
   },
   {
    "fieldname": "portal_card_link",
    "fieldtype": "Data",
    "label": "Portal Card Link",
-   "options": "URL",
-   "read_only": 1
+   "options": "URL"
   }
  ],
  "grid_page_length": 50,
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-23 22:44:39.046743",
+ "modified": "2025-10-27 21:27:11.028101",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",
