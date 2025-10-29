@@ -115,8 +115,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TOKEN", "change_me")
 TELEGRAM_BOT_ID = os.getenv("TELEGRAM_BOT_ID", "change_me")
 
 # Constructor.chat настройки
-# CONSTRUCTOR_URL = "https://ai-chat-bbho.onrender.com/graphql"
-CONSTRUCTOR_URL = ""
+CONSTRUCTOR_URL = "https://ai-chat-bbho.onrender.com/graphql"
+# CONSTRUCTOR_URL = ""
 CONSTRUCTOR_TOKEN = os.getenv("CONSTRUCTOR_TOKEN", "change_me")
 CONSTRUCTOR_ASSISTANT_ID = os.getenv("CONSTRUCTOR_ASSISTANT_ID", "change_me")
 
