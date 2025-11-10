@@ -1,5 +1,8 @@
-/* Dantist Kanban skin — v25.18.5 • THEME-READY */
+/* Dantist Kanban skin — v25.18.8 • THEME-READY + Compact mode (safe, clamped fields) */
 (() => {
+  if (window.__DNT_KANBAN_SKIN_LOCK) return;
+  window.__DNT_KANBAN_SKIN_LOCK = true;
+
   const CFG = {
     cssId: "dantist-kanban-skin-css",
     htmlClass: "dantist-kanban-skin",
@@ -7,6 +10,14 @@
     rolesCanColor: ["AIHub Super Admin", "System Manager"],
     rolesColumnMenu:["AIHub Super Admin", "System Manager"],
     settingsBtnId: "dnt-kanban-settings",
+
+    // === Compact mode ===
+    compactBtnId: "dnt-kanban-compact",
+    compactDefault: true,          // компакт по умолчанию
+    compactTitleClamp: 28,         // длина заголовка в compact
+    compactFieldClamp: 18,         // длина значений полей в compact
+    compactMaxFields: 4,           // сколько «чипов» показывать
+
     caseDoctype: "Engagement Case",
     tasksMethod: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
     tasksLimit: 5,
@@ -16,6 +27,14 @@
       "Deals – Contact Center":     { flag: "show_board_deals",    status: "status_deals" },
       "Patients – Care Department": { flag: "show_board_patients", status: "status_patients" },
     }
+  };
+
+  // Уникальные SVG-иконки (не зависят от frappe.utils.icon)
+  const ICONS = {
+    compactOn:
+      '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h10M4 17h7"/></svg>',
+    compactOff:
+      '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>',
   };
 
   async function ensure_messages(timeout_ms = 2000) {
@@ -50,6 +69,23 @@
     const b = window.cur_list?.board || window.cur_list?.kanban_board;
     return !!(b && (b.show_labels === 1 || b.show_labels === true));
   };
+  const getBoardName = () => {
+    try {
+      const r = frappe.get_route?.();
+      return r?.[3] ? decodeURIComponent(r[3]) : (window.cur_list?.board?.name || window.cur_list?.kanban_board?.name || "");
+    } catch { return ""; }
+  };
+
+  // === Compact mode state ===
+  const isCompactOn = () => document.documentElement.classList.contains("dnt-compact-on");
+  const compactKey = (board) => `dntKanbanCompact::${board||"__all__"}`;
+  const loadCompactPref = (board) => {
+    try {
+      const raw = localStorage.getItem(compactKey(board));
+      return raw === null ? CFG.compactDefault : raw === "1";
+    } catch { return CFG.compactDefault; }
+  };
+  const saveCompactPref = (board, on) => { try{ localStorage.setItem(compactKey(board), on ? "1":"0"); }catch{} };
 
   const LABEL_ALIASES = {
     display_name: new Set([
@@ -77,6 +113,7 @@
         transition:transform .12s, box-shadow .12s;
         display:flex !important; flex-direction:column; gap:0;
         color: var(--text-color, #111827);
+        max-width: 100%;
       }
       html.${CFG.htmlClass} .kanban-card.content:hover{
         transform:translateY(-1px);
@@ -148,6 +185,17 @@
       html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .menu,
       html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .dropdown,
       html.${CFG.htmlClass}.no-column-menu .kanban-column .kanban-column-header .kanban-column-actions{ display:none !important; }
+
+      /* === Compact mode tweaks === */
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card.content{ padding:8px; border-radius:12px; gap:6px; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-image{ width:26px !important; height:26px !important; border-radius:6px; }
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-head{ margin-bottom:6px; gap:8px; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-title{ font-size:12px; line-height:1.2; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-meta{ display:none; }
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-foot{ display:none; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc{ display:block; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-kv{ padding:3px 6px; font-size:11px; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-kv:nth-child(n+${CFG.compactMaxFields + 1}){ display:none; }
     `;
     document.head.appendChild(s);
   }
@@ -157,16 +205,30 @@
   const TIME_TAIL = /^(?:\d{1,2}:\d{2})(?::\d{2})?$/;
   const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
 
+  // Чистая нормализация дат без warning от moment (ISO — через frappe, DD-MM — через moment(format))
   function normalizeDateish(raw){
     let v = CLEAN(raw || "");
     v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1");
     if (!v) return v;
-    if (FULL_DT.test(v) || DATE_LIKE.test(v)) {
-      try {
-        const m = moment(frappe.datetime.convert_to_user_tz(v));
-        if (m.isValid()) return HAS_TIME.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
-      } catch {}
-    }
+
+    const isoLike = /^\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/;
+    const humanLike = /^\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?$/;
+
+    try{
+      let m = null;
+      if (isoLike.test(v)) {
+        // ISO → tz → формат
+        m = moment(frappe.datetime.convert_to_user_tz(v));
+      } else if (humanLike.test(v)) {
+        // Специально заявляем форматы, чтобы не было фолбэка на Date()
+        const formats = ["DD-MM-YYYY HH:mm:ss","DD.MM.YYYY HH:mm:ss","DD/MM/YYYY HH:mm:ss","DD-MM-YYYY","DD.MM.YYYY","DD/MM/YYYY"];
+        m = moment(v, formats, true);
+      }
+      if (m && m.isValid()) {
+        const hasTime = HAS_TIME.test(v);
+        return hasTime ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
+      }
+    }catch{}
     return v;
   }
 
@@ -387,6 +449,30 @@
     else container.appendChild(chip);
   }
 
+  // === Clamp helpers (для компакт-режима) ===
+  function clampStr(s, n){ const str = s || ""; if (str.length <= n) return str; return str.slice(0, Math.max(0,n-1)).trimEnd()+"…"; }
+  function isLikelyDate(s){ const v=CLEAN(s||""); return FULL_DT.test(v) || DATE_LIKE.test(v); }
+
+  function clampChipSpan(sv){
+    if(!sv) return;
+    const full = sv.getAttribute("data-full") || CLEAN(sv.textContent || "");
+    if (isCompactOn()){
+      const n = Math.max(1, CFG.compactFieldClamp|0);
+      const shown = isLikelyDate(full) ? full : clampStr(full, n);
+      sv.textContent = shown;
+      sv.setAttribute("data-full", full);
+      sv.setAttribute("title", full);
+    } else {
+      const keep = sv.getAttribute("data-full") || CLEAN(sv.textContent || "");
+      sv.textContent = keep;
+      sv.removeAttribute("title");
+    }
+  }
+  function clampChips(container){
+    if (!container) return;
+    container.querySelectorAll(".dnt-v").forEach(clampChipSpan);
+  }
+
   async function backfillAll(container, ctx, labelsOn, orderMap){
     const { fn2label, label2fn, fn2df } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
@@ -439,6 +525,9 @@
       Array.from(container.querySelectorAll(":scope > .dnt-kv .dnt-v")).forEach(sv=>{
         if (!CLEAN(sv.textContent)) sv.textContent = "—";
       });
+
+      // применим обрезку значений для compact
+      if (isCompactOn()) clampChips(container);
       return;
     }
 
@@ -481,6 +570,8 @@
       const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
       if (!val || !assignedValues.has(val)) ch.remove();
     });
+
+    if (isCompactOn()) clampChips(container);
   }
 
   function buildChipsHTML(pairs, ctx){
@@ -518,6 +609,21 @@
     return frag;
   }
 
+  // === Обрезка заголовка в компакт-режиме
+  function clampTitleSpan(span){
+    if (!span) return;
+    const full = span.getAttribute("data-title-full") || CLEAN(span.textContent || "");
+    if (isCompactOn()){
+      const n = Math.max(1, CFG.compactTitleClamp|0);
+      const shown = full.length <= n ? full : (full.slice(0, Math.max(0,n-1)).trimEnd()+"…");
+      span.textContent = shown;
+      span.setAttribute("title", full);
+    } else {
+      span.textContent = full;
+      span.removeAttribute("title");
+    }
+  }
+
   function normalizeDocFields(docEl, ctx){
     if (!docEl || docEl.__dnt_locked) return;
     docEl.__dnt_locked = true;
@@ -527,6 +633,9 @@
     const frag = buildChipsHTML(pairs, ctx);
     frag.__dntMount = docEl;
     docEl.appendChild(frag);
+
+    // применим clamp значений (если compact)
+    if (isCompactOn()) clampChips(docEl);
 
     let raf = null;
     const mo = new MutationObserver((muts)=>{
@@ -552,23 +661,17 @@
 
   function pickPlan(t){
     if (t.custom_target_datetime)   return { dt: t.custom_target_datetime, kind: "target" };
-    // if (t.custom_due_datetime)      return { dt: t.custom_due_datetime,  kind: "reminder" };
-    // if (t.date)                     return { dt: t.date,                 kind: "date" };
     return { dt: null, kind: null };
   }
   function planLabel(kind){
     if (kind === "target")   return t("Target at");
-    if (kind === "reminder") return t("Reminder at");
-    if (kind === "due")      return t("Due");
-    if (kind === "date")     return t("Date");
     return t("Planned");
   }
 
   function plain_text(html_like){
     const div = document.createElement("div");
     div.innerHTML = html_like || "";
-    const txt = CLEAN(div.textContent || div.innerText || "");
-    return txt;
+    return CLEAN(div.textContent || div.innerText || "");
   }
   function truncate_text(s, max_len=40){
     const str = s || "";
@@ -584,8 +687,7 @@
 
     if (!rows?.length) {
       const empty = `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
-      const more  = ``; // нет задач — ссылку не показываем
-      return header + empty + more;
+      return header + empty;
     }
 
     const lines = rows.map(ti=>{
@@ -602,11 +704,8 @@
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
 
-    const moreLabel = totalCount > 0
-      ? (totalCount > rows.length ? tf(t("Open all tasks ({0}) →"), [totalCount]) : (showOpenAll ? t("Open all tasks") + " →" : ""))
-      : "";
     const more = showOpenAll
-      ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(moreLabel || (t("Open all tasks") + " →"))}</span></div>`
+      ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(t("Open all tasks") + " →")}</span></div>`
       : ``;
 
     return header + lines + more;
@@ -692,24 +791,37 @@
 
     const span = document.createElement("span");
     span.className = "dnt-title"; span.setAttribute("contenteditable","true"); span.textContent = currentText;
+    // для компакта сохраняем полный заголовок
+    span.setAttribute("data-title-full", currentText);
     holder.appendChild(span);
 
     if (anchor) anchor.replaceWith(holder); else titleArea.appendChild(holder);
 
+    // применим обрезку если compact включён
+    clampTitleSpan(span);
+
     const save = async () => {
-      const val = (span.textContent || "").trim();
-      if (!val || val === currentText) return;
+      const full = span.getAttribute("data-title-full") || currentText;
+      let val = (span.textContent || "").trim();
+      if (isCompactOn() && full && val.endsWith("…") && full.startsWith(val.slice(0, Math.max(0,val.length-1)))) {
+        val = full;
+      }
+      if (!val || val === currentText) { clampTitleSpan(span); return; }
       try{
         await frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname:"title", value: val } });
         frappe.show_alert({ message: t("Title updated"), indicator:"green" });
+        span.setAttribute("data-title-full", val);
+        clampTitleSpan(span);
       }catch{
         frappe.msgprint({ message: t("Failed to update title"), indicator:"red" });
         span.textContent = currentText;
+        span.setAttribute("data-title-full", currentText);
+        clampTitleSpan(span);
       }
     };
     span.addEventListener("keydown", (e)=>{
       if (e.key==="Enter"){ e.preventDefault(); span.blur(); }
-      else if (e.key==="Escape"){ e.preventDefault(); span.textContent=currentText; span.blur(); }
+      else if (e.key==="Escape"){ e.preventDefault(); span.textContent=currentText; span.setAttribute("data-title-full", currentText); span.blur(); }
     });
     span.addEventListener("click", e=> e.stopPropagation());
     span.addEventListener("blur", save);
@@ -805,6 +917,10 @@
       wrapper.appendChild(row);
     }
 
+    // Обрезка заголовка + значений в compact
+    clampTitleSpan(wrapper.querySelector(".dnt-title"));
+    if (isCompactOn()) clampChips(body.querySelector(".kanban-card-doc"));
+
     card.dataset.dntUpgraded = "1";
   }
 
@@ -825,25 +941,50 @@
       document.querySelector(".page-title")
     );
   }
+
   function injectSettingsBtn(){
-    document.querySelectorAll(`#${CFG.settingsBtnId}`).forEach(el => el.remove());
-    if(!isKanbanRoute() || !userHasAny(CFG.rolesSettings)) return;
+    document.querySelectorAll(`#${CFG.settingsBtnId}, #${CFG.compactBtnId}`).forEach(el => el.remove());
+    if(!isKanbanRoute()) return;
     const anchor = findSettingsAnchor(); if(!anchor) return;
-    const btn=document.createElement("button");
-    btn.id=CFG.settingsBtnId; btn.className="btn btn-default icon-btn";
-    btn.setAttribute("title", t("Kanban settings"));
-    btn.innerHTML = frappe.utils.icon("edit","sm");
-    btn.addEventListener("click",()=> {
-      const r = frappe.get_route(); const bname = r?.[3] ? decodeURIComponent(r[3]) : (window.cur_list?.board?.name||"");
-      if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
+
+    if (userHasAny(CFG.rolesSettings)) {
+      const btn=document.createElement("button");
+      btn.id=CFG.settingsBtnId; btn.className="btn btn-default icon-btn";
+      btn.setAttribute("title", t("Kanban settings"));
+      btn.innerHTML = frappe.utils.icon("edit","sm");
+      btn.addEventListener("click",()=> {
+        const r = frappe.get_route(); const bname = r?.[3] ? decodeURIComponent(r[3]) : (window.cur_list?.board?.name||"");
+        if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
+      });
+      (document.querySelector(".page-icon-group") || anchor).insertAdjacentElement("beforeend", btn);
+    }
+
+    // Compact toggle
+    const cBtn=document.createElement("button");
+    cBtn.id=CFG.compactBtnId; cBtn.className="btn btn-default icon-btn";
+    const board = getBoardName();
+    const prefOn = loadCompactPref(board);
+    const setFace = (on) => {
+      cBtn.setAttribute("title", on ? t("Compact mode: ON") : t("Compact mode: OFF"));
+      cBtn.innerHTML = on ? ICONS.compactOn : ICONS.compactOff;
+    };
+    setFace(prefOn);
+    cBtn.addEventListener("click",()=>{
+      const next = !isCompactOn();
+      document.documentElement.classList.toggle("dnt-compact-on", next);
+      saveCompactPref(getBoardName(), next);
+      setFace(next);
+      document.querySelectorAll(".kanban-card-wrapper .dnt-title").forEach(clampTitleSpan);
+      document.querySelectorAll(".kanban-card-wrapper .kanban-card-doc").forEach(clampChips);
     });
-    (document.querySelector(".page-icon-group") || anchor).insertAdjacentElement("beforeend", btn);
+    (document.querySelector(".page-icon-group") || anchor).insertAdjacentElement("beforeend", cBtn);
   }
+
   function ensureSettingsBtnSticky(){
     let tries=0, max=120;
     const tick=()=>{ if(!isKanbanRoute()) return;
       injectSettingsBtn(); tries+=1;
-      if (document.getElementById(CFG.settingsBtnId)) return;
+      if (document.getElementById(CFG.settingsBtnId) || document.getElementById(CFG.compactBtnId)) return;
       if (tries<max) setTimeout(tick, 50);
     };
     tick();
@@ -851,7 +992,7 @@
     try{
       const mo = new MutationObserver(()=> {
         if (!isKanbanRoute()) return;
-        if (!document.getElementById(CFG.settingsBtnId)) injectSettingsBtn();
+        if (!document.getElementById(CFG.settingsBtnId) || !document.getElementById(CFG.compactBtnId)) injectSettingsBtn();
       });
       mo.observe(head, { childList:true, subtree:true });
       window.__dntKanbanHeadMO = mo;
@@ -861,8 +1002,8 @@
   async function run(){
     await ensure_messages();
     if(!isKanbanRoute()){
-      document.documentElement.classList.remove(CFG.htmlClass,"no-color","no-column-menu");
-      document.querySelectorAll(`#${CFG.settingsBtnId}`).forEach(el => el.remove());
+      document.documentElement.classList.remove(CFG.htmlClass,"no-color","no-column-menu","dnt-compact-on");
+      document.querySelectorAll(`#${CFG.settingsBtnId}, #${CFG.compactBtnId}`).forEach(el => el.remove());
       return;
     }
     injectCSS();
@@ -872,6 +1013,10 @@
     const allowMenu  = userHasAny(CFG.rolesColumnMenu);
     document.documentElement.classList.toggle("no-color", !allowColor);
     document.documentElement.classList.toggle("no-column-menu", !allowMenu);
+
+    // применяем сохранённый compact ДО рендера карточек
+    const prefer = loadCompactPref(getBoardName());
+    document.documentElement.classList.toggle("dnt-compact-on", !!prefer);
 
     enhanceCards();
     ensureSettingsBtnSticky();
