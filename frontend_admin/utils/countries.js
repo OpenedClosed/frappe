@@ -13,6 +13,11 @@ const priorityCountries = {
   'KA': 7,
 };
 
+// Кастомные маски и плейсхолдеры для стран
+const customFormats = {
+  'RU': { mask: '(999)999-99-99', placeholder: '(999)999-99-99' },
+};
+
 // Генерация списка стран из country-codes-flags-phone-codes
 export const countries = countryData
   .map(country => {
@@ -21,8 +26,11 @@ export const countries = countryData
     
     // Используем готовый dialCode из новой библиотеки или исключения
     const callingCode = country.dialCode;
-    const mask = '999 999 999';
-    const placeholder = '___ ___ ___';
+    
+    // Получаем кастомный формат или используем дефолтный
+    const customFormat = customFormats[iso];
+    const mask = customFormat?.mask || '999 999 999';
+    const placeholder = customFormat?.placeholder || '___ ___ ___';
 
     return {
       name: country.name, // Уже локализовано в библиотеке

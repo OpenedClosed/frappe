@@ -1,6 +1,47 @@
 <!-- ~/components/ChatPanel.vue -->
 <template>
-  <div class="flex flex-col " :class="isMobile ? 'h-[100vh] max-h-[100vh]' : 'h-[80vh] max-h-[80vh]'">
+  <div class="flex flex-col relative" :class="isMobile ? 'h-[100vh] max-h-[100vh]' : 'h-[80vh] max-h-[80vh]'">
+    <!-- Loading overlay for chat search -->
+    <Transition name="fade">
+      <div 
+        v-if="isSearchingChat" 
+        class="absolute inset-0 bg-white/90 dark:bg-gray-900/90  z-50 flex flex-col items-center justify-center gap-6 p-8"
+      >
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+          <div class="flex flex-col items-center gap-6">
+            <ProgressSpinner 
+              style="width: 60px; height: 60px" 
+              strokeWidth="3" 
+              animationDuration="0.8s"
+              fill="transparent"
+            />
+            <div class="text-center">
+              <p class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+                {{ t('EmbeddedChat.searchingChat', 'Searching for chat...') }}
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {{ t('EmbeddedChat.searchingChatDesc', 'Looking through all pages to find the requested conversation') }}
+              </p>
+              <div class="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-6">
+                <i class="pi pi-info-circle"></i>
+                <span>{{ t('EmbeddedChat.pleaseWait', 'This may take a few moments') }}</span>
+              </div>
+              <Button 
+                :label="t('EmbeddedChat.cancelSearch', 'Cancel')" 
+                icon="pi pi-times" 
+                severity="secondary"
+                outlined
+                @click="cancelChatSearch"
+                class="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+    
+    <!-- Debug info (remove in production) -->
+    <!-- activeRoomId: {{ activeRoomId }} | Initial: {{ initialQueryChatId }} -->
     <Toast class="max-w-[18rem] md:max-w-full" />
     <div class="flex flex-col sm:flex-row justify-between items-center gap-1 sm:gap-0 p-2  sm:py-2">
       <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -79,7 +120,7 @@
       :rooms="JSON.stringify(displayedRooms)"
       :messages="JSON.stringify(chatMessages)"
       :messages-loaded="messagesLoaded"
-      :selected-room-id="activeRoomId"
+      :room-id="activeRoomId"
       :single-room="false"
       :show-input-options="false"
       :show-audio="false"
@@ -98,6 +139,7 @@
       :message-actions="JSON.stringify(messageActions)"
       @message-action-handler="onMessageAction"
       :text-messages="textMessagesJson"
+      :load-first-room="false"
     >
       <div slot="room-header-avatar" class="flex items-center justify-center">
         <Avatar v-if="activePdEntry?.avatar" :image="activePdEntry?.avatar" :size="isMobile ? 'normal' : 'large'" shape="circle" class="mr-2" />
@@ -112,14 +154,27 @@
               <h2 class="font-bold text-sm truncate max-w-[8rem]">
                 {{ activePdEntry?.username || activeUserId }}
               </h2>
-              <Button icon="pi pi-info" severity="info" size="small" class="p-1 text-xs" @click="showUserInfoDialog = true" />
+              <div class="flex items-center gap-1">
+                <CopyChatLinkButton 
+                  :chat-id="activeRoomId"
+                  button-class="p-1 text-xs"
+                />
+                <Button icon="pi pi-info" severity="info" size="small" class="p-1 text-xs" @click="showUserInfoDialog = true" />
+              </div>
             </div>
 
-            <div v-else class="flex flex-col justify-center items-start gap-2">
+            <div v-else class="flex flex-col justify-center items-start gap-1">
               <!-- Desktop: Full view -->
-              <h2 class="font-bold truncate max-w-[15rem] md:max-w-full">
-                {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
-              </h2>
+              <div class="flex items-center gap-2 leading-none">
+                <h2 class="font-bold truncate max-w-[15rem] md:max-w-full leading-none">
+                  {{ t("EmbeddedChat.userIdLabel") }}: {{ activePdEntry?.username || activeUserId }}
+                </h2>
+                <CopyChatLinkButton 
+                  :chat-id="activeRoomId"
+                  text
+                  class="h-fit"
+                />
+              </div>
               <div class="flex flex-row justify-center items-center gap-1">
                 <p class="text-sm">{{ formatTimeDifferenceEU(activeStartDate) }}</p>
                 <p class="text-sm flex justify-center items-center" v-if="activeRoomCreatedAt">
@@ -148,10 +203,18 @@
       </div>
     </vue-advanced-chat>
     <!-- ⬇️ add this right after the closing </vue-advanced-chat> tag -->
-    <Paginator :rows="pageSize" :totalRecords="totalRecords" class="mt-2 self-center" @page="onPageChange" :template="{
+    <Paginator 
+      ref="paginatorRef"
+      :rows="pageSize" 
+      :totalRecords="totalRecords" 
+      :first="currentPage * pageSize"
+      class="mt-2 self-center" 
+      @page="onPageChange" 
+      :template="{
         '640px': 'FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink JumpToPageDropdown',
         default: 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink JumpToPageDropdown'
-    }" />
+      }" 
+    />
     <!-- place this just before </template> so it sits outside vue‑advanced-chat -->
     <Dialog v-model:visible="showMsgDialog" modal :header="t('EmbeddedChat.messageDialogHeader')" :style="{ width: '600px' }">
       <p class="mb-3">
@@ -212,7 +275,6 @@
       </template>
     </Dialog>
 
-
  
   </div>
 </template>
@@ -223,10 +285,13 @@ import { ref, computed, watch, watchEffect, shallowRef, onBeforeUnmount, onMount
 import { register } from "vue-advanced-chat";
 import Toast from "primevue/toast";
 import Badge from "primevue/badge";
+import ProgressSpinner from "primevue/progressspinner";
 import { useChatLogic } from "~/composables/useChatLogic";
+import { useChatLink } from "~/composables/useChatLink";
 import LoaderOverlay from "../LoaderOverlay.vue";
 import LoaderSmall from "../LoaderSmall.vue";
 import ReadonlyKB from "~/components/Dashboard/Components/ReadonlyKB.vue";
+import CopyChatLinkButton from "./CopyChatLinkButton.vue";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { useI18n } from "#imports";
@@ -236,6 +301,8 @@ import { debounce } from "lodash";
 const { t, locale } = useI18n();
 const { isAutoMode, currentChatId, chatMessages, messagesLoaded } = useChatState();
 const route = useRoute();
+const router = useRouter();
+const { updateUrlWithChatId } = useChatLink();
 
 // Define props
 const props = defineProps({
@@ -267,6 +334,7 @@ const toggleLegend = (event) => {
 const toggleExport = () => {
   showExport.value = !showExport.value;
 };
+
 const showExport = ref(false);
 
 const windowWidth = ref(0);
@@ -318,6 +386,7 @@ async function initializeChatData() {
 }
 
 onMounted(async () => {
+  
   updateWindowWidth();
   window.addEventListener("resize", updateWindowWidth);
   await initializeChatData();
@@ -327,6 +396,10 @@ onMounted(async () => {
 const showMsgDialog = ref(false);
 const selectedMsg = ref(null);
 const showUserInfoDialog = ref(false);
+
+// Track if we've already searched for the query chat
+const hasSearchedForQueryChat = ref(false);
+const isSearchCancelled = ref(false); // Track if search was cancelled by user
 
 // Room search functionality
 const roomSearchQuery = ref('');
@@ -346,6 +419,7 @@ const currentPage = ref(0);
 const isLoading = ref(false);
 const isLoadingData = ref(false);
 const isRoomsLoading = ref(false);
+const isSearchingChat = ref(false); // New: for chat search loading state
 const tableDataOriginal = ref([]);
 const currentEntityName = ref("");
 const isEntityInline = ref(false);
@@ -357,6 +431,9 @@ const dateRange = ref({ start: null, end: null });
 // Request tracking to prevent duplicates
 const isRequestInProgress = ref(false);
 const lastRequestParams = ref("");
+
+// Paginator ref
+const paginatorRef = ref(null);
 
 /* ── CUSTOM DROPDOWN ITEMS (only one in this example) ─ */
 const messageActions = [{ name: "seeSources", title: t("EmbeddedChat.seeSources") }];
@@ -694,6 +771,15 @@ async function onPageChange(e) {
   const newPage = typeof e.page !== 'undefined' ? e.page : e;
   const newPageSize = e.rows || pageSize.value;
   
+  // Cancel any ongoing chat search when user manually changes page
+  if (isSearchingChat.value) {
+    console.log('[Manual page change detected - cancelling search]');
+    isSearchingChat.value = false;
+    isSearchCancelled.value = true; // Mark search as cancelled
+  }
+  
+  // Reset the search flag to prevent automatic search on this page
+  hasSearchedForQueryChat.value = true;
   
   // Update local state
   currentPage.value = newPage;
@@ -769,6 +855,9 @@ function getChatId(data) {
       activeRoomCreatedAt.value = room?.createdAtFormatted || null;
       activeRoomUpdatedAt.value = room?.updatedAtFormatted || null;
     }
+    
+    // Update URL with current chat ID
+    updateUrlWithChatId(activeRoomId.value);
   }
 }
 
@@ -1151,6 +1240,161 @@ async function fetchChatData(page = 0, filters = {}, search = {}) {
   }
 }
 
+/**
+ * Search for a chat across all pages and load the page where it's located
+ * @param {string} chatId - The chat ID to search for
+ * @param {boolean} showLoading - Whether to show the loading overlay (default: false)
+ * @returns {Promise<boolean>} - True if chat was found and loaded
+ */
+async function findAndLoadChatPage(chatId, showLoading = false) {
+  if (!chatId) return false;
+  
+  console.log('[Searching for chat across pages]', chatId);
+  
+  // Reset cancellation flag at the start
+  isSearchCancelled.value = false;
+  
+  // Show loading overlay only if requested
+  if (showLoading) {
+    isSearchingChat.value = true;
+  }
+  
+  try {
+    // Check if search was cancelled before making the first API call
+    if (isSearchCancelled.value) {
+      console.log('[Search cancelled before starting]');
+      return false;
+    }
+    
+    // Build search URL to find the chat
+    const params = new URLSearchParams();
+    params.append('sort_by', 'updated_at');
+    params.append('order', '-1');
+    params.append('search', chatId); // Search by chat ID
+    params.append('page_size', '1'); // We only need to know if it exists
+    
+    const searchUrl = `api/${currentPageName.value}/${currentEntity.value}/?${params.toString()}`;
+    console.log('[Search URL]', searchUrl);
+    
+    const searchResponse = await useNuxtApp().$api.get(searchUrl);
+    
+    // Check if search was cancelled after first API call
+    if (isSearchCancelled.value) {
+      console.log('[Search cancelled after initial search]');
+      return false;
+    }
+    
+    const searchData = searchResponse.data?.data ? searchResponse.data.data : searchResponse.data;
+    
+    if (Array.isArray(searchData) && searchData.length > 0) {
+      const foundChat = searchData.find(chat => chat.chat_id === chatId);
+      
+      if (foundChat) {
+        console.log('[Chat found, now calculating page number]');
+        
+        // Get all chats to find the position
+        const allParams = new URLSearchParams();
+        allParams.append('sort_by', 'updated_at');
+        allParams.append('order', '-1');
+        allParams.append('page_size', '1000'); // Get many to find position
+        
+        const allUrl = `api/${currentPageName.value}/${currentEntity.value}/?${allParams.toString()}`;
+        const allResponse = await useNuxtApp().$api.get(allUrl);
+        
+        // Check if search was cancelled after fetching all chats
+        if (isSearchCancelled.value) {
+          console.log('[Search cancelled after fetching all chats]');
+          return false;
+        }
+        
+        const allData = allResponse.data?.data ? allResponse.data.data : allResponse.data;
+        
+        if (Array.isArray(allData)) {
+          const chatIndex = allData.findIndex(chat => chat.chat_id === chatId);
+          
+          if (chatIndex !== -1) {
+            const pageNumber = Math.floor(chatIndex / pageSize.value);
+            console.log(`[Chat found at index ${chatIndex}, page ${pageNumber}]`);
+            
+            // Check if search was cancelled before loading the page
+            if (isSearchCancelled.value) {
+              console.log('[Search cancelled before loading page]');
+              return false;
+            }
+            
+            // Load that page
+            await fetchChatData(pageNumber, appliedFilters.value, appliedSearch.value);
+            
+            // Check if search was cancelled after loading page data
+            if (isSearchCancelled.value) {
+              console.log('[Search cancelled after loading page - not switching to chat]');
+              return false;
+            }
+            
+            // Wait for the next tick to ensure rooms are built
+            await nextTick();
+            
+            // Set active room to trigger chat opening
+            activeRoomId.value = chatId;
+            
+            // Trigger the getChatId to load messages
+            await nextTick();
+            const room = rooms.value.find(r => r.roomId === chatId);
+            if (room) {
+              console.log('[Triggering getChatId for found chat]', chatId);
+              getChatId({ detail: [{ room: { roomId: chatId } }] });
+            }
+            
+            toast.add({
+              severity: 'info',
+              summary: t('EmbeddedChat.chatFound', 'Chat Found'),
+              detail: t('EmbeddedChat.chatFoundOnPage', `Chat found on page ${pageNumber + 1}`),
+              life: 3000
+            });
+            
+            return true;
+          }
+        }
+      }
+    }
+    
+    console.warn('[Chat not found in search results]', chatId);
+    toast.add({
+      severity: 'warn',
+      summary: t('EmbeddedChat.chatNotFound', 'Chat Not Found'),
+      detail: t('EmbeddedChat.chatNotFoundMessage', 'The requested chat could not be found'),
+      life: 5000
+    });
+    
+    return false;
+  } catch (error) {
+    console.error('[Error searching for chat]', error);
+    parseError(error);
+    return false;
+  } finally {
+    // Always hide loading overlay (only if it was shown)
+    if (showLoading) {
+      isSearchingChat.value = false;
+    }
+  }
+}
+
+/**
+ * Cancel the ongoing chat search
+ */
+function cancelChatSearch() {
+  console.log('[Chat search cancelled by user]');
+  isSearchingChat.value = false;
+  isSearchCancelled.value = true; // Mark search as cancelled
+  
+  toast.add({
+    severity: 'info',
+    summary: t('EmbeddedChat.searchCancelled', 'Search Cancelled'),
+    detail: t('EmbeddedChat.searchCancelledMessage', 'Chat search has been cancelled'),
+    life: 3000
+  });
+}
+
 // Create debounced versions to prevent rapid-fire requests
 const debouncedRefreshChatList = debounce(async (resetPage = true) => {
   try {
@@ -1288,10 +1532,34 @@ watch(
     
     rooms.value = buildRooms(rows, currentUserId.value);
 
-    // выбрать активную комнату, если ещё не выбрана
-    if (!rooms.value.find((r) => r.roomId === activeRoomId.value)) {
-      activeRoomId.value = rooms.value[0]?.roomId ?? null;
+    // Only open chat if it's specified in query parameters
+    const queryChatId = route.query.chatId;
+    if (queryChatId) {
+      console.log('[Opening chat from query]', queryChatId);
+      // Verify the chat exists in the current rooms list
+      const chatExists = rooms.value.some(r => r.roomId === queryChatId);
+      if (chatExists) {
+        activeRoomId.value = queryChatId;
+        
+        // Manually trigger chat loading (simulating what :load-first-room does)
+        nextTick(() => {
+          const room = rooms.value.find(r => r.roomId === queryChatId);
+          if (room) {
+            console.log('[Triggering getChatId for query chat]', queryChatId);
+            getChatId({ detail: [{ room: { roomId: queryChatId } }] });
+          }
+        });
+      } else if (!hasSearchedForQueryChat.value) {
+        // Only search for the chat once on initial load
+        console.warn('[Chat from query not found in current page]', queryChatId);
+        hasSearchedForQueryChat.value = true; // Mark as searched
+        // Try to find the chat on other pages - show loading on initial page load
+        nextTick(async () => {
+          await findAndLoadChatPage(queryChatId, true); // true = show loading overlay
+        });
+      }
     }
+    // Don't auto-select any chat if there's no query parameter
   },
   { immediate: true }
 );
@@ -1347,7 +1615,8 @@ onBeforeUnmount(() => {
 defineExpose({
   updateRoomOnNewMessage,
   refreshRoomsData,
-  refreshChatList
+  refreshChatList,
+  findAndLoadChatPage // New function to search and load chat from any page
 });
 </script>
 
@@ -1385,5 +1654,14 @@ defineExpose({
     opacity: 0;
     transform: translateY(-10px);
   }
+}
+
+/* Fade transition for loading overlay */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>
