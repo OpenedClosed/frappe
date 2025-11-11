@@ -1,4 +1,4 @@
-/* Dantist Kanban skin — v25.18.8 • THEME-READY + Compact mode (safe, clamped fields) */
+/* Dantist Kanban skin — v25.18.12 • Compact + char-budget (tighter) + assignees in compact + safe avatar fit */
 (() => {
   if (window.__DNT_KANBAN_SKIN_LOCK) return;
   window.__DNT_KANBAN_SKIN_LOCK = true;
@@ -13,10 +13,14 @@
 
     // === Compact mode ===
     compactBtnId: "dnt-kanban-compact",
-    compactDefault: true,          // компакт по умолчанию
-    compactTitleClamp: 28,         // длина заголовка в compact
-    compactFieldClamp: 18,         // длина значений полей в compact
-    compactMaxFields: 4,           // сколько «чипов» показывать
+    compactDefault: true,
+    compactTitleClamp: 24,        // было 28 → ещё компактнее
+    compactFieldClamp: 18,        // для legacy кейсов без label
+    compactMaxFields: 4,
+
+    // === Единый символьный бюджет (ужат) ===
+    pairClamp: 36,                // было 40 → −4 символа
+    taskLineBudget: 36,           // было 40 → −4 символа
 
     caseDoctype: "Engagement Case",
     tasksMethod: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
@@ -29,7 +33,11 @@
     }
   };
 
-  // Уникальные SVG-иконки (не зависят от frappe.utils.icon)
+  // Позволяем быстро переопределить бюджет через глобалки (по желанию)
+  if (!Number.isNaN(+window.DNT_KANBAN_PAIR_CLAMP)) CFG.pairClamp = +window.DNT_KANBAN_PAIR_CLAMP;
+  if (!Number.isNaN(+window.DNT_KANBAN_TASK_BUDGET)) CFG.taskLineBudget = +window.DNT_KANBAN_TASK_BUDGET;
+  if (!Number.isNaN(+window.DNT_KANBAN_TITLE_CLAMP)) CFG.compactTitleClamp = +window.DNT_KANBAN_TITLE_CLAMP;
+
   const ICONS = {
     compactOn:
       '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h10M4 17h7"/></svg>',
@@ -51,11 +59,6 @@
     const dict = (frappe && frappe._messages) ? frappe._messages : null;
     return (dict && typeof dict[s] === "string" && dict[s].length) ? dict[s] : s;
   };
-  const tf = (s, args=[]) => {
-    if (typeof __ === "function") return __(s, args);
-    return s.replace(/\{(\d+)\}/g, (_, i) => (args[i] ?? ""));
-  };
-
   const CLEAN = s => (s||"").replace(/\u00A0/g," ").replace(/\s+/g," ").trim();
   const STRIP_COLON = s => CLEAN(s).replace(/:\s*$/,"");
   const LBL_KEY = s => STRIP_COLON(s).toLowerCase();
@@ -76,7 +79,6 @@
     } catch { return ""; }
   };
 
-  // === Compact mode state ===
   const isCompactOn = () => document.documentElement.classList.contains("dnt-compact-on");
   const compactKey = (board) => `dntKanbanCompact::${board||"__all__"}`;
   const loadCompactPref = (board) => {
@@ -100,6 +102,7 @@
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
     s.textContent = `
+      :root{ --dnt-chars: ${CFG.pairClamp}; }
       html.${CFG.htmlClass} .kanban-column{ padding:8px; }
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; }
@@ -113,7 +116,9 @@
         transition:transform .12s, box-shadow .12s;
         display:flex !important; flex-direction:column; gap:0;
         color: var(--text-color, #111827);
-        max-width: 100%;
+        /* ширина «под символы»: ~36ch + запас на паддинги/иконки */
+        width: min(100%, calc(var(--dnt-chars, ${CFG.pairClamp}) * 1ch + 48px));
+        margin-inline:auto;
       }
       html.${CFG.htmlClass} .kanban-card.content:hover{
         transform:translateY(-1px);
@@ -123,12 +128,17 @@
       html.${CFG.htmlClass} .dnt-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; margin-bottom:10px; }
       html.${CFG.htmlClass} .dnt-head-left{ display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 auto; }
 
+      /* Аватар слева от названия: делаем меньше и не кропаем */
       html.${CFG.htmlClass} .kanban-image{
-        width:40px !important; height:40px !important; border-radius:10px; overflow:hidden;
+        width:30px !important; height:30px !important; border-radius:8px; overflow:hidden;
         background: var(--bg-light-gray, #eef2f7);
-        display:flex; align-items:center; justify-content:center; float:none !important; margin:0 !important; flex:0 0 40px; position:static !important;
+        display:flex; align-items:center; justify-content:center; float:none !important; margin:0 !important; flex:0 0 30px; position:static !important;
+        box-sizing: border-box; padding:2px; /* чуть воздуха вокруг */
       }
-      html.${CFG.htmlClass} .kanban-image img{ display:block !important; width:100% !important; height:100% !important; object-fit:cover !important; object-position:center; }
+      html.${CFG.htmlClass} .kanban-image img{
+        display:block !important; width:100% !important; height:100% !important;
+        object-fit:contain !important; object-position:center;
+      }
 
       html.${CFG.htmlClass} .kanban-title-area{ margin:0 !important; min-width:0; }
       html.${CFG.htmlClass} .kanban-card-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text-color, #111827); }
@@ -151,12 +161,11 @@
       html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ opacity:.72; color: var(--text-muted, #6b7280); }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; color: var(--text-color, #111827); }
 
-      html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+      html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
       html.${CFG.htmlClass} .dnt-tasks-mini{
         margin-top:6px; width:100%; max-height:72px; overflow-y: scroll; padding-right:4px;
         border-top:1px solid var(--table-border-color, var(--border-color, #eef2f7));
-        padding-top:6px;
-        scrollbar-gutter: stable;
+        padding-top:6px; scrollbar-gutter: stable;
       }
       html.${CFG.htmlClass} .dnt-taskline{
         display:flex; gap:6px; align-items:center; font-size:11px;
@@ -188,11 +197,22 @@
 
       /* === Compact mode tweaks === */
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card.content{ padding:8px; border-radius:12px; gap:6px; }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-image{ width:26px !important; height:26px !important; border-radius:6px; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-image{
+        width:22px !important; height:22px !important; border-radius:6px; padding:1px;
+      }
       html.${CFG.htmlClass}.dnt-compact-on .dnt-head{ margin-bottom:6px; gap:8px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-title{ font-size:12px; line-height:1.2; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-meta{ display:none; }
-      html.${CFG.htmlClass}.dnt-compact-on .dnt-foot{ display:none; }
+      /* ВЕРНУЛ ассайни в compact, но лайк скрыли и сделали меньший размер аватаров */
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-foot{ display:flex; margin-top:6px; }
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-foot .like-action{ display:none !important; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar-group .avatar.avatar-small{
+        width:18px; height:18px;
+      }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar-group .avatar.avatar-small .avatar-frame{
+        width:100%; height:100%; border-radius:9999px; background-size:cover; background-position:center;
+      }
+
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc{ display:block; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-kv{ padding:3px 6px; font-size:11px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-kv:nth-child(n+${CFG.compactMaxFields + 1}){ display:none; }
@@ -205,31 +225,24 @@
   const TIME_TAIL = /^(?:\d{1,2}:\d{2})(?::\d{2})?$/;
   const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
 
-  // Чистая нормализация дат без warning от moment (ISO — через frappe, DD-MM — через moment(format))
   function normalizeDateish(raw){
-    let v = CLEAN(raw || "");
-    v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1");
-    if (!v) return v;
-
+    const v0 = CLEAN(raw || "").replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1");
+    if (!v0) return v0;
     const isoLike = /^\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/;
     const humanLike = /^\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?$/;
-
     try{
-      let m = null;
-      if (isoLike.test(v)) {
-        // ISO → tz → формат
-        m = moment(frappe.datetime.convert_to_user_tz(v));
-      } else if (humanLike.test(v)) {
-        // Специально заявляем форматы, чтобы не было фолбэка на Date()
-        const formats = ["DD-MM-YYYY HH:mm:ss","DD.MM.YYYY HH:mm:ss","DD/MM/YYYY HH:mm:ss","DD-MM-YYYY","DD.MM.YYYY","DD/MM/YYYY"];
-        m = moment(v, formats, true);
+      let m=null;
+      if (isoLike.test(v0)) m = moment(frappe.datetime.convert_to_user_tz(v0));
+      else if (humanLike.test(v0)){
+        const fmts=["DD-MM-YYYY HH:mm:ss","DD.MM.YYYY HH:mm:ss","DD/MM/YYYY HH:mm:ss","DD-MM-YYYY","DD.MM.YYYY","DD/MM/YYYY"];
+        m = moment(v0, fmts, true);
       }
-      if (m && m.isValid()) {
-        const hasTime = HAS_TIME.test(v);
+      if (m && m.isValid()){
+        const hasTime = HAS_TIME.test(v0);
         return hasTime ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
       }
     }catch{}
-    return v;
+    return v0;
   }
 
   function coerceFieldsList(dt, any){
@@ -266,14 +279,8 @@
   function buildMetaMaps(doctype){
     const meta = frappe.get_meta(doctype);
     const label2fn = {}, fn2label = {}, fn2df = {};
-    (meta?.fields||[]).forEach(f=>{
-      const lbl = CLEAN(f?.label||"");
-      if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; }
-    });
-    (frappe.model.std_fields||[]).forEach(f=>{
-      const lbl = CLEAN(f?.label||"");
-      if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; }
-    });
+    (meta?.fields||[]).forEach(f=>{ const lbl=CLEAN(f?.label||""); if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; } });
+    (frappe.model.std_fields||[]).forEach(f=>{ const lbl=CLEAN(f?.label||""); if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; } });
     LABEL_ALIASES.display_name.forEach(a=> label2fn[a] = "display_name");
     (meta?.fields||[]).forEach(f=> fn2df[f.fieldname] = f);
     (frappe.model.std_fields||[]).forEach(f=> fn2df[f.fieldname] = fn2df[f.fieldname] || f);
@@ -283,17 +290,17 @@
   function tryParseDataFilter(el){
     const raw = el?.getAttribute?.("data-filter") || "";
     if (!raw) return "";
-    try {
-      const j = JSON.parse(raw);
-      if (Array.isArray(j) && j.length >= 3) return CLEAN(j[2]);
-    } catch {}
+    try{
+      const j=JSON.parse(raw);
+      if (Array.isArray(j) && j.length>=3) return CLEAN(j[2]);
+    }catch{}
     const csv = raw.split(",").map(CLEAN).filter(Boolean);
-    if (csv.length >= 3) return CLEAN(csv.slice(2).join(","));
+    if (csv.length>=3) return CLEAN(csv.slice(2).join(","));
     return CLEAN(raw);
   }
   function extractFromAttrs(el){
     if (!el) return "";
-    const attrs = ["title","aria-label","data-original-title","data-label","data-value"];
+    const attrs=["title","aria-label","data-original-title","data-label","data-value"];
     for (const a of attrs){
       const v = el.getAttribute?.(a);
       if (v && CLEAN(v)) return CLEAN(v);
@@ -307,10 +314,7 @@
     return "";
   }
   function splitByFirstColon(text){
-    const t = CLEAN(text);
-    const i = t.indexOf(":");
-    if (i === -1) return [t, ""];
-    return [CLEAN(t.slice(0,i)), CLEAN(t.slice(i+1))];
+    const t = CLEAN(text); const i=t.indexOf(":"); if (i===-1) return [t,""]; return [CLEAN(t.slice(0,i)), CLEAN(t.slice(i+1))];
   }
 
   function collectPairsFromNative(docEl, doctype){
@@ -419,9 +423,7 @@
     const v = CLEAN(val);
     if (!v) return v;
     if (FULL_DT.test(v) || DATE_LIKE.test(v)) return v;
-    if (isTranslatableField(fn, df)) {
-      try { return t(v); } catch { return v; }
-    }
+    if (isTranslatableField(fn, df)) { try { return t(v); } catch { return v; } }
     if (/^(Yes|No|Open|Closed)$/i.test(v)) { try { return t(v); } catch {} }
     return v;
   }
@@ -449,28 +451,52 @@
     else container.appendChild(chip);
   }
 
-  // === Clamp helpers (для компакт-режима) ===
-  function clampStr(s, n){ const str = s || ""; if (str.length <= n) return str; return str.slice(0, Math.max(0,n-1)).trimEnd()+"…"; }
-  function isLikelyDate(s){ const v=CLEAN(s||""); return FULL_DT.test(v) || DATE_LIKE.test(v); }
+  function clampStr(s, n){
+    const str = s || "";
+    if (n <= 0) return "…";
+    if (str.length <= n) return str;
+    return str.slice(0, Math.max(0, n-1)).trimEnd() + "…";
+  }
+  const isLikelyDate = (s)=> FULL_DT.test(CLEAN(s||"")) || DATE_LIKE.test(CLEAN(s||""));
 
-  function clampChipSpan(sv){
-    if(!sv) return;
-    const full = sv.getAttribute("data-full") || CLEAN(sv.textContent || "");
-    if (isCompactOn()){
-      const n = Math.max(1, CFG.compactFieldClamp|0);
-      const shown = isLikelyDate(full) ? full : clampStr(full, n);
-      sv.textContent = shown;
-      sv.setAttribute("data-full", full);
-      sv.setAttribute("title", full);
-    } else {
-      const keep = sv.getAttribute("data-full") || CLEAN(sv.textContent || "");
-      sv.textContent = keep;
+  // Режем ПАРОЙ «Label: Value» под общий бюджет
+  function clampKVPair(kvEl){
+    if (!kvEl) return;
+    const sv = kvEl.querySelector(".dnt-v");
+    const sk = kvEl.querySelector(".dnt-k");
+    if (!sv) return;
+
+    const fullV = sv.getAttribute("data-full") || CLEAN(sv.textContent || "");
+    const fullK = sk ? (sk.getAttribute("data-full") || CLEAN(sk.textContent || "")) : "";
+    sv.setAttribute("data-full", fullV);
+    if (sk) sk.setAttribute("data-full", fullK);
+
+    if (!isCompactOn()){
+      sv.textContent = fullV;
+      if (sk) sk.textContent = fullK;
       sv.removeAttribute("title");
+      sk?.removeAttribute("title");
+      return;
+    }
+
+    const budget = Math.max(1, CFG.pairClamp|0);
+
+    if (sk){
+      const labelText = STRIP_COLON(fullK).replace(/:$/,"");
+      const labelShown = (labelText ? t(labelText) : "").trim();
+      const labelWithColon = labelShown ? (labelShown + ":") : "";
+      const valueBudget = Math.max(1, budget - labelWithColon.length - 1); // минус пробел
+      const vShown = isLikelyDate(fullV) ? fullV : clampStr(fullV, valueBudget);
+      sv.textContent = vShown; sv.setAttribute("title", fullV);
+      sk.textContent = labelWithColon; sk.setAttribute("title", labelWithColon);
+    } else {
+      const vShown = isLikelyDate(fullV) ? fullV : clampStr(fullV, budget);
+      sv.textContent = vShown; sv.setAttribute("title", fullV);
     }
   }
   function clampChips(container){
     if (!container) return;
-    container.querySelectorAll(".dnt-v").forEach(clampChipSpan);
+    container.querySelectorAll(":scope > .dnt-kv").forEach(clampKVPair);
   }
 
   async function backfillAll(container, ctx, labelsOn, orderMap){
@@ -526,8 +552,7 @@
         if (!CLEAN(sv.textContent)) sv.textContent = "—";
       });
 
-      // применим обрезку значений для compact
-      if (isCompactOn()) clampChips(container);
+      clampChips(container);
       return;
     }
 
@@ -571,7 +596,7 @@
       if (!val || !assignedValues.has(val)) ch.remove();
     });
 
-    if (isCompactOn()) clampChips(container);
+    clampChips(container);
   }
 
   function buildChipsHTML(pairs, ctx){
@@ -609,14 +634,12 @@
     return frag;
   }
 
-  // === Обрезка заголовка в компакт-режиме
   function clampTitleSpan(span){
     if (!span) return;
     const full = span.getAttribute("data-title-full") || CLEAN(span.textContent || "");
     if (isCompactOn()){
       const n = Math.max(1, CFG.compactTitleClamp|0);
-      const shown = full.length <= n ? full : (full.slice(0, Math.max(0,n-1)).trimEnd()+"…");
-      span.textContent = shown;
+      span.textContent = full.length <= n ? full : (full.slice(0, Math.max(0,n-1)).trimEnd()+"…");
       span.setAttribute("title", full);
     } else {
       span.textContent = full;
@@ -634,8 +657,7 @@
     frag.__dntMount = docEl;
     docEl.appendChild(frag);
 
-    // применим clamp значений (если compact)
-    if (isCompactOn()) clampChips(docEl);
+    clampChips(docEl);
 
     let raf = null;
     const mo = new MutationObserver((muts)=>{
@@ -663,32 +685,25 @@
     if (t.custom_target_datetime)   return { dt: t.custom_target_datetime, kind: "target" };
     return { dt: null, kind: null };
   }
-  function planLabel(kind){
-    if (kind === "target")   return t("Target at");
-    return t("Planned");
-  }
+  function planLabel(kind){ return kind==="target" ? t("Target at") : t("Planned"); }
 
   function plain_text(html_like){
-    const div = document.createElement("div");
-    div.innerHTML = html_like || "";
+    const div = document.createElement("div"); div.innerHTML = html_like || "";
     return CLEAN(div.textContent || div.innerText || "");
   }
   function truncate_text(s, max_len=40){
     const str = s || "";
+    if (max_len <= 0) return "…";
     if (str.length <= max_len) return str;
-    return str.slice(0, max_len).trimEnd() + "…";
+    return str.slice(0, Math.max(0, max_len-1)).trimEnd() + "…";
   }
 
   function miniHtml(rows, total){
     const totalCount = typeof total === "number" ? total : (rows?.length || 0);
     const showOpenAll = totalCount > 1 || (rows?.length || 0) > 1;
-
     const header = `<div class="dnt-taskline" data-act="noop"><span class="dnt-chip">${t("Tasks")}</span></div>`;
 
-    if (!rows?.length) {
-      const empty = `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
-      return header + empty;
-    }
+    if (!rows?.length) return header + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
 
     const lines = rows.map(ti=>{
       const pick = pickPlan(ti);
@@ -697,17 +712,20 @@
       const overdue = p && open && moment(p).isBefore(moment());
       const label = planLabel(pick.kind);
       const val = p ? fmtDT(p) : "—";
+      const chipText = val;
       const cls = p && overdue ? "dnt-chip dnt-overdue" : "dnt-chip";
-      const chip = `<span class="${cls}" title="${frappe.utils.escape_html(label)}">${frappe.utils.escape_html(val)}</span>`;
+
+      const chipLen = (chipText || "").length;
+      const ttlBudget = Math.max(1, (CFG.taskLineBudget|0) - chipLen - 1); // минус пробел
       const raw = plain_text(ti.description || ti.name);
-      const ttl  = frappe.utils.escape_html(truncate_text(raw, 40));
-      return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}">${chip}<span class="ttl" title="${ttl}">${ttl}</span></div>`;
+      const ttlShown = truncate_text(raw, ttlBudget);
+
+      const chip = `<span class="${cls}" title="${frappe.utils.escape_html(label)}">${frappe.utils.escape_html(chipText)}</span>`;
+      const ttl  = frappe.utils.escape_html(ttlShown);
+      return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}">${chip}<span class="ttl" title="${frappe.utils.escape_html(raw)}">${ttl}</span></div>`;
     }).join("");
 
-    const more = showOpenAll
-      ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(t("Open all tasks") + " →")}</span></div>`
-      : ``;
-
+    const more = showOpenAll ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(t("Open all tasks") + " →")}</span></div>` : ``;
     return header + lines + more;
   }
 
@@ -726,11 +744,7 @@
         method: "frappe.client.get_list",
         args: {
           doctype: "ToDo",
-          filters: {
-            reference_type: CFG.caseDoctype,
-            reference_name: caseName,
-            status: "Open"
-          },
+          filters: { reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" },
           fields: ["name","description","status","date","custom_due_datetime","custom_target_datetime"],
           limit_page_length: CFG.tasksLimit,
           order_by: "modified desc"
@@ -743,16 +757,11 @@
   }
 
   async function loadMini(container, caseName){
-    if (miniCache.has(caseName)) {
-      container.innerHTML = miniCache.get(caseName);
-      return bindMini(container, caseName);
-    }
+    if (miniCache.has(caseName)) { container.innerHTML = miniCache.get(caseName); return bindMini(container, caseName); }
     container.innerHTML = `<div class="dnt-taskline"><span class="ttl">${t("Loading…")}</span></div>`;
     try{
       let data = await fetchMiniPrimary(caseName);
-      if ((!data.rows || !data.rows.length) && (!data.total || data.total === 0)) {
-        data = await fetchMiniFallback(caseName);
-      }
+      if ((!data.rows || !data.rows.length) && (!data.total || data.total === 0)) data = await fetchMiniFallback(caseName);
       const html  = miniHtml(data.rows || [], data.total || 0);
       miniCache.set(caseName, html);
       container.innerHTML = html;
@@ -791,21 +800,17 @@
 
     const span = document.createElement("span");
     span.className = "dnt-title"; span.setAttribute("contenteditable","true"); span.textContent = currentText;
-    // для компакта сохраняем полный заголовок
     span.setAttribute("data-title-full", currentText);
     holder.appendChild(span);
 
     if (anchor) anchor.replaceWith(holder); else titleArea.appendChild(holder);
 
-    // применим обрезку если compact включён
     clampTitleSpan(span);
 
     const save = async () => {
       const full = span.getAttribute("data-title-full") || currentText;
       let val = (span.textContent || "").trim();
-      if (isCompactOn() && full && val.endsWith("…") && full.startsWith(val.slice(0, Math.max(0,val.length-1)))) {
-        val = full;
-      }
+      if (isCompactOn() && full && val.endsWith("…") && full.startsWith(val.slice(0, Math.max(0,val.length-1)))) val = full;
       if (!val || val === currentText) { clampTitleSpan(span); return; }
       try{
         await frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname:"title", value: val } });
@@ -917,9 +922,8 @@
       wrapper.appendChild(row);
     }
 
-    // Обрезка заголовка + значений в compact
     clampTitleSpan(wrapper.querySelector(".dnt-title"));
-    if (isCompactOn()) clampChips(body.querySelector(".kanban-card-doc"));
+    clampChips(body.querySelector(".kanban-card-doc"));
 
     card.dataset.dntUpgraded = "1";
   }
@@ -959,7 +963,6 @@
       (document.querySelector(".page-icon-group") || anchor).insertAdjacentElement("beforeend", btn);
     }
 
-    // Compact toggle
     const cBtn=document.createElement("button");
     cBtn.id=CFG.compactBtnId; cBtn.className="btn btn-default icon-btn";
     const board = getBoardName();
@@ -1014,7 +1017,6 @@
     document.documentElement.classList.toggle("no-color", !allowColor);
     document.documentElement.classList.toggle("no-column-menu", !allowMenu);
 
-    // применяем сохранённый compact ДО рендера карточек
     const prefer = loadCompactPref(getBoardName());
     document.documentElement.classList.toggle("dnt-compact-on", !!prefer);
 
