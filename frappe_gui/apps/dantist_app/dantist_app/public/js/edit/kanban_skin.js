@@ -1,11 +1,10 @@
-/* Dantist Kanban skin — v25.28.6  (based on v25.28.5)
- * Изменения в этой версии:
- * - Favorite: заменён вызов на корректный toggle_star (есть в frappe.desk.form.utils),
- *   плюс используем client helper frappe.utils.toggle_star, если он доступен.
- * - Like: оставлен стандартный спрайт <use href="#es-solid-heart"> как в базовой карточке.
- * - Assignees: жёстко фиксированная высота строки; исключено смещение нижнего блока.
- * - List: ссылка с ?show_board_<flag>=1 + дубль в frappe.route_options — как и раньше.
- * - Режимы (compact/comfort): при переключении очищаем сохранённые ресайзы колонок для текущей доски.
+/* Dantist Kanban skin — v25.28.8  (based on v25.28.7)
+ * Что поменял в 25.28.8:
+ * - Кнопка-шестерёнка преобразована в ДРОПДАУН с двумя пунктами:
+ *    1) «Board Settings» (с иконкой карандаша) — открывает настройки текущей Kanban-доски;
+ *    2) «Show/Hide labels» — тоггл показа лейблов (меняет Kanban Board.show_labels).
+ * - Остальное НЕ МЕНЯЛ: лайк только сердечко, фиксированный ассайни-слот, ресайзер, compact/comfort,
+ *   List-кнопка, «Select Kanban» без «Create» для не-SM и т. д.
  */
 (() => {
   if (window.__DNT_KANBAN_S) return; window.__DNT_KANBAN_S = true;
@@ -17,7 +16,7 @@
     rolesCreateOnly: ["System Manager"],
     rolesCanColor: ["AIHub Super Admin", "System Manager"],
     rolesColumnMenu:["AIHub Super Admin", "System Manager"],
-    settingsBtnId: "dnt-kanban-settings",
+    settingsBtnId: "dnt-kanban-settings",   // теперь это обёртка btn-group с dropdown
     modeToggleId: "dnt-mode-toggle",
     openListBtnId: "dnt-open-list",
     minCardW: 240,
@@ -41,7 +40,9 @@
     modeCompact:  '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h6M7 13h4"/></svg>',
     modeComfy:    '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 10h10M7 14h8"/></svg>',
     resizerGrip:  '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="square" shape-rendering="crispEdges"><path d="M6 15L15 6M9 15L15 9M12 15L15 12"/></svg>',
-    listIcon:     '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>'
+    listIcon:     '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
+    edit:         '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',
+    tag:          '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.59 13.41 11 23l-8-8 9.59-9.59a2 2 0 0 1 2.82 0l5.18 5.18a2 2 0 0 1 0 2.82Z"/><circle cx="7.5" cy="16.5" r="1.5"/></svg>'
   };
 
   const CLEAN = s => (s||"").replace(/\u00A0/g," ").replace(/\s+/g," ").trim();
@@ -76,7 +77,6 @@
   const getSessW = (col, mode) => sessionColW.get(sessKey(col,mode));
   const clearSessAll = () => sessionColW.clear();
 
-  // очистка сохранённых ширин для текущей доски
   function clearPersistedWidthsForBoard(board){
     try{
       const prefix = `dntKanbanColW::${board||"__"}::`;
@@ -167,7 +167,7 @@
       html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ flex:0 0 auto; color: var(--text-muted); }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; color: var(--text-color); }
 
-      /* Assignees — фиксированный слот; Favorite + Like справа; без влияния на высоту */
+      /* Assignees — фиксированный слот; Like справа */
       html.${CFG.htmlClass} .dnt-assign-slot{
         height: var(--dnt-assign-h-comfy);
         min-height: var(--dnt-assign-h-comfy);
@@ -196,15 +196,17 @@
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action{ width:18px; height:18px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:12px; height:12px; }
 
+      /* Только сердечко; звездочку скрываем везде */
       html.${CFG.htmlClass} .dnt-assign-right .like-action,
-      html.${CFG.htmlClass} .dnt-assign-right .favorite-action,
-      html.${CFG.htmlClass} .dnt-assign-right .star-action,
-      html.${CFG.htmlClass} .dnt-assign-right .document-star{
-        display:inline-flex !important; align-items:center; gap:4px; opacity:1 !important; visibility:visible !important;
-        cursor:pointer;
+      html.${CFG.htmlClass} .dnt-assign-right [data-action="like"],
+      html.${CFG.htmlClass} .dnt-assign-right .btn-like{
+        display:inline-flex !important; align-items:center; gap:4px; opacity:1 !important; visibility:visible !important; cursor:pointer;
       }
-      html.${CFG.htmlClass} .dnt-like-fallback .es-icon,
-      html.${CFG.htmlClass} .dnt-star-fallback .es-icon{ width:16px; height:16px; }
+      html.${CFG.htmlClass} .dnt-like-fallback .es-icon{ width:16px; height:16px; }
+
+      html.${CFG.htmlClass} .document-star,
+      html.${CFG.htmlClass} .star-action,
+      html.${CFG.htmlClass} .favorite-action{ display:none !important; }
 
       /* Tasks */
       html.${CFG.htmlClass} .dnt-tasks-mini{
@@ -366,7 +368,7 @@
     });
   }
 
-  // ===== Like + Favorite (Star)
+  // ===== Like (сердечко)
   function ensureVisibleAction(el){
     try{
       el.classList.remove("hidden","hide"); el.style.removeProperty("display"); el.removeAttribute("aria-hidden");
@@ -375,9 +377,6 @@
   }
   function detectLikeFrom(root){
     return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like");
-  }
-  function detectFavoriteFrom(root){
-    return root.querySelector(".favorite-action, .star-action, .list-row-star, [data-action='star'], .document-star");
   }
   function createFallbackLike(doctype, name){
     const span = document.createElement("span");
@@ -394,45 +393,6 @@
         await frappe.call("frappe.desk.like.toggle_like", { doctype, name });
         span.classList.toggle("liked");
         span.classList.toggle("not-liked");
-      } finally { busy = false; }
-    });
-    return span;
-  }
-  function createFallbackFavorite(doctype, name){
-    const span = document.createElement("span");
-    span.className = "document-star not-starred dnt-star-fallback";
-    span.setAttribute("data-doctype", doctype);
-    span.setAttribute("data-name", name);
-    span.setAttribute("title", t("Favorite"));
-    const hasSprite = !!document.getElementById("es-solid-star");
-    span.innerHTML = hasSprite
-      ? `<svg class="es-icon es-line icon-sm" aria-hidden="true"><use class="star-icon" href="#es-solid-star"></use></svg>`
-      : `<svg class="es-icon es-line icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--icon-stroke)" d="M12 17.3l-5.4 3.3 1.5-6.1-4.7-4 6.2-.5L12 4l2.4 6 6.2.5-4.7 4 1.5 6.1z"/></svg>`;
-
-    async function toggleStarServer(willAdd){
-      // если есть клиентский helper — используем его
-      if (frappe?.utils?.toggle_star) {
-        return new Promise((resolve) => {
-          try{
-            frappe.utils.toggle_star(doctype, name, willAdd ? 1 : 0, () => resolve());
-          }catch{ resolve(); }
-        });
-      }
-      // серверный метод (корректный)
-      return frappe.call("frappe.desk.form.utils.toggle_star", { doctype, name, add: willAdd ? 1 : 0 });
-    }
-
-    let busy = false;
-    span.addEventListener("click", async (e)=>{
-      e.preventDefault(); e.stopPropagation();
-      if (busy) return; busy = true;
-      const willAdd = span.classList.contains("not-starred");
-      try{
-        await toggleStarServer(willAdd);
-        span.classList.toggle("not-starred", !willAdd);
-        span.classList.toggle("starred", willAdd);
-      } catch (err) {
-        frappe.msgprint?.({ message: t("Failed to toggle favorite"), indicator: "red" });
       } finally { busy = false; }
     });
     return span;
@@ -663,8 +623,7 @@
         if (tkn && LBL_KEY(tkn) !== LBL_KEY(label)) { value = tkn; break; }
       }
       if (!value && fullText) {
-        const j=fullText.indexOf(":");
-        if (j>-1){ const lbl=STRIP_COLON(fullText.slice(0,j)); if (LBL_KEY(lbl)) label = lbl; value = CLEAN(fullText.slice(j+1)); }
+        const j=fullText.indexOf(":"); if (j>-1){ const lbl=STRIP_COLON(fullText.slice(0,j)); if (LBL_KEY(lbl)) label = lbl; value = CLEAN(fullText.slice(j+1)); }
       }
       frag.appendChild(makeChip(label, normalizeDateish(value || ""), true));
     });
@@ -785,7 +744,7 @@
     const doctype = getDoctype();
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
-    // --- Assignees + Favorite + Like (одна фиксированная строка)
+    // --- Assignees + Like (одна фиксированная строка)
     let assignSlot = body.querySelector(".dnt-assign-slot"); if (!assignSlot){ assignSlot = document.createElement("div"); assignSlot.className = "dnt-assign-slot"; body.appendChild(assignSlot); }
     let assignLeft = assignSlot.querySelector(".dnt-assign-left"); if (!assignLeft){ assignLeft = document.createElement("div"); assignLeft.className = "dnt-assign-left"; assignSlot.appendChild(assignLeft); }
     let assignRight = assignSlot.querySelector(".dnt-assign-right"); if (!assignRight){ assignRight = document.createElement("div"); assignRight.className = "dnt-assign-right"; assignSlot.appendChild(assignRight); }
@@ -793,12 +752,10 @@
     const assignments = (meta || body).querySelector(".kanban-assignments");
     if (assignments && assignments.parentElement !== assignLeft) assignLeft.appendChild(assignments);
 
-    // Favorite (звезда)
-    let fav = detectFavoriteFrom(body) || detectFavoriteFrom(card);
-    if (fav){ ensureVisibleAction(fav); if (fav.parentElement !== assignRight) assignRight.appendChild(fav); }
-    else if (doctype && name){ assignRight.appendChild(createFallbackFavorite(doctype, name)); }
+    // Прячем любые звезды (на всякий)
+    body.querySelectorAll(".document-star, .star-action, .favorite-action").forEach(el=> el.remove());
 
-    // Like (сердце)
+    // Like (сердечко)
     let like = detectLikeFrom(body) || detectLikeFrom(card);
     if (like){ ensureVisibleAction(like); if (like.parentElement !== assignRight) assignRight.appendChild(like); }
     else if (doctype && name){ assignRight.appendChild(createFallbackLike(doctype, name)); }
@@ -868,7 +825,7 @@
     });
   }
 
-  // ===== Шапка: Select Kanban всем, Create New — только SM; + кнопка List
+  // ===== Шапка: Select Kanban всем (без Create для не-SM), + dropdown-шестерёнка (Settings + Labels), + кнопка List
   function findSettingsAnchor(){
     return (
       document.querySelector(".page-actions .page-icon-group") ||
@@ -898,7 +855,7 @@
             const allowCreate = hasAny(CFG.rolesCreateOnly);
             Array.from(menu.querySelectorAll("li")).forEach(li=>{
               const lbl = (li.textContent||"").trim();
-              const isCreate = /Create\s+New\s+Kanban\s+Board/i.test(lbl) || /Создать\s+Канбан/i.test(lbl);
+              const isCreate = /Create\s+New\s+Kanban\s+Board/i.test(lbl) || /Создать\s+Канбан/i.test(lbl) || /Создать.*доску/i.test(lbl);
               if (isCreate) li.style.display = allowCreate ? "" : "none";
               if (!allowCreate && (isCreate || li.classList.contains("divider") || /(^|\s)(dropdown-divider|divider)(\s|$)/.test(li.className))) {
                 li.style.display = "none";
@@ -920,8 +877,6 @@
     }
   }
   function slugDoctype(dt){ return (frappe?.router?.slug?.(dt)) || (dt||"").toLowerCase().replace(/\s+/g,"-"); }
-
-  // >>> List с флагом в query + дубль в route_options
   function routeToListWithBoardFilter(){
     const dt = getDoctype();
     const boardTitle = getBoardName();
@@ -936,6 +891,84 @@
     frappe.set_route("List", dt, "List");
   }
 
+  function buildSettingsDropdown(){
+    const wrap = document.createElement("div");
+    wrap.id = CFG.settingsBtnId;
+    wrap.className = "btn-group btn-group-sm";
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-default icon-btn btn-sm dropdown-toggle";
+    btn.setAttribute("data-toggle","dropdown");
+    btn.setAttribute("aria-expanded","false");
+    btn.setAttribute("title", t("Kanban options"));
+    btn.innerHTML = ICONS.openSettings;
+    wrap.appendChild(btn);
+
+    const menu = document.createElement("ul");
+    menu.className = "dropdown-menu";
+    menu.innerHTML = `
+      <li>
+        <a class="grey-link dropdown-item dnt-open-board-settings" href="#" onclick="return false;">
+          ${ICONS.edit} <span class="menu-item-label">${t("Board Settings")}</span>
+        </a>
+      </li>
+      <li class="dropdown-divider"></li>
+      <li>
+        <a class="grey-link dropdown-item dnt-toggle-labels" href="#" onclick="return false;">
+          ${ICONS.tag} <span class="menu-item-label dnt-toggle-labels-text"></span>
+        </a>
+      </li>
+    `;
+    wrap.appendChild(menu);
+
+    const labelsText = menu.querySelector(".dnt-toggle-labels-text");
+
+    // robust: учитываем 1/"1"/true/"true" как включённые лейблы
+    const isLabelsOn = () => {
+      const b = (window.cur_list?.board || window.cur_list?.kanban_board || {});
+      const v = b.show_labels;
+      return v === 1 || v === "1" || v === true || v === "true";
+    };
+    const refreshLabelsText = () => {
+      labelsText.textContent = isLabelsOn() ? t("Hide labels") : t("Show labels");
+    };
+
+    // первичная установка + страховки на «ленивые» загрузки и открытие меню
+    refreshLabelsText();
+    setTimeout(refreshLabelsText, 200);
+    btn.addEventListener("show.bs.dropdown", refreshLabelsText);
+    btn.addEventListener("shown.bs.dropdown", refreshLabelsText);
+    btn.addEventListener("click", () => setTimeout(refreshLabelsText, 0));
+
+    menu.querySelector(".dnt-open-board-settings").addEventListener("click",(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      const bname = getBoardName();
+      if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
+    });
+
+    menu.querySelector(".dnt-toggle-labels").addEventListener("click", async (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      const bname = getBoardName();
+      if (!bname) return;
+      const want = !isLabelsOn();
+      try{
+        await frappe.call({
+          method: "frappe.client.set_value",
+          args: { doctype: "Kanban Board", name: bname, fieldname: "show_labels", value: want ? 1 : 0 }
+        });
+        if (window.cur_list?.board) window.cur_list.board.show_labels = want;
+        if (window.cur_list?.kanban_board) window.cur_list.kanban_board.show_labels = want;
+        refreshLabelsText();
+        frappe.show_alert({ message: want ? t("Labels shown") : t("Labels hidden"), indicator: "green" });
+        setTimeout(()=> location.reload(), 50);
+      } catch {
+        frappe.msgprint?.({ message: t("Failed to toggle labels"), indicator: "red" });
+      }
+    });
+
+    return wrap;
+  }
+
   function injectControls(){
     document.querySelectorAll(`#${CFG.settingsBtnId}, #${CFG.modeToggleId}, #${CFG.openListBtnId}`).forEach(el => el.remove());
     if(!isKanbanRoute()) return;
@@ -943,16 +976,8 @@
     const anchorIcons = document.querySelector(".standard-actions .page-icon-group") || findSettingsAnchor();
     const actionsBar  = document.querySelector(".standard-actions") || document.querySelector(".page-actions") || anchorIcons?.parentElement;
 
-    // settings
-    const btn=document.createElement("button");
-    btn.id=CFG.settingsBtnId;
-    btn.className="btn btn-default icon-btn btn-sm";
-    btn.setAttribute("title", t("Kanban settings"));
-    btn.innerHTML = ICONS.openSettings;
-    btn.addEventListener("click",()=> {
-      const bname = getBoardName();
-      if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
-    });
+    // settings: теперь dropdown
+    const settingsDropdown = buildSettingsDropdown();
 
     // mode toggle (+ очистка ширин доски)
     const wrap = document.createElement("div");
@@ -1001,9 +1026,9 @@
 
     const menuGroup   = document.querySelector(".standard-actions .menu-btn-group");
     const filterGroup = document.querySelector(".custom-actions .filter-section") || document.querySelector(".filter-section");
-    if (filterGroup?.parentElement) filterGroup.parentElement.insertAdjacentElement("afterend", btn);
-    else if (menuGroup) menuGroup.insertAdjacentElement("afterend", btn);
-    else (anchorIcons || actionsBar)?.insertAdjacentElement("afterbegin", btn);
+    if (filterGroup?.parentElement) filterGroup.parentElement.insertAdjacentElement("afterend", settingsDropdown);
+    else if (menuGroup) menuGroup.insertAdjacentElement("afterend", settingsDropdown);
+    else (anchorIcons || actionsBar)?.insertAdjacentElement("afterbegin", settingsDropdown);
 
     (anchorIcons || actionsBar)?.appendChild(wrap);
     (anchorIcons || actionsBar)?.appendChild(btnList);
