@@ -1,8 +1,11 @@
-/* Dantist Kanban skin — v25.26.2
- * Fix: pointer-ресайз c setPointerCapture, DnD глушится только во время тянучки; ширина колонки реально меняется и сохраняется.
- * Restore: мини-задачи в карточке как раньше; двойной клик по названию включает редактирование и сохраняет по blur/Enter.
- * UI: Select Kanban открыт всем; пункт "Create New Kanban Board" доступен только роли System Manager; шестерёнка возле фильтров/меню.
- * Theme-safe: только var(--*) из Frappe.
+/* Dantist Kanban skin — v25.28.0
+ * Changes:
+ * - Title: dblclick => edit (focus + selection), без DnD.
+ * - Tasks: стиль/разметка как раньше.
+ * - Assignees: фиксированный слот над задачами, "+" масштабируется в compact.
+ * - Center/doc: свободная высота (без скролла), показываем все поля.
+ * - Top UI: ролевое скрытие панелей временно отключено; Select Kanban виден всем; Create New — только System Manager.
+ * - Сохранил ресайз колонок и компакт/комфорт режим.
  */
 (() => {
   if (window.__DNT_KANBAN_S) return; window.__DNT_KANBAN_S = true;
@@ -11,7 +14,7 @@
     cssId: "dantist-kanban-skin-css",
     htmlClass: "dantist-kanban-skin",
     rolesSettings: ["AIHub Super Admin", "System Manager"],
-    rolesCreateOnly: ["System Manager"], // <- только СМ видит "Create New Kanban Board"
+    rolesCreateOnly: ["System Manager"],
     rolesCanColor: ["AIHub Super Admin", "System Manager"],
     rolesColumnMenu:["AIHub Super Admin", "System Manager"],
     settingsBtnId: "dnt-kanban-settings",
@@ -36,14 +39,14 @@
   const CLEAN = s => (s||"").replace(/\u00A0/g," ").replace(/\s+/g," ").trim();
   const STRIP_COLON = s => CLEAN(s).replace(/:\s*$/,"");
   const LBL_KEY = s => STRIP_COLON(s).toLowerCase();
-  const t = (s) => { if (typeof __ === "function") return __(s); const d=frappe&&frappe._messages; return (d&&typeof d[s]==="string"&&d[s].length)?d[s]:s; };
-  const hasAny = (roles) => { try { return roles.some(r => frappe.user.has_role?.(r)); } catch { return false; } };
+  const t = (s)=>{ if (typeof __ === "function") return __(s); const d=frappe&&frappe._messages; return (d&&typeof d[s]==="string"&&d[s].length)?d[s]:s; };
+  const hasAny = (roles)=>{ try{ return roles.some(r=>frappe.user.has_role?.(r)); }catch{ return false; } };
   const isKanbanRoute = () => {
     const r = frappe.get_route?.() || [];
     if (r[0] === "List" && (r[2] === "Kanban" || r[2] === "Kanban Board")) return true;
     return (location.pathname||"").includes("/view/kanban/");
   };
-  const getDoctype = () => window.cur_list?.doctype || window.cur_list?.board?.reference_doctype || CFG.caseDoctype;
+  const getDoctype   = () => window.cur_list?.doctype || window.cur_list?.board?.reference_doctype || CFG.caseDoctype;
   const getBoardName = () => {
     try {
       const r = frappe.get_route?.();
@@ -51,7 +54,7 @@
     } catch { return ""; }
   };
   const currentMode = () => document.documentElement.classList.contains("dnt-compact-on") ? "compact" : "comfy";
-  const getColumns = () => Array.from(document.querySelectorAll(".kanban-column"));
+  const getColumns  = () => Array.from(document.querySelectorAll(".kanban-column"));
 
   const colKey = (col, mode) => {
     const board = getBoardName() || "__";
@@ -76,46 +79,46 @@
       :root{
         --dnt-card-ch-compact: ${CFG.compactChars};
         --dnt-card-ch-comfy:   ${CFG.comfyChars};
+        --dnt-h-head-compact: 36px;
+        --dnt-h-head-comfy:   52px;
+        --dnt-assign-h-compact: 22px;
+        --dnt-assign-h-comfy:   28px;
+        --dnt-tasks-h-compact: 72px;
+        --dnt-tasks-h-comfy:   88px;
       }
       html.${CFG.htmlClass}{ --dnt-card-w: var(--dnt-card-w-default); }
-
       html.${CFG.htmlClass}.dnt-compact-on { --dnt-card-w-default: calc(var(--dnt-card-ch-compact) * 1ch + 48px); }
       html.${CFG.htmlClass}:not(.dnt-compact-on) { --dnt-card-w-default: calc(var(--dnt-card-ch-comfy) * 1ch + 48px); }
 
-      /* Header (нативные отступы) */
-      html.${CFG.htmlClass} .page-head{ margin-top:0!important; margin-bottom:14px!important; }
-      html.${CFG.htmlClass} .page-actions, html.${CFG.htmlClass} .page-icon-group{ display:flex; align-items:center; gap:8px; }
-
       .kanban-board{ contain:layout style; }
-
       html.${CFG.htmlClass} .kanban-column{ padding:8px; min-width: calc(var(--dnt-card-w) + 24px); }
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; width:100%; }
 
       html.${CFG.htmlClass} .kanban-card.content{
-        border-radius:14px;
-        border:1px solid var(--border-color);
-        background: var(--card-bg);
-        padding:12px;
+        border-radius:14px; border:1px solid var(--border-color);
+        background: var(--card-bg); padding:12px;
         box-shadow: var(--shadow-base, 0 1px 2px rgba(0,0,0,.06));
         transition:transform .12s, box-shadow .12s, width .06s ease-out;
         display:flex !important; flex-direction:column; gap:0;
-        color: var(--text-color);
-        width: var(--dnt-card-w);
-        margin-inline:auto;
+        color: var(--text-color); width: var(--dnt-card-w); margin-inline:auto;
       }
       html.${CFG.htmlClass} .kanban-card.content:hover{
-        transform:translateY(-1px);
-        box-shadow: var(--shadow-lg, 0 8px 22px rgba(0,0,0,.12));
+        transform:translateY(-1px); box-shadow: var(--shadow-lg, 0 8px 22px rgba(0,0,0,.12));
       }
 
-      /* Head / Title */
-      html.${CFG.htmlClass} .dnt-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; margin-bottom:10px; }
+      /* Header */
+      html.${CFG.htmlClass} .dnt-head{
+        display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; margin-bottom:10px;
+        min-height: var(--dnt-h-head-comfy);
+      }
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-head{ min-height: var(--dnt-h-head-compact); }
+
       html.${CFG.htmlClass} .dnt-head-left{ display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 auto; }
       html.${CFG.htmlClass} .kanban-title-area{ margin:0 !important; min-width:0; }
       html.${CFG.htmlClass} .kanban-card-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text-color); }
-      html.${CFG.htmlClass} .dnt-title{ font-weight:600; line-height:1.25; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      html.${CFG.htmlClass} .dnt-title.is-edit{ cursor:text; outline:none; border-radius:6px; padding:0 2px; background: var(--fg-hover-color); }
+      html.${CFG.htmlClass} .dnt-title{ font-weight:600; line-height:1.25; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:text; }
+      html.${CFG.htmlClass} .dnt-title.is-edit{ outline:none; border-radius:6px; padding:0 2px; background: var(--fg-hover-color); }
 
       /* Avatar */
       html.${CFG.htmlClass} .kanban-image{
@@ -127,36 +130,59 @@
       html.${CFG.htmlClass} .kanban-image img{ width:100% !important; height:100% !important; object-fit:contain !important; object-position:center; display:block !important; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-image{ width:22px !important; height:22px !important; border-radius:6px; padding:1px; }
 
-      /* Chips */
-      html.${CFG.htmlClass} .kanban-card-doc{ padding:0; }
+      /* Doc (динамические поля) — без фиксированной высоты и без скролла */
+      html.${CFG.htmlClass} .kanban-card-doc{ padding:0; overflow:visible; }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-kv{
         display:flex; align-items:center; gap:6px;
         background: var(--control-bg);
         border:1px solid var(--border-color);
         border-radius:10px; padding:4px 8px; font-size:12px; min-height:24px; color: var(--text-color);
+        white-space:nowrap; overflow:visible; text-overflow:clip;
       }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-kv + .dnt-kv { margin-top:6px; }
-      html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ flex:0 1 auto; max-width:45%; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text-muted); }
+      html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ flex:0 0 auto; max-width:none; min-width:auto; white-space:nowrap; overflow:visible; text-overflow:clip; color: var(--text-muted); }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; color: var(--text-color); }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-k{ flex:0 0 auto; max-width:none; overflow:visible; text-overflow:clip; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-v{ flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 
-      /* Только в компактном режиме — лейбл НЕ сжимается, сжимается ТОЛЬКО значение */
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-k{
-        flex:0 0 auto; max-width:none; white-space:nowrap; overflow:visible; text-overflow:clip;
+      /* Assignees — фиксированный слот над задачами */
+      html.${CFG.htmlClass} .dnt-assign-slot{
+        min-height: var(--dnt-assign-h-comfy); display:flex; align-items:center; gap:8px; margin-top:8px;
       }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-doc .dnt-v{
-        flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-assign-slot{
+        min-height: var(--dnt-assign-h-compact);
       }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar-group .avatar.avatar-small{ width:18px; height:18px; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action{ width:18px; height:18px; }
+      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:12px; height:12px; }
+      html.${CFG.htmlClass} .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:14px; height:14px; }
 
-      /* Footer + tasks */
-      html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+      /* Tasks — стиль как раньше */
       html.${CFG.htmlClass} .dnt-tasks-mini{
-        margin-top:6px; width:100%; max-height:72px; overflow-y:auto; padding-right:4px;
+        margin-top:6px; width:100%; overflow-y:auto; padding-right:4px;
         border-top:1px solid var(--border-color); padding-top:6px; scrollbar-gutter: stable;
+        min-height: var(--dnt-tasks-h-comfy); max-height: var(--dnt-tasks-h-comfy);
       }
-      html.${CFG.htmlClass} .dnt-taskline{ display:flex; gap:6px; align-items:center; font-size:11px; color: var(--text-muted); padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-tasks-mini{
+        min-height: var(--dnt-tasks-h-compact); max-height: var(--dnt-tasks-h-compact);
+      }
+      html.${CFG.htmlClass} .dnt-taskline{
+        display:flex; gap:6px; align-items:center; font-size:11px;
+        color: var(--text-muted); padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+      }
       html.${CFG.htmlClass} .dnt-taskline .ttl{ font-weight:600; color: var(--text-color); overflow:hidden; text-overflow:ellipsis; }
-      html.${CFG.htmlClass} .dnt-chip{ border:1px solid var(--border-color); border-radius:999px; padding:1px 6px; background: var(--control-bg); font-size:10px; color: var(--text-color); }
-      html.${CFG.htmlClass} .dnt-overdue{ background: var(--alert-bg-danger); border-color: color-mix(in oklab, var(--alert-bg-danger) 60%, transparent); color: var(--alert-text-danger); }
+      html.${CFG.htmlClass} .dnt-chip{
+        border:1px solid var(--border-color);
+        border-radius:999px; padding:1px 6px;
+        background: var(--control-bg);
+        font-size:10px; color: var(--text-color);
+      }
+      html.${CFG.htmlClass} .dnt-overdue{
+        background: var(--alert-bg-danger); border-color: color-mix(in oklab, var(--alert-bg-danger) 60%, transparent); color: var(--alert-text-danger);
+      }
+
+      /* Footer (like) */
+      html.${CFG.htmlClass} .dnt-foot{ margin-top:10px; display:flex; align-items:center; justify-content:flex-end; gap:10px; }
 
       /* Actions */
       html.${CFG.htmlClass} .dnt-card-actions{
@@ -170,31 +196,21 @@
       html.${CFG.htmlClass}.dnt-compact-on .dnt-head{ margin-bottom:6px; gap:8px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-title{ font-size:12px; line-height:1.2; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-meta{ display:none; }
-      html.${CFG.htmlClass}.dnt-compact-on .dnt-foot{ margin-top:6px; }
-      html.${CFG.htmlClass}.dnt-compact-on .dnt-foot .like-action{ display:none !important; }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar-group .avatar.avatar-small{ width:18px; height:18px; }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:12px; height:12px; }
-      html.${CFG.htmlClass} .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:14px; height:14px; }
 
       /* Resizer */
       html.${CFG.htmlClass} .dnt-resizer{
         position:absolute; right:4px; bottom:4px; width:16px; height:16px; cursor:nwse-resize;
         opacity:.9; border-radius:4px; display:flex; align-items:center; justify-content:center;
-        color: var(--border-color);
-        background: transparent; z-index:6;
+        color: var(--border-color); background: transparent; z-index:6;
       }
       html.${CFG.htmlClass} .kanban-card-wrapper:hover .dnt-resizer{ opacity:1; }
-
-      /* Во время ресайза */
       html.${CFG.htmlClass}.dnt-resizing * { user-select: none !important; cursor:nwse-resize !important; }
-
-      /* Drag ghost width */
       html.${CFG.htmlClass} .sortable-ghost .kanban-card.content,
       html.${CFG.htmlClass} .sortable-chosen .kanban-card.content,
       html.${CFG.htmlClass} .kanban-card.sortable-ghost,
       html.${CFG.htmlClass} .kanban-card.sortable-chosen{ width: var(--dnt-card-w) !important; }
 
-      /* Тогглер режима — нативный frappe btn-group */
+      /* Head controls */
       html.${CFG.htmlClass} .dnt-mode-toggle.btn-group{ margin-left:8px; }
       html.${CFG.htmlClass} .dnt-mode-toggle .btn.active{ font-weight:600; }
     `;
@@ -237,7 +253,7 @@
     });
   }
 
-  // ===== Мини-задачи (как раньше) =====
+  // ===== Мини-задачи =====
   const miniCache = new Map();
   function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: t.custom_due_datetime || t.date || null, kind: "due" }; }
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
@@ -311,7 +327,7 @@
     });
   }
 
-  // ===== РЕЗАЙЗЕР: pointer events + глушение DnD только во время тянучки =====
+  // ===== Ресайзер =====
   function attachResizer(wrapper){
     if (!wrapper || wrapper.querySelector(".dnt-resizer")) return;
     const card = wrapper.querySelector(".kanban-card.content") || wrapper.querySelector(".kanban-card");
@@ -379,7 +395,7 @@
     handle.addEventListener("pointerdown", startResize, { passive:false, capture:true });
   }
 
-  // ===== Заголовок карточки — двойной клик для редактирования =====
+  // ===== Заголовок: dblclick => edit, без DnD =====
   function makeTitleEditable(titleArea, name, doctype){
     if (!titleArea || titleArea.__dntEditable) return;
     titleArea.__dntEditable = true;
@@ -392,9 +408,10 @@
     holder.innerHTML = "";
 
     const span = document.createElement("span");
-    span.className = "dnt-title"; // по умолчанию НЕ редактируется
+    span.className = "dnt-title";
     span.textContent = currentText;
-
+    span.setAttribute("draggable","false"); // отключаем перетаскивание
+    // по умолчанию НЕ в режиме редактирования
     holder.appendChild(span);
     if (anchor) anchor.replaceWith(holder); else titleArea.appendChild(holder);
 
@@ -422,7 +439,7 @@
       };
       if (!val || val === beforeEdit){ done(); return; }
       frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname:"title", value: val } })
-        .then(()=>{ frappe.show_alert({ message: t("Title updated"), indicator:"green" }); done(); })
+        .then(()=>{ frappe.show_alert({ message: t("Title updated"), indicator:"green" }); beforeEdit = val; done(); })
         .catch(()=>{ frappe.msgprint({ message: t("Failed to update title"), indicator:"red" }); span.textContent = beforeEdit; done(); });
     }
     function cancelEdit(){
@@ -432,16 +449,14 @@
       span.removeAttribute("contenteditable");
     }
 
-    // двойной клик — включить редактирование
+    // Разрешаем фокус/dblclick, режем только dragstart
+    span.addEventListener("dragstart", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {capture:true});
     span.addEventListener("dblclick", (e)=>{ e.preventDefault(); e.stopPropagation(); toEdit(); });
-    // одиночный клик не открывает форму
     span.addEventListener("click", (e)=> e.stopPropagation());
-    // клавиатура
     span.addEventListener("keydown", (e)=>{
       if (e.key==="Enter"){ e.preventDefault(); saveEdit(); span.blur(); }
       if (e.key==="Escape"){ e.preventDefault(); cancelEdit(); span.blur(); }
     });
-    // блюр — сохранить
     span.addEventListener("blur", saveEdit);
   }
 
@@ -666,28 +681,28 @@
 
     const name = wrapper.getAttribute("data-name") || wrapper.dataset.name || card.getAttribute("data-name") || "";
     const doctype = getDoctype();
-
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
-    // мини-задачи для нужного доктайпа
-    if (doctype === CFG.caseDoctype && name) {
-      if (!body.querySelector(".dnt-tasks-mini")) {
-        const mini = document.createElement("div");
-        mini.className = "dnt-tasks-mini";
-        body.appendChild(mini);
-        setTimeout(()=> loadMini(mini, name), 0);
-      }
-    }
+    // Фиксированный слот для ассайнов над задачами
+    let assignSlot = body.querySelector(".dnt-assign-slot");
+    if (!assignSlot){ assignSlot = document.createElement("div"); assignSlot.className = "dnt-assign-slot"; body.appendChild(assignSlot); }
+    const assign = (meta || body).querySelector(".kanban-assignments");
+    if (assign && assign.parentElement !== assignSlot) assignSlot.appendChild(assign);
 
-    // инлайн-редактирование заголовка по двойному клику
+    // Задачи (контейнер сразу после ассайнов)
+    let mini = body.querySelector(".dnt-tasks-mini");
+    if (!mini){ mini = document.createElement("div"); mini.className = "dnt-tasks-mini"; body.appendChild(mini); }
+
+    // Заголовок — редактирование по dblclick
     if (title) makeTitleEditable(title, name, doctype);
 
+    // Лайк внизу
     let foot = body.querySelector(".dnt-foot"); if(!foot){ foot = document.createElement("div"); foot.className = "dnt-foot"; body.appendChild(foot); }
-    const assign = (meta || body).querySelector(".kanban-assignments");
-    const like   = (meta || body).querySelector(".like-action");
-    if(assign && !foot.contains(assign)) foot.appendChild(assign);
-    if(like   && !foot.contains(like))   foot.appendChild(like);
+    const like = (meta || body).querySelector(".like-action");
+    if(like && !foot.contains(like)) foot.appendChild(like);
     if(meta && !meta.children.length) meta.remove();
+
+    if (doctype === CFG.caseDoctype && name) setTimeout(()=> loadMini(mini, name), 0);
 
     if (!wrapper.querySelector(".dnt-card-actions")){
       const row = document.createElement("div"); row.className="dnt-card-actions";
@@ -742,7 +757,7 @@
     });
   }
 
-  // ===== Шапка: Select Kanban всем, Create New — только System Manager, плюс раскладка =====
+  // ===== Шапка: Select Kanban всем, Create New — только System Manager =====
   function findSettingsAnchor(){
     return (
       document.querySelector(".page-actions .page-icon-group") ||
@@ -753,14 +768,11 @@
       document.querySelector(".page-title")
     );
   }
-
   function exposeSelectKanban(){
-    // показать кастомные действия
     document.querySelectorAll(".custom-actions").forEach(el=>{
       el.classList.remove("hide","hidden-xs","hidden-sm","hidden-md","hidden-lg");
       el.style.display = ""; el.style.visibility = "";
     });
-    // «Select Kanban»
     const groups = Array.from(document.querySelectorAll(".custom-actions .custom-btn-group"));
     const selectGrp = groups.find(g => /Select\s+Kanban/i.test(g.textContent||""));
     if (selectGrp){
@@ -772,13 +784,11 @@
           setTimeout(()=>{
             const menu = selectGrp.querySelector(".dropdown-menu") || document.querySelector(".dropdown-menu.show");
             if (!menu) return;
-            // скрыть "Create New…" для всех, кроме System Manager
             const allowCreate = hasAny(CFG.rolesCreateOnly);
             Array.from(menu.querySelectorAll("li")).forEach(li=>{
               const lbl = (li.textContent||"").trim();
               if (/Create\s+New\s+Kanban\s+Board/i.test(lbl)) li.style.display = allowCreate ? "" : "none";
             });
-            // переход на выбранную доску
             Array.from(menu.querySelectorAll("li.user-action a.dropdown-item")).forEach(a=>{
               const labNode = a.querySelector(".menu-item-label");
               const rawEnc = labNode?.getAttribute("data-label") || "";
@@ -802,7 +812,7 @@
     const anchorIcons = document.querySelector(".standard-actions .page-icon-group") || findSettingsAnchor();
     const actionsBar  = document.querySelector(".standard-actions") || document.querySelector(".page-actions") || anchorIcons?.parentElement;
 
-    // settings button
+    // settings button — показываем всем
     const btn=document.createElement("button");
     btn.id=CFG.settingsBtnId;
     btn.className="btn btn-default icon-btn btn-sm";
@@ -817,21 +827,17 @@
     const wrap = document.createElement("div");
     wrap.id = CFG.modeToggleId;
     wrap.className = "btn-group btn-group-sm dnt-mode-toggle";
-
     const btnCompact = document.createElement("button");
     btnCompact.className = "btn btn-default";
     btnCompact.innerHTML = `${ICONS.modeCompact} <span>${t("Compact")}</span>`;
-
     const btnComfy = document.createElement("button");
     btnComfy.className = "btn btn-default";
     btnComfy.innerHTML = `${ICONS.modeComfy} <span>${t("Comfort")}</span>`;
-
     const setActive = ()=>{
       const on = document.documentElement.classList.contains("dnt-compact-on");
       btnCompact.classList.toggle("active", on);
       btnComfy.classList.toggle("active", !on);
     };
-
     btnCompact.addEventListener("click", ()=>{
       if (!document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.add("dnt-compact-on");
@@ -848,13 +854,10 @@
         applyWidthsForMode("comfy"); setActive();
       }
     });
-
     btnCompact.addEventListener("dblclick", ()=>{ if (document.documentElement.classList.contains("dnt-compact-on")){ clearSavedMode("compact"); clearSessAll(); resetInlineCardWidths(); getColumnsEl().forEach(resetColumnInlineWidth); applyWidthsForMode("compact"); }});
     btnComfy  .addEventListener("dblclick", ()=>{ if (!document.documentElement.classList.contains("dnt-compact-on")){ clearSavedMode("comfy");   clearSessAll(); resetInlineCardWidths(); getColumnsEl().forEach(resetColumnInlineWidth); applyWidthsForMode("comfy");   }});
-
     wrap.appendChild(btnCompact); wrap.appendChild(btnComfy); setActive();
 
-    // Позиционирование: после фильтров/меню — шестерёнка; тогглер — в иконках
     const menuGroup   = document.querySelector(".standard-actions .menu-btn-group");
     const filterGroup = document.querySelector(".custom-actions .filter-section") || document.querySelector(".filter-section");
     if (filterGroup?.parentElement) filterGroup.parentElement.insertAdjacentElement("afterend", btn);
@@ -863,7 +866,6 @@
 
     (anchorIcons || actionsBar)?.appendChild(wrap);
 
-    // следить за перерисовкой шапки
     const mo = new MutationObserver(()=> {
       if (!document.getElementById(CFG.settingsBtnId) || !document.getElementById(CFG.modeToggleId)) injectControls();
       exposeSelectKanban();
@@ -894,10 +896,12 @@
 
     purgeLegacySaved();
 
+    /* ВРЕМЕННО ОТКЛЮЧЕНО ролевое скрытие верхних элементов
     const allowColor = hasAny(CFG.rolesCanColor);
     const allowMenu  = hasAny(CFG.rolesColumnMenu);
     document.documentElement.classList.toggle("no-color", !allowColor);
     document.documentElement.classList.toggle("no-column-menu", !allowMenu);
+    */
 
     try{
       const preferRaw = localStorage.getItem(`dntKanbanCompact::${getBoardName()||"__all__"}`);
@@ -912,7 +916,6 @@
     injectControls();
     exposeSelectKanban();
 
-    // следим за колонками — сброс ширины если опустели
     const colMO = new MutationObserver(normalizeColumns);
     getColumnsEl().forEach(col=> colMO.observe(col, { childList:true, subtree:true }));
 
