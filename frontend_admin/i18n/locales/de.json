@@ -33,7 +33,9 @@
     "createdLabel": "Erstellt",
     "externalIdLabel": "Externe ID",
     "phoneLabel": "Telefon",
-
+    "searchRooms": "Chats suchen...",
+    "searchingChats": "Chats werden gesucht...",
+    "errorTitle": "Fehler",
     "seeSources": "Quellen anzeigen",
     "excelSuccess": "Excel erstellt",
     "excelFailed": "Excel-Export fehlgeschlagen",
@@ -42,7 +44,24 @@
     "startedAgo": "Gestartet vor {diffDays} Tagen, {diffHours} Stunden, {diffMinutes} Minuten",
     "consultant": "Berater",
     "client": "Kunde",
-    "chatFallback": "Chat {index}"
+    "chatFallback": "Chat {index}",
+    "copyChatLink": "Chat-Link kopieren",
+    "warning": "Warnung",
+    "noChatSelected": "Kein Chat ausgewählt",
+    "success": "Erfolg",
+    "chatLinkCopied": "Chat-Link in die Zwischenablage kopiert",
+    "failedToCopyLink": "Fehler beim Kopieren des Links",
+    "chatOpened": "Chat erfolgreich geöffnet",
+    "chatNotFound": "Chat nicht gefunden",
+    "searchingChat": "Chat wird gesucht...",
+    "searchingChatDesc": "Alle Seiten werden durchsucht, um die angeforderte Konversation zu finden",
+    "pleaseWait": "Dies kann einige Momente dauern",
+    "cancelSearch": "Abbrechen",
+    "chatFound": "Chat gefunden",
+    "chatFoundOnPage": "Chat auf Seite {pageNumber} gefunden",
+    "chatNotFoundMessage": "Der angeforderte Chat konnte nicht gefunden werden",
+    "searchCancelled": "Suche abgebrochen",
+    "searchCancelledMessage": "Die Chat-Suche wurde abgebrochen"
   },
 
   "UseChatLogic": {

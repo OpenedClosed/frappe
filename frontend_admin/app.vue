@@ -14,7 +14,7 @@ const { currentLanguage } = useLanguageState();
 usePrimeVueLocale();
 
 console.log("locale", locale.value);
-if (locale.value) { 
+if (locale.value) {
   currentLanguage.value = locale.value;
 }
 
