@@ -1,10 +1,11 @@
-/* Dantist Kanban skin — v25.28.4  (based on v25.28.1)
- * Изменения:
- * - List: открывает List с флагом ?show_board_<flag>=1 + frappe.route_options[flag]=1 (как в твоём HTML).
- * - Select Kanban: всем видна; пункт "Create New Kanban Board" + разделитель скрыты для всех, кроме System Manager.
- * - Assignees: фиксированная высота строки (compact/comfy), не двигает линию задач.
- * - Like: возвращён стандартный, справа в строке Assignees; фолбэк рендерит <use href="#es-solid-heart">.
- * - Ресайз карточек: как был; ширины колонок сохраняются.
+/* Dantist Kanban skin — v25.28.6  (based on v25.28.5)
+ * Изменения в этой версии:
+ * - Favorite: заменён вызов на корректный toggle_star (есть в frappe.desk.form.utils),
+ *   плюс используем client helper frappe.utils.toggle_star, если он доступен.
+ * - Like: оставлен стандартный спрайт <use href="#es-solid-heart"> как в базовой карточке.
+ * - Assignees: жёстко фиксированная высота строки; исключено смещение нижнего блока.
+ * - List: ссылка с ?show_board_<flag>=1 + дубль в frappe.route_options — как и раньше.
+ * - Режимы (compact/comfort): при переключении очищаем сохранённые ресайзы колонок для текущей доски.
  */
 (() => {
   if (window.__DNT_KANBAN_S) return; window.__DNT_KANBAN_S = true;
@@ -74,6 +75,19 @@
   const setSessW = (col, mode, px) => sessionColW.set(sessKey(col,mode), px);
   const getSessW = (col, mode) => sessionColW.get(sessKey(col,mode));
   const clearSessAll = () => sessionColW.clear();
+
+  // очистка сохранённых ширин для текущей доски
+  function clearPersistedWidthsForBoard(board){
+    try{
+      const prefix = `dntKanbanColW::${board||"__"}::`;
+      const keys = [];
+      for (let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix)) keys.push(k);
+      }
+      keys.forEach(k => localStorage.removeItem(k));
+    }catch{}
+  }
 
   // --- css
   function injectCSS(){
@@ -153,17 +167,26 @@
       html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ flex:0 0 auto; color: var(--text-muted); }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; color: var(--text-color); }
 
-      /* Assignees — фиксированный слот + Like справа */
+      /* Assignees — фиксированный слот; Favorite + Like справа; без влияния на высоту */
       html.${CFG.htmlClass} .dnt-assign-slot{
         height: var(--dnt-assign-h-comfy);
-        display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px;
-        overflow: hidden;
+        min-height: var(--dnt-assign-h-comfy);
+        max-height: var(--dnt-assign-h-comfy);
+        line-height: var(--dnt-assign-h-comfy);
+        margin-top:8px;
+        display:flex; align-items:center; justify-content:space-between; gap:8px;
+        overflow:hidden;
       }
-      html.${CFG.htmlClass}.dnt-compact-on .dnt-assign-slot{ height: var(--dnt-assign-h-compact); }
-      html.${CFG.htmlClass} .dnt-assign-left{ display:flex; align-items:center; gap:6px; flex:1 1 auto; min-width:0; }
-      html.${CFG.htmlClass} .dnt-assign-right{ display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-assign-slot{
+        height: var(--dnt-assign-h-compact);
+        min-height: var(--dnt-assign-h-compact);
+        max-height: var(--dnt-assign-h-compact);
+        line-height: var(--dnt-assign-h-compact);
+      }
+      html.${CFG.htmlClass} .dnt-assign-left{ display:flex; align-items:center; gap:6px; flex:1 1 auto; min-width:0; overflow:hidden; }
+      html.${CFG.htmlClass} .dnt-assign-right{ display:inline-flex; align-items:center; gap:8px; flex:0 0 auto; white-space:nowrap; flex-wrap:nowrap; }
 
-      html.${CFG.htmlClass} .kanban-assignments{ display:flex; align-items:center; max-height:100%; }
+      html.${CFG.htmlClass} .kanban-assignments{ display:flex; align-items:center; height:100%; max-height:100%; overflow:hidden; }
       html.${CFG.htmlClass} .kanban-assignments .avatar-group{ display:flex; align-items:center; height:100%; }
       html.${CFG.htmlClass} .kanban-assignments .avatar.avatar-small{ width:22px; height:22px; }
       html.${CFG.htmlClass} .kanban-assignments .avatar .avatar-frame.avatar-action{ width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; }
@@ -173,10 +196,15 @@
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action{ width:18px; height:18px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:12px; height:12px; }
 
-      html.${CFG.htmlClass} .dnt-assign-right .like-action{
+      html.${CFG.htmlClass} .dnt-assign-right .like-action,
+      html.${CFG.htmlClass} .dnt-assign-right .favorite-action,
+      html.${CFG.htmlClass} .dnt-assign-right .star-action,
+      html.${CFG.htmlClass} .dnt-assign-right .document-star{
         display:inline-flex !important; align-items:center; gap:4px; opacity:1 !important; visibility:visible !important;
+        cursor:pointer;
       }
-      html.${CFG.htmlClass} .dnt-like-fallback .es-icon{ width:16px; height:16px; }
+      html.${CFG.htmlClass} .dnt-like-fallback .es-icon,
+      html.${CFG.htmlClass} .dnt-star-fallback .es-icon{ width:16px; height:16px; }
 
       /* Tasks */
       html.${CFG.htmlClass} .dnt-tasks-mini{
@@ -265,7 +293,7 @@
     });
   }
 
-  // ===== Мини-задачи =====
+  // ===== Мини-задачи
   const miniCache = new Map();
   function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: t.custom_due_datetime || t.date || null, kind: "due" }; }
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
@@ -338,15 +366,18 @@
     });
   }
 
-  // ===== Like
-  function ensureLikeVisible(el){
+  // ===== Like + Favorite (Star)
+  function ensureVisibleAction(el){
     try{
       el.classList.remove("hidden","hide"); el.style.removeProperty("display"); el.removeAttribute("aria-hidden");
-      el.style.opacity = "1"; el.style.visibility = "visible";
+      el.style.opacity = "1"; el.style.visibility = "visible"; el.style.cursor = "pointer";
     }catch{}
   }
   function detectLikeFrom(root){
     return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like");
+  }
+  function detectFavoriteFrom(root){
+    return root.querySelector(".favorite-action, .star-action, .list-row-star, [data-action='star'], .document-star");
   }
   function createFallbackLike(doctype, name){
     const span = document.createElement("span");
@@ -363,6 +394,45 @@
         await frappe.call("frappe.desk.like.toggle_like", { doctype, name });
         span.classList.toggle("liked");
         span.classList.toggle("not-liked");
+      } finally { busy = false; }
+    });
+    return span;
+  }
+  function createFallbackFavorite(doctype, name){
+    const span = document.createElement("span");
+    span.className = "document-star not-starred dnt-star-fallback";
+    span.setAttribute("data-doctype", doctype);
+    span.setAttribute("data-name", name);
+    span.setAttribute("title", t("Favorite"));
+    const hasSprite = !!document.getElementById("es-solid-star");
+    span.innerHTML = hasSprite
+      ? `<svg class="es-icon es-line icon-sm" aria-hidden="true"><use class="star-icon" href="#es-solid-star"></use></svg>`
+      : `<svg class="es-icon es-line icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--icon-stroke)" d="M12 17.3l-5.4 3.3 1.5-6.1-4.7-4 6.2-.5L12 4l2.4 6 6.2.5-4.7 4 1.5 6.1z"/></svg>`;
+
+    async function toggleStarServer(willAdd){
+      // если есть клиентский helper — используем его
+      if (frappe?.utils?.toggle_star) {
+        return new Promise((resolve) => {
+          try{
+            frappe.utils.toggle_star(doctype, name, willAdd ? 1 : 0, () => resolve());
+          }catch{ resolve(); }
+        });
+      }
+      // серверный метод (корректный)
+      return frappe.call("frappe.desk.form.utils.toggle_star", { doctype, name, add: willAdd ? 1 : 0 });
+    }
+
+    let busy = false;
+    span.addEventListener("click", async (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      if (busy) return; busy = true;
+      const willAdd = span.classList.contains("not-starred");
+      try{
+        await toggleStarServer(willAdd);
+        span.classList.toggle("not-starred", !willAdd);
+        span.classList.toggle("starred", willAdd);
+      } catch (err) {
+        frappe.msgprint?.({ message: t("Failed to toggle favorite"), indicator: "red" });
       } finally { busy = false; }
     });
     return span;
@@ -715,7 +785,7 @@
     const doctype = getDoctype();
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
-    // --- Assignees + Like (одна фиксированная строка)
+    // --- Assignees + Favorite + Like (одна фиксированная строка)
     let assignSlot = body.querySelector(".dnt-assign-slot"); if (!assignSlot){ assignSlot = document.createElement("div"); assignSlot.className = "dnt-assign-slot"; body.appendChild(assignSlot); }
     let assignLeft = assignSlot.querySelector(".dnt-assign-left"); if (!assignLeft){ assignLeft = document.createElement("div"); assignLeft.className = "dnt-assign-left"; assignSlot.appendChild(assignLeft); }
     let assignRight = assignSlot.querySelector(".dnt-assign-right"); if (!assignRight){ assignRight = document.createElement("div"); assignRight.className = "dnt-assign-right"; assignSlot.appendChild(assignRight); }
@@ -723,8 +793,14 @@
     const assignments = (meta || body).querySelector(".kanban-assignments");
     if (assignments && assignments.parentElement !== assignLeft) assignLeft.appendChild(assignments);
 
+    // Favorite (звезда)
+    let fav = detectFavoriteFrom(body) || detectFavoriteFrom(card);
+    if (fav){ ensureVisibleAction(fav); if (fav.parentElement !== assignRight) assignRight.appendChild(fav); }
+    else if (doctype && name){ assignRight.appendChild(createFallbackFavorite(doctype, name)); }
+
+    // Like (сердце)
     let like = detectLikeFrom(body) || detectLikeFrom(card);
-    if (like){ ensureLikeVisible(like); if (like.parentElement !== assignRight) assignRight.appendChild(like); }
+    if (like){ ensureVisibleAction(like); if (like.parentElement !== assignRight) assignRight.appendChild(like); }
     else if (doctype && name){ assignRight.appendChild(createFallbackLike(doctype, name)); }
 
     // --- Задачи
@@ -792,7 +868,7 @@
     });
   }
 
-  // ===== Шапка: Select Kanban всем, Create New — только System Manager; + наша кнопка List
+  // ===== Шапка: Select Kanban всем, Create New — только SM; + кнопка List
   function findSettingsAnchor(){
     return (
       document.querySelector(".page-actions .page-icon-group") ||
@@ -844,6 +920,8 @@
     }
   }
   function slugDoctype(dt){ return (frappe?.router?.slug?.(dt)) || (dt||"").toLowerCase().replace(/\s+/g,"-"); }
+
+  // >>> List с флагом в query + дубль в route_options
   function routeToListWithBoardFilter(){
     const dt = getDoctype();
     const boardTitle = getBoardName();
@@ -852,11 +930,12 @@
     if (field){
       try{ frappe.route_options = Object.assign({}, frappe.route_options, { [field]: 1 }); }catch{}
       const path = `/app/${slugDoctype(dt)}/view/list?${encodeURIComponent(field)}=1`;
-      frappe.set_route(path);
+      window.location.assign(path);
       return;
     }
     frappe.set_route("List", dt, "List");
   }
+
   function injectControls(){
     document.querySelectorAll(`#${CFG.settingsBtnId}, #${CFG.modeToggleId}, #${CFG.openListBtnId}`).forEach(el => el.remove());
     if(!isKanbanRoute()) return;
@@ -875,7 +954,7 @@
       if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
     });
 
-    // mode toggle
+    // mode toggle (+ очистка ширин доски)
     const wrap = document.createElement("div");
     wrap.id = CFG.modeToggleId;
     wrap.className = "btn-group btn-group-sm dnt-mode-toggle";
@@ -894,6 +973,7 @@
       if (!document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.add("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "1"); }catch{}
+        clearPersistedWidthsForBoard(getBoardName());
         clearSessAll(); resetInlineCardWidths(); getColumnsEl().forEach(resetColumnInlineWidth);
         applyWidthsForMode("compact"); setActive();
       }
@@ -902,6 +982,7 @@
       if (document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.remove("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "0"); }catch{}
+        clearPersistedWidthsForBoard(getBoardName());
         clearSessAll(); resetInlineCardWidths(); getColumnsEl().forEach(resetColumnInlineWidth);
         applyWidthsForMode("comfy"); setActive();
       }
