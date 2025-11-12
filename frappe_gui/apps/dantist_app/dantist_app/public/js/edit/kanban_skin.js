@@ -1,4 +1,3 @@
-
 (() => {
   if (window.__DNT_KANBAN_S) return; window.__DNT_KANBAN_S = true;
 
@@ -31,7 +30,7 @@
   };
 
   const ICONS = {
-    openSettings: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 3.2l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.26 1.3.73 1.77.47.47 1.11.73 1.77.73h.09a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
+    openSettings: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 3.2l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.26 1.3.73 1.77.47.47 1.11.73 1.77.73h.09a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
     modeCompact:  '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h6M7 13h4"/></svg>',
     modeComfy:    '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 10h10M7 14h8"/></svg>',
     resizerGrip:  '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="square" shape-rendering="crispEdges"><path d="M6 15L15 6M9 15L15 9M12 15L15 12"/></svg>',
@@ -73,7 +72,7 @@
     return !!(b && (b.show_labels === 1 || b.show_labels === true || b.show_labels === "1" || b.show_labels === "true"));
   };
 
-  // ===== Width persistence per column + mode (без жёсткого ресета)
+  // ===== Width persistence per column + mode
   const currentMode = () => document.documentElement.classList.contains("dnt-compact-on") ? "compact" : "comfy";
   const colKey = (col, mode) => {
     const board = getBoardName() || "__";
@@ -86,17 +85,25 @@
   const sessKey = (col, mode) => colKey(col, mode) + "::session";
   const setSessW = (col, mode, px) => sessionColW.set(sessKey(col,mode), px);
   const getSessW = (col, mode) => sessionColW.get(sessKey(col,mode));
+  const clearSessAll = () => sessionColW.clear();
+  function resetColumnInlineWidth(col){
+    if (!col) return;
+    col.style.removeProperty("--dnt-card-w");
+    col.style.minWidth = `calc(var(--dnt-card-w-default) + 24px)`;
+  }
   function getColumnsEl(){ return Array.from(document.querySelectorAll(".kanban-column")); }
   function normalizeColumns(){
+    const mode = currentMode();
     getColumnsEl().forEach(col=>{
       const hasCards = !!col.querySelector(".kanban-card, .kanban-card-wrapper");
       if (!hasCards){
-        col.style.removeProperty("--dnt-card-w");
-        col.style.removeProperty("min-width");
+        resetColumnInlineWidth(col);
+        sessionColW.delete(sessKey(col, mode));
       }
     });
   }
   function applyWidthsForMode(mode){
+    getColumnsEl().forEach(resetColumnInlineWidth);
     getColumnsEl().forEach(col=>{
       const saved = loadColW(col, mode);
       const sessionW = getSessW(col, mode);
@@ -104,13 +111,17 @@
       if (w){
         col.style.setProperty("--dnt-card-w", w + "px");
         col.style.minWidth = `calc(${w}px + 24px)`;
-      } else {
-        // Нет сохранённой ширины — не сбрасываем насильно, позволяем CSS по умолчанию
-        col.style.removeProperty("--dnt-card-w");
-        col.style.removeProperty("min-width");
       }
     });
     normalizeColumns();
+  }
+  function clearSavedColWidthsForBoard(board){
+    try{
+      const prefix = `dntKanbanColW::${board||"__"}::`;
+      const keys = [];
+      for (let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if (k && k.startsWith(prefix)) keys.push(k); }
+      keys.forEach(k => localStorage.removeItem(k));
+    }catch{}
   }
 
   // ===== CSS
@@ -133,7 +144,7 @@
       html.${CFG.htmlClass}:not(.dnt-compact-on) { --dnt-card-w-default: calc(var(--dnt-card-ch-comfy) * 1ch + 48px); }
 
       .kanban-board{ contain:layout style; }
-      html.${CFG.htmlClass} .kanban-column{ padding:8px; }
+      html.${CFG.htmlClass} .kanban-column{ padding:8px; min-width: calc(var(--dnt-card-w) + 24px); }
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; width:100%; }
 
@@ -141,7 +152,7 @@
         border-radius:14px; border:1px solid var(--border-color);
         background: var(--card-bg); padding:12px;
         box-shadow: var(--shadow-base, 0 1px 2px rgba(0,0,0,.06));
-        transition:transform .12s, box-shadow .12s;
+        transition:transform .12s, box-shadow .12s, width .06s ease-out;
         display:flex !important; flex-direction:column; gap:0;
         color: var(--text-color); width: var(--dnt-card-w); margin-inline:auto;
       }
@@ -350,26 +361,25 @@
   // ===== Dates
   const FULL_DT = /\b\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\b/;
   const DATE_LIKE = /\b(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})\b/;
-  const TIME_TAIL = /^(?:\d{1,2}:\d{2})(?::\d{2})?$/;
   const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
   function normalizeDateish(raw){
     let v = CLEAN(raw || "");
     v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1");
     if (!v) return v;
-    if (FULL_DT.test(v) || DATE_LIKE.test(v)) {
-      try {
+    try {
+      if (/\d/.test(v)) {
         const m = moment(frappe.datetime.convert_to_user_tz(v));
-        if (m.isValid()) return HAS_TIME.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
-      } catch {}
-    }
+        if (m.isValid()) return /:/.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
+      }
+    } catch {}
     return v;
   }
 
   // ===== Values & versions cache
-  const gvCache = new Map();
-  const DOC_CACHE = new Map();           // dt::name -> { fields..., __modified }
-  const miniCacheHtml = new Map();       // case -> html
-  const miniCacheMeta = new Map();       // case -> { versionKey }
+  const gvCache = new Map();             // get_value combo cache
+  const DOC_CACHE = new Map();           // key: dt::name -> fields + __modified
+  const miniCacheHtml = new Map();       // key: case -> html
+  const miniCacheMeta = new Map();       // key: case -> { versionKey }
 
   const docKey = (dt, name) => `${dt}::${name}`;
   function readFromDocCache(dt, name, fields){
@@ -450,7 +460,7 @@
     });
   }
 
-  // ===== Backfill helpers (для дозагрузки при нехватке кэша)
+  // ===== Backfill helpers
   async function backfillAll(container, ctx, labelsOn, orderMap){
     const { fn2label, label2fn, fn2df } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
@@ -499,12 +509,11 @@
         return ia - ib;
       });
       chips.forEach(ch => container.appendChild(ch));
-
       ensure_dashes(container);
       return;
     }
 
-    // OFF: чипы только по полям доски, пустые не выводим
+    // OFF: только непустые значения
     const assignedValues = new Set();
     const valueIndex = new Map();
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
@@ -547,7 +556,7 @@
     });
   }
 
-  // ==== Рендер из кэша (и для ON, и для OFF)
+  // ==== Рендер из кэша (ON/OFF)
   function buildChipsFromCache(ctx){
     const orderMap = getBoardOrderMap(ctx.doctype);
     const labelsOn = getShowLabelsFlag();
@@ -564,45 +573,68 @@
         val = composeDisplayName(pseudo);
       }
       const locVal = translateValue(ctx.doctype, fn, val, fn2df[fn]) || "";
-      if (!labelsOn && !locVal) return; // OFF: пустые не показываем
+      if (!labelsOn && !locVal) return;
       const chip = makeChip(human, labelsOn ? (locVal||"") : locVal, labelsOn);
       insertChipAtIndex(frag, chip, orderMap.get(fn) ?? 0);
     });
+    if (labelsOn){
+      queueMicrotask(()=> {
+        Array.from(frag.querySelectorAll?.(":scope > .dnt-kv .dnt-v") || []).forEach(sv=>{
+          if (!CLEAN(sv.textContent)) sv.textContent = "—";
+        });
+      });
+    }
     return frag;
   }
 
-  // ==== Нормализация блока док-полей
-  function normalizeDocFields(docEl, ctx){
-    if (!docEl) return;
+  // ==== Карточный рефреш уже апгрейженных карточек
+  function refreshVisibleCardsDocs(){
+    const doctype = getDoctype();
+    document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card").forEach(w => {
+      const wrap = w.classList.contains?.("kanban-card") ? w.closest(".kanban-card-wrapper") || w : w;
+      const body = wrap.querySelector(".kanban-card-body") || wrap;
+      const docEl = body?.querySelector(".kanban-card-doc");
+      const name = wrap.getAttribute("data-name") || wrap.dataset?.name || wrap.querySelector?.(".kanban-card")?.getAttribute?.("data-name") || "";
+      if (doctype && name && docEl) normalizeDocFields(docEl, { doctype, docName: name });
+    });
+  }
 
+  function normalizeDocFields(docEl, ctx, opts={}){
+    if (!docEl) return;
     const orderMap = getBoardOrderMap(ctx.doctype);
     const boardFields = [...orderMap.keys()];
     const { out, missing } = readFromDocCache(ctx.doctype, ctx.docName, boardFields);
 
     const labelsOn = getShowLabelsFlag();
-    let new_hash = "";
+    const tasksMeta = miniCacheMeta.get(ctx.docName);
+    const tasksVer  = (opts.tasksVersion != null ? opts.tasksVersion : (tasksMeta?.versionKey || "")) || "";
+
+    // базовый снимок полей
+    const snapshot = {};
+    boardFields.forEach(fn => snapshot[fn] = CLEAN(out[fn] ?? ""));
+    const card_hash_if_ready = json_hash({ labelsOn, snapshot, tasksVer });
 
     if (!missing.length){
-      const frag = buildChipsFromCache(ctx);
-
-      // Готовим hash с «сырыми» значениями (стабильно для ON/OFF)
-      const snapshot = {};
-      boardFields.forEach(fn => snapshot[fn] = CLEAN(out[fn] ?? ""));
-      new_hash = json_hash({ labelsOn, snapshot });
-
-      if (docEl.dataset.dntHash !== new_hash){
+      if (docEl.dataset.dntCardHash !== card_hash_if_ready){
+        const frag = buildChipsFromCache(ctx);
         docEl.innerHTML = "";
         docEl.appendChild(frag);
-        ensure_dashes(docEl);          // <— прочерки видны сразу при ON
-        docEl.dataset.dntHash = new_hash;
+        ensure_dashes(docEl);
+        docEl.dataset.dntCardHash = card_hash_if_ready;
+
+        // если причиной был апдейт полей, подтянем мини-задачи (двусторонняя связка)
+        if (opts.cause !== "tasks"){
+          const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
+          if (mini) setTimeout(()=> loadMini(mini, ctx.docName), 0);
+        }
       }
       return;
     }
 
-    // Не хватает в кэше — ставим лёгкий плейсхолдер и дозаполняем
-    if (docEl.dataset.dntHash !== "loading"){
+    // Есть недостающее — ставим плейсхолдер и дозаполняем
+    if (docEl.dataset.dntCardHash !== "loading"){
       docEl.innerHTML = `<div class="dnt-kv text-truncate"><span class="dnt-v">${t("Loading…")}</span></div>`;
-      docEl.dataset.dntHash = "loading";
+      docEl.dataset.dntCardHash = "loading";
     }
 
     queueMicrotask(async ()=>{
@@ -610,23 +642,31 @@
       await backfillAll(holder, ctx, labelsOn, orderMap);
 
       const v = await getValuesBatch(ctx.doctype, ctx.docName, boardFields);
-      const snapshot = {};
-      boardFields.forEach(fn => snapshot[fn] = CLEAN(v[fn] ?? ""));
-      const done_hash = json_hash({ labelsOn, snapshot });
+      const snapshot2 = {};
+      boardFields.forEach(fn => snapshot2[fn] = CLEAN(v[fn] ?? ""));
+      const done_hash = json_hash({ labelsOn, snapshot: snapshot2, tasksVer });
 
-      if (docEl.dataset.dntHash !== done_hash){
+      if (docEl.dataset.dntCardHash !== done_hash){
         docEl.innerHTML = "";
         Array.from(holder.childNodes).forEach(n => docEl.appendChild(n));
         ensure_dashes(docEl);
-        docEl.dataset.dntHash = done_hash;
+        docEl.dataset.dntCardHash = done_hash;
+
+        if (opts.cause !== "tasks"){
+          const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
+          if (mini) setTimeout(()=> loadMini(mini, ctx.docName), 0);
+        }
       }
     });
   }
 
-  // ===== Mini-tasks (тот же, версионированный кэш)
+  // ===== Mini-tasks (версионированный кэш)
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   function planLabel(kind){ return kind==="target" ? t("Target at") : t("Planned"); }
-  function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: null, kind: null }; }
+  function pickPlan(t){
+    if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" };
+    return { dt: null, kind: null };
+  }
   function plain_text(html_like){ const div=document.createElement("div"); div.innerHTML = html_like || ""; return CLEAN(div.textContent || div.innerText || ""); }
   function truncate_text(s, max_len=40){ const str = s || ""; return str.length<=max_len?str:(str.slice(0,max_len).trimEnd()+"…"); }
   function miniHeader(){ return `<div class="dnt-taskline" data-act="noop"><span class="dnt-chip">${t("Tasks")}</span></div>`; }
@@ -634,6 +674,7 @@
     const totalCount = typeof total === "number" ? total : (rows?.length || 0);
     const showOpenAll = totalCount > 1 || (rows?.length || 0) > 1;
     if (!rows?.length) return miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
+
     const lines = rows.map(ti=>{
       const pick = pickPlan(ti); const p = pick.dt;
       const open = (ti.status||"Open")==="Open";
@@ -643,6 +684,7 @@
       const ttl  = frappe.utils.escape_html(truncate_text(plain_text(ti.description || ti.name), 40));
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}"><span class="${cls}" title="${frappe.utils.escape_html(planLabel(pick.kind))}">${frappe.utils.escape_html(val)}</span><span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
+
     const more = showOpenAll ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(t("Open all tasks") + " →")}</span></div>` : ``;
     return miniHeader() + lines + more;
   }
@@ -666,6 +708,7 @@
     const latest = `${top.name||""}|${top.modified||""}`;
     return { versionKey: `${total}|${latest}`, total };
   }
+
   async function fetchMiniPrimary(caseName){
     const { message } = await frappe.call({
       method: CFG.tasksMethod,
@@ -690,34 +733,51 @@
       return { rows, total: rows.length };
     } catch { return { rows: [], total: 0 }; }
   }
+
   async function loadMini(container, caseName){
     const metaPrev = miniCacheMeta.get(caseName);
     try{
       const metaNow = await tasks_version(caseName);
       if (metaPrev && metaPrev.versionKey === metaNow.versionKey && miniCacheHtml.has(caseName)){
         container.innerHTML = miniCacheHtml.get(caseName);
-        return bindMini(container, caseName);
+        bindMini(container, caseName);
+        // оповещаем карточку о текущей версии задач
+        container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: metaNow.versionKey }}));
+        return;
       }
+
       let data = await fetchMiniPrimary(caseName);
       if ((!data.rows || !data.rows.length) && (!data.total || data.total === 0)) data = await fetchMiniFallback(caseName);
       const html  = miniHtml(data.rows || [], data.total || 0);
       miniCacheHtml.set(caseName, html);
       miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey });
-      container.innerHTML = html; bindMini(container, caseName);
+      container.innerHTML = html;
+      bindMini(container, caseName);
+
+      container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: metaNow.versionKey }}));
     } catch {
-      if (miniCacheHtml.has(caseName)){ container.innerHTML = miniCacheHtml.get(caseName); return bindMini(container, caseName); }
+      if (miniCacheHtml.has(caseName)){
+        container.innerHTML = miniCacheHtml.get(caseName);
+        bindMini(container, caseName);
+        container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: (miniCacheMeta.get(caseName)?.versionKey || "") }}));
+        return;
+      }
       try{
         const data = await fetchMiniFallback(caseName);
         const html  = miniHtml(data.rows || [], data.total || 0);
         miniCacheHtml.set(caseName, html);
         const metaNow = await tasks_version(caseName).catch(()=>({versionKey:""}));
         miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey||"" });
-        container.innerHTML = html; bindMini(container, caseName);
+        container.innerHTML = html;
+        bindMini(container, caseName);
+        container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: (metaNow.versionKey || "") }}));
       }catch{
         container.innerHTML = miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
+        container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: "" }}));
       }
     }
   }
+
   function bindMini(container, caseName){
     container.querySelectorAll("[data-open]").forEach(el=>{
       el.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); frappe.set_route("Form","ToDo", el.getAttribute("data-open")); });
@@ -735,7 +795,9 @@
       el.style.opacity = "1"; el.style.visibility = "visible"; el.style.cursor = "pointer";
     }catch{}
   }
-  function detectLikeFrom(root){ return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like"); }
+  function detectLikeFrom(root){
+    return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like");
+  }
   function createFallbackLike(doctype, name){
     const span = document.createElement("span");
     span.className = "like-action not-liked dnt-like-fallback";
@@ -782,7 +844,8 @@
       span.focus();
       const sel = window.getSelection?.();
       if (sel && document.createRange){
-        const r = document.createRange(); r.selectNodeContents(span); r.collapse(false);
+        const r = document.createRange();
+        r.selectNodeContents(span); r.collapse(false);
         sel.removeAllRanges(); sel.addRange(r);
       }
     }
@@ -913,6 +976,10 @@
     let mini = body.querySelector(".dnt-tasks-mini");
     if (!mini){ mini = document.createElement("div"); mini.className = "dnt-tasks-mini"; body.appendChild(mini); }
     if (doctype === CFG.caseDoctype && name) {
+      // слушаем версию задач, чтобы обновить поля при изменении задач
+      mini.addEventListener("dnt:tasks-version", (e)=>{
+        normalizeDocFields(doc, { doctype, docName: name }, { cause: "tasks", tasksVersion: e.detail?.versionKey });
+      });
       setTimeout(()=> loadMini(mini, name), 0);
     }
 
@@ -981,15 +1048,19 @@
       document.querySelector(".page-title")
     );
   }
+
   function hideViewSwitcher(){
     const candidates = Array.from(document.querySelectorAll(".standard-actions .menu-btn-group, .page-actions .menu-btn-group, .page-actions .btn-group, .standard-actions .btn-group"));
     candidates.forEach(g=>{
       const txt = CLEAN(g.textContent||"").toLowerCase();
       const hasViewWords = /view|вид/i.test(g.querySelector("[title]")?.getAttribute("title")||"") || /list|report|kanban|calendar|вид|список|отчет/i.test(txt);
       const looksSwitcher = g.querySelector("button.dropdown-toggle, .view-switcher, .btn-view-switcher");
-      if (looksSwitcher && hasViewWords){ g.style.display = "none"; }
+      if (looksSwitcher && hasViewWords){
+        g.style.display = "none";
+      }
     });
   }
+
   function slugDoctype(dt){ return (frappe?.router?.slug?.(dt)) || (dt||"").toLowerCase().replace(/\s+/g,"-"); }
   function routeToListWithBoardFilter(){
     const dt = getDoctype();
@@ -1202,6 +1273,9 @@
       if (!document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.add("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "1"); }catch{}
+        // сбрасываем сохранённые ширины при смене режима
+        clearSavedColWidthsForBoard(getBoardName());
+        clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
         requestAnimationFrame(()=>{ applyWidthsForMode("compact"); setActive(); });
       }
     });
@@ -1209,6 +1283,9 @@
       if (document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.remove("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "0"); }catch{}
+        // сбрасываем сохранённые ширины при смене режима
+        clearSavedColWidthsForBoard(getBoardName());
+        clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
         requestAnimationFrame(()=>{ applyWidthsForMode("comfy"); setActive(); });
       }
     });
@@ -1260,8 +1337,10 @@
 
     applyWidthsForMode(currentMode());
 
+    // 1) прогрев кэша полей → 2) апгрейд карт → 3) обновление ДАННЫХ в уже апгрейженных картах
     await prime_doc_fields_cache_for_visible_cards();
     enhanceCards();
+    refreshVisibleCardsDocs();
     injectControls();
     exposeSelectKanban();
 
@@ -1275,6 +1354,7 @@
       requestAnimationFrame(()=>{
         applyWidthsForMode(currentMode());
         enhanceCards();
+        refreshVisibleCardsDocs();
         normalizeColumns();
         exposeSelectKanban();
         hideViewSwitcher();
@@ -1288,7 +1368,8 @@
       if(isKanbanRoute()) { 
         await prime_doc_fields_cache_for_visible_cards();
         applyWidthsForMode(currentMode()); 
-        enhanceCards(); 
+        enhanceCards();
+        refreshVisibleCardsDocs();
         normalizeColumns(); 
         exposeSelectKanban(); 
         hideViewSwitcher(); 
