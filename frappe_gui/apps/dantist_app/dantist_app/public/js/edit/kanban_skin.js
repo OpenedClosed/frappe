@@ -30,7 +30,7 @@
   };
 
   const ICONS = {
-    openSettings: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 3.2l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.26 1.3.73 1.77.47.47 1.11.73 1.77.73h.09a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
+    openSettings: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 3.2l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0-1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.26 1.3.73 1.77.47.47 1.11.73 1.77.73h.09a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
     modeCompact:  '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h6M7 13h4"/></svg>',
     modeComfy:    '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 10h10M7 14h8"/></svg>',
     resizerGrip:  '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="square" shape-rendering="crispEdges"><path d="M6 15L15 6M9 15L15 9M12 15L15 12"/></svg>',
@@ -124,7 +124,7 @@
     }catch{}
   }
 
-  // ===== CSS
+  // ===== CSS (включая анти-дёрганье и скелеты)
   function injectCSS(){
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
@@ -146,19 +146,27 @@
       .kanban-board{ contain:layout style; }
       html.${CFG.htmlClass} .kanban-column{ padding:8px; min-width: calc(var(--dnt-card-w) + 24px); }
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
-      html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; width:100%; }
+      html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; width:100%; will-change: transform; }
 
       html.${CFG.htmlClass} .kanban-card.content{
         border-radius:14px; border:1px solid var(--border-color);
         background: var(--card-bg); padding:12px;
         box-shadow: var(--shadow-base, 0 1px 2px rgba(0,0,0,.06));
-        transition:transform .12s, box-shadow .12s, width .06s ease-out;
+        transition:transform .12s, box-shadow .12s;
         display:flex !important; flex-direction:column; gap:0;
         color: var(--text-color); width: var(--dnt-card-w); margin-inline:auto;
       }
       html.${CFG.htmlClass} .kanban-card.content:hover{
         transform:translateY(-1px); box-shadow: var(--shadow-lg, 0 8px 22px rgba(0,0,0,.12));
       }
+
+      /* Anti-jank: мягкая перерисовка блоков */
+      html.${CFG.htmlClass} .dnt-softfade { transition: opacity .16s ease, filter .16s ease; }
+      html.${CFG.htmlClass} .dnt-softfade.dim { opacity:.35; filter: blur(.4px) saturate(.9); }
+      @media (prefers-reduced-motion: reduce){
+        html.${CFG.htmlClass} .dnt-softfade { transition: none !important; }
+      }
+      html.${CFG.htmlClass}.dnt-resizing *{ transition: none !important; }
 
       /* Header */
       html.${CFG.htmlClass} .dnt-head{
@@ -209,8 +217,7 @@
         max-height: var(--dnt-assign-h-comfy);
         line-height: var(--dnt-assign-h-comfy);
         margin-top:8px;
-        display:flex; align-items:center; justify-content:space-between; gap:8px;
-        overflow:hidden;
+        display:flex; align-items:center; justify-content:space-between; gap:8px; overflow:hidden;
       }
       html.${CFG.htmlClass}.dnt-compact-on .dnt-assign-slot{
         height: var(--dnt-assign-h-compact);
@@ -230,7 +237,7 @@
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action{ width:18px; height:18px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:12px; height:12px; }
 
-      /* Скрыть звёзды */
+      /* Hide stars */
       html.${CFG.htmlClass} .document-star,
       html.${CFG.htmlClass} .star-action,
       html.${CFG.htmlClass} .favorite-action{ display:none !important; }
@@ -281,63 +288,96 @@
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card.content{ padding:8px; border-radius:12px; gap:6px; }
       html.${CFG.htmlClass}.dnt-compact-on .dnt-head{ margin-bottom:6px; gap:8px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-title{ font-size:12px; line-height:1.2; }
+
+      /* Skeleton loader */
+      @keyframes dnt-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+      html.${CFG.htmlClass} .dnt-skel{ display:grid; gap:6px; }
+      html.${CFG.htmlClass} .dnt-skel-line{
+        height:12px; border-radius:6px;
+        background: linear-gradient(90deg, var(--control-bg) 25%, color-mix(in oklab, var(--control-bg) 70%, white) 50%, var(--control-bg) 75%);
+        background-size:200% 100%;
+        animation:dnt-shimmer 1.1s linear infinite;
+      }
+      html.${CFG.htmlClass} .dnt-skel-line.h16{ height:16px; border-radius:8px; }
+      html.${CFG.htmlClass} .w20{ width:20%; } .w30{ width:30%; } .w40{ width:40%; } .w50{ width:50%; }
+      html.${CFG.htmlClass} .w60{ width:60%; } .w70{ width:70%; } .w80{ width:80%; } .w100{ width:100%; }
+      @media (prefers-reduced-motion: reduce){
+        html.${CFG.htmlClass} .dnt-skel-line{ animation:none; }
+      }
     `;
     document.head.appendChild(s);
   }
 
-  // ===== Board fields mapping
-  function coerceFieldsList(dt, any){
-    let arr=[];
-    if(Array.isArray(any)) arr=any;
-    else if(typeof any==="string" && any.trim()){
-      try{ const j=JSON.parse(any); if(Array.isArray(j)) arr=j; }
-      catch{ arr=any.split(/[,\s]+/).filter(Boolean); }
-    }
-    const meta = frappe.get_meta(dt);
-    const fns = new Set((meta?.fields||[]).map(f=>f.fieldname)
-      .concat((frappe.model.std_fields||[]).map(f=>f.fieldname), ["name"]));
-    const label2fn = {};
-    (meta?.fields||[]).forEach(f=>{ if (f?.label) label2fn[LBL_KEY(f.label)] = f.fieldname; });
-    (frappe.model.std_fields||[]).forEach(f=>{ if (f?.label) label2fn[LBL_KEY(f.label)] = f.fieldname; });
-    const out=[];
-    arr.forEach(x=>{
-      const raw = (""+x).trim(); if(!raw) return;
-      if (fns.has(raw)) out.push(raw);
-      else { const g = label2fn[LBL_KEY(raw)]; if (g && fns.has(g)) out.push(g); }
-    });
-    return [...new Set(out)];
-  }
-  function getBoardOrderMap(doctype){
-    try{
-      const board = window.cur_list?.board || window.cur_list?.kanban_board;
-      const fields = coerceFieldsList(doctype, board?.fields || []);
-      const map = new Map(); fields.forEach((fn,i)=> map.set(fn,i));
-      return map;
-    }catch{ return new Map(); }
-  }
-
-  // ===== Meta & translate
-  const LABEL_ALIASES = {
-    display_name: new Set([
-      "display name","display_name","displayname",
-      "отображаемое имя","имя профиля","full name","name","фио",
-      "имя / фио","имя и фамилия","имя, фамилия"
-    ])
-  };
+  // ===== Meta helpers, dates, caches (как в v25.31.0)
+  const LABEL_ALIASES = { display_name: new Set(["display name","display_name","displayname","отображаемое имя","имя профиля","full name","name","фио","имя / фио","имя и фамилия","имя, фамилия"]) };
   const isDisplayName = (s)=> LABEL_ALIASES.display_name.has(LBL_KEY(s));
   function buildMetaMaps(doctype){
     const meta = frappe.get_meta(doctype);
     const label2fn = {}, fn2label = {}, fn2df = {};
-    (meta?.fields||[]).forEach(f=>{
-      const lbl = CLEAN(f?.label||"");
-      if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; fn2df[f.fieldname] = f; }
-    });
-    (frappe.model.std_fields||[]).forEach(f=>{
-      const lbl = CLEAN(f?.label||"");
-      if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; fn2df[f.fieldname] = fn2df[f.fieldname] || f; }
-    });
+    (meta?.fields||[]).forEach(f=>{ const lbl = CLEAN(f?.label||""); if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; fn2df[f.fieldname] = f; }});
+    (frappe.model.std_fields||[]).forEach(f=>{ const lbl = CLEAN(f?.label||""); if (lbl){ label2fn[LBL_KEY(lbl)] = f.fieldname; fn2label[f.fieldname] = lbl; fn2df[f.fieldname] = fn2df[f.fieldname] || f; }});
     LABEL_ALIASES.display_name.forEach(a=> label2fn[a] = "display_name");
     return { label2fn, fn2label, fn2df };
+  }
+  function coerceFieldsList(dt, any){
+    let arr=[];
+    if(Array.isArray(any)) arr=any;
+    else if(typeof any==="string" && any.trim()){
+      try{ const j=JSON.parse(any); if(Array.isArray(j)) arr=j; } catch{ arr=any.split(/[,\s]+/).filter(Boolean); }
+    }
+    const meta = frappe.get_meta(dt);
+    const fns = new Set((meta?.fields||[]).map(f=>f.fieldname).concat((frappe.model.std_fields||[]).map(f=>f.fieldname), ["name"]));
+    const label2fn = {};
+    (meta?.fields||[]).forEach(f=>{ if (f?.label) label2fn[LBL_KEY(f.label)] = f.fieldname; });
+    (frappe.model.std_fields||[]).forEach(f=>{ if (f?.label) label2fn[LBL_KEY(f.label)] = f.fieldname; });
+    const out=[]; arr.forEach(x=>{ const raw=(""+x).trim(); if(!raw) return; if (fns.has(raw)) out.push(raw); else { const g = label2fn[LBL_KEY(raw)]; if (g && fns.has(g)) out.push(g); }});
+    return [...new Set(out)];
+  }
+  const gvCache = new Map();
+  const DOC_CACHE = new Map();
+  const miniCacheHtml = new Map();
+  const miniCacheMeta = new Map();
+  const docKey = (dt, name) => `${dt}::${name}`;
+  function readFromDocCache(dt, name, fields){
+    const key = docKey(dt, name);
+    const stored = DOC_CACHE.get(key) || {};
+    const out = {}; const missing = [];
+    (fields||[]).forEach(f=>{ if (Object.prototype.hasOwnProperty.call(stored, f)) out[f] = stored[f]; else missing.push(f); });
+    return { out, missing, stored };
+  }
+  function mergeDocCache(dt, name, obj){
+    const key = docKey(dt, name);
+    const prev = DOC_CACHE.get(key) || {};
+    const next = Object.assign({}, prev, obj||{});
+    DOC_CACHE.set(key, next);
+    return next;
+  }
+  async function getValuesBatch(doctype, name, fields){
+    const need = Array.from(new Set((fields||[]).slice()));
+    const k = `${doctype}:${name}::${need.slice().sort().join(",")}`;
+    if (gvCache.has(k)) return gvCache.get(k);
+    let { out, missing } = readFromDocCache(doctype, name, need);
+    if (missing.length){
+      try{
+        const { message } = await frappe.call({ method: "frappe.client.get_value", args: { doctype, filters:{ name }, fieldname: missing }});
+        const obj = message || {};
+        mergeDocCache(doctype, name, obj);
+        out = Object.assign({}, out, obj);
+      }catch{}
+    }
+    gvCache.set(k, out);
+    return out;
+  }
+  function composeDisplayName(v){
+    const f = CLEAN(v.first_name), m = CLEAN(v.middle_name), l = CLEAN(v.last_name);
+    const parts = [f,m,l].filter(Boolean);
+    return parts.length ? parts.join(" ") : (CLEAN(v.title) || "");
+  }
+  const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
+  function normalizeDateish(raw){
+    let v = CLEAN(raw || ""); v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1"); if (!v) return v;
+    try{ if (/\d/.test(v)){ const m = moment(frappe.datetime.convert_to_user_tz(v)); if (m.isValid()) return HAS_TIME.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY"); } }catch{}
+    return v;
   }
   function isTranslatableField(fn, df){
     if (!fn) return false;
@@ -348,110 +388,51 @@
     return false;
   }
   function translateValue(dt, fn, val, df){
-    const v = CLEAN(val);
-    if (!v) return v;
+    const v = CLEAN(val); if (!v) return v;
     if (/\b\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\b/.test(v)) return v;
-    if (isTranslatableField(fn, df)) {
-      try { return t(v); } catch { return v; }
-    }
+    if (isTranslatableField(fn, df)) { try { return t(v); } catch { return v; } }
     if (/^(Yes|No|Open|Closed)$/i.test(v)) { try { return t(v); } catch {} }
     return v;
   }
-
-  // ===== Dates
-  const FULL_DT = /\b\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\b/;
-  const DATE_LIKE = /\b(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})\b/;
-  const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
-  function normalizeDateish(raw){
-    let v = CLEAN(raw || "");
-    v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1");
-    if (!v) return v;
-    try {
-      if (/\d/.test(v)) {
-        const m = moment(frappe.datetime.convert_to_user_tz(v));
-        if (m.isValid()) return /:/.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
-      }
-    } catch {}
-    return v;
+  function getBoardOrderMap(doctype){
+    try{
+      const board = window.cur_list?.board || window.cur_list?.kanban_board;
+      const fields = coerceFieldsList(doctype, board?.fields || []);
+      const map = new Map(); fields.forEach((fn,i)=> map.set(fn,i));
+      return map;
+    }catch{ return new Map(); }
   }
 
-  // ===== Values & versions cache
-  const gvCache = new Map();             // get_value combo cache
-  const DOC_CACHE = new Map();           // key: dt::name -> fields + __modified
-  const miniCacheHtml = new Map();       // key: case -> html
-  const miniCacheMeta = new Map();       // key: case -> { versionKey }
-
-  const docKey = (dt, name) => `${dt}::${name}`;
-  function readFromDocCache(dt, name, fields){
-    const key = docKey(dt, name);
-    const stored = DOC_CACHE.get(key) || {};
-    const out = {};
-    const missing = [];
-    (fields||[]).forEach(f=>{
-      if (Object.prototype.hasOwnProperty.call(stored, f)) out[f] = stored[f];
-      else missing.push(f);
-    });
-    return { out, missing, stored };
-  }
-  function mergeDocCache(dt, name, obj){
-    const key = docKey(dt, name);
-    const prev = DOC_CACHE.get(key) || {};
-    const next = Object.assign({}, prev, obj||{});
-    DOC_CACHE.set(key, next);
-    return next;
-  }
-
-  async function getValuesBatch(doctype, name, fields){
-    const need = Array.from(new Set((fields||[]).slice()));
-    const k = `${doctype}:${name}::${need.slice().sort().join(",")}`;
-    if (gvCache.has(k)) return gvCache.get(k);
-
-    let { out, missing } = readFromDocCache(doctype, name, need);
-
-    if (missing.length){
-      try{
-        const { message } = await frappe.call({
-          method: "frappe.client.get_value",
-          args: { doctype, filters:{ name }, fieldname: missing }
-        });
-        const obj = message || {};
-        mergeDocCache(doctype, name, obj);
-        out = Object.assign({}, out, obj);
-      }catch{}
+  // ===== Skeleton helpers + anti-jank
+  function showDocSkeleton(docEl, labelsOn){
+    const sk = document.createElement("div"); sk.className = "dnt-skel";
+    const rows = labelsOn ? [ "w80","w60","w70","w50","w40" ] : [ "w70","w60","w50" ];
+    for (let i=0;i<Math.max(3, rows.length); i++){
+      const r = document.createElement("div"); r.className = "dnt-skel-line " + rows[i % rows.length]; sk.appendChild(r);
     }
-
-    gvCache.set(k, out);
-    return out;
+    docEl.innerHTML=""; docEl.appendChild(sk);
   }
-
-  function composeDisplayName(v){
-    const f = CLEAN(v.first_name), m = CLEAN(v.middle_name), l = CLEAN(v.last_name);
-    const parts = [f,m,l].filter(Boolean);
-    return parts.length ? parts.join(" ") : (CLEAN(v.title) || "");
+  function showTasksSkeleton(container){
+    const sk = document.createElement("div"); sk.className = "dnt-skel";
+    const arr = ["w50 h16","w80","w60"];
+    arr.forEach(cls => { const d=document.createElement("div"); d.className = "dnt-skel-line " + cls; sk.appendChild(d); });
+    container.innerHTML = sk.outerHTML;
   }
-
-  // ===== Chips DOM helpers
-  function makeChip(label, value, showLabel){
-    const kv = document.createElement("div");
-    kv.className = "dnt-kv text-truncate";
-    kv.dataset.dntLabel = showLabel ? CLEAN(label||"") : "";
-    if (showLabel && CLEAN(label)){
-      const sk = document.createElement("span");
-      sk.className = "dnt-k";
-      sk.textContent = t(STRIP_COLON(label)) + ":";
-      kv.appendChild(sk);
-    }
-    const sv = document.createElement("span");
-    sv.className = "dnt-v";
-    sv.textContent = CLEAN(value);
-    kv.appendChild(sv);
-    return kv;
-  }
-  function insertChipAtIndex(container, chip, idx){
-    const nodes = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
-    const target = nodes[idx];
-    if (target) container.insertBefore(chip, target);
-    else container.appendChild(chip);
+  function lockCardHeight(el){
+    const wrap = el.closest(".kanban-card-wrapper") || el.closest(".kanban-card") || null;
+    if (!wrap) return ()=>{};
+    const h = wrap.getBoundingClientRect().height;
+    wrap.style.minHeight = Math.max(48, Math.round(h)) + "px";
+    const fades = wrap.querySelectorAll(".kanban-card-doc, .kanban-card-meta, .dnt-assign-slot, .dnt-tasks-mini");
+    fades.forEach(n => n.classList.add("dnt-softfade","dim"));
+    let undone = false;
+    return ()=>{
+      if (undone) return; undone = true;
+      requestAnimationFrame(()=>{
+        fades.forEach(n => n.classList.remove("dim"));
+        setTimeout(()=>{ wrap.style.removeProperty("min-height"); }, 160);
+      });
+    };
   }
   function ensure_dashes(container){
     if (!getShowLabelsFlag()) return;
@@ -460,11 +441,112 @@
     });
   }
 
-  // ===== Backfill helpers
+  // ===== Build chips (ON/OFF)
+  function buildChipsFromCache(ctx){
+    const orderMap = getBoardOrderMap(ctx.doctype);
+    const labelsOn = getShowLabelsFlag();
+    const { fn2label, fn2df } = buildMetaMaps(ctx.doctype);
+    const boardFields = [...orderMap.keys()];
+    const { out } = readFromDocCache(ctx.doctype, ctx.docName, boardFields);
+
+    const frag = document.createDocumentFragment();
+    boardFields.forEach(fn=>{
+      const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
+      let val = CLEAN(normalizeDateish(out[fn]));
+      if (fn==="display_name" && !val){
+        const pseudo = (readFromDocCache(ctx.doctype, ctx.docName, ["first_name","middle_name","last_name","title"]).out);
+        val = composeDisplayName(pseudo);
+      }
+      const locVal = translateValue(ctx.doctype, fn, val, fn2df[fn]) || "";
+      if (!labelsOn && !locVal) return;
+      const kv = document.createElement("div"); kv.className="dnt-kv text-truncate"; kv.dataset.dntLabel = labelsOn ? human : "";
+      if (labelsOn && CLEAN(human)){
+        const sk=document.createElement("span"); sk.className="dnt-k"; sk.textContent = t(STRIP_COLON(human))+":";
+        kv.appendChild(sk);
+      }
+      const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = labelsOn ? (locVal||"") : locVal; kv.appendChild(sv);
+      insertChipAtIndex(frag, kv, orderMap.get(fn) ?? 0);
+    });
+    if (labelsOn){
+      queueMicrotask(()=> {
+        Array.from(frag.querySelectorAll?.(":scope > .dnt-kv .dnt-v") || []).forEach(sv=>{
+          if (!CLEAN(sv.textContent)) sv.textContent = "—";
+        });
+      });
+    }
+    return frag;
+  }
+  function insertChipAtIndex(container, chip, idx){
+    const nodes = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
+    const target = nodes[idx];
+    if (target) container.insertBefore(chip, target); else container.appendChild(chip);
+  }
+
+  // ===== Backfill / normalize (c учётом хэш + anti-jank)
+  function normalizeDocFields(docEl, ctx, opts={}){
+    if (!docEl) return;
+    const orderMap = getBoardOrderMap(ctx.doctype);
+    const boardFields = [...orderMap.keys()];
+    const { out, missing } = readFromDocCache(ctx.doctype, ctx.docName, boardFields);
+
+    const labelsOn = getShowLabelsFlag();
+    const tasksMeta = miniCacheMeta.get(ctx.docName);
+    const tasksVer  = (opts.tasksVersion != null ? opts.tasksVersion : (tasksMeta?.versionKey || "")) || "";
+
+    const snapshot = {}; boardFields.forEach(fn => snapshot[fn] = CLEAN(out[fn] ?? ""));
+    const card_hash_if_ready = json_hash({ labelsOn, snapshot, tasksVer });
+
+    if (!missing.length){
+      if (docEl.dataset.dntCardHash !== card_hash_if_ready){
+        const unlock = lockCardHeight(docEl);
+        const frag = buildChipsFromCache(ctx);
+        docEl.innerHTML = "";
+        docEl.appendChild(frag);
+        ensure_dashes(docEl);
+        docEl.dataset.dntCardHash = card_hash_if_ready;
+
+        if (opts.cause !== "tasks"){
+          const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
+          if (mini) setTimeout(()=> loadMini(mini, ctx.docName, { soft:true }), 0);
+        }
+        unlock();
+      }
+      return;
+    }
+
+    if (docEl.dataset.dntCardHash !== "loading"){
+      const unlock = lockCardHeight(docEl);
+      showDocSkeleton(docEl, labelsOn);
+      docEl.dataset.dntCardHash = "loading";
+      setTimeout(unlock, 160);
+    }
+
+    queueMicrotask(async ()=>{
+      const holder = document.createElement("div");
+      await backfillAll(holder, ctx, labelsOn, orderMap);
+
+      const v = await getValuesBatch(ctx.doctype, ctx.docName, boardFields);
+      const snapshot2 = {}; boardFields.forEach(fn => snapshot2[fn] = CLEAN(v[fn] ?? ""));
+      const done_hash = json_hash({ labelsOn, snapshot: snapshot2, tasksVer });
+
+      if (docEl.dataset.dntCardHash !== done_hash){
+        const unlock = lockCardHeight(docEl);
+        docEl.innerHTML = "";
+        Array.from(holder.childNodes).forEach(n => docEl.appendChild(n));
+        ensure_dashes(docEl);
+        docEl.dataset.dntCardHash = done_hash;
+        if (opts.cause !== "tasks"){
+          const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
+          if (mini) setTimeout(()=> loadMini(mini, ctx.docName, { soft:true }), 0);
+        }
+        unlock();
+      }
+    });
+  }
+
   async function backfillAll(container, ctx, labelsOn, orderMap){
     const { fn2label, label2fn, fn2df } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
-
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
       if (!lbl) return;
@@ -472,8 +554,7 @@
       if (!fn || !boardFields.includes(fn)) ch.remove();
     });
 
-    const need = boardFields.slice();
-    const v = await getValuesBatch(ctx.doctype, ctx.docName, need);
+    const v = await getValuesBatch(ctx.doctype, ctx.docName, boardFields);
     if (boardFields.includes("display_name") && !CLEAN(v.display_name)) {
       const pseudo = await getValuesBatch(ctx.doctype, ctx.docName, ["first_name","middle_name","last_name","title"]);
       v.display_name = composeDisplayName(pseudo);
@@ -490,14 +571,16 @@
           return f === fn;
         });
         if (!chip){
-          chip = makeChip(human, locVal, true);
+          chip = document.createElement("div"); chip.className="dnt-kv text-truncate"; chip.dataset.dntLabel = human;
+          const sk=document.createElement("span"); sk.className="dnt-k"; sk.textContent = t(STRIP_COLON(human))+":";
+          const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = locVal || "—";
+          chip.appendChild(sk); chip.appendChild(sv);
           insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         } else {
           const sv = chip.querySelector(".dnt-v"); if (sv) sv.textContent = locVal || "—";
           const sk = chip.querySelector(".dnt-k"); if (sk) sk.textContent = t(STRIP_COLON(human)) + ":";
         }
       });
-
       const chips = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
       chips.sort((a,b)=>{
         const la = CLEAN(a.dataset.dntLabel || a.querySelector(".dnt-k")?.textContent || "").replace(/:$/,"");
@@ -538,7 +621,9 @@
         insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0);
         assignedValues.add(locVal);
       } else {
-        const chip = makeChip("", locVal, false);
+        const chip = document.createElement("div"); chip.className="dnt-kv text-truncate";
+        const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = locVal;
+        chip.appendChild(sv);
         insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
         assignedValues.add(locVal);
       }
@@ -556,117 +641,10 @@
     });
   }
 
-  // ==== Рендер из кэша (ON/OFF)
-  function buildChipsFromCache(ctx){
-    const orderMap = getBoardOrderMap(ctx.doctype);
-    const labelsOn = getShowLabelsFlag();
-    const { fn2label, fn2df } = buildMetaMaps(ctx.doctype);
-    const boardFields = [...orderMap.keys()];
-    const { out } = readFromDocCache(ctx.doctype, ctx.docName, boardFields);
-
-    const frag = document.createDocumentFragment();
-    boardFields.forEach(fn=>{
-      const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
-      let val = CLEAN(normalizeDateish(out[fn]));
-      if (fn==="display_name" && !val){
-        const pseudo = (readFromDocCache(ctx.doctype, ctx.docName, ["first_name","middle_name","last_name","title"]).out);
-        val = composeDisplayName(pseudo);
-      }
-      const locVal = translateValue(ctx.doctype, fn, val, fn2df[fn]) || "";
-      if (!labelsOn && !locVal) return;
-      const chip = makeChip(human, labelsOn ? (locVal||"") : locVal, labelsOn);
-      insertChipAtIndex(frag, chip, orderMap.get(fn) ?? 0);
-    });
-    if (labelsOn){
-      queueMicrotask(()=> {
-        Array.from(frag.querySelectorAll?.(":scope > .dnt-kv .dnt-v") || []).forEach(sv=>{
-          if (!CLEAN(sv.textContent)) sv.textContent = "—";
-        });
-      });
-    }
-    return frag;
-  }
-
-  // ==== Карточный рефреш уже апгрейженных карточек
-  function refreshVisibleCardsDocs(){
-    const doctype = getDoctype();
-    document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card").forEach(w => {
-      const wrap = w.classList.contains?.("kanban-card") ? w.closest(".kanban-card-wrapper") || w : w;
-      const body = wrap.querySelector(".kanban-card-body") || wrap;
-      const docEl = body?.querySelector(".kanban-card-doc");
-      const name = wrap.getAttribute("data-name") || wrap.dataset?.name || wrap.querySelector?.(".kanban-card")?.getAttribute?.("data-name") || "";
-      if (doctype && name && docEl) normalizeDocFields(docEl, { doctype, docName: name });
-    });
-  }
-
-  function normalizeDocFields(docEl, ctx, opts={}){
-    if (!docEl) return;
-    const orderMap = getBoardOrderMap(ctx.doctype);
-    const boardFields = [...orderMap.keys()];
-    const { out, missing } = readFromDocCache(ctx.doctype, ctx.docName, boardFields);
-
-    const labelsOn = getShowLabelsFlag();
-    const tasksMeta = miniCacheMeta.get(ctx.docName);
-    const tasksVer  = (opts.tasksVersion != null ? opts.tasksVersion : (tasksMeta?.versionKey || "")) || "";
-
-    // базовый снимок полей
-    const snapshot = {};
-    boardFields.forEach(fn => snapshot[fn] = CLEAN(out[fn] ?? ""));
-    const card_hash_if_ready = json_hash({ labelsOn, snapshot, tasksVer });
-
-    if (!missing.length){
-      if (docEl.dataset.dntCardHash !== card_hash_if_ready){
-        const frag = buildChipsFromCache(ctx);
-        docEl.innerHTML = "";
-        docEl.appendChild(frag);
-        ensure_dashes(docEl);
-        docEl.dataset.dntCardHash = card_hash_if_ready;
-
-        // если причиной был апдейт полей, подтянем мини-задачи (двусторонняя связка)
-        if (opts.cause !== "tasks"){
-          const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
-          if (mini) setTimeout(()=> loadMini(mini, ctx.docName), 0);
-        }
-      }
-      return;
-    }
-
-    // Есть недостающее — ставим плейсхолдер и дозаполняем
-    if (docEl.dataset.dntCardHash !== "loading"){
-      docEl.innerHTML = `<div class="dnt-kv text-truncate"><span class="dnt-v">${t("Loading…")}</span></div>`;
-      docEl.dataset.dntCardHash = "loading";
-    }
-
-    queueMicrotask(async ()=>{
-      const holder = document.createElement("div");
-      await backfillAll(holder, ctx, labelsOn, orderMap);
-
-      const v = await getValuesBatch(ctx.doctype, ctx.docName, boardFields);
-      const snapshot2 = {};
-      boardFields.forEach(fn => snapshot2[fn] = CLEAN(v[fn] ?? ""));
-      const done_hash = json_hash({ labelsOn, snapshot: snapshot2, tasksVer });
-
-      if (docEl.dataset.dntCardHash !== done_hash){
-        docEl.innerHTML = "";
-        Array.from(holder.childNodes).forEach(n => docEl.appendChild(n));
-        ensure_dashes(docEl);
-        docEl.dataset.dntCardHash = done_hash;
-
-        if (opts.cause !== "tasks"){
-          const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
-          if (mini) setTimeout(()=> loadMini(mini, ctx.docName), 0);
-        }
-      }
-    });
-  }
-
-  // ===== Mini-tasks (версионированный кэш)
+  // ===== Mini-tasks (версия + fade)
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   function planLabel(kind){ return kind==="target" ? t("Target at") : t("Planned"); }
-  function pickPlan(t){
-    if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" };
-    return { dt: null, kind: null };
-  }
+  function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: null, kind: null }; }
   function plain_text(html_like){ const div=document.createElement("div"); div.innerHTML = html_like || ""; return CLEAN(div.textContent || div.innerText || ""); }
   function truncate_text(s, max_len=40){ const str = s || ""; return str.length<=max_len?str:(str.slice(0,max_len).trimEnd()+"…"); }
   function miniHeader(){ return `<div class="dnt-taskline" data-act="noop"><span class="dnt-chip">${t("Tasks")}</span></div>`; }
@@ -674,7 +652,6 @@
     const totalCount = typeof total === "number" ? total : (rows?.length || 0);
     const showOpenAll = totalCount > 1 || (rows?.length || 0) > 1;
     if (!rows?.length) return miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
-
     const lines = rows.map(ti=>{
       const pick = pickPlan(ti); const p = pick.dt;
       const open = (ti.status||"Open")==="Open";
@@ -684,7 +661,6 @@
       const ttl  = frappe.utils.escape_html(truncate_text(plain_text(ti.description || ti.name), 40));
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}"><span class="${cls}" title="${frappe.utils.escape_html(planLabel(pick.kind))}">${frappe.utils.escape_html(val)}</span><span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
-
     const more = showOpenAll ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(t("Open all tasks") + " →")}</span></div>` : ``;
     return miniHeader() + lines + more;
   }
@@ -734,14 +710,15 @@
     } catch { return { rows: [], total: 0 }; }
   }
 
-  async function loadMini(container, caseName){
+  async function loadMini(container, caseName, opts={}){
+    const soft = !!opts.soft;
     const metaPrev = miniCacheMeta.get(caseName);
     try{
+      if (!soft) showTasksSkeleton(container);
       const metaNow = await tasks_version(caseName);
       if (metaPrev && metaPrev.versionKey === metaNow.versionKey && miniCacheHtml.has(caseName)){
         container.innerHTML = miniCacheHtml.get(caseName);
         bindMini(container, caseName);
-        // оповещаем карточку о текущей версии задач
         container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: metaNow.versionKey }}));
         return;
       }
@@ -751,14 +728,19 @@
       const html  = miniHtml(data.rows || [], data.total || 0);
       miniCacheHtml.set(caseName, html);
       miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey });
+
+      const unlock = lockCardHeight(container);
       container.innerHTML = html;
       bindMini(container, caseName);
+      unlock();
 
       container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: metaNow.versionKey }}));
     } catch {
       if (miniCacheHtml.has(caseName)){
+        const unlock = lockCardHeight(container);
         container.innerHTML = miniCacheHtml.get(caseName);
         bindMini(container, caseName);
+        unlock();
         container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: (miniCacheMeta.get(caseName)?.versionKey || "") }}));
         return;
       }
@@ -768,8 +750,12 @@
         miniCacheHtml.set(caseName, html);
         const metaNow = await tasks_version(caseName).catch(()=>({versionKey:""}));
         miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey||"" });
+
+        const unlock = lockCardHeight(container);
         container.innerHTML = html;
         bindMini(container, caseName);
+        unlock();
+
         container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: (metaNow.versionKey || "") }}));
       }catch{
         container.innerHTML = miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
@@ -793,14 +779,13 @@
     try{
       el.classList.remove("hidden","hide"); el.style.removeProperty("display"); el.removeAttribute("aria-hidden");
       el.style.opacity = "1"; el.style.visibility = "visible"; el.style.cursor = "pointer";
+      el.classList.add("dnt-softfade");
     }catch{}
   }
-  function detectLikeFrom(root){
-    return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like");
-  }
+  function detectLikeFrom(root){ return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like"); }
   function createFallbackLike(doctype, name){
     const span = document.createElement("span");
-    span.className = "like-action not-liked dnt-like-fallback";
+    span.className = "like-action not-liked dnt-like-fallback dnt-softfade";
     span.setAttribute("data-doctype", doctype);
     span.setAttribute("data-name", name);
     span.setAttribute("title", t("Like"));
@@ -822,33 +807,17 @@
   function makeTitleEditable(titleArea, name, doctype){
     if (!titleArea || titleArea.__dntEditable) return;
     titleArea.__dntEditable = true;
-
     const anchor = titleArea.querySelector("a");
     const currentText = (titleArea.querySelector(".kanban-card-title")?.textContent || anchor?.textContent || name || "").trim();
-
     const holder = titleArea.querySelector(".kanban-card-title") || document.createElement("div");
     holder.classList.add("kanban-card-title"); holder.innerHTML = "";
-
     const span = document.createElement("span");
-    span.className = "dnt-title"; span.textContent = currentText;
+    span.className = "dnt-title dnt-softfade"; span.textContent = currentText;
     holder.appendChild(span);
     if (anchor) anchor.replaceWith(holder); else titleArea.appendChild(holder);
-
     let beforeEdit = currentText;
-
-    function toEdit(){
-      if (span.isContentEditable) return;
-      beforeEdit = span.textContent || "";
-      span.classList.add("is-edit");
-      span.setAttribute("contenteditable","true");
-      span.focus();
-      const sel = window.getSelection?.();
-      if (sel && document.createRange){
-        const r = document.createRange();
-        r.selectNodeContents(span); r.collapse(false);
-        sel.removeAllRanges(); sel.addRange(r);
-      }
-    }
+    function toEdit(){ if (span.isContentEditable) return; beforeEdit = span.textContent || ""; span.classList.add("is-edit"); span.setAttribute("contenteditable","true"); span.focus();
+      const sel = window.getSelection?.(); if (sel && document.createRange){ const r = document.createRange(); r.selectNodeContents(span); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); } }
     function saveEdit(){
       if (!span.isContentEditable) return;
       const val = CLEAN(span.textContent || "");
@@ -859,13 +828,9 @@
         .catch(()=>{ frappe.msgprint({ message: t("Failed to update title"), indicator:"red" }); span.textContent = beforeEdit; done(); });
     }
     function cancelEdit(){ if (!span.isContentEditable) return; span.textContent = beforeEdit; span.classList.remove("is-edit"); span.removeAttribute("contenteditable"); }
-
     span.addEventListener("dblclick", (e)=>{ e.preventDefault(); e.stopPropagation(); toEdit(); });
     span.addEventListener("click", (e)=> e.stopPropagation());
-    span.addEventListener("keydown", (e)=>{
-      if (e.key==="Enter"){ e.preventDefault(); saveEdit(); span.blur(); }
-      if (e.key==="Escape"){ e.preventDefault(); cancelEdit(); span.blur(); }
-    });
+    span.addEventListener("keydown", (e)=>{ if (e.key==="Enter"){ e.preventDefault(); saveEdit(); span.blur(); } if (e.key==="Escape"){ e.preventDefault(); cancelEdit(); span.blur(); }});
     span.addEventListener("blur", saveEdit);
   }
 
@@ -875,32 +840,25 @@
     const card = wrapper.querySelector(".kanban-card.content") || wrapper.querySelector(".kanban-card");
     const col = wrapper.closest(".kanban-column");
     if (!card || !col) return;
-
     const handle = document.createElement("div");
     handle.className = "dnt-resizer"; handle.title = t("Resize width"); handle.innerHTML = ICONS.resizerGrip;
     wrapper.appendChild(handle);
-
     let currentW = null;
-
     const startResize = (evStart)=>{
       if (!(evStart instanceof PointerEvent)) return;
       evStart.preventDefault(); evStart.stopPropagation(); evStart.stopImmediatePropagation();
       handle.setPointerCapture?.(evStart.pointerId);
-
       const startX = evStart.clientX;
       const startRect = card.getBoundingClientRect();
       const mode = currentMode();
       document.documentElement.classList.add("dnt-resizing");
-
       const stopper = (ev)=>{ ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); };
       const cutDown = (ev)=>{ if (!ev.target?.closest(".dnt-resizer")) { ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); } };
-
       document.addEventListener("dragstart", stopper, true);
       document.addEventListener("selectstart", stopper, true);
       document.addEventListener("mousedown", cutDown, true);
       document.addEventListener("touchstart", cutDown, true);
       document.addEventListener("pointerdown", cutDown, true);
-
       const onMove = (ev)=>{
         if (!(ev instanceof PointerEvent)) return;
         const dx = ev.clientX - startX;
@@ -928,12 +886,10 @@
         document.documentElement.classList.remove("dnt-resizing");
         normalizeColumns();
       };
-
       document.addEventListener("pointermove", onMove, true);
       document.addEventListener("pointerup", endResize, true);
       document.addEventListener("pointercancel", endResize, true);
     };
-
     handle.addEventListener("pointerdown", startResize, { passive:false, capture:true });
   }
 
@@ -948,6 +904,9 @@
     const doc   = body?.querySelector(".kanban-card-doc");
     if(!body) { card.dataset.dntUpgraded="1"; return; }
 
+    [meta, doc, body.querySelector(".dnt-assign-slot"), body.querySelector(".dnt-tasks-mini")]
+      .filter(Boolean).forEach(n => n.classList.add("dnt-softfade"));
+
     let head = body.querySelector(".dnt-head"); if(!head){ head = document.createElement("div"); head.className = "dnt-head"; body.prepend(head); }
     let left = head.querySelector(".dnt-head-left"); if(!left){ left = document.createElement("div"); left.className = "dnt-head-left"; head.prepend(left); }
     if (img && !left.contains(img)) left.prepend(img);
@@ -960,7 +919,7 @@
 
     if (doc) normalizeDocFields(doc, { doctype, docName: name });
 
-    let assignSlot = body.querySelector(".dnt-assign-slot"); if (!assignSlot){ assignSlot = document.createElement("div"); assignSlot.className = "dnt-assign-slot"; body.appendChild(assignSlot); }
+    let assignSlot = body.querySelector(".dnt-assign-slot"); if (!assignSlot){ assignSlot = document.createElement("div"); assignSlot.className = "dnt-assign-slot dnt-softfade"; body.appendChild(assignSlot); }
     let assignLeft = assignSlot.querySelector(".dnt-assign-left"); if (!assignLeft){ assignLeft = document.createElement("div"); assignLeft.className = "dnt-assign-left"; assignSlot.appendChild(assignLeft); }
     let assignRight = assignSlot.querySelector(".dnt-assign-right"); if (!assignRight){ assignRight = document.createElement("div"); assignRight.className = "dnt-assign-right"; assignSlot.appendChild(assignRight); }
 
@@ -974,9 +933,8 @@
     else if (doctype && name){ assignRight.appendChild(createFallbackLike(doctype, name)); }
 
     let mini = body.querySelector(".dnt-tasks-mini");
-    if (!mini){ mini = document.createElement("div"); mini.className = "dnt-tasks-mini"; body.appendChild(mini); }
+    if (!mini){ mini = document.createElement("div"); mini.className = "dnt-tasks-mini dnt-softfade"; body.appendChild(mini); }
     if (doctype === CFG.caseDoctype && name) {
-      // слушаем версию задач, чтобы обновить поля при изменении задач
       mini.addEventListener("dnt:tasks-version", (e)=>{
         normalizeDocFields(doc, { doctype, docName: name }, { cause: "tasks", tasksVersion: e.detail?.versionKey });
       });
@@ -1036,8 +994,18 @@
       upgradeCard(wrap);
     });
   }
+  function refreshVisibleCardsDocs(){
+    const doctype = getDoctype();
+    document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card").forEach(w => {
+      const wrap = w.classList.contains?.("kanban-card") ? w.closest(".kanban-card-wrapper") || w : w;
+      const body = wrap.querySelector(".kanban-card-body") || wrap;
+      const docEl = body?.querySelector(".kanban-card-doc");
+      const name = wrap.getAttribute("data-name") || wrap.dataset?.name || wrap.querySelector?.(".kanban-card")?.getAttribute?.("data-name") || "";
+      if (doctype && name && docEl) normalizeDocFields(docEl, { doctype, docName: name });
+    });
+  }
 
-  // ===== Header controls
+  // ===== Header controls (со сбросом widths при смене режима)
   function findSettingsAnchor(){
     return (
       document.querySelector(".page-actions .page-icon-group") ||
@@ -1048,19 +1016,15 @@
       document.querySelector(".page-title")
     );
   }
-
   function hideViewSwitcher(){
     const candidates = Array.from(document.querySelectorAll(".standard-actions .menu-btn-group, .page-actions .menu-btn-group, .page-actions .btn-group, .standard-actions .btn-group"));
     candidates.forEach(g=>{
       const txt = CLEAN(g.textContent||"").toLowerCase();
       const hasViewWords = /view|вид/i.test(g.querySelector("[title]")?.getAttribute("title")||"") || /list|report|kanban|calendar|вид|список|отчет/i.test(txt);
       const looksSwitcher = g.querySelector("button.dropdown-toggle, .view-switcher, .btn-view-switcher");
-      if (looksSwitcher && hasViewWords){
-        g.style.display = "none";
-      }
+      if (looksSwitcher && hasViewWords){ g.style.display = "none"; }
     });
   }
-
   function slugDoctype(dt){ return (frappe?.router?.slug?.(dt)) || (dt||"").toLowerCase().replace(/\s+/g,"-"); }
   function routeToListWithBoardFilter(){
     const dt = getDoctype();
@@ -1075,12 +1039,10 @@
     }
     frappe.set_route("List", dt, "List");
   }
-
   function buildSettingsDropdown(){
     const wrap = document.createElement("div");
     wrap.id = CFG.settingsBtnId;
     wrap.className = "btn-group btn-group-sm";
-
     const btn = document.createElement("button");
     btn.className = "btn btn-default icon-btn btn-sm dropdown-toggle";
     btn.setAttribute("data-toggle","dropdown");
@@ -1088,62 +1050,41 @@
     btn.setAttribute("title", t("Kanban options"));
     btn.innerHTML = ICONS.openSettings;
     wrap.appendChild(btn);
-
     const menu = document.createElement("ul");
     menu.className = "dropdown-menu";
     menu.innerHTML = `
-      <li>
-        <a class="grey-link dropdown-item dnt-open-board-settings" href="#" onclick="return false;">
-          ${frappe.utils.icon("edit","sm")} <span class="menu-item-label">${t("Board Settings")}</span>
-        </a>
-      </li>
+      <li><a class="grey-link dropdown-item dnt-open-board-settings" href="#" onclick="return false;">${frappe.utils.icon("edit","sm")} <span class="menu-item-label">${t("Board Settings")}</span></a></li>
       <li class="dropdown-divider"></li>
-      <li>
-        <a class="grey-link dropdown-item dnt-toggle-labels" href="#" onclick="return false;">
-          ${frappe.utils.icon("tag","sm")} <span class="menu-item-label dnt-toggle-labels-text"></span>
-        </a>
-      </li>
+      <li><a class="grey-link dropdown-item dnt-toggle-labels" href="#" onclick="return false;">${frappe.utils.icon("tag","sm")} <span class="menu-item-label dnt-toggle-labels-text"></span></a></li>
     `;
     wrap.appendChild(menu);
-
     const labelsText = menu.querySelector(".dnt-toggle-labels-text");
     const isLabelsOn = () => getShowLabelsFlag();
     const refreshLabelsText = () => { labelsText.textContent = isLabelsOn() ? t("Hide labels") : t("Show labels"); };
-
     refreshLabelsText();
     btn.addEventListener("show.bs.dropdown", refreshLabelsText);
     btn.addEventListener("shown.bs.dropdown", refreshLabelsText);
     btn.addEventListener("click", () => setTimeout(refreshLabelsText, 0));
-
     menu.querySelector(".dnt-open-board-settings").addEventListener("click",(e)=>{
       e.preventDefault(); e.stopPropagation();
       const bname = getBoardName();
       if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
     });
-
     menu.querySelector(".dnt-toggle-labels").addEventListener("click", async (e)=>{
       e.preventDefault(); e.stopPropagation();
-      const bname = getBoardName();
-      if (!bname) return;
+      const bname = getBoardName(); if (!bname) return;
       const want = !isLabelsOn();
       try{
-        await frappe.call({
-          method: "frappe.client.set_value",
-          args: { doctype: "Kanban Board", name: bname, fieldname: "show_labels", value: want ? 1 : 0 }
-        });
+        await frappe.call({ method: "frappe.client.set_value", args: { doctype: "Kanban Board", name: bname, fieldname: "show_labels", value: want ? 1 : 0 }});
         if (window.cur_list?.board) window.cur_list.board.show_labels = want;
         if (window.cur_list?.kanban_board) window.cur_list.kanban_board.show_labels = want;
         refreshLabelsText();
         frappe.show_alert({ message: want ? t("Labels shown") : t("Labels hidden"), indicator: "green" });
         setTimeout(()=> location.reload(), 50);
-      } catch {
-        frappe.msgprint?.({ message: t("Failed to toggle labels"), indicator: "red" });
-      }
+      } catch { frappe.msgprint?.({ message: t("Failed to toggle labels"), indicator: "red" }); }
     });
-
     return wrap;
   }
-
   function exposeSelectKanban(){
     document.querySelectorAll(".custom-actions").forEach(el=>{
       el.classList.remove("hide","hidden-xs","hidden-sm","hidden-md","hidden-lg");
@@ -1165,9 +1106,7 @@
               const lbl = (li.textContent||"").trim();
               const isCreate = /Create\s+New\s+Kanban\s+Board/i.test(lbl) || /Создать\s+Канбан/i.test(lbl) || /Создать.*доску/i.test(lbl);
               if (isCreate) li.style.display = allowCreate ? "" : "none";
-              if (!allowCreate && (isCreate || li.classList.contains("divider") || /(^|\s)(dropdown-divider|divider)(\s|$)/.test(li.className))) {
-                li.style.display = "none";
-              }
+              if (!allowCreate && (isCreate || li.classList.contains("divider") || /(^|\s)(dropdown-divider|divider)(\s|$)/.test(li.className))) { li.style.display = "none"; }
             });
             Array.from(menu.querySelectorAll("li.user-action a.dropdown-item")).forEach(a=>{
               const labNode = a.querySelector(".menu-item-label");
@@ -1185,30 +1124,20 @@
     }
   }
 
-  // ==== Дифф-прогрев кэша полей для видимых карточек
+  // ==== Прогрев кэша и сравнение версий doc.modified
   async function prime_doc_fields_cache_for_visible_cards(){
-    const dt = getDoctype();
-    if (!dt) return;
+    const dt = getDoctype(); if (!dt) return;
     const orderMap = getBoardOrderMap(dt);
-    const boardFields = [...orderMap.keys()];
-    if (!boardFields.length) return;
-
+    const boardFields = [...orderMap.keys()]; if (!boardFields.length) return;
     const names = Array.from(document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card"))
-      .map(el => el.getAttribute("data-name") || el.dataset?.name || el.querySelector?.(".kanban-card")?.getAttribute?.("data-name"))
-      .filter(Boolean);
-    const unique = Array.from(new Set(names));
-    if (!unique.length) return;
+      .map(el => el.getAttribute("data-name") || el.dataset?.name || el.querySelector?.(".kanban-card")?.getAttribute?.("data-name")).filter(Boolean);
+    const unique = Array.from(new Set(names)); if (!unique.length) return;
 
     let versionRows = [];
     try{
       const { message: rows = [] } = await frappe.call({
         method: "frappe.client.get_list",
-        args: {
-          doctype: dt,
-          filters: [["name","in", unique]],
-          fields: ["name","modified"],
-          limit_page_length: unique.length
-        }
+        args: { doctype: dt, filters: [["name","in", unique]], fields: ["name","modified"], limit_page_length: unique.length }
       });
       versionRows = rows;
     }catch{}
@@ -1217,9 +1146,7 @@
     for (const r of versionRows){
       const key = docKey(dt, r.name);
       const cached = DOC_CACHE.get(key) || {};
-      if (!cached.__modified || cached.__modified !== r.modified){
-        changed.push(r.name);
-      }
+      if (!cached.__modified || cached.__modified !== r.modified){ changed.push(r.name); }
     }
     unique.forEach(n => { if (!DOC_CACHE.has(docKey(dt,n))) changed.push(n); });
 
@@ -1237,22 +1164,18 @@
       });
       rows.forEach(r => {
         const { name, modified, ...rest } = r || {};
-        if (name){
-          mergeDocCache(dt, name, Object.assign({}, rest, { __modified: modified }));
-        }
+        if (name){ mergeDocCache(dt, name, Object.assign({}, rest, { __modified: modified })); }
       });
     }catch{}
   }
 
+  // ===== Controls & run
   function injectControls(){
     document.querySelectorAll(`#${CFG.settingsBtnId}, #${CFG.modeToggleId}, #${CFG.openListBtnId}`).forEach(el => el.remove());
     if(!isKanbanRoute()) return;
-
     hideViewSwitcher();
-
     const anchorIcons = document.querySelector(".standard-actions .page-icon-group") || findSettingsAnchor();
     const actionsBar  = document.querySelector(".standard-actions") || document.querySelector(".page-actions") || anchorIcons?.parentElement;
-
     const settingsDropdown = buildSettingsDropdown();
 
     const wrap = document.createElement("div");
@@ -1273,7 +1196,6 @@
       if (!document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.add("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "1"); }catch{}
-        // сбрасываем сохранённые ширины при смене режима
         clearSavedColWidthsForBoard(getBoardName());
         clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
         requestAnimationFrame(()=>{ applyWidthsForMode("compact"); setActive(); });
@@ -1283,7 +1205,6 @@
       if (document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.remove("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "0"); }catch{}
-        // сбрасываем сохранённые ширины при смене режима
         clearSavedColWidthsForBoard(getBoardName());
         clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
         requestAnimationFrame(()=>{ applyWidthsForMode("comfy"); setActive(); });
@@ -1316,7 +1237,6 @@
     window.__dntActionsMO = mo;
   }
 
-  // ===== Run
   async function run(){
     await ensure_messages();
     if(!isKanbanRoute()){
@@ -1337,7 +1257,6 @@
 
     applyWidthsForMode(currentMode());
 
-    // 1) прогрев кэша полей → 2) апгрейд карт → 3) обновление ДАННЫХ в уже апгрейженных картах
     await prime_doc_fields_cache_for_visible_cards();
     enhanceCards();
     refreshVisibleCardsDocs();
