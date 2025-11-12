@@ -34,7 +34,8 @@
     modeCompact:  '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h6M7 13h4"/></svg>',
     modeComfy:    '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 10h10M7 14h8"/></svg>',
     resizerGrip:  '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="square" shape-rendering="crispEdges"><path d="M6 15L15 6M9 15L15 9M12 15L15 12"/></svg>',
-    listIcon:     '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>'
+    listIcon:     '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
+    plus:         '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>'
   };
 
   // ===== Utils
@@ -64,6 +65,10 @@
   const getBoardName = () => {
     try { const r = frappe.get_route?.(); return r?.[3] ? decodeURIComponent(r[3]) : (window.cur_list?.board?.name || window.cur_list?.kanban_board?.name || ""); }
     catch { return ""; }
+  };
+  const getColumnField = () => {
+    const b = window.cur_list?.board || window.cur_list?.kanban_board || {};
+    return b.field_name || b.field || b.kanban_field || "status";
   };
 
   // ===== View flags
@@ -124,7 +129,7 @@
     }catch{}
   }
 
-  // ===== CSS (включая анти-дёрганье и скелеты)
+  // ===== CSS (анти-джанк, скелеты, счётчики, кнопка задач, drag-fix в динамических областях)
   function injectCSS(){
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
@@ -148,6 +153,11 @@
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; width:100%; will-change: transform; }
 
+      /* Column title count */
+      html.${CFG.htmlClass} .dnt-col-count{
+        margin-left:6px; font-weight:600; opacity:.8; font-size:.9em;
+      }
+
       html.${CFG.htmlClass} .kanban-card.content{
         border-radius:14px; border:1px solid var(--border-color);
         background: var(--card-bg); padding:12px;
@@ -160,7 +170,7 @@
         transform:translateY(-1px); box-shadow: var(--shadow-lg, 0 8px 22px rgba(0,0,0,.12));
       }
 
-      /* Anti-jank: мягкая перерисовка блоков */
+      /* Anti-jank */
       html.${CFG.htmlClass} .dnt-softfade { transition: opacity .16s ease, filter .16s ease; }
       html.${CFG.htmlClass} .dnt-softfade.dim { opacity:.35; filter: blur(.4px) saturate(.9); }
       @media (prefers-reduced-motion: reduce){
@@ -193,9 +203,6 @@
 
       /* Meta & tags */
       html.${CFG.htmlClass} .kanban-card-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:4px 0 0; }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-meta{ gap:4px; }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-meta .label,
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-card-meta .tag-pill{ transform:scale(.92); transform-origin:left center; }
 
       /* Doc fields */
       html.${CFG.htmlClass} .kanban-card-doc{ padding:0; overflow:visible; }
@@ -221,9 +228,6 @@
       }
       html.${CFG.htmlClass}.dnt-compact-on .dnt-assign-slot{
         height: var(--dnt-assign-h-compact);
-        min-height: var(--dnt-assign-h-compact);
-        max-height: var(--dnt-assign-h-compact);
-        line-height: var(--dnt-assign-h-compact);
       }
       html.${CFG.htmlClass} .dnt-assign-left{ display:flex; align-items:center; gap:6px; flex:1 1 auto; min-width:0; overflow:hidden; }
       html.${CFG.htmlClass} .dnt-assign-right{ display:inline-flex; align-items:center; gap:8px; flex:0 0 auto; white-space:nowrap; }
@@ -231,11 +235,7 @@
       html.${CFG.htmlClass} .kanban-assignments{ display:flex; align-items:center; height:100%; max-height:100%; overflow:hidden; }
       html.${CFG.htmlClass} .kanban-assignments .avatar-group{ display:flex; align-items:center; height:100%; }
       html.${CFG.htmlClass} .kanban-assignments .avatar.avatar-small{ width:22px; height:22px; }
-      html.${CFG.htmlClass} .kanban-assignments .avatar .avatar-frame.avatar-action{ width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; }
-      html.${CFG.htmlClass} .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:14px; height:14px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar.avatar-small{ width:18px; height:18px; }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action{ width:18px; height:18px; }
-      html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:12px; height:12px; }
 
       /* Hide stars */
       html.${CFG.htmlClass} .document-star,
@@ -256,24 +256,23 @@
         border-top:1px solid var(--border-color); padding-top:6px; scrollbar-gutter: stable;
         min-height: var(--dnt-tasks-h-comfy); max-height: var(--dnt-tasks-h-comfy);
       }
-      html.${CFG.htmlClass}.dnt-compact-on .dnt-tasks-mini{
-        min-height: var(--dnt-tasks-h-compact); max-height: var(--dnt-tasks-h-compact);
-      }
-      html.${CFG.htmlClass} .dnt-taskline{
-        display:flex; gap:6px; align-items:center; font-size:11px;
-        color: var(--text-muted); padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
-      }
+      html.${CFG.htmlClass}.dnt-compact-on .dnt-tasks-mini{ min-height: var(--dnt-tasks-h-compact); max-height: var(--dnt-tasks-h-compact); }
+      html.${CFG.htmlClass} .dnt-taskline{ display:flex; gap:6px; align-items:center; font-size:11px; color: var(--text-muted); padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
       html.${CFG.htmlClass} .dnt-taskline .ttl{ font-weight:600; color: var(--text-color); overflow:hidden; text-overflow:ellipsis; }
-      html.${CFG.htmlClass} .dnt-chip{
-        border:1px solid var(--border-color); border-radius:999px; padding:1px 6px;
-        background: var(--control-bg); font-size:10px; color: var(--text-color);
-      }
+      html.${CFG.htmlClass} .dnt-chip{ border:1px solid var(--border-color); border-radius:999px; padding:1px 6px; background: var(--control-bg); font-size:10px; color: var(--text-color); }
       html.${CFG.htmlClass} .dnt-overdue{ background: var(--alert-bg-danger); border-color: color-mix(in oklab, var(--alert-bg-danger) 60%, transparent); color: var(--alert-text-danger); }
+      html.${CFG.htmlClass} .dnt-task-add{ margin-left:auto; display:inline-flex; align-items:center; gap:4px; padding:0 6px; border-radius:999px; border:1px solid var(--border-color); background: var(--control-bg); text-decoration:none; cursor:pointer; }
+
+      /* Drag from dynamic areas: убрать выделение + показать grab */
+      html.${CFG.htmlClass} .kanban-card-meta,
+      html.${CFG.htmlClass} .kanban-card-doc,
+      html.${CFG.htmlClass} .dnt-assign-slot,
+      html.${CFG.htmlClass} .dnt-tasks-mini{
+        -webkit-user-drag: none; user-select: none; cursor: grab;
+      }
 
       /* Hover actions */
-      html.${CFG.htmlClass} .dnt-card-actions{
-        position:absolute; top:12px; right:12px; display:flex; gap:6px; opacity:0; pointer-events:none; transition:opacity .12s; z-index:5;
-      }
+      html.${CFG.htmlClass} .dnt-card-actions{ position:absolute; top:12px; right:12px; display:flex; gap:6px; opacity:0; pointer-events:none; transition:opacity .12s; z-index:5; }
       html.${CFG.htmlClass} .kanban-card-wrapper:hover .dnt-card-actions{ opacity:1; pointer-events:auto; }
 
       /* Resizer */
@@ -308,7 +307,7 @@
     document.head.appendChild(s);
   }
 
-  // ===== Meta helpers, dates, caches (как в v25.31.0)
+  // ===== Meta helpers, dates, caches
   const LABEL_ALIASES = { display_name: new Set(["display name","display_name","displayname","отображаемое имя","имя профиля","full name","name","фио","имя / фио","имя и фамилия","имя, фамилия"]) };
   const isDisplayName = (s)=> LABEL_ALIASES.display_name.has(LBL_KEY(s));
   function buildMetaMaps(doctype){
@@ -373,12 +372,28 @@
     const parts = [f,m,l].filter(Boolean);
     return parts.length ? parts.join(" ") : (CLEAN(v.title) || "");
   }
+
+  // ==== Robust date detection
+  const DATE_ISO = /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/;
+  const DATE_DOTS = /^\d{2}[./-]\d{2}[./-]\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?$/;
   const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
+  function looksDateLike(v){
+    if (!v || typeof v !== "string") return false;
+    const s = CLEAN(v);
+    if (!s) return false;
+    return DATE_ISO.test(s) || DATE_DOTS.test(s) || s.includes("T");
+  }
   function normalizeDateish(raw){
-    let v = CLEAN(raw || ""); v = v.replace(/(\d{2}:\d{2}:\d{2})\.\d+$/, "$1"); if (!v) return v;
-    try{ if (/\d/.test(v)){ const m = moment(frappe.datetime.convert_to_user_tz(v)); if (m.isValid()) return HAS_TIME.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY"); } }catch{}
+    let v = CLEAN(raw || "");
+    if (!v) return v;
+    if (!looksDateLike(v)) return v;
+    try{
+      const m = moment(frappe.datetime.convert_to_user_tz(v));
+      if (m.isValid()) return HAS_TIME.test(v) || DATE_ISO.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
+    }catch{}
     return v;
   }
+
   function isTranslatableField(fn, df){
     if (!fn) return false;
     if (/^status_/.test(fn)) return true;
@@ -482,7 +497,12 @@
     if (target) container.insertBefore(chip, target); else container.appendChild(chip);
   }
 
-  // ===== Backfill / normalize (c учётом хэш + anti-jank)
+  // ===== Backfill / normalize (исключаем поле статуса из сравнения)
+  function getExcludedSnapshotFields(){
+    const f = getColumnField();
+    return new Set([CLEAN(f).toLowerCase()]);
+  }
+
   function normalizeDocFields(docEl, ctx, opts={}){
     if (!docEl) return;
     const orderMap = getBoardOrderMap(ctx.doctype);
@@ -493,7 +513,11 @@
     const tasksMeta = miniCacheMeta.get(ctx.docName);
     const tasksVer  = (opts.tasksVersion != null ? opts.tasksVersion : (tasksMeta?.versionKey || "")) || "";
 
-    const snapshot = {}; boardFields.forEach(fn => snapshot[fn] = CLEAN(out[fn] ?? ""));
+    const excluded = getExcludedSnapshotFields();
+    const snapshot = {};
+    boardFields.forEach(fn => {
+      if (!excluded.has(CLEAN(fn).toLowerCase())) snapshot[fn] = CLEAN(out[fn] ?? "");
+    });
     const card_hash_if_ready = json_hash({ labelsOn, snapshot, tasksVer });
 
     if (!missing.length){
@@ -526,7 +550,10 @@
       await backfillAll(holder, ctx, labelsOn, orderMap);
 
       const v = await getValuesBatch(ctx.doctype, ctx.docName, boardFields);
-      const snapshot2 = {}; boardFields.forEach(fn => snapshot2[fn] = CLEAN(v[fn] ?? ""));
+      const snapshot2 = {};
+      boardFields.forEach(fn => {
+        if (!excluded.has(CLEAN(fn).toLowerCase())) snapshot2[fn] = CLEAN(v[fn] ?? "");
+      });
       const done_hash = json_hash({ labelsOn, snapshot: snapshot2, tasksVer });
 
       if (docEl.dataset.dntCardHash !== done_hash){
@@ -641,17 +668,26 @@
     });
   }
 
-  // ===== Mini-tasks (версия + fade)
+  // ===== Mini-tasks (версия + fade + кнопка «создать» и счётчик)
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   function planLabel(kind){ return kind==="target" ? t("Target at") : t("Planned"); }
   function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: null, kind: null }; }
   function plain_text(html_like){ const div=document.createElement("div"); div.innerHTML = html_like || ""; return CLEAN(div.textContent || div.innerText || ""); }
   function truncate_text(s, max_len=40){ const str = s || ""; return str.length<=max_len?str:(str.slice(0,max_len).trimEnd()+"…"); }
-  function miniHeader(){ return `<div class="dnt-taskline" data-act="noop"><span class="dnt-chip">${t("Tasks")}</span></div>`; }
-  function miniHtml(rows, total){
+
+  function miniHeader(total, caseName){
+    const cnt = typeof total === "number" ? ` (${total})` : "";
+    return `<div class="dnt-taskline" data-act="noop" style="cursor:default">
+      <span class="dnt-chip">${frappe.utils.escape_html(t("Tasks")+cnt)}</span>
+      <a href="#" class="dnt-task-add" data-act="create-task" data-case="${frappe.utils.escape_html(caseName||"")}" title="${frappe.utils.escape_html(t("New task"))}">
+        ${ICONS.plus}<span>${frappe.utils.escape_html(t("New"))}</span>
+      </a>
+    </div>`;
+  }
+  function miniHtml(rows, total, caseName){
     const totalCount = typeof total === "number" ? total : (rows?.length || 0);
     const showOpenAll = totalCount > 1 || (rows?.length || 0) > 1;
-    if (!rows?.length) return miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
+    if (!rows?.length) return miniHeader(totalCount, caseName) + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
     const lines = rows.map(ti=>{
       const pick = pickPlan(ti); const p = pick.dt;
       const open = (ti.status||"Open")==="Open";
@@ -662,7 +698,7 @@
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}"><span class="${cls}" title="${frappe.utils.escape_html(planLabel(pick.kind))}">${frappe.utils.escape_html(val)}</span><span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
     const more = showOpenAll ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(t("Open all tasks") + " →")}</span></div>` : ``;
-    return miniHeader() + lines + more;
+    return miniHeader(totalCount, caseName) + lines + more;
   }
 
   async function tasks_version(caseName){
@@ -725,7 +761,7 @@
 
       let data = await fetchMiniPrimary(caseName);
       if ((!data.rows || !data.rows.length) && (!data.total || data.total === 0)) data = await fetchMiniFallback(caseName);
-      const html  = miniHtml(data.rows || [], data.total || 0);
+      const html  = miniHtml(data.rows || [], data.total || 0, caseName);
       miniCacheHtml.set(caseName, html);
       miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey });
 
@@ -746,7 +782,7 @@
       }
       try{
         const data = await fetchMiniFallback(caseName);
-        const html  = miniHtml(data.rows || [], data.total || 0);
+        const html  = miniHtml(data.rows || [], data.total || 0, caseName);
         miniCacheHtml.set(caseName, html);
         const metaNow = await tasks_version(caseName).catch(()=>({versionKey:""}));
         miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey||"" });
@@ -758,7 +794,7 @@
 
         container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: (metaNow.versionKey || "") }}));
       }catch{
-        container.innerHTML = miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
+        container.innerHTML = miniHeader(0, caseName) + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
         container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: "" }}));
       }
     }
@@ -771,6 +807,26 @@
     container.querySelector('[data-act="open-all"]')?.addEventListener("click",(e)=>{
       e.preventDefault(); e.stopPropagation();
       frappe.set_route("List","ToDo",{ reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" });
+    });
+    container.querySelector('[data-act="create-task"]')?.addEventListener("click",(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      const cName = e.currentTarget.getAttribute("data-case") || caseName;
+      try {
+        frappe.new_doc("ToDo", {
+          reference_type: CFG.caseDoctype,
+          reference_name: cName,
+          status: "Open"
+        });
+      } catch {
+        frappe.set_route("Form","ToDo","new-to-do-1");
+        setTimeout(()=> {
+          try {
+            cur_frm?.set_value("reference_type", CFG.caseDoctype);
+            cur_frm?.set_value("reference_name", cName);
+            cur_frm?.set_value("status","Open");
+          } catch {}
+        }, 200);
+      }
     });
   }
 
@@ -803,6 +859,24 @@
     return span;
   }
 
+  // ===== Drag from dynamic areas: точечный фикс (без блокировки drag-событий Sortable)
+  function enableDragFromDynamicAreas(body){
+    const areas = [ body.querySelector(".kanban-card-meta"), body.querySelector(".kanban-card-doc"), body.querySelector(".dnt-assign-slot"), body.querySelector(".dnt-tasks-mini") ].filter(Boolean);
+    areas.forEach(area=>{
+      if (area.__dntDragFixApplied) return;
+      area.__dntDragFixApplied = true;
+      area.addEventListener("mousedown", (e)=>{
+        if (e.button !== 0) return;
+        const tag = (e.target?.tagName||"").toLowerCase();
+        if (/^(a|button|input|textarea|select|svg|path|use)$/i.test(tag)) return;
+        e.preventDefault(); // убираем выделение, но НЕ останавливаем всплытие — drag пойдёт вверх до Sortable
+      }, true);
+      area.addEventListener("touchstart", ()=>{
+        try{ area.style.touchAction = "none"; setTimeout(()=> area.style.touchAction = "", 500); }catch{}
+      }, { passive: true });
+    });
+  }
+
   // ===== Title inline-edit
   function makeTitleEditable(titleArea, name, doctype){
     if (!titleArea || titleArea.__dntEditable) return;
@@ -832,6 +906,47 @@
     span.addEventListener("click", (e)=> e.stopPropagation());
     span.addEventListener("keydown", (e)=>{ if (e.key==="Enter"){ e.preventDefault(); saveEdit(); span.blur(); } if (e.key==="Escape"){ e.preventDefault(); cancelEdit(); span.blur(); }});
     span.addEventListener("blur", saveEdit);
+  }
+
+  // ===== Lazy observe (апгрейд только видимых карточек)
+  const visibleCards = new WeakSet();
+  let lazyIO = null;
+  function ensureLazyIO(){
+    if (lazyIO) return lazyIO;
+    try{
+      lazyIO = new IntersectionObserver(entries=>{
+        entries.forEach(entry=>{
+          const wrap = entry.target;
+          if (entry.isIntersecting){
+            visibleCards.add(wrap);
+            upgradeCard(wrap);
+            refreshCardDocForWrap(wrap);
+            lazyIO.unobserve(wrap);
+          }
+        });
+      }, { root:null, rootMargin:"200px", threshold:0.01 });
+    }catch{ lazyIO = null; }
+    return lazyIO;
+  }
+  function observeForLazy(wrap){
+    const io = ensureLazyIO();
+    if (io) io.observe(wrap);
+  }
+  function isWrapVisible(wrap){
+    if (visibleCards.has(wrap)) return true;
+    try{
+      const r = wrap.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const vw = window.innerWidth  || document.documentElement.clientWidth;
+      return r.bottom >= -180 && r.top <= vh + 180 && r.right >= -50 && r.left <= vw + 50;
+    }catch{ return true; }
+  }
+  function refreshCardDocForWrap(wrap){
+    const dt = getDoctype();
+    const body = wrap.querySelector(".kanban-card-body") || wrap;
+    const docEl = body?.querySelector(".kanban-card-doc");
+    const name = wrap.getAttribute("data-name") || wrap.dataset?.name || body?.querySelector?.(".kanban-card")?.getAttribute?.("data-name") || "";
+    if (dt && name && docEl) normalizeDocFields(docEl, { doctype: dt, docName: name });
   }
 
   // ===== Card upgrade
@@ -917,7 +1032,7 @@
     const name = wrapper.getAttribute("data-name") || wrapper.dataset.name || card.getAttribute("data-name") || "";
     const doctype = getDoctype();
 
-    if (doc) normalizeDocFields(doc, { doctype, docName: name });
+    if (doc && isWrapVisible(wrapper)) normalizeDocFields(doc, { doctype, docName: name });
 
     let assignSlot = body.querySelector(".dnt-assign-slot"); if (!assignSlot){ assignSlot = document.createElement("div"); assignSlot.className = "dnt-assign-slot dnt-softfade"; body.appendChild(assignSlot); }
     let assignLeft = assignSlot.querySelector(".dnt-assign-left"); if (!assignLeft){ assignLeft = document.createElement("div"); assignLeft.className = "dnt-assign-left"; assignSlot.appendChild(assignLeft); }
@@ -934,7 +1049,7 @@
 
     let mini = body.querySelector(".dnt-tasks-mini");
     if (!mini){ mini = document.createElement("div"); mini.className = "dnt-tasks-mini dnt-softfade"; body.appendChild(mini); }
-    if (doctype === CFG.caseDoctype && name) {
+    if (doctype === CFG.caseDoctype && name && isWrapVisible(wrapper)) {
       mini.addEventListener("dnt:tasks-version", (e)=>{
         normalizeDocFields(doc, { doctype, docName: name }, { cause: "tasks", tasksVersion: e.detail?.versionKey });
       });
@@ -985,27 +1100,47 @@
 
     makeTitleEditable(title, name, doctype);
     attachResizer(wrapper);
+    enableDragFromDynamicAreas(body);
     card.dataset.dntUpgraded = "1";
   }
 
   function enhanceCards(){
     document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card:not(.content)").forEach(w => {
       const wrap = w.classList.contains?.("kanban-card") ? w.closest(".kanban-card-wrapper") || w : w;
-      upgradeCard(wrap);
+      if (isWrapVisible(wrap)) upgradeCard(wrap); else observeForLazy(wrap);
     });
   }
   function refreshVisibleCardsDocs(){
-    const doctype = getDoctype();
     document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card").forEach(w => {
       const wrap = w.classList.contains?.("kanban-card") ? w.closest(".kanban-card-wrapper") || w : w;
-      const body = wrap.querySelector(".kanban-card-body") || wrap;
-      const docEl = body?.querySelector(".kanban-card-doc");
-      const name = wrap.getAttribute("data-name") || wrap.dataset?.name || wrap.querySelector?.(".kanban-card")?.getAttribute?.("data-name") || "";
-      if (doctype && name && docEl) normalizeDocFields(docEl, { doctype, docName: name });
+      if (!isWrapVisible(wrap)) return;
+      refreshCardDocForWrap(wrap);
     });
   }
 
-  // ===== Header controls (со сбросом widths при смене режима)
+  // ===== Column header counters
+  function headerOfColumn(col){
+    return col.querySelector(".kanban-column-title, .kanban-title, .kanban-title-area, .kanban-column .title, .kanban-card-title-area") || null;
+  }
+  function countCards(col){
+    return col.querySelectorAll(".kanban-card-wrapper, .kanban-cards > .kanban-card").length;
+  }
+  function updateColumnCounts(){
+    getColumnsEl().forEach(col=>{
+      const head = headerOfColumn(col);
+      if (!head) return;
+      let badge = head.querySelector(".dnt-col-count");
+      const n = countCards(col);
+      if (!badge){
+        badge = document.createElement("span");
+        badge.className = "dnt-col-count";
+        head.appendChild(badge);
+      }
+      badge.textContent = ` (${n})`;
+    });
+  }
+
+  // ===== Header controls
   function findSettingsAnchor(){
     return (
       document.querySelector(".page-actions .page-icon-group") ||
@@ -1124,13 +1259,16 @@
     }
   }
 
-  // ==== Прогрев кэша и сравнение версий doc.modified
+  // ==== Прогрев кэша: только для видимых карточек
   async function prime_doc_fields_cache_for_visible_cards(){
     const dt = getDoctype(); if (!dt) return;
     const orderMap = getBoardOrderMap(dt);
     const boardFields = [...orderMap.keys()]; if (!boardFields.length) return;
-    const names = Array.from(document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card"))
-      .map(el => el.getAttribute("data-name") || el.dataset?.name || el.querySelector?.(".kanban-card")?.getAttribute?.("data-name")).filter(Boolean);
+    const nodes = Array.from(document.querySelectorAll(".kanban-card-wrapper, .kanban-column .kanban-card"));
+    const names = nodes
+      .filter(w => isWrapVisible(w.classList?.contains?.("kanban-card") ? (w.closest(".kanban-card-wrapper") || w) : w))
+      .map(el => el.getAttribute("data-name") || el.dataset?.name || el.querySelector?.(".kanban-card")?.getAttribute?.("data-name"))
+      .filter(Boolean);
     const unique = Array.from(new Set(names)); if (!unique.length) return;
 
     let versionRows = [];
@@ -1198,7 +1336,7 @@
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "1"); }catch{}
         clearSavedColWidthsForBoard(getBoardName());
         clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
-        requestAnimationFrame(()=>{ applyWidthsForMode("compact"); setActive(); });
+        requestAnimationFrame(()=>{ applyWidthsForMode("compact"); setActive(); updateColumnCounts(); });
       }
     });
     btnComfy.addEventListener("click", ()=>{
@@ -1207,7 +1345,7 @@
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "0"); }catch{}
         clearSavedColWidthsForBoard(getBoardName());
         clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
-        requestAnimationFrame(()=>{ applyWidthsForMode("comfy"); setActive(); });
+        requestAnimationFrame(()=>{ applyWidthsForMode("comfy"); setActive(); updateColumnCounts(); });
       }
     });
     wrap.appendChild(btnCompact); wrap.appendChild(btnComfy); setActive();
@@ -1262,8 +1400,9 @@
     refreshVisibleCardsDocs();
     injectControls();
     exposeSelectKanban();
+    updateColumnCounts();
 
-    const colMO = new MutationObserver(normalizeColumns);
+    const colMO = new MutationObserver(()=>{ normalizeColumns(); updateColumnCounts(); });
     getColumnsEl().forEach(col=> colMO.observe(col, { childList:true, subtree:true }));
 
     let attempts = 0;
@@ -1277,22 +1416,41 @@
         normalizeColumns();
         exposeSelectKanban();
         hideViewSwitcher();
+        updateColumnCounts();
       });
       if (attempts < 12) setTimeout(pump, 80);
     };
     pump();
 
+    // Мягкий наблюдатель: обновляем только затронутые и видимые карточки/колонки
     if (window.__dntKanbanMO) window.__dntKanbanMO.disconnect();
-    const mo = new MutationObserver(async ()=>{ 
-      if(isKanbanRoute()) { 
-        await prime_doc_fields_cache_for_visible_cards();
-        applyWidthsForMode(currentMode()); 
-        enhanceCards();
-        refreshVisibleCardsDocs();
-        normalizeColumns(); 
-        exposeSelectKanban(); 
-        hideViewSwitcher(); 
-      } 
+    const mo = new MutationObserver(async (muts)=>{
+      if(!isKanbanRoute()) return;
+      const touchedCards = new Set();
+      const touchedColumns = new Set();
+
+      const collect = (node) => {
+        if (!node || node.nodeType !== 1) return;
+        if (node.classList.contains("kanban-card-wrapper") || node.classList.contains("kanban-card")) {
+          const wrap = node.classList.contains("kanban-card") ? (node.closest(".kanban-card-wrapper") || node) : node;
+          touchedCards.add(wrap);
+        }
+        if (node.classList.contains("kanban-column")) touchedColumns.add(node);
+        node.querySelectorAll?.(".kanban-card-wrapper, .kanban-card, .kanban-column")?.forEach(collect);
+      };
+
+      muts.forEach(m=>{
+        m.addedNodes && m.addedNodes.forEach(collect);
+        m.removedNodes && m.removedNodes.forEach(collect);
+        if (m.target && m.target.classList?.contains("kanban-column")) touchedColumns.add(m.target);
+      });
+
+      touchedCards.forEach(w=>{
+        if (isWrapVisible(w)) { upgradeCard(w); refreshCardDocForWrap(w); }
+        else observeForLazy(w);
+      });
+
+      if (touchedColumns.size || touchedCards.size) updateColumnCounts();
     });
     mo.observe(document.body||document.documentElement,{ childList:true, subtree:true });
     window.__dntKanbanMO = mo;
