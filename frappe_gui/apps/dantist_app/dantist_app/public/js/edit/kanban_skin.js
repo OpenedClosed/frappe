@@ -73,7 +73,7 @@
     return !!(b && (b.show_labels === 1 || b.show_labels === true || b.show_labels === "1" || b.show_labels === "true"));
   };
 
-  // ===== Width persistence per column + mode
+  // ===== Width persistence per column + mode (без жёсткого ресета)
   const currentMode = () => document.documentElement.classList.contains("dnt-compact-on") ? "compact" : "comfy";
   const colKey = (col, mode) => {
     const board = getBoardName() || "__";
@@ -86,25 +86,17 @@
   const sessKey = (col, mode) => colKey(col, mode) + "::session";
   const setSessW = (col, mode, px) => sessionColW.set(sessKey(col,mode), px);
   const getSessW = (col, mode) => sessionColW.get(sessKey(col,mode));
-  const clearSessAll = () => sessionColW.clear();
-  function resetColumnInlineWidth(col){
-    if (!col) return;
-    col.style.removeProperty("--dnt-card-w");
-    col.style.minWidth = `calc(var(--dnt-card-w-default) + 24px)`;
-  }
   function getColumnsEl(){ return Array.from(document.querySelectorAll(".kanban-column")); }
   function normalizeColumns(){
-    const mode = currentMode();
     getColumnsEl().forEach(col=>{
       const hasCards = !!col.querySelector(".kanban-card, .kanban-card-wrapper");
       if (!hasCards){
-        resetColumnInlineWidth(col);
-        sessionColW.delete(sessKey(col, mode));
+        col.style.removeProperty("--dnt-card-w");
+        col.style.removeProperty("min-width");
       }
     });
   }
   function applyWidthsForMode(mode){
-    getColumnsEl().forEach(resetColumnInlineWidth);
     getColumnsEl().forEach(col=>{
       const saved = loadColW(col, mode);
       const sessionW = getSessW(col, mode);
@@ -112,17 +104,13 @@
       if (w){
         col.style.setProperty("--dnt-card-w", w + "px");
         col.style.minWidth = `calc(${w}px + 24px)`;
+      } else {
+        // Нет сохранённой ширины — не сбрасываем насильно, позволяем CSS по умолчанию
+        col.style.removeProperty("--dnt-card-w");
+        col.style.removeProperty("min-width");
       }
     });
     normalizeColumns();
-  }
-  function clearSavedColWidthsForBoard(board){
-    try{
-      const prefix = `dntKanbanColW::${board||"__"}::`;
-      const keys = [];
-      for (let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if (k && k.startsWith(prefix)) keys.push(k); }
-      keys.forEach(k => localStorage.removeItem(k));
-    }catch{}
   }
 
   // ===== CSS
@@ -145,7 +133,7 @@
       html.${CFG.htmlClass}:not(.dnt-compact-on) { --dnt-card-w-default: calc(var(--dnt-card-ch-comfy) * 1ch + 48px); }
 
       .kanban-board{ contain:layout style; }
-      html.${CFG.htmlClass} .kanban-column{ padding:8px; min-width: calc(var(--dnt-card-w) + 24px); }
+      html.${CFG.htmlClass} .kanban-column{ padding:8px; }
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; width:100%; }
 
@@ -153,7 +141,7 @@
         border-radius:14px; border:1px solid var(--border-color);
         background: var(--card-bg); padding:12px;
         box-shadow: var(--shadow-base, 0 1px 2px rgba(0,0,0,.06));
-        transition:transform .12s, box-shadow .12s, width .06s ease-out;
+        transition:transform .12s, box-shadow .12s;
         display:flex !important; flex-direction:column; gap:0;
         color: var(--text-color); width: var(--dnt-card-w); margin-inline:auto;
       }
@@ -378,10 +366,10 @@
   }
 
   // ===== Values & versions cache
-  const gvCache = new Map();             // get_value combo cache
-  const DOC_CACHE = new Map();           // key: dt::name -> fields + __modified
-  const miniCacheHtml = new Map();       // key: case -> html
-  const miniCacheMeta = new Map();       // key: case -> { versionKey }
+  const gvCache = new Map();
+  const DOC_CACHE = new Map();           // dt::name -> { fields..., __modified }
+  const miniCacheHtml = new Map();       // case -> html
+  const miniCacheMeta = new Map();       // case -> { versionKey }
 
   const docKey = (dt, name) => `${dt}::${name}`;
   function readFromDocCache(dt, name, fields){
@@ -455,8 +443,14 @@
     if (target) container.insertBefore(chip, target);
     else container.appendChild(chip);
   }
+  function ensure_dashes(container){
+    if (!getShowLabelsFlag()) return;
+    container.querySelectorAll?.(".dnt-kv .dnt-v")?.forEach(sv=>{
+      if (!CLEAN(sv.textContent)) sv.textContent = "—";
+    });
+  }
 
-  // ===== Backfill helpers
+  // ===== Backfill helpers (для дозагрузки при нехватке кэша)
   async function backfillAll(container, ctx, labelsOn, orderMap){
     const { fn2label, label2fn, fn2df } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
@@ -505,12 +499,12 @@
         return ia - ib;
       });
       chips.forEach(ch => container.appendChild(ch));
-      Array.from(container.querySelectorAll(":scope > .dnt-kv .dnt-v")).forEach(sv=>{
-        if (!CLEAN(sv.textContent)) sv.textContent = "—";
-      });
+
+      ensure_dashes(container);
       return;
     }
 
+    // OFF: чипы только по полям доски, пустые не выводим
     const assignedValues = new Set();
     const valueIndex = new Map();
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
@@ -553,14 +547,15 @@
     });
   }
 
+  // ==== Рендер из кэша (и для ON, и для OFF)
   function buildChipsFromCache(ctx){
     const orderMap = getBoardOrderMap(ctx.doctype);
     const labelsOn = getShowLabelsFlag();
     const { fn2label, fn2df } = buildMetaMaps(ctx.doctype);
     const boardFields = [...orderMap.keys()];
     const { out } = readFromDocCache(ctx.doctype, ctx.docName, boardFields);
-    const frag = document.createDocumentFragment();
 
+    const frag = document.createDocumentFragment();
     boardFields.forEach(fn=>{
       const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
       let val = CLEAN(normalizeDateish(out[fn]));
@@ -569,23 +564,17 @@
         val = composeDisplayName(pseudo);
       }
       const locVal = translateValue(ctx.doctype, fn, val, fn2df[fn]) || "";
-      if (!labelsOn && !locVal) return;
+      if (!labelsOn && !locVal) return; // OFF: пустые не показываем
       const chip = makeChip(human, labelsOn ? (locVal||"") : locVal, labelsOn);
       insertChipAtIndex(frag, chip, orderMap.get(fn) ?? 0);
     });
-
-    if (labelsOn){
-      queueMicrotask(()=> {
-        Array.from(frag.querySelectorAll?.(":scope > .dnt-kv .dnt-v") || []).forEach(sv=>{
-          if (!CLEAN(sv.textContent)) sv.textContent = "—";
-        });
-      });
-    }
     return frag;
   }
 
+  // ==== Нормализация блока док-полей
   function normalizeDocFields(docEl, ctx){
     if (!docEl) return;
+
     const orderMap = getBoardOrderMap(ctx.doctype);
     const boardFields = [...orderMap.keys()];
     const { out, missing } = readFromDocCache(ctx.doctype, ctx.docName, boardFields);
@@ -595,6 +584,8 @@
 
     if (!missing.length){
       const frag = buildChipsFromCache(ctx);
+
+      // Готовим hash с «сырыми» значениями (стабильно для ON/OFF)
       const snapshot = {};
       boardFields.forEach(fn => snapshot[fn] = CLEAN(out[fn] ?? ""));
       new_hash = json_hash({ labelsOn, snapshot });
@@ -602,48 +593,40 @@
       if (docEl.dataset.dntHash !== new_hash){
         docEl.innerHTML = "";
         docEl.appendChild(frag);
+        ensure_dashes(docEl);          // <— прочерки видны сразу при ON
         docEl.dataset.dntHash = new_hash;
       }
       return;
     }
 
-    const pairsFrag = document.createDocumentFragment();
-    const placeholder = document.createElement("div");
-    placeholder.className = "dnt-kv text-truncate";
-    const phv = document.createElement("span"); phv.className = "dnt-v"; phv.textContent = t("Loading…");
-    placeholder.appendChild(phv);
-    pairsFrag.appendChild(placeholder);
-
-    new_hash = "loading";
-    if (docEl.dataset.dntHash !== new_hash){
-      docEl.innerHTML = "";
-      docEl.appendChild(pairsFrag);
-      docEl.dataset.dntHash = new_hash;
+    // Не хватает в кэше — ставим лёгкий плейсхолдер и дозаполняем
+    if (docEl.dataset.dntHash !== "loading"){
+      docEl.innerHTML = `<div class="dnt-kv text-truncate"><span class="dnt-v">${t("Loading…")}</span></div>`;
+      docEl.dataset.dntHash = "loading";
     }
 
     queueMicrotask(async ()=>{
       const holder = document.createElement("div");
       await backfillAll(holder, ctx, labelsOn, orderMap);
-      const snapshot = {};
+
       const v = await getValuesBatch(ctx.doctype, ctx.docName, boardFields);
+      const snapshot = {};
       boardFields.forEach(fn => snapshot[fn] = CLEAN(v[fn] ?? ""));
       const done_hash = json_hash({ labelsOn, snapshot });
 
       if (docEl.dataset.dntHash !== done_hash){
         docEl.innerHTML = "";
         Array.from(holder.childNodes).forEach(n => docEl.appendChild(n));
+        ensure_dashes(docEl);
         docEl.dataset.dntHash = done_hash;
       }
     });
   }
 
-  // ===== Mini-tasks (версионированный кэш)
+  // ===== Mini-tasks (тот же, версионированный кэш)
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   function planLabel(kind){ return kind==="target" ? t("Target at") : t("Planned"); }
-  function pickPlan(t){
-    if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" };
-    return { dt: null, kind: null };
-  }
+  function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: null, kind: null }; }
   function plain_text(html_like){ const div=document.createElement("div"); div.innerHTML = html_like || ""; return CLEAN(div.textContent || div.innerText || ""); }
   function truncate_text(s, max_len=40){ const str = s || ""; return str.length<=max_len?str:(str.slice(0,max_len).trimEnd()+"…"); }
   function miniHeader(){ return `<div class="dnt-taskline" data-act="noop"><span class="dnt-chip">${t("Tasks")}</span></div>`; }
@@ -651,7 +634,6 @@
     const totalCount = typeof total === "number" ? total : (rows?.length || 0);
     const showOpenAll = totalCount > 1 || (rows?.length || 0) > 1;
     if (!rows?.length) return miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
-
     const lines = rows.map(ti=>{
       const pick = pickPlan(ti); const p = pick.dt;
       const open = (ti.status||"Open")==="Open";
@@ -661,7 +643,6 @@
       const ttl  = frappe.utils.escape_html(truncate_text(plain_text(ti.description || ti.name), 40));
       return `<div class="dnt-taskline" data-open="${frappe.utils.escape_html(ti.name)}"><span class="${cls}" title="${frappe.utils.escape_html(planLabel(pick.kind))}">${frappe.utils.escape_html(val)}</span><span class="ttl" title="${ttl}">${ttl}</span></div>`;
     }).join("");
-
     const more = showOpenAll ? `<div class="dnt-taskline" data-act="open-all"><span class="ttl">${frappe.utils.escape_html(t("Open all tasks") + " →")}</span></div>` : ``;
     return miniHeader() + lines + more;
   }
@@ -685,7 +666,6 @@
     const latest = `${top.name||""}|${top.modified||""}`;
     return { versionKey: `${total}|${latest}`, total };
   }
-
   async function fetchMiniPrimary(caseName){
     const { message } = await frappe.call({
       method: CFG.tasksMethod,
@@ -710,7 +690,6 @@
       return { rows, total: rows.length };
     } catch { return { rows: [], total: 0 }; }
   }
-
   async function loadMini(container, caseName){
     const metaPrev = miniCacheMeta.get(caseName);
     try{
@@ -719,33 +698,26 @@
         container.innerHTML = miniCacheHtml.get(caseName);
         return bindMini(container, caseName);
       }
-
       let data = await fetchMiniPrimary(caseName);
       if ((!data.rows || !data.rows.length) && (!data.total || data.total === 0)) data = await fetchMiniFallback(caseName);
       const html  = miniHtml(data.rows || [], data.total || 0);
       miniCacheHtml.set(caseName, html);
       miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey });
-      container.innerHTML = html;
-      bindMini(container, caseName);
+      container.innerHTML = html; bindMini(container, caseName);
     } catch {
-      if (miniCacheHtml.has(caseName)){
-        container.innerHTML = miniCacheHtml.get(caseName);
-        return bindMini(container, caseName);
-      }
+      if (miniCacheHtml.has(caseName)){ container.innerHTML = miniCacheHtml.get(caseName); return bindMini(container, caseName); }
       try{
         const data = await fetchMiniFallback(caseName);
         const html  = miniHtml(data.rows || [], data.total || 0);
         miniCacheHtml.set(caseName, html);
         const metaNow = await tasks_version(caseName).catch(()=>({versionKey:""}));
         miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey||"" });
-        container.innerHTML = html;
-        bindMini(container, caseName);
+        container.innerHTML = html; bindMini(container, caseName);
       }catch{
         container.innerHTML = miniHeader() + `<div class="dnt-taskline"><span class="ttl">${t("No open tasks")}</span></div>`;
       }
     }
   }
-
   function bindMini(container, caseName){
     container.querySelectorAll("[data-open]").forEach(el=>{
       el.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); frappe.set_route("Form","ToDo", el.getAttribute("data-open")); });
@@ -763,9 +735,7 @@
       el.style.opacity = "1"; el.style.visibility = "visible"; el.style.cursor = "pointer";
     }catch{}
   }
-  function detectLikeFrom(root){
-    return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like");
-  }
+  function detectLikeFrom(root){ return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like"); }
   function createFallbackLike(doctype, name){
     const span = document.createElement("span");
     span.className = "like-action not-liked dnt-like-fallback";
@@ -812,8 +782,7 @@
       span.focus();
       const sel = window.getSelection?.();
       if (sel && document.createRange){
-        const r = document.createRange();
-        r.selectNodeContents(span); r.collapse(false);
+        const r = document.createRange(); r.selectNodeContents(span); r.collapse(false);
         sel.removeAllRanges(); sel.addRange(r);
       }
     }
@@ -1012,19 +981,15 @@
       document.querySelector(".page-title")
     );
   }
-
   function hideViewSwitcher(){
     const candidates = Array.from(document.querySelectorAll(".standard-actions .menu-btn-group, .page-actions .menu-btn-group, .page-actions .btn-group, .standard-actions .btn-group"));
     candidates.forEach(g=>{
       const txt = CLEAN(g.textContent||"").toLowerCase();
       const hasViewWords = /view|вид/i.test(g.querySelector("[title]")?.getAttribute("title")||"") || /list|report|kanban|calendar|вид|список|отчет/i.test(txt);
       const looksSwitcher = g.querySelector("button.dropdown-toggle, .view-switcher, .btn-view-switcher");
-      if (looksSwitcher && hasViewWords){
-        g.style.display = "none";
-      }
+      if (looksSwitcher && hasViewWords){ g.style.display = "none"; }
     });
   }
-
   function slugDoctype(dt){ return (frappe?.router?.slug?.(dt)) || (dt||"").toLowerCase().replace(/\s+/g,"-"); }
   function routeToListWithBoardFilter(){
     const dt = getDoctype();
@@ -1163,7 +1128,6 @@
     const unique = Array.from(new Set(names));
     if (!unique.length) return;
 
-    // Шаг 1: дешёвый пинг версий
     let versionRows = [];
     try{
       const { message: rows = [] } = await frappe.call({
@@ -1186,7 +1150,6 @@
         changed.push(r.name);
       }
     }
-    // Плюс новые, которых нет в DOC_CACHE
     unique.forEach(n => { if (!DOC_CACHE.has(docKey(dt,n))) changed.push(n); });
 
     if (!changed.length) return;
@@ -1239,8 +1202,6 @@
       if (!document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.add("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "1"); }catch{}
-        clearSavedColWidthsForBoard(getBoardName());
-        clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
         requestAnimationFrame(()=>{ applyWidthsForMode("compact"); setActive(); });
       }
     });
@@ -1248,8 +1209,6 @@
       if (document.documentElement.classList.contains("dnt-compact-on")){
         document.documentElement.classList.remove("dnt-compact-on");
         try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "0"); }catch{}
-        clearSavedColWidthsForBoard(getBoardName());
-        clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth);
         requestAnimationFrame(()=>{ applyWidthsForMode("comfy"); setActive(); });
       }
     });
@@ -1301,7 +1260,6 @@
 
     applyWidthsForMode(currentMode());
 
-    // ВАЖНО: сперва дифф-прогрев полей, затем апгрейд
     await prime_doc_fields_cache_for_visible_cards();
     enhanceCards();
     injectControls();
