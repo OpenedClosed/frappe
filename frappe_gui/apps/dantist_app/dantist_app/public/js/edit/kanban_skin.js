@@ -1,3 +1,9 @@
+// === Dantist Kanban skin — v25.30 ===
+// Frappe v15 — компактный/комфортный режимы, фиксация лайков, аккуратные ассайни,
+// мини-список задач с кэшем, анти-дёргание (скелетоны + блокировка высоты),
+// ресайзер ширины колонок, скрытие переключателя вида и оставление "Select Kanban" без "Create",
+// кнопка "List" с автопереносом фильтра текущей доски в список.
+
 (() => {
   if (window.__DNT_KANBAN_S) return; window.__DNT_KANBAN_S = true;
 
@@ -186,7 +192,7 @@
       html.${CFG.htmlClass} .dnt-tasks-mini{ margin-top:6px; width:100%; overflow-y:auto; padding-right:4px; border-top:1px solid var(--border-color); padding-top:6px; scrollbar-gutter: stable; min-height: var(--dnt-tasks-h-comfy); max-height: var(--dnt-tasks-h-comfy); }
       html.${CFG.htmlClass}.dnt-compact-on .dnt-tasks-mini{ min-height: var(--dnt-tasks-h-compact); max-height: var(--dnt-tasks-h-compact); }
       html.${CFG.htmlClass} .dnt-taskline{ display:flex; gap:6px; align-items:center; font-size:11px; color: var(--text-muted); padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
-      html.${CFG.htmlClass} .dnt-taskline .ttl{ font-weight:600; color: var(--text-color); overflow:hidden; text-overflow:ellipsis; flex:1 1 auto; min-width:0; } /* ← фикс ширины/усечения */
+      html.${CFG.htmlClass} .dnt-taskline .ttl{ font-weight:600; color: var(--text-color); overflow:hidden; text-overflow:ellipsis; flex:1 1 auto; min-width:0; }
 
       html.${CFG.htmlClass} .dnt-chip{ border:1px solid var(--border-color); border-radius:999px; padding:1px 6px; background: var(--control-bg); font-size:10px; color: var(--text-color); }
       html.${CFG.htmlClass} .dnt-overdue{ background: var(--alert-bg-danger); border-color: color-mix(in oklab, var(--alert-bg-danger) 60%, transparent); color: var(--alert-text-danger); }
@@ -229,7 +235,7 @@
     let arr=[];
     if(Array.isArray(any)) arr=any;
     else if(typeof any==="string" && any.trim()){
-      try{ const j=JSON.parse(any); if(Array.isArray(j)) arr=j; } catch{ arr=any.split(/[\,\s]+/).filter(Boolean); }
+      try{ const j=JSON.parse(any); if(Array.isArray(j)) arr=j; } catch{ arr=any.split(/[\,\s]+/g).filter(Boolean); }
     }
     const meta = frappe.get_meta(dt);
     const fns = new Set((meta?.fields||[]).map(f=>f.fieldname).concat((frappe.model.std_fields||[]).map(f=>f.fieldname), ["name"]));
@@ -300,23 +306,131 @@
   }
 
   // === Dates & localization
-  const DATE_ISO = /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/;
-  const DATE_DOTS = /^\d{2}[./-]\d{2}[./-]\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?$/;
-  const HAS_TIME = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/;
-  function looksDateLike(v){ if (!v || typeof v !== "string") return false; const s = CLEAN(v); if (!s) return false; return DATE_ISO.test(s) || DATE_DOTS.test(s) || s.includes("T"); }
-  function normalizeDateish(raw){ let v = CLEAN(raw || ""); if (!v) return v; if (!looksDateLike(v)) return v; try{ const m = moment(frappe.datetime.convert_to_user_tz(v)); if (m.isValid()) return HAS_TIME.test(v) || DATE_ISO.test(v) ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY"); }catch{} return v; }
-  function isTranslatableField(fn, df){ if (!fn) return false; if (/^status_/.test(fn)) return true; if (fn === "channel_platform" || fn === "channel_type" || fn === "priority") return true; const ty = (df?.fieldtype || "").toLowerCase(); if (ty === "select") return true; return false; }
-  function translateValue(dt, fn, val, df){ const v = CLEAN(val); if (!v) return v; if (/\b\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\b/.test(v)) return v; if (isTranslatableField(fn, df)) { try { return t(v); } catch { return v; } } if (/^(Yes|No|Open|Closed)$/i.test(v)) { try { return t(v); } catch {} } return v; }
-  function getBoardOrderMap(doctype){ try{ const board = window.cur_list?.board || window.cur_list?.kanban_board; const fields = coerceFieldsList(doctype, board?.fields || []); const map = new Map(); fields.forEach((fn,i)=> map.set(fn,i)); return map; }catch{ return new Map(); } }
+  const DATE_ISO_STRICT = /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+\-]\d{2}:?\d{2})?)?$/;
+  const DATE_DMY       = /^(?:\d{1,2})[./-](?:\d{1,2})[./-](?:\d{2}|\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/;
+  const HAS_TIME       = /[ T]\d{1,2}:\d{2}/;
+
+  function looksDateLike(v){
+    if (v == null) return false;
+    if (typeof moment === "function" && moment.isMoment && moment.isMoment(v)) return v.isValid();
+    if (v instanceof Date) return !isNaN(+v);
+    if (typeof v === "number") return isFinite(v);
+    if (typeof v !== "string") return false;
+    const s = CLEAN(v);
+    if (!s) return false;
+    if (/^(test|none|n\/a|null|undefined|нет|—|-)$/i.test(s)) return false;
+    return DATE_ISO_STRICT.test(s) || DATE_DMY.test(s);
+  }
+
+  function normalizeDateish(raw){
+    const orig = raw;
+    if (!looksDateLike(orig)) return CLEAN(orig || "");
+    try{
+      if (typeof moment === "function" && moment.isMoment && moment.isMoment(orig)) {
+        const m = orig.clone();
+        if (!m.isValid()) return CLEAN(String(orig));
+        const hasTime = m.hours() || m.minutes() || m.seconds();
+        return hasTime ? m.format("DD-MM-YYYY HH:mm:ss") : m.format("DD-MM-YYYY");
+      }
+      if (orig instanceof Date || typeof orig === "number") {
+        const m = moment(orig);
+        return m.isValid() ? m.format("DD-MM-YYYY HH:mm:ss") : CLEAN(String(orig));
+      }
+      const s = CLEAN(String(orig));
+      const formats = [
+        "YYYY-MM-DDTHH:mm:ss.SSSZ",
+        "YYYY-MM-DDTHH:mm:ssZ",
+        "YYYY-MM-DD HH:mm:ss",
+        "YYYY-MM-DD",
+        "DD.MM.YYYY HH:mm:ss",
+        "DD.MM.YYYY",
+        "DD/MM/YYYY HH:mm:ss",
+        "DD/MM/YYYY"
+      ];
+      const parsedUtc = moment.utc(s, formats, true);
+      if (!parsedUtc.isValid()) return s;
+
+      const iso = parsedUtc.toISOString();
+      const user = (frappe?.datetime?.convert_to_user_tz)
+        ? moment(frappe.datetime.convert_to_user_tz(iso))
+        : parsedUtc.local();
+
+      return HAS_TIME.test(s) || DATE_ISO_STRICT.test(s)
+        ? user.format("DD-MM-YYYY HH:mm:ss")
+        : user.format("DD-MM-YYYY");
+    } catch {
+      return CLEAN(orig || "");
+    }
+  }
+
+  function isTranslatableField(fn, df){
+    if (!fn) return false;
+    if (/^status_/.test(fn)) return true;
+    if (fn === "channel_platform" || fn === "channel_type" || fn === "priority") return true;
+    const ty = (df?.fieldtype || "").toLowerCase();
+    if (ty === "select") return true;
+    return false;
+  }
+
+  function translateValue(dt, fn, val, df){
+    const v = CLEAN(val);
+    if (!v) return v;
+    if (/\b\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\b/.test(v)) return v;
+    if (isTranslatableField(fn, df)) { try { return t(v); } catch { return v; } }
+    if (/^(Yes|No|Open|Closed)$/i.test(v)) { try { return t(v); } catch {} }
+    return v;
+  }
+
+  function getBoardOrderMap(doctype){
+    try{
+      const board = window.cur_list?.board || window.cur_list?.kanban_board;
+      const fields = coerceFieldsList(doctype, board?.fields || []);
+      const map = new Map(); fields.forEach((fn,i)=> map.set(fn,i));
+      return map;
+    }catch{ return new Map(); }
+  }
 
   // ===== Skeletons & anti-jank
-  function showDocSkeleton(docEl, labelsOn){ const sk = document.createElement("div"); sk.className = "dnt-skel"; const rows = labelsOn ? [ "w80","w60","w70","w50","w40" ] : [ "w70","w60","w50" ]; for (let i=0;i<Math.max(3, rows.length); i++){ const r = document.createElement("div"); r.className = "dnt-skel-line " + rows[i % rows.length]; sk.appendChild(r); } docEl.innerHTML=""; docEl.appendChild(sk); }
-  function showTasksSkeleton(container){ const sk = document.createElement("div"); sk.className = "dnt-skel"; const arr = ["w50 h16","w80","w60"]; arr.forEach(cls => { const d=document.createElement("div"); d.className = "dnt-skel-line " + cls; sk.appendChild(d); }); container.innerHTML = sk.outerHTML; }
-  function lockCardHeight(el){ const wrap = el.closest(".kanban-card-wrapper") || el.closest(".kanban-card") || null; if (!wrap) return ()=>{}; const h = wrap.getBoundingClientRect().height; wrap.style.minHeight = Math.max(48, Math.round(h)) + "px"; const fades = wrap.querySelectorAll(".kanban-card-doc, .kanban-card-meta, .dnt-assign-slot, .dnt-tasks-mini"); fades.forEach(n => n.classList.add("dnt-softfade","dim")); let undone = false; return ()=>{ if (undone) return; undone = true; requestAnimationFrame(()=>{ fades.forEach(n => n.classList.remove("dim")); setTimeout(()=>{ wrap.style.removeProperty("min-height"); }, 160); }); }; }
-  function ensure_dashes(container){ if (!getShowLabelsFlag()) return; container.querySelectorAll?.(".dnt-kv .dnt-v")?.forEach(sv=>{ if (!CLEAN(sv.textContent)) sv.textContent = "—"; }); }
+  function showDocSkeleton(docEl, labelsOn){
+    const sk = document.createElement("div"); sk.className = "dnt-skel";
+    const rows = labelsOn ? [ "w80","w60","w70","w50","w40" ] : [ "w70","w60","w50" ];
+    for (let i=0;i<Math.max(3, rows.length); i++){
+      const r = document.createElement("div"); r.className = "dnt-skel-line " + rows[i % rows.length]; sk.appendChild(r);
+    }
+    docEl.innerHTML=""; docEl.appendChild(sk);
+  }
+  function showTasksSkeleton(container){
+    const sk = document.createElement("div"); sk.className = "dnt-skel";
+    const arr = ["w50 h16","w80","w60"];
+    arr.forEach(cls => { const d=document.createElement("div"); d.className = "dnt-skel-line " + cls; sk.appendChild(d); });
+    container.innerHTML = sk.outerHTML;
+  }
+  function lockCardHeight(el){
+    const wrap = el.closest(".kanban-card-wrapper") || el.closest(".kanban-card") || null;
+    if (!wrap) return ()=>{};
+    const h = wrap.getBoundingClientRect().height;
+    wrap.style.minHeight = Math.max(48, Math.round(h)) + "px";
+    const fades = wrap.querySelectorAll(".kanban-card-doc, .kanban-card-meta, .dnt-assign-slot, .dnt-tasks-mini");
+    fades.forEach(n => n.classList.add("dnt-softfade","dim"));
+    let undone = false;
+    return ()=>{
+      if (undone) return; undone = true;
+      requestAnimationFrame(()=>{
+        fades.forEach(n => n.classList.remove("dim"));
+        setTimeout(()=>{ wrap.style.removeProperty("min-height"); }, 160);
+      });
+    };
+  }
+  function ensure_dashes(container){
+    if (!getShowLabelsFlag()) return;
+    container.querySelectorAll?.(".dnt-kv .dnt-v")?.forEach(sv=>{ if (!CLEAN(sv.textContent)) sv.textContent = "—"; });
+  }
 
   // ===== Chips build
-  function insertChipAtIndex(container, chip, idx){ const nodes = Array.from(container.querySelectorAll(":scope > .dnt-kv")); const target = nodes[idx]; if (target) container.insertBefore(chip, target); else container.appendChild(chip); }
+  function insertChipAtIndex(container, chip, idx){
+    const nodes = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
+    const target = nodes[idx]; if (target) container.insertBefore(chip, target); else container.appendChild(chip);
+  }
   function buildChipsFromCache(ctx){
     const orderMap = getBoardOrderMap(ctx.doctype);
     const labelsOn = getShowLabelsFlag();
@@ -327,19 +441,30 @@
     boardFields.forEach(fn=>{
       const human = fn2label[fn] || (fn==="display_name" ? "Display Name" : fn);
       let val = CLEAN(normalizeDateish(out[fn]));
-      if (fn==="display_name" && !val){ const pseudo = (readFromDocCache(ctx.doctype, ctx.docName, ["first_name","middle_name","last_name","title"]).out); val = composeDisplayName(pseudo); }
+      if (fn==="display_name" && !val){
+        const pseudo = (readFromDocCache(ctx.doctype, ctx.docName, ["first_name","middle_name","last_name","title"]).out);
+        val = composeDisplayName(pseudo);
+      }
       const locVal = translateValue(ctx.doctype, fn, val, fn2df[fn]) || "";
       if (!labelsOn && !locVal) return;
       const kv = document.createElement("div"); kv.className="dnt-kv text-truncate"; kv.dataset.dntLabel = labelsOn ? human : "";
-      if (labelsOn && CLEAN(human)){ const sk=document.createElement("span"); sk.className="dnt-k"; sk.textContent = t(STRIP_COLON(human))+":"; kv.appendChild(sk); }
+      if (labelsOn && CLEAN(human)){
+        const sk=document.createElement("span"); sk.className="dnt-k"; sk.textContent = t(STRIP_COLON(human))+":"; kv.appendChild(sk);
+      }
       const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = labelsOn ? (locVal||"") : locVal; kv.appendChild(sv);
       insertChipAtIndex(frag, kv, orderMap.get(fn) ?? 0);
     });
-    if (labelsOn){ queueMicrotask(()=> { Array.from(frag.querySelectorAll?.(":scope > .dnt-kv .dnt-v") || []).forEach(sv=>{ if (!CLEAN(sv.textContent)) sv.textContent = "—"; }); }); }
+    if (labelsOn){
+      queueMicrotask(()=> {
+        Array.from(frag.querySelectorAll?.(":scope > .dnt-kv .dnt-v") || []).forEach(sv=>{ if (!CLEAN(sv.textContent)) sv.textContent = "—"; });
+      });
+    }
     return frag;
   }
 
-  function getExcludedSnapshotFields(){ const f = getColumnField(); return new Set([CLEAN(f).toLowerCase()]); }
+  function getExcludedSnapshotFields(){
+    const f = getColumnField(); return new Set([CLEAN(f).toLowerCase()]);
+  }
 
   function normalizeDocFields(docEl, ctx, opts={}){
     if (!docEl) return;
@@ -350,7 +475,8 @@
     const tasksMeta = miniCacheMeta.get(ctx.docName);
     const tasksVer  = (opts.tasksVersion != null ? opts.tasksVersion : (tasksMeta?.versionKey || "")) || "";
     const excluded = getExcludedSnapshotFields();
-    const snapshot = {}; boardFields.forEach(fn => { if (!excluded.has(CLEAN(fn).toLowerCase())) snapshot[fn] = CLEAN(out[fn] ?? ""); });
+    const snapshot = {};
+    boardFields.forEach(fn => { if (!excluded.has(CLEAN(fn).toLowerCase())) snapshot[fn] = CLEAN(out[fn] ?? ""); });
     const card_hash_if_ready = json_hash({ labelsOn, snapshot, tasksVer });
 
     if (!missing.length){
@@ -362,8 +488,12 @@
         if (opts.cause !== "tasks"){
           const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
           if (mini && mini.dataset.dntMiniInit!=="1") {
-            if (miniCacheHtml.has(ctx.docName)){ mini.innerHTML = miniCacheHtml.get(ctx.docName); bindMini(mini, ctx.docName); mini.dataset.dntMiniInit = "1"; dbg("✅ Tasks from cache (init)", ctx.docName); }
-            else { setTimeout(()=> loadMini(mini, ctx.docName, { soft:true }), 0); }
+            if (miniCacheHtml.has(ctx.docName)){
+              mini.innerHTML = miniCacheHtml.get(ctx.docName); bindMini(mini, ctx.docName); mini.dataset.dntMiniInit = "1";
+              dbg("✅ Tasks from cache (init)", ctx.docName);
+            } else {
+              setTimeout(()=> loadMini(mini, ctx.docName, { soft:true }), 0);
+            }
           }
         }
         unlock();
@@ -371,22 +501,35 @@
       return;
     }
 
-    if (docEl.dataset.dntCardHash !== "loading"){ const unlock = lockCardHeight(docEl); showDocSkeleton(docEl, labelsOn); docEl.dataset.dntCardHash = "loading"; setTimeout(unlock, 160); }
+    if (docEl.dataset.dntCardHash !== "loading"){
+      const unlock = lockCardHeight(docEl);
+      showDocSkeleton(docEl, labelsOn);
+      docEl.dataset.dntCardHash = "loading";
+      setTimeout(unlock, 160);
+    }
 
     queueMicrotask(async ()=>{
-      const holder = document.createElement("div"); await backfillAll(holder, ctx, labelsOn, orderMap);
+      const holder = document.createElement("div");
+      await backfillAll(holder, ctx, labelsOn, orderMap);
       const v = await getValuesBatch(ctx.doctype, ctx.docName, boardFields);
-      const snapshot2 = {}; boardFields.forEach(fn => { if (!excluded.has(CLEAN(fn).toLowerCase())) snapshot2[fn] = CLEAN(v[fn] ?? ""); });
+      const snapshot2 = {};
+      boardFields.forEach(fn => { if (!excluded.has(CLEAN(fn).toLowerCase())) snapshot2[fn] = CLEAN(v[fn] ?? ""); });
       const done_hash = json_hash({ labelsOn, snapshot: snapshot2, tasksVer });
       if (docEl.dataset.dntCardHash !== done_hash){
         const unlock = lockCardHeight(docEl);
-        docEl.innerHTML = ""; Array.from(holder.childNodes).forEach(n => docEl.appendChild(n)); ensure_dashes(docEl);
+        docEl.innerHTML = "";
+        Array.from(holder.childNodes).forEach(n => docEl.appendChild(n));
+        ensure_dashes(docEl);
         docEl.dataset.dntCardHash = done_hash;
         if (opts.cause !== "tasks"){
           const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
           if (mini && mini.dataset.dntMiniInit!=="1") {
-            if (miniCacheHtml.has(ctx.docName)){ mini.innerHTML = miniCacheHtml.get(ctx.docName); bindMini(mini, ctx.docName); mini.dataset.dntMiniInit = "1"; dbg("✅ Tasks from cache (init)", ctx.docName); }
-            else { setTimeout(()=> loadMini(mini, ctx.docName, { soft:true }), 0); }
+            if (miniCacheHtml.has(ctx.docName)){
+              mini.innerHTML = miniCacheHtml.get(ctx.docName); bindMini(mini, ctx.docName); mini.dataset.dntMiniInit = "1";
+              dbg("✅ Tasks from cache (init)", ctx.docName);
+            } else {
+              setTimeout(()=> loadMini(mini, ctx.docName, { soft:true }), 0);
+            }
           }
         }
         unlock();
@@ -420,8 +563,16 @@
           const f = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
           return f === fn;
         });
-        if (!chip){ chip = document.createElement("div"); chip.className="dnt-kv text-truncate"; chip.dataset.dntLabel = human; const sk=document.createElement("span"); sk.className="dnt-k"; sk.textContent = t(STRIP_COLON(human))+":"; const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = locVal || "—"; chip.appendChild(sk); chip.appendChild(sv); insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0); }
-        else { const sv = chip.querySelector(".dnt-v"); if (sv) sv.textContent = locVal || "—"; const sk = chip.querySelector(".dnt-k"); if (sk) sk.textContent = t(STRIP_COLON(human)) + ":"; }
+        if (!chip){
+          chip = document.createElement("div"); chip.className="dnt-kv text-truncate"; chip.dataset.dntLabel = human;
+          const sk=document.createElement("span"); sk.className="dnt-k"; sk.textContent = t(STRIP_COLON(human))+":";
+          const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = locVal || "—";
+          chip.appendChild(sk); chip.appendChild(sv);
+          insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
+        } else {
+          const sv = chip.querySelector(".dnt-v"); if (sv) sv.textContent = locVal || "—";
+          const sk = chip.querySelector(".dnt-k"); if (sk) sk.textContent = t(STRIP_COLON(human)) + ":";
+        }
       });
       const chips = Array.from(container.querySelectorAll(":scope > .dnt-kv"));
       chips.sort((a,b)=>{
@@ -433,7 +584,9 @@
         const ib = orderMap.has(fnb||"") ? orderMap.get(fnb||"") : 9999;
         return ia - ib;
       });
-      chips.forEach(ch => container.appendChild(ch)); ensure_dashes(container); return;
+      chips.forEach(ch => container.appendChild(ch));
+      ensure_dashes(container);
+      return;
     }
 
     const assignedValues = new Set(); const valueIndex = new Map();
@@ -445,28 +598,51 @@
 
     const { fn2df: fn2df2 } = buildMetaMaps(ctx.doctype);
     boardFields.forEach(fn=>{
-      const raw = v[fn]; const norm = CLEAN(normalizeDateish(raw)); const locVal = translateValue(ctx.doctype, fn, norm, fn2df2[fn]); if (!locVal) return;
+      const raw = v[fn];
+      const norm = CLEAN(normalizeDateish(raw));
+      const locVal = translateValue(ctx.doctype, fn, norm, fn2df2[fn]);
+      if (!locVal) return;
       const pool = valueIndex.get(norm) || valueIndex.get(locVal) || []; const pick = pool.shift?.();
-      if (pick){ const sv = pick.querySelector(".dnt-v"); if (sv) sv.textContent = locVal; insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0); assignedValues.add(locVal); }
-      else { const chip = document.createElement("div"); chip.className="dnt-kv text-truncate"; const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = locVal; chip.appendChild(sv); insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0); assignedValues.add(locVal); }
+      if (pick){
+        const sv = pick.querySelector(".dnt-v"); if (sv) sv.textContent = locVal;
+        insertChipAtIndex(container, pick, orderMap.get(fn) ?? 0);
+        assignedValues.add(locVal);
+      } else {
+        const chip = document.createElement("div"); chip.className="dnt-kv text-truncate";
+        const sv=document.createElement("span"); sv.className="dnt-v"; sv.textContent = locVal; chip.appendChild(sv);
+        insertChipAtIndex(container, chip, orderMap.get(fn) ?? 0);
+        assignedValues.add(locVal);
+      }
     });
 
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
       const lbl = CLEAN(ch.dataset.dntLabel || ch.querySelector(".dnt-k")?.textContent || "").replace(/:$/,'');
-      if (lbl){ const fn = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null); if (!fn || !boardFields.includes(fn)) ch.remove(); return; }
-      const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || ""); if (!val || !assignedValues.has(val)) ch.remove();
+      if (lbl){
+        const fn = label2fn[LBL_KEY(lbl)] || (isDisplayName(lbl) ? "display_name" : null);
+        if (!fn || !boardFields.includes(fn)) ch.remove();
+        return;
+      }
+      const val = CLEAN(ch.querySelector(".dnt-v")?.textContent || "");
+      if (!val || !assignedValues.has(val)) ch.remove();
     });
   }
 
   // ===== Display name compose
-  function composeDisplayName(v){ const f = CLEAN(v.first_name), m = CLEAN(v.middle_name), l = CLEAN(v.last_name); const parts = [f,m,l].filter(Boolean); return parts.length ? parts.join(" ") : (CLEAN(v.title) || ""); }
+  function composeDisplayName(v){
+    const f = CLEAN(v.first_name), m = CLEAN(v.middle_name), l = CLEAN(v.last_name);
+    const parts = [f,m,l].filter(Boolean);
+    return parts.length ? parts.join(" ") : (CLEAN(v.title) || "");
+  }
 
-  // ===== Mini-tasks (truncate removed → dynamic by CSS width)
+  // ===== Mini-tasks
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   function planLabel(kind){ return kind==="target" ? t("Target at") : t("Planned"); }
   function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: null, kind: null }; }
   function plain_text(html_like){ const div=document.createElement("div"); div.innerHTML = html_like || ""; return CLEAN(div.textContent || div.innerText || ""); }
-  function miniHeader(total, caseName){ const cnt = typeof total === "number" ? ` (${total})` : ""; return `<div class="dnt-taskline" data-act="noop" style="cursor:default"><span class="dnt-chip">${frappe.utils.escape_html(t("Tasks")+cnt)}</span><a href="#" class="dnt-task-add" data-act="create-task" data-case="${frappe.utils.escape_html(caseName||"")}" title="${frappe.utils.escape_html(t("New task"))}">${ICONS.plus}<span>${frappe.utils.escape_html(t("New"))}</span></a></div>`; }
+  function miniHeader(total, caseName){
+    const cnt = typeof total === "number" ? ` (${total})` : "";
+    return `<div class="dnt-taskline" data-act="noop" style="cursor:default"><span class="dnt-chip">${frappe.utils.escape_html(t("Tasks")+cnt)}</span><a href="#" class="dnt-task-add" data-act="create-task" data-case="${frappe.utils.escape_html(caseName||"")}" title="${frappe.utils.escape_html(t("New task"))}">${ICONS.plus}<span>${frappe.utils.escape_html(t("New"))}</span></a></div>`;
+  }
   function miniHtml(rows, total, caseName){
     const totalCount = typeof total === "number" ? total : (rows?.length || 0);
     const showOpenAll = totalCount > 1 || (rows?.length || 0) > 1;
@@ -572,13 +748,33 @@
   }
 
   function bindMini(container, caseName){
-    container.querySelectorAll("[data-open]").forEach(el=>{ el.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); frappe.set_route("Form","ToDo", el.getAttribute("data-open")); }); });
-    container.querySelector('[data-act="open-all"]')?.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); frappe.set_route("List","ToDo",{ reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" }); });
-    container.querySelector('[data-act="create-task"]')?.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); const cName = e.currentTarget.getAttribute("data-case") || caseName; try { frappe.new_doc("ToDo", { reference_type: CFG.caseDoctype, reference_name: cName, status: "Open" }); } catch { frappe.set_route("Form","ToDo","new-to-do-1"); setTimeout(()=> { try { cur_frm?.set_value("reference_type", CFG.caseDoctype); cur_frm?.set_value("reference_name", cName); cur_frm?.set_value("status","Open"); } catch {} }, 200); } });
+    container.querySelectorAll("[data-open]").forEach(el=>{
+      el.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); frappe.set_route("Form","ToDo", el.getAttribute("data-open")); });
+    });
+    container.querySelector('[data-act="open-all"]')?.addEventListener("click",(e)=>{
+      e.preventDefault(); e.stopPropagation(); frappe.set_route("List","ToDo",{ reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" });
+    });
+    container.querySelector('[data-act="create-task"]')?.addEventListener("click",(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      const cName = e.currentTarget.getAttribute("data-case") || caseName;
+      try { frappe.new_doc("ToDo", { reference_type: CFG.caseDoctype, reference_name: cName, status: "Open" }); }
+      catch {
+        frappe.set_route("Form","ToDo","new-to-do-1");
+        setTimeout(()=> { try { cur_frm?.set_value("reference_type", CFG.caseDoctype); cur_frm?.set_value("reference_name", cName); cur_frm?.set_value("status","Open"); } catch {} }, 200);
+      }
+    });
   }
 
   // ===== Like
-  function ensureVisibleAction(el){ try{ el.classList.remove("hidden","hide"); el.style.removeProperty("display"); el.removeAttribute("aria-hidden"); el.style.opacity = "1"; el.style.visibility = "visible"; el.style.cursor = "pointer"; el.classList.add("dnt-softfade"); }catch{} }
+  function ensureVisibleAction(el){
+    try{
+      el.classList.remove("hidden","hide");
+      el.style.removeProperty("display");
+      el.removeAttribute("aria-hidden");
+      el.style.opacity = "1"; el.style.visibility = "visible"; el.style.cursor = "pointer";
+      el.classList.add("dnt-softfade");
+    }catch{}
+  }
   function detectLikeFrom(root){ return root.querySelector(".like-action, .list-row-like, .liked-by, [data-action='like'], .btn-like"); }
   function createFallbackLike(doctype, name){
     const span = document.createElement("span");
@@ -588,7 +784,14 @@
     span.setAttribute("title", t("Like"));
     span.innerHTML = `<svg class="es-icon es-line icon-sm" aria-hidden="true"><use class="like-icon" href="#es-solid-heart"></use></svg>`;
     let busy = false;
-    span.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation(); if (busy) return; busy = true; try{ await frappe.call("frappe.desk.like.toggle_like", { doctype, name }); span.classList.toggle("liked"); span.classList.toggle("not-liked"); } finally { busy = false; } });
+    span.addEventListener("click", async (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      if (busy) return; busy = true;
+      try{
+        await frappe.call("frappe.desk.like.toggle_like", { doctype, name });
+        span.classList.toggle("liked"); span.classList.toggle("not-liked");
+      } finally { busy = false; }
+    });
     return span;
   }
 
@@ -598,22 +801,46 @@
     areas.forEach(area=>{
       if (area.__dntDragFixApplied) return;
       area.__dntDragFixApplied = true;
-      area.addEventListener("mousedown", (e)=>{ if (e.button !== 0) return; const tag = (e.target?.tagName||"").toLowerCase(); if (/^(a|button|input|textarea|select|svg|path|use)$/i.test(tag)) return; e.preventDefault(); }, true);
-      area.addEventListener("touchstart", ()=>{ try{ area.style.touchAction = "none"; setTimeout(()=> area.style.touchAction = "", 500); }catch{} }, { passive: true });
+      area.addEventListener("mousedown", (e)=>{
+        if (e.button !== 0) return;
+        const tag = (e.target?.tagName||"").toLowerCase();
+        if (/^(a|button|input|textarea|select|svg|path|use)$/i.test(tag)) return;
+        e.preventDefault();
+      }, true);
+      area.addEventListener("touchstart", ()=>{
+        try{ area.style.touchAction = "none"; setTimeout(()=> area.style.touchAction = "", 500); }catch{}
+      }, { passive: true });
     });
   }
 
   // ===== Title inline-edit
   function makeTitleEditable(titleArea, name, doctype){
     if (!titleArea || titleArea.__dntEditable) return; titleArea.__dntEditable = true;
-    const anchor = titleArea.querySelector("a"); const currentText = (titleArea.querySelector(".kanban-card-title")?.textContent || anchor?.textContent || name || "").trim();
+    const anchor = titleArea.querySelector("a");
+    const currentText = (titleArea.querySelector(".kanban-card-title")?.textContent || anchor?.textContent || name || "").trim();
     const holder = titleArea.querySelector(".kanban-card-title") || document.createElement("div"); holder.classList.add("kanban-card-title"); holder.innerHTML = "";
     const span = document.createElement("span"); span.className = "dnt-title dnt-softfade"; span.textContent = currentText; holder.appendChild(span);
     if (anchor) anchor.replaceWith(holder); else titleArea.appendChild(holder);
     let beforeEdit = currentText;
-    function toEdit(){ if (span.isContentEditable) return; beforeEdit = span.textContent || ""; span.classList.add("is-edit"); span.setAttribute("contenteditable","true"); span.focus(); const sel = window.getSelection?.(); if (sel && document.createRange){ const r = document.createRange(); r.selectNodeContents(span); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); } }
-    function saveEdit(){ if (!span.isContentEditable) return; const val = CLEAN(span.textContent || ""); const done = ()=>{ span.classList.remove("is-edit"); span.removeAttribute("contenteditable"); }; if (!val || val === beforeEdit){ done(); return; } frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname:"title", value: val } }).then(()=>{ frappe.show_alert({ message: t("Title updated"), indicator:"green" }); beforeEdit = val; done(); }).catch(()=>{ frappe.msgprint({ message: t("Failed to update title"), indicator:"red" }); span.textContent = beforeEdit; done(); }); }
-    function cancelEdit(){ if (!span.isContentEditable) return; span.textContent = beforeEdit; span.classList.remove("is-edit"); span.removeAttribute("contenteditable"); }
+    function toEdit(){
+      if (span.isContentEditable) return;
+      beforeEdit = span.textContent || "";
+      span.classList.add("is-edit"); span.setAttribute("contenteditable","true"); span.focus();
+      const sel = window.getSelection?.(); if (sel && document.createRange){ const r = document.createRange(); r.selectNodeContents(span); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }
+    }
+    function saveEdit(){
+      if (!span.isContentEditable) return;
+      const val = CLEAN(span.textContent || "");
+      const done = ()=>{ span.classList.remove("is-edit"); span.removeAttribute("contenteditable"); };
+      if (!val || val === beforeEdit){ done(); return; }
+      frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname:"title", value: val } })
+        .then(()=>{ frappe.show_alert({ message: t("Title updated"), indicator:"green" }); beforeEdit = val; done(); })
+        .catch(()=>{ frappe.msgprint({ message: t("Failed to update title"), indicator:"red" }); span.textContent = beforeEdit; done(); });
+    }
+    function cancelEdit(){
+      if (!span.isContentEditable) return;
+      span.textContent = beforeEdit; span.classList.remove("is-edit"); span.removeAttribute("contenteditable");
+    }
     span.addEventListener("dblclick", (e)=>{ e.preventDefault(); e.stopPropagation(); toEdit(); });
     span.addEventListener("click", (e)=> e.stopPropagation());
     span.addEventListener("keydown", (e)=>{ if (e.key==="Enter"){ e.preventDefault(); saveEdit(); span.blur(); } if (e.key==="Escape"){ e.preventDefault(); cancelEdit(); span.blur(); }});
@@ -744,13 +971,12 @@
     const name = wrapper.getAttribute("data-name") || wrapper.dataset.name || card.getAttribute("data-name") || "";
     const doctype = getDoctype();
 
-    // normalize only when visible — lazy
     if (doc && isWrapVisible(wrapper)) normalizeDocFields(doc, { doctype, docName: name });
 
     let assignSlot = body.querySelector(".dnt-assign-slot");
     if (!assignSlot){
       assignSlot = document.createElement("div");
-      assignSlot.className = "dnt-assign-slot dnt-softfade"; // ← фикс: без точки в className
+      assignSlot.className = "dnt-assign-slot dnt-softfade";
       body.appendChild(assignSlot);
     }
     let assignLeft = assignSlot.querySelector(".dnt-assign-left"); if (!assignLeft){ assignLeft = document.createElement("div"); assignLeft.className = "dnt-assign-left"; assignSlot.appendChild(assignLeft); }
@@ -767,8 +993,17 @@
     let mini = body.querySelector(".dnt-tasks-mini"); if (!mini){ mini = document.createElement("div"); mini.className = "dnt-tasks-mini dnt-softfade"; body.appendChild(mini); }
     if (doctype === CFG.caseDoctype && name) {
       const lsHtml = ls_get(`dntMiniHtml::${name}`); const lsMetaRaw = ls_get(`dntMiniMeta::${name}`);
-      if (lsHtml && lsMetaRaw){ let parsed=null; try{ parsed = JSON.parse(lsMetaRaw); }catch{} if (parsed?.versionKey){ mini.innerHTML = lsHtml; bindMini(mini, name); mini.dataset.dntMiniInit = "1"; miniCacheHtml.set(name, lsHtml); miniCacheMeta.set(name, { versionKey: parsed.versionKey }); dbg("✅ Prime tasks from localStorage (upgrade)", name); } }
-      mini.addEventListener("dnt:tasks-version", (e)=>{ normalizeDocFields(doc, { doctype, docName: name }, { cause: "tasks", tasksVersion: e.detail?.versionKey }); });
+      if (lsHtml && lsMetaRaw){
+        let parsed=null; try{ parsed = JSON.parse(lsMetaRaw); }catch{}
+        if (parsed?.versionKey){
+          mini.innerHTML = lsHtml; bindMini(mini, name); mini.dataset.dntMiniInit = "1";
+          miniCacheHtml.set(name, lsHtml); miniCacheMeta.set(name, { versionKey: parsed.versionKey });
+          dbg("✅ Prime tasks from localStorage (upgrade)", name);
+        }
+      }
+      mini.addEventListener("dnt:tasks-version", (e)=>{
+        normalizeDocFields(doc, { doctype, docName: name }, { cause: "tasks", tasksVersion: e.detail?.versionKey });
+      });
       setTimeout(()=> loadMini(mini, name, { soft:true }), 0);
     }
 
@@ -779,18 +1014,30 @@
       row.appendChild(bOpen);
 
       const bDel = document.createElement("div"); bDel.className="dnt-icon-btn"; bDel.title=t("Delete / Remove from board"); bDel.innerHTML = frappe.utils.icon("delete","sm");
-      bDel.addEventListener("click",(e)=>{ e.stopPropagation();
+      bDel.addEventListener("click",(e)=>{
+        e.stopPropagation();
         const bname = getBoardName(); const flag = CFG.boardFieldByTitle[bname]; const canSoft = !!flag;
-        const d = new frappe.ui.Dialog({ title: t("Card actions"), primary_action_label: canSoft ? t("Remove from this board") : t("Delete"),
+        const d = new frappe.ui.Dialog({
+          title: t("Card actions"),
+          primary_action_label: canSoft ? t("Remove from this board") : t("Delete"),
           primary_action: ()=> {
             if (canSoft) {
-              frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname: flag, value: 0 } }).then(()=>{ frappe.show_alert(t("Removed from board")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
+              frappe.call({ method:"frappe.client.set_value", args:{ doctype, name, fieldname: flag, value: 0 } })
+                .then(()=>{ frappe.show_alert(t("Removed from board")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
             } else {
-              frappe.call({ method:"frappe.client.delete", args:{ doctype, name } }).then(()=>{ frappe.show_alert(t("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
-            } } });
+              frappe.call({ method:"frappe.client.delete", args:{ doctype, name } })
+                .then(()=>{ frappe.show_alert(t("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
+            }
+          }
+        });
         if (canSoft){
           d.set_secondary_action_label(t("Delete document"));
-          d.set_secondary_action(()=> { frappe.confirm(t("Delete this document?"),()=>{ frappe.call({ method:"frappe.client.delete", args:{ doctype, name } }).then(()=>{ frappe.show_alert(t("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); }); }); });
+          d.set_secondary_action(()=> {
+            frappe.confirm(t("Delete this document?"),()=>{
+              frappe.call({ method:"frappe.client.delete", args:{ doctype, name } })
+                .then(()=>{ frappe.show_alert(t("Deleted")); try{window.cur_list?.refresh();}catch{}; d.hide(); });
+            });
+          });
         }
         d.show();
       });
@@ -867,7 +1114,10 @@
     btn.addEventListener("hidden.bs.dropdown", refreshLabelsText);
     btn.addEventListener("click", () => setTimeout(refreshLabelsText, 0));
 
-    menu.querySelector(".dnt-open-board-settings").addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); const bname = getBoardName(); if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`); });
+    menu.querySelector(".dnt-open-board-settings").addEventListener("click",(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      const bname = getBoardName(); if (bname) frappe.set_route(`/app/kanban-board/${encodeURIComponent(bname)}`);
+    });
 
     menu.querySelector(".dnt-toggle-labels").addEventListener("click", async (e)=>{
       e.preventDefault(); e.stopPropagation();
@@ -888,11 +1138,15 @@
   }
 
   function exposeSelectKanban(){
-    document.querySelectorAll(".custom-actions").forEach(el=>{ el.classList.remove("hide","hidden-xs","hidden-sm","hidden-md","hidden-lg"); el.style.display = ""; el.style.visibility = ""; });
+    document.querySelectorAll(".custom-actions").forEach(el=>{
+      el.classList.remove("hide","hidden-xs","hidden-sm","hidden-md","hidden-lg");
+      el.style.display = ""; el.style.visibility = "";
+    });
     const groups = Array.from(document.querySelectorAll(".custom-actions .custom-btn-group"));
     const selectGrp = groups.find(g => /Select\s+Kanban/i.test(g.textContent||"") || /Выбрать\s+Канбан/i.test(g.textContent||""));
     if (selectGrp){
-      selectGrp.classList.remove("hide","hidden-xs","hidden-sm","hidden-md","hidden-lg"); selectGrp.style.display = "";
+      selectGrp.classList.remove("hide","hidden-xs","hidden-sm","hidden-md","hidden-lg");
+      selectGrp.style.display = "";
       const btn = selectGrp.querySelector("button");
       if (btn){
         btn.addEventListener("click", ()=>{
@@ -904,7 +1158,9 @@
               const lbl = (li.textContent||"").trim();
               const isCreate = /Create\s+New\s+Kanban\s+Board/i.test(lbl) || /Создать\s+Канбан/i.test(lbl) || /Создать.*доску/i.test(lbl);
               if (isCreate) li.style.display = allowCreate ? "" : "none";
-              if (!allowCreate && (isCreate || li.classList.contains("divider") || /(^|\s)(dropdown-divider|divider)(\s|$)/.test(li.className))) { li.style.display = "none"; }
+              if (!allowCreate && (isCreate || li.classList.contains("divider") || /(^|\s)(dropdown-divider|divider)(\s|$)/.test(li.className))) {
+                li.style.display = "none";
+              }
             });
             Array.from(menu.querySelectorAll("li.user-action a.dropdown-item")).forEach(a=>{
               const labNode = a.querySelector(".menu-item-label");
@@ -935,7 +1191,7 @@
         });
         const obj = fetched || {};
         mergeDocCache(doctype, name, obj);
-        out = Object.assign({}, out, obj); // ← ключевой фикс
+        out = Object.assign({}, out, obj);
       } catch { dbg("🧩 Fields refresh failed ⚠️", name); }
     } else { dbg("✅ Fields from cache", name); }
     return out;
@@ -946,7 +1202,10 @@
     qsa_in(root, ".kanban-card-wrapper, .kanban-column .kanban-card").forEach(w => {
       const wrap = w.classList?.contains?.("kanban-card") ? (w.closest(".kanban-card-wrapper") || w) : w;
       if (!isWrapVisible(wrap)) return;
-      const dt = getDoctype(); const body = wrap.querySelector(".kanban-card-body") || wrap; const docEl = body?.querySelector(".kanban-card-doc"); const name = wrap.getAttribute("data-name") || wrap.dataset?.name || body?.querySelector?.(".kanban-card")?.getAttribute?.("data-name") || "";
+      const dt = getDoctype();
+      const body = wrap.querySelector(".kanban-card-body") || wrap;
+      const docEl = body?.querySelector(".kanban-card-doc");
+      const name = wrap.getAttribute("data-name") || wrap.dataset?.name || body?.querySelector?.(".kanban-card")?.getAttribute?.("data-name") || "";
       if (dt && name && docEl) normalizeDocFields(docEl, { doctype: dt, docName: name });
     });
   }, 120);
@@ -972,7 +1231,10 @@
         if (m.target && m.target.classList?.contains("kanban-column")) touchedColumns.add(m.target);
       }
       PERF.schedule(() => {
-        for (const w of touchedCards){ if (!w.isConnected) continue; if (isWrapVisible(w)) { upgradeCard(w); refreshCardDocForWrap(w); } else { observeForLazy(w); } }
+        for (const w of touchedCards){
+          if (!w.isConnected) continue;
+          if (isWrapVisible(w)) { upgradeCard(w); refreshCardDocForWrap(w); } else { observeForLazy(w); }
+        }
         if (touchedColumns.size) updateColumnCounts();
       });
       if (touchedCards.size > 10 || touchedColumns.size > 3) refreshVisibleCardsDocs_bounced();
@@ -998,7 +1260,6 @@
     const names = vis.map(el => el.getAttribute("data-name") || el.dataset?.name || el.querySelector?.(".kanban-card")?.getAttribute?.("data-name")).filter(Boolean);
     const unique = Array.from(new Set(names)); if (!unique.length) return;
 
-    // hydrate from LS first (so normalize uses cached values immediately after reload)
     DOC_LS.hydrate(dt, unique);
 
     let versionRows = [];
@@ -1043,8 +1304,24 @@
     const btnCompact = document.createElement("button"); btnCompact.className = "btn btn-default"; btnCompact.innerHTML = `${ICONS.modeCompact} <span>${t("Compact")}</span>`;
     const btnComfy = document.createElement("button"); btnComfy.className = "btn btn-default"; btnComfy.innerHTML = `${ICONS.modeComfy} <span>${t("Comfort")}</span>`;
     const setActive = ()=>{ const on = document.documentElement.classList.contains("dnt-compact-on"); btnCompact.classList.toggle("active", on); btnComfy.classList.toggle("active", !on); };
-    btnCompact.addEventListener("click", ()=>{ if (!document.documentElement.classList.contains("dnt-compact-on")){ document.documentElement.classList.add("dnt-compact-on"); try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "1"); }catch{} clearSavedColWidthsForBoard(getBoardName()); clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth); requestAnimationFrame(()=>{ applyWidthsForMode("compact"); setActive(); updateColumnCounts(); }); } });
-    btnComfy.addEventListener("click", ()=>{ if (document.documentElement.classList.contains("dnt-compact-on")){ document.documentElement.classList.remove("dnt-compact-on"); try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "0"); }catch{} clearSavedColWidthsForBoard(getBoardName()); clearSessAll(); getColumnsEl().forEach(resetColumnInlineWidth); requestAnimationFrame(()=>{ applyWidthsForMode("comfy"); setActive(); updateColumnCounts(); }); } });
+    btnCompact.addEventListener("click", ()=>{
+      if (!document.documentElement.classList.contains("dnt-compact-on")){
+        document.documentElement.classList.add("dnt-compact-on");
+        try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "1"); }catch{}
+        clearSavedColWidthsForBoard(getBoardName()); clearSessAll();
+        getColumnsEl().forEach(resetColumnInlineWidth);
+        requestAnimationFrame(()=>{ applyWidthsForMode("compact"); setActive(); updateColumnCounts(); });
+      }
+    });
+    btnComfy.addEventListener("click", ()=>{
+      if (document.documentElement.classList.contains("dnt-compact-on")){
+        document.documentElement.classList.remove("dnt-compact-on");
+        try{ localStorage.setItem(`dntKanbanCompact::${getBoardName()||"__all__"}`, "0"); }catch{}
+        clearSavedColWidthsForBoard(getBoardName()); clearSessAll();
+        getColumnsEl().forEach(resetColumnInlineWidth);
+        requestAnimationFrame(()=>{ applyWidthsForMode("comfy"); setActive(); updateColumnCounts(); });
+      }
+    });
     wrap.appendChild(btnCompact); wrap.appendChild(btnComfy); setActive();
 
     const btnList = document.createElement("button"); btnList.id = CFG.openListBtnId; btnList.className = "btn btn-default btn-sm"; btnList.setAttribute("title", t("Open List with board filter")); btnList.innerHTML = `${ICONS.listIcon} <span>${t("List")}</span>`;
@@ -1090,7 +1367,6 @@
 
     applyWidthsForMode(currentMode());
 
-    // hydrate visible names from LS before any normalization
     try{
       const dt = getDoctype();
       const wraps = visible_wrappers().filter(isWrapVisible);
@@ -1108,7 +1384,16 @@
     updateColumnCounts();
     attach_main_observer();
 
-    setTimeout(() => { PERF.schedule(() => { applyWidthsForMode(currentMode()); enhanceCards(); refreshVisibleCardsDocs(); updateColumnCounts(); exposeSelectKanban(); hideViewSwitcher(); }); }, 120);
+    setTimeout(() => {
+      PERF.schedule(() => {
+        applyWidthsForMode(currentMode());
+        enhanceCards();
+        refreshVisibleCardsDocs();
+        updateColumnCounts();
+        exposeSelectKanban();
+        hideViewSwitcher();
+      });
+    }, 120);
   }
 
   if (frappe?.after_ajax) frappe.after_ajax(run); else document.addEventListener("DOMContentLoaded", run);
