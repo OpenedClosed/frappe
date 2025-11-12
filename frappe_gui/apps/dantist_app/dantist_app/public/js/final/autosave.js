@@ -1,5 +1,11 @@
 // === dnt_autosave_f15_force.js ===
-// Frappe v15 — автосохранение на любых изменениях + скрытие Save (docstatus=0) + анти-дёргание UI.
+// Frappe v15 — автосохранение + корректная логика Save без дёрганий.
+// Правила:
+// • СОЗДАНИЕ (frm.is_new() === true): кнопку Save не трогаем вообще.
+// • РЕДАКТИРОВАНИЕ (frm.is_new() === false): не даём создать кнопку Save изначально.
+// • Никаких удалений/перестроений панели действий: только предотвращаем именно рендер Save.
+// • Автосейв — как в рабочей версии: input/change/blur + grid events, анти-дёргание UI, safety-таймер.
+
 (function () {
   if (window.__DNT_AUTOSAVE_F15_FORCE) return;
   window.__DNT_AUTOSAVE_F15_FORCE = true;
@@ -14,114 +20,149 @@
     log_prefix: "[DNT-AUTOSAVE]"
   };
 
-  // CSS: прячем Save и фиксируем макет во время сохранения (без анимаций)
+  // === CSS: только анти-дёргание на время автосохранения ===
   (function ensure_css(){
     if (document.getElementById("dnt-autosave-css")) return;
     const s = document.createElement("style");
     s.id = "dnt-autosave-css";
     s.textContent = `
-      .page-actions .primary-action[data-label="Save"],
-      .page-head   .primary-action[data-label="Save"],
-      .page-actions .primary-action[data-label="Сохранить"],
-      .page-head   .primary-action[data-label="Сохранить"] { display:none !important; }
-
       .dnt-saving * { transition: none !important; animation: none !important; }
       .dnt-saving .page-head { min-height: 56px; }
-      .dnt-saving .page-head .indicator-pill { visibility: hidden !important; } /* место сохраняем */
-      .dnt-saving .form-message { display: none !important; } /* убираем всплывающие системные подсказки */
+      .dnt-saving .page-head .indicator-pill { visibility: hidden !important; }
+      .dnt-saving .form-message { display: none !important; }
     `;
     document.head.appendChild(s);
   })();
 
+  // === Утилиты ===
   function page_root(frm){
-    return (frm?.page?.wrapper && (frm.page.wrapper[0] || frm.page.wrapper)) || null;
+    return (frm?.page?.wrapper && (frm.page.wrapper[0] || frm.page.wrapper)) || document;
   }
-
-  function supported(frm){
+  function is_new_doc(frm){
+    try {
+      if (!frm || !frm.doc) return false;
+      if (typeof frm.is_new === "function") return frm.is_new();
+      return !!frm.doc.__islocal;
+    } catch { return false; }
+  }
+  function supported_autosave(frm){
     try{
       if (!frm || !frm.doctype || !frm.doc) return false;
       if (frm.meta?.istable) return false;
       if (frm.doc.docstatus !== 0) return false;
       if (CFG.exclude.has(frm.doctype)) return false;
       if (frm.__dnt_autosave_disabled || frm.doc.__disable_autosave) return false;
+      if (is_new_doc(frm)) return false; // на создании — без автосейва
       return true;
     } catch { return false; }
   }
 
-  function hide_save_ui_strict(frm){
-    try { frm.disable_save?.(); } catch {}
-    try { frm.page?.clear_primary_action?.(); } catch {}
-    try {
-      const btn = frm.page?.btn_primary;
-      if (btn && typeof btn.addClass === "function") btn.addClass("hide");
-    } catch {}
-    try {
-      const root = page_root(frm);
-      if (root && !root.__dnt_actions_obs){
-        const acts = root.querySelector(".page-actions");
-        if (acts){
-          const mo = new MutationObserver(() => {
-            try { frm.page?.clear_primary_action?.(); } catch {}
-            try {
-              const b = frm.page?.btn_primary;
-              if (b && typeof b.addClass === "function") b.addClass("hide");
-            } catch {}
-          });
-          mo.observe(acts, { childList:true, subtree:true });
-          root.__dnt_actions_obs = mo;
-        }
-      }
-    } catch {}
-  }
+  // === ПЕРЕХВАТ: не даём создать Save на редактировании ещё до рендера ===
+  (function patch_set_primary_action(){
+    const try_patch = () => {
+      const proto = window.frappe?.ui?.Page?.prototype;
+      if (!proto || proto.__dnt_patched_spa) return !!proto?.__dnt_patched_spa;
 
-  // --- Анти-дёргание: сохраняем/восстанавливаем фокус, каретку и скролл ---
+      const orig = proto.set_primary_action;
+      proto.set_primary_action = function(label, action, icon, btn_class){
+        try {
+          const frm = window.cur_frm;
+          // Только когда это форма текущего frm и документ НЕ новый
+          if (frm && this === frm.page && !is_new_doc(frm)) {
+            const lbl = (typeof label === "string" ? label : (label?.toString?.() || "")).toLowerCase();
+            if (lbl.includes("save") || lbl.includes("сохран")) {
+              // Не создаём Save вообще (без миганий/сдвигов)
+              // Возвращаем скрытую «заглушку», если кто-то ждёт объект кнопки
+              try { this.clear_primary_action?.(); } catch {}
+              try {
+                const host = (this.wrapper && (this.wrapper[0] || this.wrapper)) || document;
+                const std = host.querySelector?.(".page-actions .standard-actions") || host;
+                const btn = document.createElement("button");
+                btn.className = "btn btn-primary btn-sm primary-action dnt-suppressed-save";
+                btn.setAttribute("data-label", label || "");
+                btn.style.display = "none";
+                std && std.appendChild(btn);
+                return btn;
+              } catch {}
+              return null;
+            }
+          }
+        } catch {}
+        return orig.apply(this, arguments);
+      };
+
+      proto.__dnt_patched_spa = true;
+      return true;
+    };
+    if (!try_patch()) {
+      const t = setInterval(() => { if (try_patch()) clearInterval(t); }, 100);
+    }
+  })();
+
+  // === РЕЗЕРВ: если Save «подсунут» позже — мгновенно скрываем ===
+  (function guard_save_presence(){
+    function kill_save_in(container){
+      const frm = window.cur_frm;
+      if (!frm || is_new_doc(frm)) return; // на создании — не трогаем
+      container.querySelectorAll('.primary-action').forEach(btn => {
+        const label = ((btn.getAttribute("data-label") || btn.textContent || "") + "").toLowerCase();
+        if (label.includes("save") || label.includes("сохран")) {
+          btn.style.display = "none";
+          btn.classList.add("dnt-suppressed-save");
+        }
+      });
+    }
+    function mount(){
+      const container = document.querySelector(".page-actions");
+      if (!container) return false;
+      kill_save_in(container);
+      const mo = new MutationObserver(() => kill_save_in(container));
+      mo.observe(container, { childList:true, subtree:true });
+      return true;
+    }
+    if (!mount()) {
+      const t = setInterval(() => { if (mount()) clearInterval(t); }, 200);
+    }
+  })();
+
+  // === Анти-дёргание курсора/скролла при автосохранении ===
   function capture_ui_state(frm){
     const state = {};
     try {
-      const root = page_root(frm) || document;
       const active = document.activeElement;
       const fieldwrap = active && active.closest?.(".frappe-control");
-      const fieldname = fieldwrap?.getAttribute?.("data-fieldname");
-      state.fieldname = fieldname || null;
+      state.fieldname = fieldwrap?.getAttribute?.("data-fieldname") || null;
 
-      // каретка
       try {
         if (active && ("selectionStart" in active) && ("selectionEnd" in active)) {
           state.caret = [active.selectionStart, active.selectionEnd];
         }
       } catch {}
 
-      // скроллы
-      const main = (page_root(frm) || document).querySelector?.(".layout-main-section");
+      const main = page_root(frm).querySelector?.(".layout-main-section");
       state.scroll_el = main || document.scrollingElement || document.documentElement;
       state.scroll_top = state.scroll_el ? state.scroll_el.scrollTop : null;
     } catch {}
     return state;
   }
-
   function restore_ui_state(frm, state){
     try {
-      // скролл
       if (state?.scroll_el && typeof state.scroll_top === "number") {
         state.scroll_el.scrollTop = state.scroll_top;
       }
-      // фокус
       if (state?.fieldname) {
         const ctrl = frm.get_field?.(state.fieldname);
-        let input = null;
-        if (ctrl?.$input?.length) input = ctrl.$input.get(0);
+        let input = ctrl?.$input?.length ? ctrl.$input.get(0) : null;
         if (!input) {
-          input = (page_root(frm) || document).querySelector(
-            `.frappe-control[data-fieldname="${CSS.escape(state.fieldname)}"] input, 
-             .frappe-control[data-fieldname="${CSS.escape(state.fieldname)}"] textarea, 
+          input = page_root(frm).querySelector(
+            `.frappe-control[data-fieldname="${CSS.escape(state.fieldname)}"] input,
+             .frappe-control[data-fieldname="${CSS.escape(state.fieldname)}"] textarea,
              .frappe-control[data-fieldname="${CSS.escape(state.fieldname)}"] select`
           );
         }
         if (input) {
           input.focus({ preventScroll: true });
-          try {
-            if (state.caret) input.setSelectionRange(state.caret[0], state.caret[1]);
-          } catch {}
+          try { if (state.caret) input.setSelectionRange(state.caret[0], state.caret[1]); } catch {}
         }
       }
     } catch {}
@@ -140,13 +181,12 @@
     } catch {}
   }
 
+  // === Автосохранение (как в рабочей версии) ===
   function bind_autosave(frm){
     if (frm.__dnt_autosave_bound) return;
+    if (!supported_autosave(frm)) return;
+
     frm.__dnt_autosave_bound = true;
-
-    if (!supported(frm)) return;
-
-    hide_save_ui_strict(frm);
 
     let timer = null;
     let saving = false;
@@ -156,7 +196,7 @@
     const is_dirty = () => !!frm.doc.__unsaved || (typeof frm.is_dirty === "function" && frm.is_dirty());
 
     const schedule = () => {
-      if (!supported(frm)) return;
+      if (!supported_autosave(frm)) return;
       pending = true;
       if (timer) clearTimeout(timer);
       timer = setTimeout(flush, CFG.debounce_ms);
@@ -164,7 +204,7 @@
     };
 
     const flush = async () => {
-      if (!supported(frm)) { pending = false; return; }
+      if (!supported_autosave(frm)) { pending = false; return; }
       if (saving) return;
       if (!is_dirty()) { pending = false; return; }
 
@@ -174,10 +214,9 @@
 
       saving = true;
 
-      // глушим звук/тост на время автосейва
       const old_alert = frappe.show_alert;
       const old_sound = frappe.utils?.play_sound;
-      frappe.show_alert = function (msg, seconds) {
+      frappe.show_alert = function (msg) {
         try {
           const txt = typeof msg === "string" ? msg : (msg && (msg.message || msg.title)) || "";
           const t = String(txt).toLowerCase();
@@ -187,7 +226,6 @@
       };
       if (frappe.utils) frappe.utils.play_sound = function () {};
 
-      // анти-дёргание
       const ui = capture_ui_state(frm);
       const root = page_root(frm) || document.body;
       root.classList.add("dnt-saving");
@@ -200,11 +238,9 @@
       } catch (e){
         console.warn(CFG.log_prefix, "save failed:", e?.message || e);
       } finally {
-        // вернуть звук/алерт
         if (frappe.utils && old_sound) frappe.utils.play_sound = old_sound;
         if (old_alert) frappe.show_alert = old_alert;
 
-        // восстановить UI
         requestAnimationFrame(() => {
           restore_ui_state(frm, ui);
           root.classList.remove("dnt-saving");
@@ -223,7 +259,7 @@
       return out;
     };
 
-    // DOM-инпуты (захватом): Select/Data/Date/etc.
+    // DOM-инпуты (захватом)
     const root = page_root(frm) || document;
     if (!frm.__dnt_dom_bound){
       const dom_on_change = frappe.utils?.debounce ? frappe.utils.debounce(schedule, 50) : schedule;
@@ -245,7 +281,7 @@
     frm.dnt_autosave_flush = flush;
   }
 
-  // Патчим frappe.model.set_value (для grid/child)
+  // === Патч frappe.model.set_value для child-таблиц (только триггерим автосейв) ===
   (function patch_model_set_value_when_ready(){
     const try_patch = () => {
       if (!frappe?.model?.set_value || frappe.model.__dnt_patched) return false;
@@ -254,7 +290,7 @@
         const out = await orig(doctype, name, fieldname, value, df);
         try {
           const frm = cur_frm;
-          if (frm && supported(frm) && frm.dnt_autosave_schedule) frm.dnt_autosave_schedule();
+          if (frm && supported_autosave(frm) && frm.dnt_autosave_schedule) frm.dnt_autosave_schedule();
         } catch {}
         return out;
       };
@@ -267,25 +303,18 @@
     }
   })();
 
-  // Хук на все формы
+  // === Хуки форм: только включаем автосейв, кнопки не трогаем (ими рулит патч выше) ===
   frappe.ui.form.on("*", {
-    setup(frm){ if (supported(frm)) bind_autosave(frm); },
-    onload_post_render(frm){ if (supported(frm)) bind_autosave(frm); },
-    refresh(frm){
-      if (supported(frm)) {
-        bind_autosave(frm);
-        hide_save_ui_strict(frm);
-      } else {
-        try { page_root(frm)?.classList.remove("dnt-hide-save"); } catch {}
-      }
-    },
+    setup(frm){ if (supported_autosave(frm)) bind_autosave(frm); },
+    onload_post_render(frm){ if (supported_autosave(frm)) bind_autosave(frm); },
+    refresh(frm){ if (supported_autosave(frm)) bind_autosave(frm); },
   });
 
-  // Страховка: перепривязка к текущей форме
+  // === Safety-биндер как в «рабочей» версии: если не успели привязаться — дожмём ===
   setInterval(() => {
     try {
       const frm = cur_frm;
-      if (frm && supported(frm)) bind_autosave(frm);
+      if (frm && supported_autosave(frm)) bind_autosave(frm);
     } catch {}
   }, 800);
 
@@ -293,4 +322,4 @@
   window.dnt_autosave_flush_all = async () => {
     try { if (cur_frm?.dnt_autosave_flush) await cur_frm.dnt_autosave_flush(); } catch {}
   };
-})();
+})();i
