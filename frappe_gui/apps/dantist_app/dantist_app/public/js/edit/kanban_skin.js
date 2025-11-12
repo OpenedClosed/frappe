@@ -21,7 +21,6 @@
     tasksMethod: "dantist_app.api.tasks.handlers.ec_tasks_for_case",
     tasksLimit: 5,
 
-    // логирование кэша
     debug: true,
     log_prefix: "[DNT-KANBAN]",
 
@@ -34,12 +33,12 @@
   };
 
   const ICONS = {
-    // кнопку шестерёнки берём из frappe.utils.icon('settings','sm') — меньше артефактов
     modeCompact:  '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h6M7 13h4"/></svg>',
     modeComfy:    '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 10h10M7 14h8"/></svg>',
     resizerGrip:  '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="square" shape-rendering="crispEdges"><path d="M6 15L15 6M9 15L15 9M12 15L15 12"/></svg>',
     listIcon:     '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
-    plus:         '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>'
+    plus:         '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+    settings:     '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="7" cy="18" r="2"/></svg>'
   };
 
   // ===== Utils
@@ -50,6 +49,8 @@
   const hasAny = (roles)=>{ try{ return roles.some(r=>frappe.user.has_role?.(r)); }catch{ return false; } };
   const json_hash = (o)=>{ try{ return JSON.stringify(o); }catch{ return ""; } };
   const dbg = (...args)=> { if (CFG.debug) try{ console.log(CFG.log_prefix, ...args); }catch{} };
+  const ls_get = (k)=>{ try{ return localStorage.getItem(k); }catch{ return null; } };
+  const ls_set = (k,v)=>{ try{ localStorage.setItem(k,v); }catch{} };
 
   async function ensure_messages(timeout_ms = 2000) {
     const start = Date.now();
@@ -134,7 +135,7 @@
     }catch{}
   }
 
-  // ===== CSS (анти-джанк, скелеты, счётчики, кнопка задач, drag-fix, размеры Assign To)
+  // ===== CSS
   function injectCSS(){
     if(document.getElementById(CFG.cssId)) return;
     const s=document.createElement("style"); s.id=CFG.cssId;
@@ -144,7 +145,6 @@
         --dnt-card-ch-comfy:   ${CFG.comfyChars};
         --dnt-h-head-compact: 36px;
         --dnt-h-head-comfy:   52px;
-        /* Чуть больше в comfy, чуть компактнее в compact */
         --dnt-assign-h-compact: 22px;
         --dnt-assign-h-comfy:   32px;
         --dnt-tasks-h-compact: 72px;
@@ -159,7 +159,6 @@
       html.${CFG.htmlClass} .kanban-cards{ display:block !important; }
       html.${CFG.htmlClass} .kanban-card-wrapper{ position:relative; margin:0 !important; width:100%; will-change: transform; }
 
-      /* Column title count */
       html.${CFG.htmlClass} .dnt-col-count{ margin-left:6px; font-weight:600; opacity:.8; font-size:.9em; }
 
       html.${CFG.htmlClass} .kanban-card.content{
@@ -174,7 +173,6 @@
         transform:translateY(-1px); box-shadow: var(--shadow-lg, 0 8px 22px rgba(0,0,0,.12));
       }
 
-      /* Anti-jank */
       html.${CFG.htmlClass} .dnt-softfade { transition: opacity .16s ease, filter .16s ease; }
       html.${CFG.htmlClass} .dnt-softfade.dim { opacity:.35; filter: blur(.4px) saturate(.9); }
       @media (prefers-reduced-motion: reduce){
@@ -182,7 +180,6 @@
       }
       html.${CFG.htmlClass}.dnt-resizing *{ transition: none !important; }
 
-      /* Header */
       html.${CFG.htmlClass} .dnt-head{
         display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; margin-bottom:10px;
         min-height: var(--dnt-h-head-comfy);
@@ -195,7 +192,6 @@
       html.${CFG.htmlClass} .dnt-title{ font-weight:600; line-height:1.25; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:text; }
       html.${CFG.htmlClass} .dnt-title.is-edit{ outline:none; border-radius:6px; padding:0 2px; background: var(--fg-hover-color); }
 
-      /* Avatar */
       html.${CFG.htmlClass} .kanban-image{
         width:40px !important; height:40px !important; border-radius:10px; overflow:hidden;
         background: var(--bg-color);
@@ -205,10 +201,8 @@
       html.${CFG.htmlClass} .kanban-image img{ width:100% !important; height:100% !important; object-fit:contain !important; object-position:center; display:block !important; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-image{ width:22px !important; height:22px !important; border-radius:6px; padding:1px; }
 
-      /* Meta & tags */
       html.${CFG.htmlClass} .kanban-card-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:4px 0 0; }
 
-      /* Doc fields */
       html.${CFG.htmlClass} .kanban-card-doc{ padding:0; overflow:visible; }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-kv{
         display:flex; align-items:center; gap:6px;
@@ -221,7 +215,6 @@
       html.${CFG.htmlClass} .kanban-card-doc .dnt-k{ flex:0 0 auto; color: var(--text-muted); }
       html.${CFG.htmlClass} .kanban-card-doc .dnt-v{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; color: var(--text-color); }
 
-      /* Assignees row — подгон плюсика и высот */
       html.${CFG.htmlClass} .dnt-assign-slot{
         height: var(--dnt-assign-h-comfy);
         min-height: var(--dnt-assign-h-comfy);
@@ -250,12 +243,10 @@
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action{ width:18px; height:18px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-assignments .avatar .avatar-frame.avatar-action svg{ width:12px; height:12px; }
 
-      /* Hide stars */
       html.${CFG.htmlClass} .document-star,
       html.${CFG.htmlClass} .star-action,
       html.${CFG.htmlClass} .favorite-action{ display:none !important; }
 
-      /* Like */
       html.${CFG.htmlClass} .dnt-assign-right .like-action,
       html.${CFG.htmlClass} .dnt-assign-right [data-action="like"],
       html.${CFG.htmlClass} .dnt-assign-right .btn-like{
@@ -263,7 +254,6 @@
       }
       html.${CFG.htmlClass} .dnt-like-fallback .es-icon{ width:16px; height:16px; }
 
-      /* Tasks mini — comfy чуть выше */
       html.${CFG.htmlClass} .dnt-tasks-mini{
         margin-top:6px; width:100%; overflow-y:auto; padding-right:4px;
         border-top:1px solid var(--border-color); padding-top:6px; scrollbar-gutter: stable;
@@ -278,7 +268,6 @@
       html.${CFG.htmlClass} .dnt-overdue{ background: var(--alert-bg-danger); border-color: color-mix(in oklab, var(--alert-bg-danger) 60%, transparent); color: var(--alert-text-danger); }
       html.${CFG.htmlClass} .dnt-task-add{ margin-left:auto; display:inline-flex; align-items:center; gap:4px; padding:0 6px; border-radius:999px; border:1px solid var(--border-color); background: var(--control-bg); text-decoration:none; cursor:pointer; }
 
-      /* Drag из «динамических» зон: убираем выделение, оставляем grab */
       html.${CFG.htmlClass} .kanban-card-meta,
       html.${CFG.htmlClass} .kanban-card-doc,
       html.${CFG.htmlClass} .dnt-assign-slot,
@@ -286,11 +275,9 @@
         -webkit-user-drag: none; user-select: none; cursor: grab;
       }
 
-      /* Hover actions */
       html.${CFG.htmlClass} .dnt-card-actions{ position:absolute; top:12px; right:12px; display:flex; gap:6px; opacity:0; pointer-events:none; transition:opacity .12s; z-index:5; }
       html.${CFG.htmlClass} .kanban-card-wrapper:hover .dnt-card-actions{ opacity:1; pointer-events:auto; }
 
-      /* Resizer */
       html.${CFG.htmlClass} .dnt-resizer{
         position:absolute; right:4px; bottom:4px; width:16px; height:16px; cursor:nwse-resize;
         opacity:.9; border-radius:4px; display:flex; align-items:center; justify-content:center;
@@ -298,12 +285,10 @@
       }
       html.${CFG.htmlClass} .kanban-card-wrapper:hover .dnt-resizer{ opacity:1; }
 
-      /* Compact tweaks */
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card.content{ padding:8px; border-radius:12px; gap:6px; }
       html.${CFG.htmlClass}.dnt-compact-on .dnt-head{ margin-bottom:6px; gap:8px; }
       html.${CFG.htmlClass}.dnt-compact-on .kanban-card-title{ font-size:12px; line-height:1.2; }
 
-      /* Skeleton loader */
       @keyframes dnt-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
       html.${CFG.htmlClass} .dnt-skel{ display:grid; gap:6px; }
       html.${CFG.htmlClass} .dnt-skel-line{
@@ -317,7 +302,6 @@
       html.${CFG.htmlClass} .w60{ width:60%; } .w70{ width:70%; } .w80{ width:80%; } .w100{ width:100%; }
       @media (prefers-reduced-motion: reduce){ html.${CFG.htmlClass} .dnt-skel-line{ animation:none; } }
 
-      /* Шестерёнка: ровное выравнивание и анти-дёрганье текста пункта */
       html.${CFG.htmlClass} .btn.icon-btn svg{ display:block; }
       html.${CFG.htmlClass} .dnt-toggle-labels-text{ display:inline-block; min-width: 120px; }
     `;
@@ -552,7 +536,6 @@
         if (opts.cause !== "tasks"){
           const mini = docEl.parentElement?.querySelector(".dnt-tasks-mini");
           if (mini && mini.dataset.dntMiniInit!=="1") {
-            // первичная инициализация мини-задач из кэша (без сетевых запросов)
             if (miniCacheHtml.has(ctx.docName)){
               mini.innerHTML = miniCacheHtml.get(ctx.docName);
               bindMini(mini, ctx.docName);
@@ -665,7 +648,6 @@
       return;
     }
 
-    // OFF: только непустые значения
     const assignedValues = new Set();
     const valueIndex = new Map();
     Array.from(container.querySelectorAll(":scope > .dnt-kv")).forEach(ch=>{
@@ -710,7 +692,7 @@
     });
   }
 
-  // ===== Mini-tasks (версия + fade + кнопка «создать» и счётчик)
+  // ===== Mini-tasks
   const fmtDT = (dt) => { try { return moment(frappe.datetime.convert_to_user_tz(dt)).format("DD-MM-YYYY HH:mm:ss"); } catch { return dt; } };
   function planLabel(kind){ return kind==="target" ? t("Target at") : t("Planned"); }
   function pickPlan(t){ if (t.custom_target_datetime) return { dt: t.custom_target_datetime, kind: "target" }; return { dt: null, kind: null }; }
@@ -743,24 +725,24 @@
     return miniHeader(totalCount, caseName) + lines + more;
   }
 
+  // === NEW: версия задач только по count и макс. custom_target_datetime + кэш между перезагрузками
   async function tasks_version(caseName){
-    const [cntResp, lastResp] = await Promise.all([
+    const [cntResp, lastTargetResp] = await Promise.all([
       frappe.call({ method: "frappe.client.get_count", args: {
         doctype: "ToDo",
         filters: { reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" }
       }}),
       frappe.call({ method: "frappe.client.get_list", args: {
         doctype: "ToDo",
-        filters: { reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open" },
-        fields: ["name","modified"],
+        filters: { reference_type: CFG.caseDoctype, reference_name: caseName, status: "Open", custom_target_datetime: ["is", "set"] },
+        fields: ["custom_target_datetime"],
         limit_page_length: 1,
-        order_by: "modified desc"
+        order_by: "custom_target_datetime desc"
       }})
     ]);
     const total = +((cntResp?.message)||0);
-    const top = (lastResp?.message||[])[0] || {};
-    const latest = `${top.name||""}|${top.modified||""}`;
-    return { versionKey: `${total}|${latest}`, total };
+    const lastTarget = ((lastTargetResp?.message||[])[0]?.custom_target_datetime) || "";
+    return { versionKey: `${total}|${lastTarget||"__no_target__"}`, total };
   }
 
   async function fetchMiniPrimary(caseName){
@@ -790,25 +772,53 @@
 
   async function loadMini(container, caseName, opts={}){
     const soft = !!opts.soft;
+    const lsHtmlKey = `dntMiniHtml::${caseName}`;
+    const lsMetaKey = `dntMiniMeta::${caseName}`;
     const metaPrev = miniCacheMeta.get(caseName);
     try{
       if (!soft) showTasksSkeleton(container);
+
       const metaNow = await tasks_version(caseName);
 
-      if (metaPrev && metaPrev.versionKey === metaNow.versionKey && miniCacheHtml.has(caseName)){
-        container.innerHTML = miniCacheHtml.get(caseName);
+      // 1) Проверяем кэш из localStorage (живёт между перезагрузками)
+      const lsMetaRaw = ls_get(lsMetaKey);
+      const lsHtml = ls_get(lsHtmlKey);
+      let lsMeta = null;
+      try{ lsMeta = lsMetaRaw ? JSON.parse(lsMetaRaw) : null; }catch{ lsMeta = null; }
+
+      if (lsMeta && lsMeta.versionKey === metaNow.versionKey && lsHtml){
+        miniCacheHtml.set(caseName, lsHtml);
+        miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey });
+        container.innerHTML = lsHtml;
         bindMini(container, caseName);
         container.dataset.dntMiniInit = "1";
+        dbg("✅ Tasks from localStorage cache", caseName);
+        container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: metaNow.versionKey }}));
+        return;
+      }
+
+      // 2) Проверяем кэш в памяти текущей сессии
+      if (metaPrev && metaPrev.versionKey === metaNow.versionKey && miniCacheHtml.has(caseName)){
+        const html = miniCacheHtml.get(caseName);
+        container.innerHTML = html;
+        bindMini(container, caseName);
+        container.dataset.dntMiniInit = "1";
+        // синхронизируем localStorage
+        ls_set(lsHtmlKey, html);
+        ls_set(lsMetaKey, JSON.stringify({ versionKey: metaNow.versionKey }));
         dbg("✅ Tasks from cache", caseName);
         container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: metaNow.versionKey }}));
         return;
       }
 
+      // 3) Тянем список только если версия изменилась/кэша нет
       let data = await fetchMiniPrimary(caseName);
       if ((!data.rows || !data.rows.length) && (!data.total || data.total === 0)) data = await fetchMiniFallback(caseName);
       const html  = miniHtml(data.rows || [], data.total || 0, caseName);
       miniCacheHtml.set(caseName, html);
       miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey });
+      ls_set(lsHtmlKey, html);
+      ls_set(lsMetaKey, JSON.stringify({ versionKey: metaNow.versionKey }));
 
       const unlock = lockCardHeight(container);
       container.innerHTML = html;
@@ -821,12 +831,28 @@
     } catch {
       if (miniCacheHtml.has(caseName)){
         const unlock = lockCardHeight(container);
-        container.innerHTML = miniCacheHtml.get(caseName);
+        const html = miniCacheHtml.get(caseName);
+        container.innerHTML = html;
         bindMini(container, caseName);
         container.dataset.dntMiniInit = "1";
         unlock();
         dbg("✅ Tasks from cache (fallback)", caseName);
         container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: (miniCacheMeta.get(caseName)?.versionKey || "") }}));
+        return;
+      }
+      const lsHtml = ls_get(lsHtmlKey);
+      const lsMetaRaw = ls_get(lsMetaKey);
+      if (lsHtml && lsMetaRaw){
+        let parsed=null; try{ parsed = JSON.parse(lsMetaRaw); }catch{}
+        miniCacheHtml.set(caseName, lsHtml);
+        if (parsed?.versionKey) miniCacheMeta.set(caseName, { versionKey: parsed.versionKey });
+        const unlock = lockCardHeight(container);
+        container.innerHTML = lsHtml;
+        bindMini(container, caseName);
+        container.dataset.dntMiniInit = "1";
+        unlock();
+        dbg("✅ Tasks from localStorage (fallback)", caseName);
+        container.dispatchEvent(new CustomEvent("dnt:tasks-version", { detail: { versionKey: (parsed?.versionKey || "") }}));
         return;
       }
       try{
@@ -835,6 +861,8 @@
         miniCacheHtml.set(caseName, html);
         const metaNow = await tasks_version(caseName).catch(()=>({versionKey:""}));
         miniCacheMeta.set(caseName, { versionKey: metaNow.versionKey||"" });
+        ls_set(lsHtmlKey, html);
+        ls_set(lsMetaKey, JSON.stringify({ versionKey: metaNow.versionKey||"" }));
 
         const unlock = lockCardHeight(container);
         container.innerHTML = html;
@@ -907,7 +935,7 @@
     return span;
   }
 
-  // ===== Drag из динамических зон: точечный фикс
+  // ===== Drag из динамических зон
   function enableDragFromDynamicAreas(body){
     const areas = [ body.querySelector(".kanban-card-meta"), body.querySelector(".kanban-card-doc"), body.querySelector(".dnt-assign-slot"), body.querySelector(".dnt-tasks-mini") ].filter(Boolean);
     areas.forEach(area=>{
@@ -917,7 +945,7 @@
         if (e.button !== 0) return;
         const tag = (e.target?.tagName||"").toLowerCase();
         if (/^(a|button|input|textarea|select|svg|path|use)$/i.test(tag)) return;
-        e.preventDefault(); // убираем выделение, drag пойдёт наверх до Sortable
+        e.preventDefault();
       }, true);
       area.addEventListener("touchstart", ()=>{
         try{ area.style.touchAction = "none"; setTimeout(()=> area.style.touchAction = "", 500); }catch{}
@@ -956,7 +984,7 @@
     span.addEventListener("blur", saveEdit);
   }
 
-  // ===== Lazy observe (апгрейд только видимых карточек)
+  // ===== Lazy observe
   const visibleCards = new WeakSet();
   let lazyIO = null;
   function ensureLazyIO(){
@@ -997,8 +1025,8 @@
     if (dt && name && docEl) normalizeDocFields(docEl, { doctype: dt, docName: name });
   }
 
-  // ===== Track positions to detect real moves (чтобы НЕ перезагружать задачи у всех)
-  const POS_MAP = new Map(); // name -> column value
+  // ===== Positions map
+  const POS_MAP = new Map();
   function getCardColumnValue(wrap){
     return wrap?.closest(".kanban-column")?.getAttribute("data-column-value") || "";
   }
@@ -1107,23 +1135,28 @@
     if (like){ ensureVisibleAction(like); if (like.parentElement !== assignRight) assignRight.appendChild(like); }
     else if (doctype && name){ assignRight.appendChild(createFallbackLike(doctype, name)); }
 
-    // Мини-задачи: НЕ дергаем сеть, если уже есть кэш/инициализация
     let mini = body.querySelector(".dnt-tasks-mini");
     if (!mini){ mini = document.createElement("div"); mini.className = "dnt-tasks-mini dnt-softfade"; body.appendChild(mini); }
-    if (doctype === CFG.caseDoctype && name && isWrapVisible(wrapper)) {
+
+    // Мгновенный показ из localStorage, затем лёгкая проверка версии
+    if (doctype === CFG.caseDoctype && name) {
+      const lsHtml = ls_get(`dntMiniHtml::${name}`);
+      const lsMetaRaw = ls_get(`dntMiniMeta::${name}`);
+      if (lsHtml && lsMetaRaw){
+        let parsed=null; try{ parsed = JSON.parse(lsMetaRaw); }catch{}
+        if (parsed?.versionKey){
+          mini.innerHTML = lsHtml;
+          bindMini(mini, name);
+          mini.dataset.dntMiniInit = "1";
+          miniCacheHtml.set(name, lsHtml);
+          miniCacheMeta.set(name, { versionKey: parsed.versionKey });
+          dbg("✅ Prime tasks from localStorage (upgrade)", name);
+        }
+      }
       mini.addEventListener("dnt:tasks-version", (e)=>{
         normalizeDocFields(doc, { doctype, docName: name }, { cause: "tasks", tasksVersion: e.detail?.versionKey });
       });
-      if (mini.dataset.dntMiniInit==="1"){
-        // уже инициализировано ранее — ничего не делаем тут
-      } else if (miniCacheHtml.has(name)) {
-        mini.innerHTML = miniCacheHtml.get(name);
-        bindMini(mini, name);
-        mini.dataset.dntMiniInit = "1";
-        dbg("✅ Tasks from cache (upgrade)", name);
-      } else {
-        setTimeout(()=> loadMini(mini, name, { soft:true }), 0);
-      }
+      setTimeout(()=> loadMini(mini, name, { soft:true }), 0);
     }
 
     if (!wrapper.querySelector(".dnt-card-actions")){
@@ -1172,7 +1205,6 @@
     attachResizer(wrapper);
     enableDragFromDynamicAreas(body);
 
-    // зафиксируем текущую позицию карточки
     POS_MAP.set(name, getCardColumnValue(wrapper));
 
     card.dataset.dntUpgraded = "1";
@@ -1214,7 +1246,7 @@
     });
   }
 
-  // ===== Header controls (шестерёнка + без дёрганья текста)
+  // ===== Header controls (settings icon fix)
   function findSettingsAnchor(){
     return (
       document.querySelector(".page-actions .page-icon-group") ||
@@ -1248,6 +1280,16 @@
     }
     frappe.set_route("List", dt, "List");
   }
+  function resolveSettingsIcon(){
+    try{
+      const tries = ["settings","settings-2","setup","preferences","sliders","cog","gear","sliders-horizontal"];
+      for (const key of tries){
+        const svg = (frappe.utils?.icon && frappe.utils.icon(key,"sm")) || (frappe.ui?.icon && frappe.ui.icon(key,"sm")) || "";
+        if (svg && typeof svg === "string" && svg.indexOf("<svg") !== -1) return svg;
+      }
+    }catch{}
+    return ICONS.settings;
+  }
   function buildSettingsDropdown(){
     const wrap = document.createElement("div");
     wrap.id = CFG.settingsBtnId;
@@ -1257,8 +1299,7 @@
     btn.setAttribute("data-toggle","dropdown");
     btn.setAttribute("aria-expanded","false");
     btn.setAttribute("title", t("Kanban options"));
-    // новая шестерёнка
-    try { btn.innerHTML = frappe.utils.icon("settings","sm"); } catch { btn.textContent = "⚙️"; }
+    btn.innerHTML = ICONS.settings; // или ICONS.listIcon
     wrap.appendChild(btn);
     const menu = document.createElement("ul");
     menu.className = "dropdown-menu";
@@ -1271,7 +1312,6 @@
     const labelsText = menu.querySelector(".dnt-toggle-labels-text");
     const isLabelsOn = () => getShowLabelsFlag();
     const refreshLabelsText = () => { labelsText.textContent = isLabelsOn() ? t("Hide labels") : t("Show labels"); };
-    // заранее выставляем текст, чтобы не прыгало
     refreshLabelsText();
     btn.addEventListener("show.bs.dropdown", refreshLabelsText);
     btn.addEventListener("shown.bs.dropdown", refreshLabelsText);
@@ -1292,7 +1332,6 @@
         if (window.cur_list?.board) window.cur_list.board.show_labels = want;
         if (window.cur_list?.kanban_board) window.cur_list.kanban_board.show_labels = want;
         refreshLabelsText();
-        // вместо reload — мягко перерисуем видимые карточки
         refreshVisibleCardsDocs();
         dbg(want ? "🔖 Labels shown" : "🔖 Labels hidden");
         frappe.show_alert({ message: want ? t("Labels shown") : t("Labels hidden"), indicator: "green" });
@@ -1341,7 +1380,7 @@
     }
   }
 
-  // ==== Прогрев кэша: только для видимых карточек
+  // ==== Прогрев кэша полей доков
   async function prime_doc_fields_cache_for_visible_cards(){
     const dt = getDoctype(); if (!dt) return;
     const orderMap = getBoardOrderMap(dt);
@@ -1504,8 +1543,6 @@
     };
     pump();
 
-    // Наблюдатель: обновляем только затронутые и видимые карточки/колонки.
-    // Плюс — определяем реальные «переносы» по смене столбца и перезагружаем задачи ТОЛЬКО у них.
     if (window.__dntKanbanMO) window.__dntKanbanMO.disconnect();
     const mo = new MutationObserver(async (muts)=>{
       if(!isKanbanRoute()) return;
@@ -1528,7 +1565,6 @@
         if (m.target && m.target.classList?.contains("kanban-column")) touchedColumns.add(m.target);
       });
 
-      // обработаем карточки точечно
       touchedCards.forEach(w=>{
         const wrap = w.classList?.contains?.("kanban-card") ? (w.closest(".kanban-card-wrapper") || w) : w;
         if (!wrap.isConnected) return;
@@ -1539,12 +1575,10 @@
         const prevCol = POS_MAP.get(name);
         const nowCol  = getCardColumnValue(wrap);
         if (prevCol !== undefined && nowCol !== prevCol){
-          // реальный перенос карточки — обновим ТОЛЬКО её мини-задачи
           POS_MAP.set(name, nowCol);
           dbg("🔁 Card moved → reload tasks only", name, ":", prevCol, "→", nowCol);
           forceReloadTasksForWrap(wrap);
         } else {
-          // не перенос: мягкий апгрейд без перезагрузок задач
           if (isWrapVisible(wrap)) { upgradeCard(wrap); refreshCardDocForWrap(wrap); }
           else observeForLazy(wrap);
           if (prevCol === undefined) POS_MAP.set(name, nowCol);
