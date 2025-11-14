@@ -1,19 +1,20 @@
-// === DNT User Work Tab (User form widgets, Engagement Case + ToDo) — v11 ===
+// === DNT User Work Tab (User form widgets, Engagement Case + ToDo) — v12 ===
 //
-// Base: v9 (логика вкладки, загрузка данных, счётчики, клики).
-// Правки v11:
-// • Наполнение рендера вынесено из form-section во свой корень #dnt-user-work-root внутри tab-pane
-//   => Frappe может скрывать секцию, но наш блок остаётся видимым.
-// • Карточки Engagement Case отрисовываются в CRM-стиле (как в CRM widget preview):
-//   avatar + title + chips (status, priority, events, unanswered, updated).
-// • Дизайн задач ОСТАЁТСЯ как в v9 (inline dnt-user-item).
+// Base: v11 (логика вкладки, загрузка данных, счётчики, клики).
+// v12:
+// • Даты из comment_when без HTML-тегов (только текст).
+// • Кейсы (Engagement Case): CRM-стиль как в widget-превью: avatar + title + platform + lang + Updated + P-badge.
+//   — убран статус колонки и любые Events / Unanswered из виджета User Work.
+// • Задачи: стиль как в engagement_case_tasks.js (ec-task + chips), без авто-правил и кнопок Complete/Cancel.
+// • "My Work" таб:
+//   — всегда первая вкладка;
+//   — если пользователь был на "My Work", это запоминается и при refresh снова активируется "My Work"
+//     (остальные вкладки не переопределяем, чтобы не ломать роуты типа "открыть сразу Settings").
 //
-// Важно: мы НЕ вмешиваемся в выбор активной вкладки User
-// (Frappe по-прежнему открывает нужную вкладку по route / settings / и т. п.).
 
 (() => {
-  if (window.DNT_USER_WORK_TAB_V11) return;
-  window.DNT_USER_WORK_TAB_V11 = true;
+  if (window.DNT_USER_WORK_TAB_V12) return;
+  window.DNT_USER_WORK_TAB_V12 = true;
 
   function tr(s) {
     try { if (typeof _ === "function") return _(s); } catch (e) {}
@@ -30,7 +31,7 @@
     containerClass: "dnt-user-work-widgets",
     cardsListAttr: "data-role-cards-list",
     tasksListAttr: "data-role-tasks-list",
-    logPrefix: "[DNT-USER-WORK v11]",
+    logPrefix: "[DNT-USER-WORK v12]",
     limits: {
       cards: 4,
       tasks: 6
@@ -61,8 +62,6 @@
       emptyTasksSelf: "You have no tasks yet",
       emptyTasksOther: "This user has no tasks yet",
       loading: "Loading…",
-      eventsCount: "Events",
-      unanswered: "Unanswered",
       footerHint: "Click a card or task to open it",
       summaryTemplate: "{cards} • {tasks}",
       updated: "Updated"
@@ -70,7 +69,8 @@
     retries: {
       layout: 10,
       delayMs: 80
-    }
+    },
+    lastMyWorkKey: "dnt.user.last_tab_mywork"
   };
 
   function log(...args) {
@@ -79,13 +79,13 @@
     } catch (e) {}
   }
 
-  // ===== CSS: таба всегда видима + базовый стиль карточек + CRM-стиль для кейсов =====
+  // ===== CSS: секция видима + рамка + CRM-стиль кейсов + EC-стиль задач =====
 
   function ensure_css() {
     if (document.getElementById(cfg.cssId)) return;
 
     const css = `
-      /* === DNT User Work: формальная секция — всегда видима (на всякий случай) === */
+      /* === DNT User Work: формальная секция — всегда видима (fallback) === */
       .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"] {
         display: block !important;
         visibility: visible !important;
@@ -261,73 +261,6 @@
         gap: 0.25rem;
       }
 
-      /* === v9 tasks: dnt-user-item (оставляем как было) === */
-      .dnt-user-item{
-        border-radius: 0.6rem;
-        padding: 0.4rem 0.55rem;
-        background: rgba(15,23,42,0.03);
-        cursor: pointer;
-        transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
-      }
-      .dnt-user-item:hover{
-        background: rgba(15,23,42,0.06);
-        transform: translateY(-1px);
-        box-shadow: 0 8px 22px rgba(15,23,42,0.12);
-      }
-      .dnt-user-item-main{
-        display: flex;
-        justify-content: space-between;
-        gap: 0.5rem;
-        align-items: flex-start;
-      }
-      .dnt-user-item-title{
-        font-size: 0.78rem;
-        font-weight: 500;
-        word-break: break-word;
-      }
-      .dnt-user-item-meta{
-        margin-top: 0.18rem;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.28rem;
-        font-size: 0.7rem;
-        opacity: 0.8;
-      }
-      .dnt-user-pill{
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        border-radius: 999px;
-        padding: 0.15rem 0.6rem;
-        font-size: 0.7rem;
-        background: rgba(15,23,42,0.04);
-      }
-      .dnt-user-pill-status-open{
-        color: #15803d;
-        background: rgba(34,197,94,0.08);
-      }
-      .dnt-user-pill-status-closed{
-        color: #b91c1c;
-        background: rgba(248,113,113,0.08);
-      }
-      .dnt-user-pill-unanswered{
-        color: #b45309;
-        background: rgba(251,191,36,0.12);
-      }
-      .dnt-user-dot{
-        width: 0.32rem;
-        height: 0.32rem;
-        border-radius: 999px;
-        background: rgba(15,23,42,0.35);
-      }
-      .dnt-user-item-sub{
-        font-size: 0.7rem;
-        opacity: 0.8;
-        margin-top: 0.15rem;
-        word-break: break-word;
-      }
-
       /* === CRM-стиль для кейсов внутри User Work (как в CRM widget preview) === */
       .dnt-user-cases-list{
         margin-top: 0.1rem;
@@ -420,6 +353,78 @@
         margin:0 6px;
         align-self:stretch;
       }
+
+      /* === EC-style задачи (как в engagement_case_tasks) === */
+      .ec-task{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:10px;
+        padding:10px 0;
+        border-top:1px solid var(--table-border-color, var(--border-color,#eef2f7));
+      }
+      .ec-task:first-child{border-top:none}
+      .ec-task.-muted{opacity:.78}
+      .ec-task .l{
+        flex:1 1 auto;
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+      }
+      .ec-task .title{
+        font-weight:600;
+        font-size:13px;
+        color: var(--text-color, #111827);
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
+      .ec-task .meta{
+        display:flex;
+        gap:6px;
+        flex-wrap:wrap;
+        margin-top:3px;
+        color:var(--text-muted,#6b7280);
+        font-size:11px;
+      }
+      .ec-task .chip{
+        border:1px solid var(--border-color,#e5e7eb);
+        border-radius:999px;
+        padding:2px 6px;
+        background: var(--bg-light-gray,#f3f4f6);
+        color: var(--text-color,#111827);
+      }
+      .ec-task .chip.-ghost{
+        background: var(--control-bg,#f8fafc);
+        color: var(--text-color,#111827);
+      }
+      .ec-task .chip.-p-high{
+        background: var(--alert-bg-danger, #fee2e2);
+        border-color: color-mix(in oklab, var(--alert-bg-danger, #fee2e2) 60%, #ffffff);
+        color: var(--alert-text-danger, #991b1b);
+      }
+      .ec-task .chip.-p-med{
+        background: var(--bg-light-blue, #e5f0ff);
+        border-color: var(--text-on-light-blue, #dbeafe);
+        color: color-mix(in oklab, var(--text-on-light-blue, #1e3a8a) 80%, #111);
+      }
+      .ec-task .chip.-p-low{
+        background: var(--bg-green, #e8f5e9);
+        border-color: color-mix(in oklab, var(--bg-green, #e8f5e9) 60%, #ffffff);
+        color: var(--text-on-green, #14532d);
+      }
+      .ec-task .chip-target.-overdue{
+        background: var(--alert-bg-danger, #fee2e2);
+        border-color: color-mix(in oklab, var(--alert-bg-danger, #fecaca) 70%, #ffffff);
+        color: var(--alert-text-danger, #991b1b);
+      }
+      .ec-task .r{
+        flex:0 0 auto;
+        display:flex;
+        align-items:center;
+        gap:4px;
+      }
     `;
 
     const s = document.createElement("style");
@@ -446,11 +451,15 @@
     return String(value).split(" ")[0];
   }
 
+  // comment_when → выкидываем HTML-теги, оставляем только текст ("2 hours ago" и т. п.)
   function rel_time(value) {
     if (!value) return "";
     try {
       if (window.frappe?.datetime?.comment_when) {
-        return frappe.datetime.comment_when(value);
+        const html = frappe.datetime.comment_when(value);
+        const tmp = document.createElement("div");
+        tmp.innerHTML = html;
+        return (tmp.textContent || tmp.innerText || "").trim();
       }
     } catch (e) {}
     return format_date(value);
@@ -468,6 +477,42 @@
   function full_path(p) {
     if (!p) return "";
     return p.startsWith("/") ? p : `/${p}`;
+  }
+
+  function clean_title(raw){
+    const s = String(raw || "")
+      .replace(/<[^>]*>/g, "")
+      .replace(/\s+/g, " ").trim();
+    return s.length > 60 ? s.slice(0, 60).trimEnd() + "…" : s;
+  }
+
+  function fmt_user_dt(dtStr) {
+    if (!dtStr) return "";
+    try {
+      if (window.moment && window.frappe?.datetime?.convert_to_user_tz) {
+        return moment(frappe.datetime.convert_to_user_tz(dtStr)).format("YYYY-MM-DD HH:mm");
+      }
+    } catch (e) {}
+    return String(dtStr);
+  }
+
+  function is_overdue(t) {
+    if ((t.status || "Open") !== "Open") return false;
+    try {
+      if (!window.moment) return false;
+      const now = moment();
+      const target = t.custom_target_datetime || t.date || null;
+      if (!target) return false;
+      return moment(target).isBefore(now);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function priority_class(p){
+    if (p === "High") return "-p-high";
+    if (p === "Low") return "-p-low";
+    return "-p-med";
   }
 
   function update_counts(frm, partial) {
@@ -516,9 +561,11 @@
 
     const titles = get_titles(is_self);
 
-    // --- Tab button (НЕ делаем активной, НЕ двигаем порядок) ---
+    // --- Tab button: ВСЕГДА ПЕРВАЯ вкладка ---
     let $tabLi = $tabs.find("#" + cfg.tabBtnId).closest("li");
-    if (!$tabLi.length) {
+    if ($tabLi.length) {
+      $tabLi.detach();
+    } else {
       const btnHtml = `
         <li class="nav-item show">
           <button class="nav-link"
@@ -534,14 +581,12 @@
         </li>
       `;
       $tabLi = $(btnHtml);
-      $tabs.append($tabLi);
       log("tab button created");
-    } else {
-      $tabLi.find(".nav-link").text(tr(titles.tab));
-      log("tab button text updated");
     }
+    $tabs.prepend($tabLi);
+    $tabLi.find(".nav-link").text(tr(titles.tab));
 
-    // --- Tab pane (стандартный bootstrap-tab) ---
+    // --- Tab pane (bootstrap-tab) ---
     let $tabPane = $tabContent.find("#" + cfg.tabId);
     if (!$tabPane.length) {
       const paneHtml = `
@@ -563,7 +608,6 @@
       log("tab pane created");
     }
 
-    // Секция может жить своей жизнью — мы на неё не опираемся, но подстрахуемся
     const $section = $tabPane.find(`.row.form-section[data-fieldname="${cfg.tabFieldname}"]`);
     const $sectionBody = $section.find(".section-body");
     if ($section.length) {
@@ -573,11 +617,10 @@
       log("section visibility patched (fallback)");
     }
 
-    // --- Наш собственный root, не зависящий от section-body ---
+    // --- Наш root, не зависящий от section-body ---
     let $root = $tabPane.find("#" + cfg.rootId);
     if (!$root.length) {
       $root = $(`<div id="${cfg.rootId}"></div>`);
-      // Добавим после form-section, чтобы выглядело как "контент секции"
       if ($section.length) {
         $section.after($root);
       } else {
@@ -586,7 +629,6 @@
       log("root created");
     }
 
-    // Полностью перерисовываем содержимое root
     $root.empty().append(`
       <div class="${cfg.containerClass}">
         <div class="dnt-user-work-card">
@@ -687,7 +729,7 @@
     );
   }
 
-  // ===== RENDER: кейсы — CRM-стиль =====
+  // ===== RENDER: кейсы — CRM-стиль, но только platform/lang/Updated/P =====
 
   function render_cards(list_el, rows, case_details, is_self) {
     log("render_cards input", {
@@ -714,7 +756,6 @@
       index_case[doc.name] = doc;
     });
 
-    const sepChip = `<span class="crm-vsep" aria-hidden="true"></span>`;
     const labelUpdated = tr(cfg.labels.updated);
 
     const html = items
@@ -728,44 +769,28 @@
           doc.display_name ||
           case_name;
 
-        const status_raw = doc.runtime_status || row.status;
-        const status_label = status_raw ? tr(status_raw) : "";
         const priority = doc.priority || row.priority || "";
-        const events_count = doc.events_count || 0;
-        const unanswered_count = doc.unanswered_count || 0;
 
         const updated_dt = doc.last_event_at || doc.modified || row.modified;
         const updated_rel = rel_time(updated_dt);
 
         const avatar_src = full_path(doc.avatar || "/assets/dantist_app/files/egg.png");
+        const platform = doc.channel_platform || "";
+        const lang = doc.preferred_language || "";
 
-        const status_chip = status_label
-          ? `<span class="crm-chip">${frappe.utils.escape_html(status_label)}</span>`
+        const platform_chip = platform
+          ? `<span class="crm-chip">${frappe.utils.escape_html(tr(platform))}</span>`
           : "";
 
-        const pr_chip = priority
-          ? `<span class="crm-chip">${frappe.utils.escape_html(tr(priority))}</span>`
-          : "";
-
-        const events_chip = events_count
-          ? `<span class="crm-chip">${frappe.utils.escape_html(tr(cfg.labels.eventsCount))}: ${String(events_count)}</span>`
-          : "";
-
-        const unans_chip = unanswered_count
-          ? `<span class="crm-chip">${frappe.utils.escape_html(tr(cfg.labels.unanswered))}: ${String(unanswered_count)}</span>`
+        const lang_chip = lang
+          ? `<span class="crm-chip -ghost">${frappe.utils.escape_html(String(lang).toLowerCase())}</span>`
           : "";
 
         const time_chip = updated_rel
           ? `<span class="crm-chip -ghost"><span class="lbl">${frappe.utils.escape_html(labelUpdated)}:</span> ${frappe.utils.escape_html(updated_rel)}</span>`
           : "";
 
-        const metaMain = [
-          status_chip,
-          pr_chip,
-          events_chip,
-          unans_chip
-        ].filter(Boolean).join(" ");
-
+        const metaMain = [platform_chip, lang_chip].filter(Boolean).join(" ");
         const metaTime = [time_chip].filter(Boolean).join(" ");
 
         const pr_badge = priority
@@ -803,7 +828,7 @@
     list_el.html(html);
   }
 
-  // ===== RENDER: задачи — как в v9 (dnt-user-item) =====
+  // ===== RENDER: задачи — EC-стиль (ec-task + chips) =====
 
   function render_tasks(list_el, rows, is_self) {
     log("render_tasks input", { rowsCount: rows ? rows.length : 0 });
@@ -816,58 +841,85 @@
     const items = rows.slice(0, cfg.limits.tasks);
     const html = items
       .map(row => {
-        const title =
+        const title_raw =
           row.description ||
           (row.reference_type && row.reference_name
             ? `${row.reference_type}: ${row.reference_name}`
             : row.name);
 
-        const status_raw = row.status;
-        const status_label = status_raw ? tr(status_raw) : "";
-        const status_cls = status_raw ? status_class(status_raw) : "";
-        const date = format_date(row.date || row.modified) || "";
+        const title = clean_title(title_raw);
+
+        const reminder_dt = row.custom_due_datetime || null;
+        const reminder = reminder_dt ? fmt_user_dt(reminder_dt) : null;
+
+        const target_dt = row.custom_target_datetime || row.date || null;
+        const target = target_dt ? fmt_user_dt(target_dt) : null;
+
+        const who = row.allocated_to || "";
+        const st  = row.status || "Open";
+        const clsMuted = st === "Open" ? "" : " -muted";
+        const p = row.priority || "Medium";
+        const pcls = priority_class(p);
+        const overdue = is_overdue(row);
+        const created = row.creation ? fmt_user_dt(row.creation) : "";
         const ref_info =
           row.reference_type && row.reference_name
             ? `${row.reference_type}: ${row.reference_name}`
             : "";
 
+        const chips = [];
+        chips.push(
+          `<span class="chip">${frappe.utils.escape_html(tr(st))}</span>`
+        );
+        if (row.priority) {
+          chips.push(
+            `<span class="chip ${pcls}">${frappe.utils.escape_html(tr(row.priority))}</span>`
+          );
+        }
+        if (who) {
+          chips.push(
+            `<span class="chip -ghost">@${frappe.utils.escape_html(who)}</span>`
+          );
+        }
+        if (ref_info) {
+          chips.push(
+            `<span class="chip -ghost">${frappe.utils.escape_html(ref_info)}</span>`
+          );
+        }
+        if (target) {
+          chips.push(
+            `<span class="chip -ghost chip-target${overdue ? " -overdue" : ""}">🗓 ${frappe.utils.escape_html(target)}</span>`
+          );
+        }
+        if (reminder) {
+          chips.push(
+            `<span class="chip -ghost">🔔 ${frappe.utils.escape_html(reminder)}</span>`
+          );
+        }
+        if (created) {
+          chips.push(
+            `<span class="chip -ghost">${frappe.utils.escape_html(created)}</span>`
+          );
+        }
+
         return `
-          <div class="dnt-user-item dnt-user-item-task"
+          <div class="ec-task dnt-user-task${clsMuted}"
                data-doctype="${cfg.doctypes.todo}"
                data-name="${frappe.utils.escape_html(row.name)}"
                data-ref-doctype="${frappe.utils.escape_html(row.reference_type || "")}"
                data-ref-name="${frappe.utils.escape_html(row.reference_name || "")}">
-            <div class="dnt-user-item-main">
-              <div>
-                <div class="dnt-user-item-title">
-                  ${frappe.utils.escape_html(title)}
-                </div>
-                ${
-                  ref_info
-                    ? `<div class="dnt-user-item-sub">
-                         ${frappe.utils.escape_html(ref_info)}
-                       </div>`
-                    : ""
-                }
-                <div class="dnt-user-item-meta">
-                  ${
-                    status_label
-                      ? `<span class="dnt-user-pill ${status_cls}">
-                           <span class="dnt-user-dot"></span>
-                           <span>${frappe.utils.escape_html(status_label)}</span>
-                         </span>`
-                      : ""
-                  }
-                  ${
-                    row.priority
-                      ? `<span class="dnt-user-pill">
-                           ${frappe.utils.escape_html(tr(row.priority))}
-                         </span>`
-                      : ""
-                  }
-                  ${date ? `<span>${frappe.utils.escape_html(date)}</span>` : ""}
-                </div>
+            <div class="l">
+              <div class="title" title="${frappe.utils.escape_html(title)}">
+                ${frappe.utils.escape_html(title)}
               </div>
+              <div class="meta">
+                ${chips.join(" ")}
+              </div>
+            </div>
+            <div class="r">
+              <button class="btn btn-xs btn-default" type="button">
+                ${frappe.utils.escape_html(tr("Open"))}
+              </button>
             </div>
           </div>
         `;
@@ -951,7 +1003,9 @@
               "last_event_at",
               "events_count",
               "unanswered_count",
-              "modified"
+              "modified",
+              "channel_platform",
+              "preferred_language"
             ],
             filters: [[cfg.doctypes.case, "name", "in", case_names]],
             limit_page_length: case_names.length
@@ -993,7 +1047,12 @@
           "status",
           "priority",
           "date",
-          "modified"
+          "modified",
+          "allocated_to",
+          "assigned_by",
+          "custom_target_datetime",
+          "custom_due_datetime",
+          "creation"
         ],
         filters: [
           ["ToDo", "allocated_to", "=", user_email],
@@ -1015,14 +1074,43 @@
     });
   }
 
-  // ===== actions / handlers =====
+  // ===== tab activation memory for My Work =====
+
+  function activate_main_tab(frm, fieldname) {
+    try {
+      const $wrapper = frm.$wrapper;
+      if (!$wrapper || !$wrapper.length) return;
+
+      const $tabs = $wrapper.find("ul.form-tabs .nav-link");
+      if (!$tabs.length) return;
+
+      let $target = $tabs.filter(`#${cfg.tabBtnId}`);
+      if (!$target.length && fieldname) {
+        $target = $tabs.filter(`[data-fieldname="${fieldname}"]`);
+      }
+      if (!$target.length) return;
+
+      if ($.fn.tab) {
+        $target.tab("show");
+      } else {
+        $target.trigger("click");
+      }
+
+      localStorage.setItem(cfg.lastMyWorkKey, "1");
+      log("activate_main_tab → My Work shown");
+    } catch (e) {
+      log("activate_main_tab error", e);
+    }
+  }
 
   function bind_actions(frm) {
     if (frm.dnt_user_work_tab_bound) return;
     frm.dnt_user_work_tab_bound = true;
 
-    // Переключение "Cases / Tasks" внутри карточки
-    frm.$wrapper.on("click", ".dnt-user-work-tab-btn", function () {
+    const $w = frm.$wrapper;
+
+    // Внутренние табы "Cases / Tasks" внутри карточки
+    $w.on("click", ".dnt-user-work-tab-btn", function () {
       const btn = $(this);
       const kind = btn.attr("data-kind");
       if (!kind) return;
@@ -1039,8 +1127,8 @@
       log("inner tab switch", { kind });
     });
 
-    // Открытие кейса
-    frm.$wrapper.on("click", ".dnt-user-case-item, .crm-item.dnt-user-case-item", function () {
+    // Клик по кейсу
+    $w.on("click", ".dnt-user-case-item", function () {
       const el = $(this);
       const doctype = el.attr("data-doctype") || cfg.doctypes.case;
       const name = el.attr("data-name");
@@ -1049,8 +1137,8 @@
       frappe.set_route("Form", doctype, name);
     });
 
-    // Открытие задачи
-    frm.$wrapper.on("click", ".dnt-user-item-task", function () {
+    // Клик по задаче (любой клик по строке)
+    $w.on("click", ".dnt-user-task", function () {
       const el = $(this);
       const ref_doctype = el.attr("data-ref-doctype");
       const ref_name = el.attr("data-ref-name");
@@ -1066,7 +1154,7 @@
     });
 
     // "All Cases / All Tasks"
-    frm.$wrapper.on("click", ".dnt-user-work-all-link", function (e) {
+    $w.on("click", ".dnt-user-work-all-link", function (e) {
       e.preventDefault();
       const el = $(this);
       const kind = el.attr("data-kind");
@@ -1088,9 +1176,68 @@
         });
       }
     });
+
+    // Запоминаем, что пользователь активировал именно "My Work" таб
+    $w.on("click", "ul.form-tabs .nav-link", function () {
+      const fieldname = $(this).attr("data-fieldname") || "";
+      const isMyWork = fieldname === cfg.tabFieldname || this.id === cfg.tabBtnId;
+      localStorage.setItem(cfg.lastMyWorkKey, isMyWork ? "1" : "0");
+      log("outer tab click", { fieldname, isMyWork });
+    });
   }
 
-  // ===== init with retries =====
+  function apply_last_mywork_tab_if_needed(frm) {
+    try {
+      const prefer = localStorage.getItem(cfg.lastMyWorkKey) === "1";
+      if (!prefer) return;
+
+      const $wrapper = frm.$wrapper;
+      if (!$wrapper || !$wrapper.length) return;
+
+      const $tabs = $wrapper.find("ul.form-tabs .nav-link");
+      if (!$tabs.length) return;
+
+      const $active = $tabs.filter(".active");
+      if ($active.length) {
+        const fieldname = $active.attr("data-fieldname") || "";
+        // Не трогаем, если явно открыт не "User Details" и не наш таб
+        if (fieldname && fieldname !== "user_details_tab" && fieldname !== cfg.tabFieldname) {
+          log("skip auto My Work (another tab active)", { fieldname });
+          return;
+        }
+      }
+
+      activate_main_tab(frm, cfg.tabFieldname);
+      log("auto-activated My Work from memory");
+    } catch (e) {
+      log("apply_last_mywork_tab_if_needed error", e);
+    }
+  }
+
+  // Лёгкий guard против повторного hide секции Frappe
+  function start_visibility_guard(frm) {
+    if (frm.dnt_user_work_guard_started) return;
+    frm.dnt_user_work_guard_started = true;
+
+    let left = 20; // ~4 секунды после refresh
+    (function tick() {
+      if (left-- <= 0) return;
+      try {
+        const $wrapper = frm.$wrapper;
+        if (!$wrapper || !$wrapper.length) return;
+        const $section = $wrapper.find(`.row.form-section[data-fieldname="${cfg.tabFieldname}"]`);
+        const $body = $section.find(".section-body");
+        if ($section.length) {
+          $section.removeClass("empty-section hide-control").addClass("visible-section");
+          $section.css({ display: "block", visibility: "visible" });
+          $body.css({ display: "block", visibility: "visible" });
+        }
+      } catch (e) {
+        // молча
+      }
+      setTimeout(tick, 200);
+    })();
+  }
 
   function attempt_init(frm, is_self, tries_left) {
     if (!frm || !frm.doc || !frm.doc.name) {
@@ -1109,40 +1256,15 @@
       return;
     }
 
-    log("panel ready, binding actions and loading data");
-
     bind_actions(frm);
     update_counts(frm, { cards: 0, tasks: 0 });
 
     const user_email = frm.doc.name; // User.name = email / user id
     load_cards(frm, panel.cardsList, user_email, is_self);
     load_tasks(frm, panel.tasksList, user_email, is_self);
-  }
 
-  // Лёгкий "анти-hide" цикл: если Frappe вдруг снова пометит секцию empty/hide-control —
-  // через небольшой интервал вернём ей display:block. Но сам контент уже не зависит от секции.
-  function start_visibility_guard(frm) {
-    if (frm.dnt_user_work_guard_started) return;
-    frm.dnt_user_work_guard_started = true;
-
-    let left = 20; // ~20 * 200ms = ~4 сек после refresh
-    (function tick() {
-      if (left-- <= 0) return;
-      try {
-        const $wrapper = frm.$wrapper;
-        if (!$wrapper || !$wrapper.length) return;
-        const $section = $wrapper.find(`.row.form-section[data-fieldname="${cfg.tabFieldname}"]`);
-        const $body = $section.find(".section-body");
-        if ($section.length) {
-          $section.removeClass("empty-section hide-control").addClass("visible-section");
-          $section.css({ display: "block", visibility: "visible" });
-          $body.css({ display: "block", visibility: "visible" });
-        }
-      } catch (e) {
-        // молча
-      }
-      setTimeout(tick, 200);
-    })();
+    // После того, как всё отрисовали, пробуем восстановить таб "My Work"
+    apply_last_mywork_tab_if_needed(frm);
   }
 
   function init_for_form(frm) {
