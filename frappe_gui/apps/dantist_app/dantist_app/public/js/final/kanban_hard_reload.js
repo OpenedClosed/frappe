@@ -1,8 +1,9 @@
-/* Dantist Kanban Hard Reload — v1.10
+/* Dantist Kanban Hard Reload — v1.11
    — Уникальный ключ на основе точного URL + board + doctype
    — "route-enter" перезапуск (один раз на настоящий заход в конкретный канбан)
    — Хуки fetch/XHR/frappe.call + гард-таймер
    — Защита от циклов через sessionStorage + блок повторного reload в рамках одной вкладки
+   — Никаких перезагрузок, инициированных просто фокусом вкладки (нет visibilitychange-арминга)
 */
 (() => {
   const CFG = {
@@ -304,7 +305,4 @@
   setTimeout(arm, 0);
   if (frappe?.router?.on) frappe.router.on("change", arm);
   window.addEventListener?.("load", arm);
-  document.addEventListener?.("visibilitychange", () => {
-    if (!document.hidden) arm();
-  });
 })();
