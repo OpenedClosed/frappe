@@ -1,35 +1,37 @@
-// === DNT Kanban Plus (Frappe v15) — vT19 (final) ===
+// === DNT Kanban Plus (Frappe v15) — vT20 (responsive) ===
 // Right flyout (Assignees) — only on Kanban. Left flyout (Workspaces) — global except /app and /app/home.
-// Fixes: clickable assignees → User profile, no "scanned" line, CSS fully scoped (no sidebar icon shrink), left flyout independent of base menu.
+// Desktop: активные края слева/справа. Mobile: края отключены, вместо них — кнопки-бургер.
 
 (() => {
-  if (window.__DNT_KANBAN_PLUS_T19) return;
-  window.__DNT_KANBAN_PLUS_T19 = true;
+  if (window.__DNT_KANBAN_PLUS_T20) return;
+  window.__DNT_KANBAN_PLUS_T20 = true;
 
   const CFG = {
     ids: {
-      css: "dnt-kanban-plus-t19-css",
+      css: "dnt-kanban-plus-t20-css",
       rightEdge: "dnt-fly-edge-right",
       leftEdge: "dnt-fly-edge-left",
       rightFly: "dnt-fly-right",
       leftFly: "dnt-fly-left",
-      boardsWrap: "dnt-board-switcher-wrap"
+      boardsWrap: "dnt-board-switcher-wrap",
+      leftBtn: "dnt-fly-left-btn",
+      rightBtn: "dnt-fly-right-btn"
     },
     edgeW: 14,
     flyW: 336,
     z: 2147483000,
     fadeMs: 140,
     debug: (localStorage.getItem("dnt.kanban.debug") ?? "1") === "1",
-    log_prefix: "[DNT+T19]",
+    log_prefix: "[DNT+T20]",
     STATIC_BOARDS: [
       "Leads – Contact Center",
       "Deals – Contact Center",
       "Patients – Care Department"
     ],
-    html_snippet_limit: 1600
+    html_snippet_limit: 1600,
+    mobile_bp: 900
   };
 
-  // ===== Utils
   const dbg = (...a)=>{ try{ if(CFG.debug) console.log(CFG.log_prefix, ...a);}catch{} };
   const group = (title, payload)=>{ try{ if(!CFG.debug) return; console.groupCollapsed(CFG.log_prefix+" "+title); if (payload!==undefined) console.log(payload); console.groupEnd(); }catch{} };
   const CLEAN = s => (s||"").replace(/\u00A0/g," ").replace(/\s+/g," ").trim();
@@ -38,10 +40,19 @@
 
   const getRoute = ()=> (frappe?.get_route?.() || []);
   const isKanbanRoute = () => {
-    try { const r = getRoute(); if (r[0] === "List" && (r[2] === "Kanban" || r[2] === "Kanban Board")) return true; return (location.pathname||"").includes("/view/kanban/"); } catch { return false; }
+    try {
+      const r = getRoute();
+      if (r[0] === "List" && (r[2] === "Kanban" || r[2] === "Kanban Board")) return true;
+      return (location.pathname||"").includes("/view/kanban/");
+    } catch { return false; }
   };
   const isWorkspaceHubRoute = () => {
-    try { const p = location.pathname || ""; if (p === "/app" || p === "/app/home") return true; const r = getRoute(); return r[0] === "Workspaces"; } catch { return false; }
+    try {
+      const p = location.pathname || "";
+      if (p === "/app" || p === "/app/home") return true;
+      const r = getRoute();
+      return r[0] === "Workspaces";
+    } catch { return false; }
   };
   const getDoctype = () =>
     window.cur_list?.doctype
@@ -63,6 +74,10 @@
     window.location.assign(`/app/${encodeURIComponent(slug)}/view/kanban/${encodeURIComponent(boardTitle)}`);
   };
 
+  const isMobileView = () => {
+    try { return window.innerWidth <= CFG.mobile_bp; } catch { return false; }
+  };
+
   // ===== Theme flag
   function hex_to_rgb(h){ const m = (h||"").trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i); if (!m) return null; let s = m[1]; if (s.length===3) s = s.split("").map(x=>x+x).join(""); return [parseInt(s.slice(0,2),16), parseInt(s.slice(2,4),16), parseInt(s.slice(4,6),16)]; }
   function css_to_rgb(s){ if (!s) return null; const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i); if (m) return [+m[1],+m[2],+m[3]]; const h = s.trim(); if (h.startsWith("#")) return hex_to_rgb(h); return null; }
@@ -75,50 +90,239 @@
     const s=document.createElement("style");
     s.id = CFG.ids.css;
     s.textContent = `
-      #${CFG.ids.leftEdge}, #${CFG.ids.rightEdge}{ position: fixed; top: 0; bottom: 0; z-index:${CFG.z}; width:${CFG.edgeW}px; opacity:0; pointer-events:auto; }
+      #${CFG.ids.leftEdge}, #${CFG.ids.rightEdge}{
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        z-index:${CFG.z};
+        width:${CFG.edgeW}px;
+        opacity:0;
+        pointer-events:auto;
+      }
       #${CFG.ids.leftEdge}{ left:0; }
       #${CFG.ids.rightEdge}{ right:0; }
 
-      .dnt-fly{ position: fixed; top:0; width:${CFG.flyW}px; height:calc(100vh - 20px); margin:10px; background: color-mix(in oklab, var(--card-bg) 8%, transparent); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); z-index:${CFG.z}; transition: transform ${CFG.fadeMs}ms ease, opacity ${CFG.fadeMs}ms ease; opacity:0; pointer-events:none; display:flex; flex-direction:column; border: 1px solid color-mix(in oklab, var(--border-color) 40%, transparent); border-radius: 14px; }
-      .dnt-fly.show{ opacity:1; pointer-events:auto; }
-      #${CFG.ids.rightFly}{ right:0; transform: translateX(16px); }
-      #${CFG.ids.leftFly}{ left:0; transform: translateX(-16px); }
-      .dnt-fly.show#${CFG.ids.rightFly}{ transform: translateX(0); }
-      .dnt-fly.show#${CFG.ids.leftFly}{ transform: translateX(0); }
+      .dnt-fly{
+        position: fixed;
+        top:0;
+        width:${CFG.flyW}px;
+        height:calc(100vh - 20px);
+        margin:10px;
+        background: color-mix(in oklab, var(--card-bg) 8%, transparent);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+        z-index:${CFG.z};
+        transition: transform ${CFG.fadeMs}ms ease, opacity ${CFG.fadeMs}ms ease;
+        opacity:0;
+        pointer-events:none;
+        display:flex;
+        flex-direction:column;
+        border: 1px solid color-mix(in oklab, var(--border-color) 40%, transparent);
+        border-radius: 14px;
+      }
+      .dnt-fly.show{
+        opacity:1;
+        pointer-events:auto;
+      }
+      #${CFG.ids.rightFly}{
+        right:0;
+        transform: translateX(16px);
+      }
+      #${CFG.ids.leftFly}{
+        left:0;
+        transform: translateX(-16px);
+      }
+      .dnt-fly.show#${CFG.ids.rightFly}{
+        transform: translateX(0);
+      }
+      .dnt-fly.show#${CFG.ids.leftFly}{
+        transform: translateX(0);
+      }
 
-      .dnt-fly-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px dashed color-mix(in oklab, var(--border-color) 45%, transparent); background: color-mix(in oklab, var(--card-bg) 10%, transparent); border-top-left-radius: 14px; border-top-right-radius: 14px; }
-      .dnt-fly-body{ padding:12px; overflow:auto; gap:10px; display:flex; flex-direction:column; }
-      .dnt-fly-title{ font-weight:700; letter-spacing:.2px; }
+      .dnt-fly-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:10px 12px;
+        border-bottom:1px dashed color-mix(in oklab, var(--border-color) 45%, transparent);
+        background: color-mix(in oklab, var(--card-bg) 10%, transparent);
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+      }
+      .dnt-fly-body{
+        padding:12px;
+        overflow:auto;
+        gap:10px;
+        display:flex;
+        flex-direction:column;
+      }
+      .dnt-fly-title{
+        font-weight:700;
+        letter-spacing:.2px;
+      }
 
       /* Board switcher */
       #${CFG.ids.boardsWrap}{ margin:8px 0 0; width:100%; }
-      #${CFG.ids.boardsWrap} .dnt-boards-grid{ display:flex; flex-direction:row; flex-wrap:nowrap; gap:8px; align-items:center; justify-content:flex-start; overflow:auto; }
-      #${CFG.ids.boardsWrap} .dnt-boards-grid.dnt-seg{ gap:0; padding:4px; border-radius:14px; border:1px solid color-mix(in oklab, var(--border-color) 60%, transparent); background: color-mix(in oklab, var(--card-bg) 8%, transparent); }
-      #${CFG.ids.boardsWrap} .dnt-boards-grid.dnt-seg .dnt-board-btn{ border:none; background:transparent; border-radius:10px; margin:0 2px; }
-      #${CFG.ids.boardsWrap} .dnt-board-btn{ display:flex; align-items:center; padding:8px 14px; border-radius:12px; font-weight:600; line-height:1; border:1px solid color-mix(in oklab, var(--border-color) 60%, transparent); background: color-mix(in oklab, var(--card-bg) 6%, transparent); color: var(--text-color); text-decoration:none; cursor:pointer; transition: background .12s ease, border-color .12s ease; white-space:nowrap; }
-      #${CFG.ids.boardsWrap} .dnt-board-btn:hover{ background: color-mix(in oklab, var(--fg-hover-color) 18%, transparent); border-color: color-mix(in oklab, var(--border-color) 80%, transparent); }
-      html.dnt-theme-light #${CFG.ids.boardsWrap} .dnt-board-btn.active{ background: color-mix(in oklab, var(--card-bg) 72%, black 28%); border-color: color-mix(in oklab, var(--border-color) 70%, black 30%); color: color-mix(in oklab, var(--text-color) 85%, white 15%); }
-      html.dnt-theme-dark #${CFG.ids.boardsWrap} .dnt-board-btn.active{ background: color-mix(in oklab, var(--card-bg) 68%, white 32%); border-color: color-mix(in oklab, var(--border-color) 60%, white 40%); color: color-mix(in oklab, var(--text-color) 85%, black 15%); }
+      #${CFG.ids.boardsWrap} .dnt-boards-grid{
+        display:flex;
+        flex-direction:row;
+        flex-wrap:nowrap;
+        gap:8px;
+        align-items:center;
+        justify-content:flex-start;
+        overflow:auto;
+      }
+      #${CFG.ids.boardsWrap} .dnt-boards-grid.dnt-seg{
+        gap:0;
+        padding:4px;
+        border-radius:14px;
+        border:1px solid color-mix(in oklab, var(--border-color) 60%, transparent);
+        background: color-mix(in oklab, var(--card-bg) 8%, transparent);
+      }
+      #${CFG.ids.boardsWrap} .dnt-boards-grid.dnt-seg .dnt-board-btn{
+        border:none;
+        background:transparent;
+        border-radius:10px;
+        margin:0 2px;
+      }
+      #${CFG.ids.boardsWrap} .dnt-board-btn{
+        display:flex;
+        align-items:center;
+        padding:8px 14px;
+        border-radius:12px;
+        font-weight:600;
+        line-height:1;
+        border:1px solid color-mix(in oklab, var(--border-color) 60%, transparent);
+        background: color-mix(in oklab, var(--card-bg) 6%, transparent);
+        color: var(--text-color);
+        text-decoration:none;
+        cursor:pointer;
+        transition: background .12s ease, border-color .12s ease;
+        white-space:nowrap;
+      }
+      #${CFG.ids.boardsWrap} .dnt-board-btn:hover{
+        background: color-mix(in oklab, var(--fg-hover-color) 18%, transparent);
+        border-color: color-mix(in oklab, var(--border-color) 80%, transparent);
+      }
+      html.dnt-theme-light #${CFG.ids.boardsWrap} .dnt-board-btn.active{
+        background: color-mix(in oklab, var(--card-bg) 72%, black 28%);
+        border-color: color-mix(in oklab, var(--border-color) 70%, black 30%);
+        color: color-mix(in oklab, var(--text-color) 85%, white 15%);
+      }
+      html.dnt-theme-dark #${CFG.ids.boardsWrap} .dnt-board-btn.active{
+        background: color-mix(in oklab, var(--card-bg) 68%, white 32%);
+        border-color: color-mix(in oklab, var(--border-color) 60%, white 40%);
+        color: color-mix(in oklab, var(--text-color) 85%, black 15%);
+      }
 
       /* Left */
       .dnt-left-block{ display:flex; flex-direction:column; gap:8px; }
       .dnt-left-h{ font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin:6px 0 2px; }
       .dnt-left-links{ display:flex; flex-direction:column; gap:8px; }
-      .dnt-left-links a{ display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:10px; text-decoration:none; color: var(--text-color); border:1px solid color-mix(in oklab, var(--border-color) 55%, transparent); background: color-mix(in oklab, var(--card-bg) 4%, transparent); transition: background .12s ease, border-color .12s ease; }
-      .dnt-ws-ico, .dnt-fly .sidebar-item-icon{ width:20px; height:20px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; }
+      .dnt-left-links a{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        padding:6px 10px;
+        border-radius:10px;
+        text-decoration:none;
+        color: var(--text-color);
+        border:1px solid color-mix(in oklab, var(--border-color) 55%, transparent);
+        background: color-mix(in oklab, var(--card-bg) 4%, transparent);
+        transition: background .12s ease, border-color .12s ease;
+      }
+      .dnt-ws-ico, .dnt-fly .sidebar-item-icon{
+        width:20px;
+        height:20px;
+        border-radius:6px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+      }
 
       /* Right */
       .dnt-user-grid{ display:flex; flex-direction:column; gap:6px; }
-      .dnt-user{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:10px; border:1px solid color-mix(in oklab, var(--border-color) 55%, transparent); background: color-mix(in oklab, var(--card-bg) 4%, transparent); cursor:pointer; }
-      .dnt-ava{ width:24px; height:24px; border-radius:50%; background: var(--control-bg); display:flex; align-items:center; justify-content:center; font-weight:700; overflow:hidden; }
-      .dnt-ava img{ width:24px; height:24px; border-radius:50%; object-fit:cover; display:block; }
+      .dnt-user{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        padding:6px 8px;
+        border-radius:10px;
+        border:1px solid color-mix(in oklab, var(--border-color) 55%, transparent);
+        background: color-mix(in oklab, var(--card-bg) 4%, transparent);
+        cursor:pointer;
+      }
+      .dnt-ava{
+        width:24px;
+        height:24px;
+        border-radius:50%;
+        background: var(--control-bg);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:700;
+        overflow:hidden;
+      }
+      .dnt-ava img{
+        width:24px;
+        height:24px;
+        border-radius:50%;
+        object-fit:cover;
+        display:block;
+      }
       .dnt-name{ font-size:12px; }
+
+      /* Mobile burger buttons */
+      .dnt-fly-btn{
+        position: fixed;
+        top: 10px;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in oklab, var(--border-color) 60%, transparent);
+        background: color-mix(in oklab, var(--card-bg) 18%, transparent);
+        display:none;
+        align-items:center;
+        justify-content:center;
+        padding:0;
+        margin:0;
+        z-index:${CFG.z};
+        cursor:pointer;
+      }
+      #${CFG.ids.leftBtn}{ left: 12px; }
+      #${CFG.ids.rightBtn}{ right: 12px; }
+
+      .dnt-fly-burger{
+        width:18px;
+        height:14px;
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between;
+      }
+      .dnt-fly-burger span{
+        display:block;
+        height:2px;
+        border-radius:999px;
+        background: color-mix(in oklab, var(--text-color) 88%, transparent);
+      }
+
+      @media (max-width: ${CFG.mobile_bp}px){
+        #${CFG.ids.leftEdge}, #${CFG.ids.rightEdge}{
+          pointer-events:none;
+        }
+        .dnt-fly{
+          height:100vh;
+          margin:0;
+        }
+        .dnt-fly-btn{
+          display:flex;
+        }
+      }
     `;
     document.head.appendChild(s);
     dbg("CSS injected");
   })();
 
-  // ===== helpers
   const getKanbanRoot = () => { const roots = Array.from(document.querySelectorAll(".kanban")); return roots.find(r => r && r.getClientRects().length) || roots[0] || null; };
 
   // ===== Right flyout (Assignees)
@@ -149,7 +353,12 @@
     return Array.from(tokens).filter(Boolean);
   }
 
-  function resolve_user_info(token){ const info = (typeof frappe?.user_info === "function") ? frappe.user_info(token) : null; if (info && (info.fullname || info.name || info.email)) return info; if (EMAIL_RE.test(token)) return { name: token, fullname: token, email: token, image: "" }; return { name: token, fullname: token, email: "", image: "" }; }
+  function resolve_user_info(token){
+    const info = (typeof frappe?.user_info === "function") ? frappe.user_info(token) : null;
+    if (info && (info.fullname || info.name || info.email)) return info;
+    if (EMAIL_RE.test(token)) return { name: token, fullname: token, email: token, image: "" };
+    return { name: token, fullname: token, email: "", image: "" };
+  }
 
   function gather_assignees_from_wrap(wrap, idx){
     const tokens = collect_user_tokens(wrap);
@@ -211,7 +420,7 @@
   }
 
   async function render_right_fly(force_scan=false){
-    if (!isKanbanRoute()) return; // right fly only on Kanban
+    if (!isKanbanRoute()) return;
     const root = document.getElementById(CFG.ids.rightFly); if (!root) return;
     const body = root.querySelector('.dnt-fly-body');
     const head = root.querySelector('.dnt-fly-title'); head.textContent = t('Assignees');
@@ -238,7 +447,6 @@
     body.innerHTML = '';
     body.appendChild(grid);
 
-    // Delegated click → open User profile
     grid.addEventListener('click', (e)=>{
       const el = e.target && (e.target.closest ? e.target.closest('[data-open-user]') : null);
       if (!el) return;
@@ -249,7 +457,7 @@
     });
   }
 
-  // ===== Left flyout (Workspaces) — global except hub
+  // ===== Left flyout (Workspaces)
   function CLEAN_TEXT(n){ return CLEAN(n.textContent||"") || n.getAttribute?.("title") || ""; }
 
   function collect_sidebar_items_from_dom(){
@@ -273,7 +481,12 @@
   }
 
   function collect_workspaces_from_boot(){
-    const srcs = [ ...(frappe?.boot?.allowed_workspaces || []), ...(frappe?.boot?.workspaces || []), ...(frappe?.boot?.all_workspaces || []), ...(frappe?.boot?.public_workspaces || []), ].filter(Boolean);
+    const srcs = [
+      ...(frappe?.boot?.allowed_workspaces || []),
+      ...(frappe?.boot?.workspaces || []),
+      ...(frappe?.boot?.all_workspaces || []),
+      ...(frappe?.boot?.public_workspaces || []),
+    ].filter(Boolean);
     const out = [];
     for (const it of srcs){
       const label = CLEAN(it.title || it.label || it.name || ""); if (!label) continue;
@@ -281,8 +494,14 @@
       const route = (it.route && String(it.route)) || ("/app/" + encodeURIComponent(label.toLowerCase().replace(/\s+/g,"-")));
       const icon = it.icon_html || it.icon || it.icon_class || it.icon_name || it.icon_label || "";
       let iconHTML = "";
-      if (icon && /</.test(icon)) { const tmp = document.createElement("div"); tmp.innerHTML = icon; const first = tmp.querySelector("svg, i, span"); iconHTML = first ? `<span class="sidebar-item-icon">${first.outerHTML}</span>` : ""; }
-      else if (icon && /[a-z-]{2,}/i.test(icon)) { iconHTML = `<span class="sidebar-item-icon"><svg class="icon icon-md" aria-hidden="true"><use href="#icon-${esc(icon)}"></use></svg></span>`; }
+      if (icon && /</.test(icon)) {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = icon;
+        const first = tmp.querySelector("svg, i, span");
+        iconHTML = first ? `<span class="sidebar-item-icon">${first.outerHTML}</span>` : "";
+      } else if (icon && /[a-z-]{2,}/i.test(icon)) {
+        iconHTML = `<span class="sidebar-item-icon"><svg class="icon icon-md" aria-hidden="true"><use href="#icon-${esc(icon)}"></use></svg></span>`;
+      }
       const is_public = !!(it.public || it.is_public);
       out.push({ href: route, label, iconHTML, is_public, src: "boot" });
     }
@@ -291,7 +510,7 @@
   }
 
   function render_left_fly(){
-    if (isWorkspaceHubRoute()) return; // not on hub
+    if (isWorkspaceHubRoute()) return;
     const root = document.getElementById(CFG.ids.leftFly); if (!root) return;
     const pubBox = root.querySelector('.dnt-left-links[data-ws="public"]'); if (!pubBox) return;
 
@@ -307,7 +526,14 @@
       const a = document.createElement("a");
       a.href = it.href || "#";
       a.innerHTML = `${it.iconHTML || `<span class="dnt-ws-ico">${esc((it.label||" ")[0].toUpperCase())}</span>`} <span>${esc(it.label)}</span>`;
-      a.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); const href = it.href || ""; dbg("open workspace:", { href, label: it.label }); if (href.startsWith("#")) frappe.set_route(href.substring(1)); else window.location.assign(href); });
+      a.addEventListener("click",(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const href = it.href || "";
+        dbg("open workspace:", { href, label: it.label });
+        if (href.startsWith("#")) frappe.set_route(href.substring(1));
+        else window.location.assign(href);
+      });
       frag.appendChild(a);
     });
     pubBox.replaceChildren(frag);
@@ -321,9 +547,13 @@
 
   function ensure_board_switcher(){
     if (!isKanbanRoute()) {
-      const prev = document.getElementById(CFG.ids.boardsWrap); if (prev) prev.remove(); last_switcher_hash = ""; return;
+      const prev = document.getElementById(CFG.ids.boardsWrap);
+      if (prev) prev.remove();
+      last_switcher_hash = "";
+      return;
     }
-    const head = document.querySelector(".page-head-content") || document.querySelector(".page-head"); if (!head) return;
+    const head = document.querySelector(".page-head-content") || document.querySelector(".page-head");
+    if (!head) return;
     if (document.getElementById(CFG.ids.boardsWrap)) return;
 
     const wrap = document.createElement("div");
@@ -343,7 +573,10 @@
 
     if (!dt) { grid.innerHTML = ""; return; }
 
-    const html = boards.map(title=>{ const isActive = CLEAN(title) === active; return `<a href="#" class="dnt-board-btn${isActive?" active":""}" data-board="${esc(title)}">${esc(title)}</a>`; }).join("");
+    const html = boards.map(title=>{
+      const isActive = CLEAN(title) === active;
+      return `<a href="#" class="dnt-board-btn${isActive?" active":""}" data-board="${esc(title)}">${esc(title)}</a>`;
+    }).join("");
 
     const new_hash = `${dt}|${active}|${html}`;
     if (new_hash === last_switcher_hash) return;
@@ -351,101 +584,228 @@
 
     grid.innerHTML = html;
     grid.querySelectorAll(".dnt-board-btn").forEach(btn=>{
-      btn.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); const title = btn.getAttribute("data-board"); dbg("switch board (hard):", { dt, title }); routeToBoard(dt, title); });
+      btn.addEventListener("click",(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const title = btn.getAttribute("data-board");
+        dbg("switch board (hard):", { dt, title });
+        routeToBoard(dt, title);
+      });
     });
 
     group("board switcher rendered", { dt, active, boards });
   }
 
   // ===== Flyouts & edges (split left/right)
-  function remove_left(){ [CFG.ids.leftEdge, CFG.ids.leftFly].forEach(id=>{ const el = document.getElementById(id); if (el) el.remove(); }); }
-  function remove_right(){ [CFG.ids.rightEdge, CFG.ids.rightFly].forEach(id=>{ const el = document.getElementById(id); if (el) el.remove(); }); }
+  function remove_left(){
+    [CFG.ids.leftEdge, CFG.ids.leftFly, CFG.ids.leftBtn].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+  }
+  function remove_right(){
+    [CFG.ids.rightEdge, CFG.ids.rightFly, CFG.ids.rightBtn].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+  }
 
   function ensure_left(){
     if (isWorkspaceHubRoute()) { remove_left(); return; }
-    if (document.getElementById(CFG.ids.leftEdge)) return;
-
-    const leftEdge  = document.createElement("div");
-    leftEdge.id = CFG.ids.leftEdge;
-    document.body.appendChild(leftEdge);
-
-    const leftFly = document.createElement("div");
-    leftFly.id = CFG.ids.leftFly; leftFly.className = "dnt-fly";
-    leftFly.innerHTML = `
-      <div class="dnt-fly-head">
-        <div class="dnt-fly-title">${t("Workspace")}</div>
-        <div class="text-muted" style="font-size:12px">${t("hover out to close")}</div>
-      </div>
-      <div class="dnt-fly-body">
-        <div class="dnt-left-block">
-          <div class="dnt-left-h">${t("Public")}</div>
-          <div class="dnt-left-links" data-ws="public"></div>
+    if (!document.getElementById(CFG.ids.leftEdge)){
+      const leftEdge  = document.createElement("div");
+      leftEdge.id = CFG.ids.leftEdge;
+      document.body.appendChild(leftEdge);
+    }
+    if (!document.getElementById(CFG.ids.leftFly)){
+      const leftFly = document.createElement("div");
+      leftFly.id = CFG.ids.leftFly;
+      leftFly.className = "dnt-fly";
+      leftFly.innerHTML = `
+        <div class="dnt-fly-head">
+          <div class="dnt-fly-title">${t("Workspace")}</div>
+          <div class="text-muted" style="font-size:12px">${t("hover out to close")}</div>
         </div>
-        <div class="dnt-left-block" style="display:none">
-          <div class="dnt-left-h">${t("My Workspaces")}</div>
-          <div class="dnt-left-links" data-ws="private"></div>
+        <div class="dnt-fly-body">
+          <div class="dnt-left-block">
+            <div class="dnt-left-h">${t("Public")}</div>
+            <div class="dnt-left-links" data-ws="public"></div>
+          </div>
+          <div class="dnt-left-block" style="display:none">
+            <div class="dnt-left-h">${t("My Workspaces")}</div>
+            <div class="dnt-left-links" data-ws="private"></div>
+          </div>
         </div>
-      </div>
-    `;
-    document.body.appendChild(leftFly);
+      `;
+      document.body.appendChild(leftFly);
+    }
 
-    const hover = { leftEdge:false, leftFly:false };
-    const update = ()=>{ const fly = document.getElementById(CFG.ids.leftFly); if (!fly) return; const on = hover.leftEdge || hover.leftFly; if (on) fly.classList.add("show"); else fly.classList.remove("show"); };
+    if (!document.getElementById(CFG.ids.leftBtn)){
+      const btn = document.createElement("button");
+      btn.id = CFG.ids.leftBtn;
+      btn.type = "button";
+      btn.className = "dnt-fly-btn";
+      btn.setAttribute("aria-label", "Open workspace");
+      btn.innerHTML = `<div class="dnt-fly-burger"><span></span><span></span><span></span></div>`;
+      btn.addEventListener("click", ()=>{
+        const fly = document.getElementById(CFG.ids.leftFly);
+        if (!fly) return;
+        const shown = fly.classList.contains("show");
+        if (!shown) render_left_fly();
+        fly.classList.toggle("show", !shown);
+      });
+      document.body.appendChild(btn);
+    }
 
-    document.addEventListener("mousemove", (e)=>{ if (isWorkspaceHubRoute()) return; const nearLeft = e.clientX <= CFG.edgeW; if (nearLeft !== hover.leftEdge){ hover.leftEdge = nearLeft; if (nearLeft) render_left_fly(); update(); } }, {passive:true});
-    leftEdge.addEventListener("mouseenter", ()=>{ if (isWorkspaceHubRoute()) return; hover.leftEdge = true; render_left_fly(); update(); });
-    leftEdge.addEventListener("mouseleave", ()=>{ hover.leftEdge = false; update(); });
-    leftFly.addEventListener("mouseenter", ()=>{ hover.leftFly = true; update(); });
-    leftFly.addEventListener("mouseleave", ()=>{ hover.leftFly = false; update(); });
+    const leftEdge = document.getElementById(CFG.ids.leftEdge);
+    const leftFly = document.getElementById(CFG.ids.leftFly);
+    if (!leftEdge || !leftFly) return;
 
-    dbg("left flyouts created");
+    if (!leftEdge.__dntBound){
+      const hover = { leftEdge:false, leftFly:false };
+      const update = ()=>{
+        if (!leftFly) return;
+        const on = hover.leftEdge || hover.leftFly;
+        leftFly.classList.toggle("show", on);
+      };
+
+      document.addEventListener("mousemove", (e)=>{
+        if (isMobileView() || isWorkspaceHubRoute()) return;
+        const nearLeft = e.clientX <= CFG.edgeW;
+        if (nearLeft !== hover.leftEdge){
+          hover.leftEdge = nearLeft;
+          if (nearLeft) render_left_fly();
+          update();
+        }
+      }, {passive:true});
+
+      leftEdge.addEventListener("mouseenter", ()=>{
+        if (isMobileView() || isWorkspaceHubRoute()) return;
+        hover.leftEdge = true;
+        render_left_fly();
+        update();
+      });
+      leftEdge.addEventListener("mouseleave", ()=>{
+        hover.leftEdge = false;
+        update();
+      });
+      leftFly.addEventListener("mouseenter", ()=>{
+        hover.leftFly = true;
+        update();
+      });
+      leftFly.addEventListener("mouseleave", ()=>{
+        hover.leftFly = false;
+        update();
+      });
+
+      leftEdge.__dntBound = true;
+      dbg("left flyouts created");
+    }
   }
 
   function ensure_right(){
     if (!isKanbanRoute()) { remove_right(); return; }
-    if (document.getElementById(CFG.ids.rightEdge)) return;
 
-    const rightEdge = document.createElement("div"); rightEdge.id = CFG.ids.rightEdge; document.body.appendChild(rightEdge);
+    if (!document.getElementById(CFG.ids.rightEdge)){
+      const rightEdge = document.createElement("div");
+      rightEdge.id = CFG.ids.rightEdge;
+      document.body.appendChild(rightEdge);
+    }
+    if (!document.getElementById(CFG.ids.rightFly)){
+      const rightFly = document.createElement("div");
+      rightFly.id = CFG.ids.rightFly;
+      rightFly.className = "dnt-fly";
+      rightFly.innerHTML = `
+        <div class="dnt-fly-head">
+          <div class="dnt-fly-title">${t("Assignees")}</div>
+          <div class="text-muted" style="font-size:12px">${t("hover out to close")}</div>
+        </div>
+        <div class="dnt-fly-body"><div class="dnt-user-grid"></div></div>
+      `;
+      document.body.appendChild(rightFly);
+    }
 
-    const rightFly = document.createElement("div"); rightFly.id = CFG.ids.rightFly; rightFly.className = "dnt-fly";
-    rightFly.innerHTML = `
-      <div class="dnt-fly-head">
-        <div class="dnt-fly-title">${t("Assignees")}</div>
-        <div class="text-muted" style="font-size:12px">${t("hover out to close")}</div>
-      </div>
-      <div class="dnt-fly-body"><div class="dnt-user-grid"></div></div>
-    `;
-    document.body.appendChild(rightFly);
+    if (!document.getElementById(CFG.ids.rightBtn)){
+      const btn = document.createElement("button");
+      btn.id = CFG.ids.rightBtn;
+      btn.type = "button";
+      btn.className = "dnt-fly-btn";
+      btn.setAttribute("aria-label", "Open assignees");
+      btn.innerHTML = `<div class="dnt-fly-burger"><span></span><span></span><span></span></div>`;
+      btn.addEventListener("click", ()=>{
+        const fly = document.getElementById(CFG.ids.rightFly);
+        if (!fly) return;
+        const shown = fly.classList.contains("show");
+        if (!shown) render_right_fly(true);
+        fly.classList.toggle("show", !shown);
+      });
+      document.body.appendChild(btn);
+    }
 
-    const hover = { rightEdge:false, rightFly:false };
-    const update = ()=>{ const fly = document.getElementById(CFG.ids.rightFly); if (!fly) return; const on = hover.rightEdge || hover.rightFly; if (on) fly.classList.add("show"); else fly.classList.remove("show"); };
+    const rightEdge = document.getElementById(CFG.ids.rightEdge);
+    const rightFly = document.getElementById(CFG.ids.rightFly);
+    if (!rightEdge || !rightFly) return;
 
-    document.addEventListener("mousemove", (e)=>{ if (!isKanbanRoute()) return; const w = window.innerWidth; const nearRight = (w - e.clientX) <= CFG.edgeW; if (nearRight !== hover.rightEdge){ hover.rightEdge = nearRight; if (nearRight) render_right_fly(true); update(); } }, {passive:true});
-    rightEdge.addEventListener("mouseenter", ()=>{ if (!isKanbanRoute()) return; hover.rightEdge = true; render_right_fly(true); update(); });
-    rightEdge.addEventListener("mouseleave", ()=>{ hover.rightEdge = false; update(); });
-    rightFly.addEventListener("mouseenter", ()=>{ hover.rightFly = true; update(); });
-    rightFly.addEventListener("mouseleave", ()=>{ hover.rightFly = false; update(); });
+    if (!rightEdge.__dntBound){
+      const hover = { rightEdge:false, rightFly:false };
+      const update = ()=>{
+        if (!rightFly) return;
+        const on = hover.rightEdge || hover.rightFly;
+        rightFly.classList.toggle("show", on);
+      };
 
-    dbg("right flyouts created");
+      document.addEventListener("mousemove", (e)=>{
+        if (!isKanbanRoute() || isMobileView()) return;
+        const w = window.innerWidth;
+        const nearRight = (w - e.clientX) <= CFG.edgeW;
+        if (nearRight !== hover.rightEdge){
+          hover.rightEdge = nearRight;
+          if (nearRight) render_right_fly(true);
+          update();
+        }
+      }, {passive:true});
+
+      rightEdge.addEventListener("mouseenter", ()=>{
+        if (!isKanbanRoute() || isMobileView()) return;
+        hover.rightEdge = true;
+        render_right_fly(true);
+        update();
+      });
+      rightEdge.addEventListener("mouseleave", ()=>{
+        hover.rightEdge = false;
+        update();
+      });
+      rightFly.addEventListener("mouseenter", ()=>{
+        hover.rightFly = true;
+        update();
+      });
+      rightFly.addEventListener("mouseleave", ()=>{
+        hover.rightFly = false;
+        update();
+      });
+
+      rightEdge.__dntBound = true;
+      dbg("right flyouts created");
+    }
   }
 
   // ===== Boot / Route
   function run(){
     update_theme_flag();
 
-    // Left is global except hub
     ensure_left();
-
-    // Right only on Kanban
     ensure_right();
 
-    // Board switcher only on Kanban
     if (!isKanbanRoute()) {
-      const bs = document.getElementById(CFG.ids.boardsWrap); if (bs) bs.remove();
+      const bs = document.getElementById(CFG.ids.boardsWrap);
+      if (bs) bs.remove();
       last_switcher_hash = "";
     } else {
       ensure_board_switcher();
-      setTimeout(()=>{ update_theme_flag(); render_board_switcher(); }, 120);
+      setTimeout(()=>{
+        update_theme_flag();
+        render_board_switcher();
+      }, 120);
     }
   }
 
@@ -455,5 +815,11 @@
   frappe?.router?.on && frappe.router.on("change", run);
 
   let wd_i = 0;
-  setInterval(()=> { wd_i = (wd_i+1)%4; if (!wd_i) { dbg("watchdog route:", getRoute().join(" / ")); update_theme_flag(); } }, 3000);
+  setInterval(()=>{
+    wd_i = (wd_i+1)%4;
+    if (!wd_i) {
+      dbg("watchdog route:", getRoute().join(" / "));
+      update_theme_flag();
+    }
+  }, 3000);
 })();

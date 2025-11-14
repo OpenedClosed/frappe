@@ -1,8 +1,8 @@
-/* Dantist Kanban Hard Reload — v1.9
+/* Dantist Kanban Hard Reload — v1.10
    — Уникальный ключ на основе точного URL + board + doctype
-   — Мгновенный "route-enter" перезапуск (один раз на вход в канбан)
+   — "route-enter" перезапуск (один раз на настоящий заход в конкретный канбан)
    — Хуки fetch/XHR/frappe.call + гард-таймер
-   — Повторный reload разрешён после небольшого cooldown (без циклов)
+   — Защита от циклов через sessionStorage + блок повторного reload в рамках одной вкладки
 */
 (() => {
   const CFG = {
@@ -10,8 +10,8 @@
     delay_ms: 250,
     debounce_ms: 300,
     guard_ms: 1200,
-    route_enter_ms: 200, // мягкий «на входе»
-    cooldown_ms: 3000,   // через сколько миллисекунд можно снова перезагрузить тот же URL
+    route_enter_ms: 200,
+    cooldown_ms: 3000,
     watch_methods: new Set([
       "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards",
       "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_board",
@@ -22,7 +22,6 @@
       "frappe.client.get_doc_permissions",
       "frappe.client.get_list",
       "frappe.client.get_value",
-      // кастомные:
       "dantist_app.api.engagement.handlers.engagement_hidden_children",
       "dantist_app.api.engagement.handlers.engagement_allowed_for_board",
       "dantist_app.api.tasks.handlers.ec_tasks_for_case"
@@ -37,7 +36,7 @@
       "/api/method/frappe.client.get_doc_permissions",
       "/api/method/frappe.client.get_list",
       "/api/method/frappe.client.get_value",
-      "/api/method/frappe.client.get", // GET Kanban Board
+      "/api/method/frappe.client.get",
       "/api/method/dantist_app.api.engagement.handlers.engagement_hidden_children",
       "/api/method/dantist_app.api.engagement.handlers.engagement_allowed_for_board",
       "/api/method/dantist_app.api.tasks.handlers.ec_tasks_for_case"
@@ -45,6 +44,7 @@
   };
 
   const CLEAN = s => (s || "").trim();
+  const SEEN = (window.__DNT_KANBAN_HR_SEEN = window.__DNT_KANBAN_HR_SEEN || {});
 
   function is_kanban_url() {
     try {
@@ -97,13 +97,11 @@
     if (armed_key === key) return;
     armed_key = key;
 
-    // 1) «на входе» — мягкий одноразовый перезапуск для этого захода
     clearTimeout(enter_timer);
     enter_timer = setTimeout(() => {
       maybe_reload_once("route-enter");
     }, CFG.route_enter_ms);
 
-    // 2) гард — если не поймали сетевой триггер
     clearTimeout(guard_timer);
     guard_timer = setTimeout(() => {
       if (!armed_key) return;
@@ -131,6 +129,15 @@
     const key = key_for_current();
     if (!armed_key || armed_key !== key) return;
 
+    // Уже перезагружали эту доску в рамках текущей вкладки — не трогаем её больше.
+    if (SEEN[key]) {
+      disarm();
+      try {
+        console.debug("[DNT] Kanban hard reload skipped (seen in this tab)", key, reason ? `(${reason})` : "");
+      } catch {}
+      return;
+    }
+
     const now = Date.now();
     let last_ts = 0;
 
@@ -142,31 +149,23 @@
       }
     } catch {}
 
-    // Если уже перезагружались по этому URL недавно — не делаем ещё раз (защита от цикла)
     if (last_ts && now - last_ts < (CFG.cooldown_ms || 2000)) {
       disarm();
       try {
-        console.debug(
-          "[DNT] Kanban hard reload skipped (cooldown)",
-          key,
-          reason ? `(${reason})` : ""
-        );
+        console.debug("[DNT] Kanban hard reload skipped (cooldown)", key, reason ? `(${reason})` : "");
       } catch {}
       return;
     }
 
-    // Фиксируем момент последнего reload для этого URL
     try {
       sessionStorage.setItem(key, String(now));
     } catch {}
 
+    SEEN[key] = true;
+
     disarm();
     try {
-      console.debug(
-        "[DNT] Kanban hard reload:",
-        key,
-        reason ? `(${reason})` : ""
-      );
+      console.debug("[DNT] Kanban hard reload:", key, reason ? `(${reason})` : "");
     } catch {}
     setTimeout(() => {
       location.reload();
@@ -183,7 +182,6 @@
     } catch { return false; }
   }
 
-  // ===== Hook: frappe.call
   (function hook_frappe_call() {
     if (!window.frappe || !frappe.call || frappe.call.__dntHooked) return;
     const orig = frappe.call.bind(frappe);
@@ -222,7 +220,6 @@
     frappe.call = wrapped;
   })();
 
-  // ===== Hook: fetch
   (function hook_fetch() {
     if (!window.fetch || window.fetch.__dntHooked) return;
     const orig = window.fetch.bind(window);
@@ -249,7 +246,6 @@
     window.fetch = wrapped;
   })();
 
-  // ===== Hook: XHR
   (function hook_xhr() {
     if (!window.XMLHttpRequest || window.XMLHttpRequest.__dntHooked) return;
     const Orig = window.XMLHttpRequest;
@@ -290,19 +286,20 @@
     window.XMLHttpRequest = DntXHR;
   })();
 
-  // ===== Утилиты
   window.DNT = Object.assign(window.DNT || {}, {
     resetKanbanReload(prefix = "dnt_kanban_hard_reload:") {
       try {
         Object.keys(sessionStorage).forEach(k => {
           if (k.startsWith(prefix)) sessionStorage.removeItem(k);
         });
+        Object.keys(SEEN).forEach(k => {
+          if (k.startsWith(prefix)) delete SEEN[k];
+        });
         console.info("[DNT] Kanban hard reload flags cleared");
       } catch {}
     }
   });
 
-  // ===== Вооружаемся как можно раньше + дублируем
   try { arm(); } catch {}
   setTimeout(arm, 0);
   if (frappe?.router?.on) frappe.router.on("change", arm);
