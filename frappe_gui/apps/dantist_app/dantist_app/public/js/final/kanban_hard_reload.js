@@ -1,7 +1,8 @@
-/* Dantist Kanban Hard Reload — v1.8
+/* Dantist Kanban Hard Reload — v1.9
    — Уникальный ключ на основе точного URL + board + doctype
-   — Мгновенный "route-enter" перезапуск (один раз на URL)
+   — Мгновенный "route-enter" перезапуск (один раз на вход в канбан)
    — Хуки fetch/XHR/frappe.call + гард-таймер
+   — Повторный reload разрешён после небольшого cooldown (без циклов)
 */
 (() => {
   const CFG = {
@@ -10,6 +11,7 @@
     debounce_ms: 300,
     guard_ms: 1200,
     route_enter_ms: 200, // мягкий «на входе»
+    cooldown_ms: 3000,   // через сколько миллисекунд можно снова перезагрузить тот же URL
     watch_methods: new Set([
       "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards",
       "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_board",
@@ -79,7 +81,6 @@
 
   function key_for_current() {
     const { board, dt, p, h, q } = route_bits();
-    // максимально уникально для данной страницы
     const url_fingerprint = [p, q, h].join("|");
     return `dnt_kanban_hard_reload:${dt}:${board}:${url_fingerprint}`;
   }
@@ -96,7 +97,7 @@
     if (armed_key === key) return;
     armed_key = key;
 
-    // 1) «на входе» — мягкий одноразовый перезапуск, если его ещё не было именно для этого URL
+    // 1) «на входе» — мягкий одноразовый перезапуск для этого захода
     clearTimeout(enter_timer);
     enter_timer = setTimeout(() => {
       maybe_reload_once("route-enter");
@@ -109,7 +110,7 @@
       maybe_reload_once("guard");
     }, CFG.guard_ms);
 
-    try { console.debug("[DNT] armed for", armed_key); } catch {}
+    try { console.debug("[DNT] Kanban HR armed for", armed_key); } catch {}
   }
 
   function disarm() {
@@ -129,11 +130,47 @@
     if (!CFG.enabled || !is_kanban_url()) return;
     const key = key_for_current();
     if (!armed_key || armed_key !== key) return;
-    if (sessionStorage.getItem(key) === "1") { disarm(); return; }
-    sessionStorage.setItem(key, "1");
+
+    const now = Date.now();
+    let last_ts = 0;
+
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        const parsed = parseInt(raw, 10);
+        if (!isNaN(parsed)) last_ts = parsed;
+      }
+    } catch {}
+
+    // Если уже перезагружались по этому URL недавно — не делаем ещё раз (защита от цикла)
+    if (last_ts && now - last_ts < (CFG.cooldown_ms || 2000)) {
+      disarm();
+      try {
+        console.debug(
+          "[DNT] Kanban hard reload skipped (cooldown)",
+          key,
+          reason ? `(${reason})` : ""
+        );
+      } catch {}
+      return;
+    }
+
+    // Фиксируем момент последнего reload для этого URL
+    try {
+      sessionStorage.setItem(key, String(now));
+    } catch {}
+
     disarm();
-    try { console.debug("[DNT] Kanban hard reload:", key, reason ? `(${reason})` : ""); } catch {}
-    setTimeout(() => location.reload(), Math.max(0, CFG.delay_ms | 0));
+    try {
+      console.debug(
+        "[DNT] Kanban hard reload:",
+        key,
+        reason ? `(${reason})` : ""
+      );
+    } catch {}
+    setTimeout(() => {
+      location.reload();
+    }, Math.max(0, CFG.delay_ms | 0));
   }
 
   function url_is_get_kanban_board(url) {
@@ -152,8 +189,10 @@
     const orig = frappe.call.bind(frappe);
 
     const wrapped = function(...args) {
-      const m = (typeof args[0] === "string") ? args[0]
-            : (args[0] && typeof args[0] === "object" ? (args[0].method || "") : "");
+      const m = (typeof args[0] === "string")
+        ? args[0]
+        : (args[0] && typeof args[0] === "object" ? (args[0].method || "") : "");
+
       if (typeof args[0] === "string" && typeof args[2] === "function") {
         const cb = args[2];
         args[2] = function(res) {
@@ -165,6 +204,7 @@
           return cb.apply(this, arguments);
         };
       }
+
       const ret = orig.apply(this, args);
       try {
         if (ret && typeof ret.then === "function") {
@@ -172,11 +212,12 @@
             if (is_kanban_url() && CFG.watch_methods.has(m)) {
               debounce(() => maybe_reload_once("frappe.call(then):" + m), CFG.debounce_ms);
             }
-          }).catch(()=>{});
+          }).catch(() => {});
         }
       } catch {}
       return ret;
     };
+
     wrapped.__dntHooked = true;
     frappe.call = wrapped;
   })();
@@ -185,19 +226,25 @@
   (function hook_fetch() {
     if (!window.fetch || window.fetch.__dntHooked) return;
     const orig = window.fetch.bind(window);
+
     const wrapped = async function(input, init) {
       const url = typeof input === "string" ? input : (input?.url || "");
       const res = await orig(input, init);
       try {
-        if (is_kanban_url() && (
-          (url && CFG.watch_urls_contains.some(s => url.includes(s))) ||
-          url_is_get_kanban_board(url)
-        )) {
-          debounce(() => maybe_reload_once("fetch:" + (url.split("/api/method/")[1] || url)), CFG.debounce_ms);
+        if (
+          is_kanban_url() &&
+          (
+            (url && CFG.watch_urls_contains.some(s => url.includes(s))) ||
+            url_is_get_kanban_board(url)
+          )
+        ) {
+          const tag = url.split("/api/method/")[1] || url;
+          debounce(() => maybe_reload_once("fetch:" + tag), CFG.debounce_ms);
         }
       } catch {}
       return res;
     };
+
     wrapped.__dntHooked = true;
     window.fetch = wrapped;
   })();
@@ -206,28 +253,39 @@
   (function hook_xhr() {
     if (!window.XMLHttpRequest || window.XMLHttpRequest.__dntHooked) return;
     const Orig = window.XMLHttpRequest;
+
     function DntXHR() {
       const xhr = new Orig();
       let req_url = "";
       const o_open = xhr.open;
       const o_send = xhr.send;
 
-      xhr.open = function(method, url) { try { req_url = url || ""; } catch {} return o_open.apply(xhr, arguments); };
+      xhr.open = function(method, url) {
+        try { req_url = url || ""; } catch {}
+        return o_open.apply(xhr, arguments);
+      };
+
       xhr.send = function(body) {
         xhr.addEventListener("load", function() {
           try {
-            if (is_kanban_url() && (
-              (req_url && CFG.watch_urls_contains.some(s => req_url.includes(s))) ||
-              url_is_get_kanban_board(req_url)
-            )) {
-              debounce(() => maybe_reload_once("xhr:" + (req_url.split("/api/method/")[1] || req_url)), CFG.debounce_ms);
+            if (
+              is_kanban_url() &&
+              (
+                (req_url && CFG.watch_urls_contains.some(s => req_url.includes(s))) ||
+                url_is_get_kanban_board(req_url)
+              )
+            ) {
+              const tag = req_url.split("/api/method/")[1] || req_url;
+              debounce(() => maybe_reload_once("xhr:" + tag), CFG.debounce_ms);
             }
           } catch {}
         });
         return o_send.apply(xhr, arguments);
       };
+
       return xhr;
     }
+
     DntXHR.__dntHooked = true;
     window.XMLHttpRequest = DntXHR;
   })();
@@ -236,7 +294,9 @@
   window.DNT = Object.assign(window.DNT || {}, {
     resetKanbanReload(prefix = "dnt_kanban_hard_reload:") {
       try {
-        Object.keys(sessionStorage).forEach(k => { if (k.startsWith(prefix)) sessionStorage.removeItem(k); });
+        Object.keys(sessionStorage).forEach(k => {
+          if (k.startsWith(prefix)) sessionStorage.removeItem(k);
+        });
         console.info("[DNT] Kanban hard reload flags cleared");
       } catch {}
     }
@@ -247,5 +307,7 @@
   setTimeout(arm, 0);
   if (frappe?.router?.on) frappe.router.on("change", arm);
   window.addEventListener?.("load", arm);
-  document.addEventListener?.("visibilitychange", () => { if (!document.hidden) arm(); });
+  document.addEventListener?.("visibilitychange", () => {
+    if (!document.hidden) arm();
+  });
 })();

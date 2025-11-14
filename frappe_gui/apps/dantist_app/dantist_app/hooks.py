@@ -109,8 +109,7 @@ app_include_js = [
     "/assets/dantist_app/js/hide/kanban_filter.js",
 
 
-    # "/assets/dantist_app/js/add/profile_tasks.js",
-    "/assets/dantist_app/js/add/profile_tasks_2.js",
+    "/assets/dantist_app/js/add/profile_tasks.js",
     "/assets/dantist_app/js/add/engagement_case_form.js",
     "/assets/dantist_app/js/add/engagement_case_tasks.js",
     "/assets/dantist_app/js/add/engagement_case_list.js",

@@ -93,8 +93,51 @@
     return `<span class="crm-chip">${esc(__(String(rawVal||"")))}</span>`;
   }
 
+  // ---------- Back to Kanban (если есть фильтр по доске в query) ----------
+
+  function detectBoardFromQuery() {
+    try {
+      if (!frappe || !frappe.utils || typeof frappe.utils.get_url_arg !== "function") {
+        return null;
+      }
+      for (const meta of BOARDS) {
+        const v = frappe.utils.get_url_arg(meta.flag);
+        if (v && v !== "0") {
+          return meta;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  }
+
+  function wireBackToBoardButton(listview) {
+    try {
+      if (!listview || !listview.page) return;
+      if (listview.page.__ec_back_to_board_bound) return;
+
+      const meta = detectBoardFromQuery();
+      if (!meta) return;
+
+      const label = __("Back to {0}", [__(meta.board)]);
+
+      // Кнопка окажется справа, в блоке действий, рядом с остальными view-кнопками.
+      listview.page.add_inner_button(label, () => {
+        frappe.set_route("List", "Engagement Case", "Kanban", meta.board);
+      }, __("View"));
+
+      listview.page.__ec_back_to_board_bound = true;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   frappe.listview_settings["Engagement Case"] = {
-    async onload() { await ensureBoards(); },
+    async onload(listview) {
+      await ensureBoards();
+      wireBackToBoardButton(listview);
+    },
     get_indicator(doc) { return indicatorFor(doc); },
     formatters: {
       status_crm_board: (v)=>boardChipLV("CRM Board", v),
