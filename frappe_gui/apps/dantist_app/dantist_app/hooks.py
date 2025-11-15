@@ -120,6 +120,7 @@ app_include_js = [
 
     "/assets/dantist_app/js/edit/kanban_skin.js",
     "/assets/dantist_app/js/edit/dnt_kanban_plus.js",
+    "/assets/dantist_app/js/edit/user_creation.js",
     "/assets/dantist_app/js/final/autosave.js",
 ]
 

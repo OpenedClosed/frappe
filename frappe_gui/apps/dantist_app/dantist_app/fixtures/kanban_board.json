@@ -4,7 +4,7 @@
    {
     "column_name": "New",
     "indicator": "Pink",
-    "order": "[\"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\", \"IE-2025-00807\"]",
+    "order": "[\"IE-2025-00807\", \"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -13,7 +13,7 @@
    {
     "column_name": "Qualification",
     "indicator": "Yellow",
-    "order": "[\"IE-2025-00808\", \"IE-2025-00751\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00720\", \"IE-2025-00771\", \"IE-2025-00775\", \"IE-2025-00782\", \"IE-2025-00795\", \"IE-2025-00796\", \"IE-2025-00797\", \"IE-2025-00800\"]",
+    "order": "[\"IE-2025-00771\", \"IE-2025-00775\", \"IE-2025-00782\", \"IE-2025-00795\", \"IE-2025-00796\", \"IE-2025-00797\", \"IE-2025-00808\", \"IE-2025-00751\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00720\", \"IE-2025-00800\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -22,7 +22,7 @@
    {
     "column_name": "Briefing",
     "indicator": "Orange",
-    "order": "[\"IE-2025-00710\", \"IE-2025-00772\", \"IE-2025-00776\", \"IE-2025-00783\", \"IE-2025-00784\", \"IE-2025-00792\", \"IE-2025-00802\"]",
+    "order": "[\"IE-2025-00772\", \"IE-2025-00776\", \"IE-2025-00783\", \"IE-2025-00784\", \"IE-2025-00792\", \"IE-2025-00802\", \"IE-2025-00710\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -31,7 +31,7 @@
    {
     "column_name": "Scheduled",
     "indicator": "Light Blue",
-    "order": "[\"IE-2025-00753\", \"IE-2025-00756\", \"IE-2025-00750\", \"IE-2025-00778\", \"IE-2025-00785\", \"IE-2025-00786\"]",
+    "order": "[\"IE-2025-00756\", \"IE-2025-00778\", \"IE-2025-00785\", \"IE-2025-00786\", \"IE-2025-00753\", \"IE-2025-00750\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -40,7 +40,7 @@
    {
     "column_name": "In Work",
     "indicator": "Blue",
-    "order": "[\"IE-2025-00752\", \"IE-2025-00789\", \"IE-2025-00793\", \"IE-2025-00755\"]",
+    "order": "[\"IE-2025-00789\", \"IE-2025-00793\", \"IE-2025-00752\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -49,7 +49,7 @@
    {
     "column_name": "On Hold",
     "indicator": "Purple",
-    "order": "[\"IE-2025-00787\", \"IE-2025-00788\"]",
+    "order": "[\"IE-2025-00755\", \"IE-2025-00787\", \"IE-2025-00788\"]",
     "parent": "CRM Board",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -89,7 +89,7 @@
   "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
   "filters": null,
   "kanban_board_name": "CRM Board",
-  "modified": "2025-10-27 21:56:50.400372",
+  "modified": "2025-11-12 17:38:16.349248",
   "name": "CRM Board",
   "private": 0,
   "reference_doctype": "Engagement Case",
@@ -100,7 +100,7 @@
    {
     "column_name": "Bot Active / New Inquiry",
     "indicator": "Pink",
-    "order": "[\"IE-2025-00753\", \"IE-2025-00710\", \"IE-2025-00751\", \"IE-2025-00750\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00720\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\", \"IE-2025-00800\"]",
+    "order": "[\"IE-2025-00750\", \"IE-2025-00746\", \"IE-2025-00726\", \"IE-2025-00748\", \"IE-2025-00747\", \"IE-2025-00745\", \"IE-2025-00736\", \"IE-2025-00744\", \"IE-2025-00730\", \"IE-2025-00738\", \"IE-2025-00741\", \"IE-2025-00735\", \"IE-2025-00737\", \"IE-2025-00740\", \"IE-2025-00739\", \"IE-2025-00742\", \"IE-2025-00711\", \"IE-2025-00733\", \"IE-2025-00734\", \"IE-2025-00732\", \"IE-2025-00731\", \"IE-2025-00728\", \"IE-2025-00729\", \"IE-2025-00713\", \"IE-2025-00727\", \"IE-2025-00725\", \"IE-2025-00724\", \"IE-2025-00723\", \"IE-2025-00722\", \"IE-2025-00719\", \"IE-2025-00721\", \"IE-2025-00720\", \"IE-2025-00718\", \"IE-2025-00717\", \"IE-2025-00716\", \"IE-2025-00715\", \"IE-2025-00714\", \"IE-2025-00712\", \"IE-2025-00800\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -109,7 +109,7 @@
    {
     "column_name": "In Progress",
     "indicator": "Yellow",
-    "order": "[\"IE-2025-00752\", \"IE-2025-00801\"]",
+    "order": "[\"IE-2025-00751\", \"IE-2025-00803\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -118,7 +118,7 @@
    {
     "column_name": "Waiting List",
     "indicator": "Purple",
-    "order": "[\"IE-2025-00804\", \"IE-2025-00803\"]",
+    "order": "[\"IE-2025-00814\", \"IE-2025-00752\", \"IE-2025-00710\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -127,7 +127,7 @@
    {
     "column_name": "Call Later",
     "indicator": "Orange",
-    "order": "[\"IE-2025-00755\"]",
+    "order": "[\"IE-2025-00753\", \"IE-2025-00812\", \"IE-2025-00804\", \"IE-2025-00805\", \"IE-2025-00755\"]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -136,7 +136,7 @@
    {
     "column_name": "Failed / No Show (lead)",
     "indicator": "Red",
-    "order": "[\"IE-2025-00805\"]",
+    "order": "[]",
     "parent": "Leads – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -164,21 +164,21 @@
   "docstatus": 0,
   "doctype": "Kanban Board",
   "field_name": "status_leads",
-  "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
+  "fields": "[\"display_name\", \"phone\", \"channel_type\", \"portal_service\", \"specialist\", \"modified\"]",
   "filters": null,
   "kanban_board_name": "Leads – Contact Center",
-  "modified": "2025-10-27 21:56:58.283627",
+  "modified": "2025-11-15 08:16:38.698745",
   "name": "Leads – Contact Center",
   "private": 0,
   "reference_doctype": "Engagement Case",
-  "show_labels": 1
+  "show_labels": 0
  },
  {
   "columns": [
    {
     "column_name": "Appointment Scheduled",
     "indicator": "Light Blue",
-    "order": "[\"IE-2025-00756\"]",
+    "order": "[\"IE-2025-00813\"]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -187,7 +187,7 @@
    {
     "column_name": "Post-Visit Check",
     "indicator": "Yellow",
-    "order": "[\"IE-2025-00774\"]",
+    "order": "[\"IE-2025-00756\"]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -196,7 +196,7 @@
    {
     "column_name": "Recommended Recall Added",
     "indicator": "Purple",
-    "order": "[\"IE-2025-00773\"]",
+    "order": "[]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -205,7 +205,7 @@
    {
     "column_name": "Transferred to Care",
     "indicator": "Blue",
-    "order": "[\"IE-2025-00801\"]",
+    "order": "[\"IE-2025-00774\", \"IE-2025-00801\", \"IE-2025-00773\"]",
     "parent": "Deals – Contact Center",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -236,11 +236,11 @@
   "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
   "filters": null,
   "kanban_board_name": "Deals – Contact Center",
-  "modified": "2025-10-27 19:02:28.361854",
+  "modified": "2025-11-14 22:21:54.557501",
   "name": "Deals – Contact Center",
   "private": 0,
   "reference_doctype": "Engagement Case",
-  "show_labels": 1
+  "show_labels": 0
  },
  {
   "columns": [
@@ -274,7 +274,7 @@
    {
     "column_name": "In Treatment",
     "indicator": "Blue",
-    "order": "[\"IE-2025-00780\", \"IE-2025-00779\"]",
+    "order": "[\"IE-2025-00779\", \"IE-2025-00780\"]",
     "parent": "Patients – Care Department",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -323,7 +323,7 @@
   "fields": "[\"display_name\",\"phone\",\"channel_type\",\"portal_service\",\"specialist\",\"modified\"]",
   "filters": null,
   "kanban_board_name": "Patients – Care Department",
-  "modified": "2025-10-27 21:50:11.178941",
+  "modified": "2025-11-14 22:21:59.811133",
   "name": "Patients – Care Department",
   "private": 0,
   "reference_doctype": "Engagement Case",

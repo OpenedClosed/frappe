@@ -1,4 +1,4 @@
-// === DNT User Work Tab (User form widgets, Engagement Case + ToDo) — v15.6 ===
+// === DNT User Work Tab (User form widgets, Engagement Case + ToDo) — v15.7 ===
 //
 // Base: v11 (логика вкладки, загрузка данных, счётчики, клики).
 // v15:
@@ -29,11 +29,7 @@
 // v15.5:
 // • Клик по задаче ВСЕГДА открывает ToDo, а не Engagement Case.
 // • "All Cases" открывает список Engagement Case c фильтром _assign = ["like", "%user%"].
-// • "All Tasks" открывает список ToDo с фильтром allocated_to = user, status = "Open".
-// • Логика памяти вкладки полностью переписана:
-//   - храним только последний fieldname табы,
-//   - при клике только обновляем память,
-//   - при refresh один раз ставим вкладку из памяти, без навязывания My Work.
+// • "All Tasks" (должно) открывать список ToDo с allocated_to = user, status = "Open".
 //
 // v15.6:
 // • Память вкладок переписана ещё раз с нуля:
@@ -41,10 +37,15 @@
 //   - при refresh, после построения вкладок, один раз ищем сохранённую вкладку и триггерим по ней click();
 //   - без сторожевых таймеров и флагов, ничего не борется с Frappe, просто переоткрываем нужную вкладку.
 //
+// v15.7:
+// • На форме создания User (frm.is_new() === true) вкладка/секция User Work полностью скрыта и не инициализируется.
+// • CSS-фаллбек секции включается только при body.dnt-user-work-on (только для существующих пользователей).
+// • "All Tasks" теперь корректно открывает ToDo со списком задач allocated_to = user_email, status = "Open".
+//
 
 (() => {
-  if (window.DNT_USER_WORK_TAB_V15_6) return;
-  window.DNT_USER_WORK_TAB_V15_6 = true;
+  if (window.DNT_USER_WORK_TAB_V15_7) return;
+  window.DNT_USER_WORK_TAB_V15_7 = true;
 
   function tr(s) {
     try { if (typeof _ === "function") return _(s); } catch (e) {}
@@ -62,7 +63,7 @@
     mainClass: "dnt-user-work-main",
     cardsListAttr: "data-role-cards-list",
     tasksListAttr: "data-role-tasks-list",
-    logPrefix: "[DNT-USER-WORK v15.6]",
+    logPrefix: "[DNT-USER-WORK v15.7]",
     limits: {
       cards: 4,
       tasks: 6
@@ -219,23 +220,23 @@
     if (document.getElementById(cfg.cssId)) return;
 
     const css = `
-      /* === DNT User Work: формальная секция — всегда видима (fallback) === */
-      .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"] {
+      /* === DNT User Work: включаем секцию только для существующих пользователей (body.dnt-user-work-on) === */
+      body.dnt-user-work-on .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"] {
         display: block !important;
         visibility: visible !important;
       }
-      .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"].empty-section,
-      .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"].hide-control {
+      body.dnt-user-work-on .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"].empty-section,
+      body.dnt-user-work-on .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"].hide-control {
         display: block !important;
         visibility: visible !important;
       }
-      .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"] .section-body {
+      body.dnt-user-work-on .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"] .section-body {
         display: block !important;
       }
-      #${cfg.tabId}.tab-pane {
+      body.dnt-user-work-on #${cfg.tabId}.tab-pane {
         visibility: visible !important;
       }
-      .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"] {
+      body.dnt-user-work-on .row.form-section.card-section[data-fieldname="${cfg.tabFieldname}"] {
         margin-bottom: 0.75rem;
       }
 
@@ -1351,7 +1352,8 @@
       } else if (kind === "tasks") {
         // ToDo, фильтр по allocated_to = user, status = Open
         frappe.route_options = {
-          _assign: ["like", "%" + user_email + "%"]
+          allocated_to: user_email,
+          status: "Open"
         };
         frappe.set_route("List", cfg.doctypes.todo);
       }
@@ -1428,12 +1430,47 @@
   }
 
   function init_for_form(frm) {
-    if (!frm || !frm.doc || !frm.doc.name) {
+    if (!frm || !frm.doc) {
       log("init_for_form: missing frm.doc");
       return;
     }
 
     ensure_css();
+
+    const is_new = typeof frm.is_new === "function" ? frm.is_new() : !!frm.doc.__islocal;
+
+    if (is_new) {
+      // На форме создания: полностью скрываем всё, что связано с User Work
+      log("init_for_form: new User doc, hide User Work tab/section");
+
+      try {
+        document.body.classList.remove("dnt-user-work-on");
+      } catch (e) {}
+
+      try {
+        const $wrapper = frm.$wrapper;
+        if ($wrapper && $wrapper.length) {
+          $wrapper.find("#" + cfg.tabBtnId).closest("li").remove();
+          $wrapper.find("#" + cfg.tabId).remove();
+
+          const $section = $wrapper.find(`.row.form-section[data-fieldname="${cfg.tabFieldname}"]`);
+          const $body = $section.find(".section-body");
+          if ($section.length) {
+            $section.addClass("hide-control empty-section");
+            $section.css({ display: "none", visibility: "hidden" });
+            $body.css({ display: "none", visibility: "hidden" });
+          }
+        }
+      } catch (e2) {
+        log("init_for_form: error while hiding on new", e2);
+      }
+
+      return;
+    }
+
+    try {
+      document.body.classList.add("dnt-user-work-on");
+    } catch (e) {}
 
     const is_self =
       frappe.session &&
