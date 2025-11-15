@@ -1,8 +1,8 @@
-/* Dantist Kanban Hard Reload — v1.12
+/* Dantist Kanban Hard Reload — v1.13
    — Уникальный ключ на основе doctype + board (без завязки на URL)
    — "route-enter" перезапуск (один раз на настоящий заход в конкретный канбан)
    — Хуки fetch/XHR/frappe.call + гард-таймер
-   — Защита от циклов через sessionStorage + блок повторного reload в рамках одной вкладки
+   — Защита от циклов через sessionStorage + флаг "done" на доску
    — Никаких перезагрузок, инициированных просто фокусом вкладки (нет visibilitychange-арминга)
 */
 (() => {
@@ -12,7 +12,7 @@
     debounce_ms: 300,
     guard_ms: 1200,
     route_enter_ms: 200,
-    cooldown_ms: 3000,
+    cooldown_ms: 3000, // больше не критичен, но оставим на будущее
     watch_methods: new Set([
       "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards",
       "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_board",
@@ -82,10 +82,14 @@
     return { board: CLEAN(board) || "all", dt: CLEAN(dt) || "Unknown" };
   }
 
-  // ВАЖНО: ключ больше не зависит от query/hash — только от doctype + board
+  // Ключ для таймштампа (на всякий случай оставим) и ключ "done"
   function key_for_current() {
     const { board, dt } = route_bits();
     return `dnt_kanban_hard_reload:${dt}:${board}`;
+  }
+
+  function done_key_for_current() {
+    return key_for_current() + ":done";
   }
 
   let armed_key = null;
@@ -108,42 +112,44 @@
 
   function maybe_reload_once(reason = "") {
     if (!CFG.enabled || !is_kanban_url()) return;
+
     const key = key_for_current();
+    const done_key = done_key_for_current();
+
     if (!armed_key || armed_key !== key) return;
 
-    // Уже перезагружали эту доску в рамках текущей вкладки — не трогаем её больше.
-    if (SEEN[key]) {
-      disarm();
-      try {
-        console.debug("[DNT] Kanban hard reload skipped (seen in this tab)", key, reason ? `(${reason})` : "");
-      } catch {}
-      return;
-    }
-
-    const now = Date.now();
-    let last_ts = 0;
-
+    // Если мы уже перезагружали ЭТУ доску в пределах ЭТОЙ вкладки (за всю жизнь вкладки) —
+    // больше не трогаем её. Это убивает возможность лупа даже при долгой загрузке.
     try {
-      const raw = sessionStorage.getItem(key);
-      if (raw) {
-        const parsed = parseInt(raw, 10);
-        if (!isNaN(parsed)) last_ts = parsed;
+      const done_flag = sessionStorage.getItem(done_key);
+      if (done_flag === "1") {
+        disarm();
+        try {
+          console.debug("[DNT] Kanban hard reload skipped (done for board)", key, reason ? `(${reason})` : "");
+        } catch {}
+        return;
       }
     } catch {}
 
-    if (last_ts && now - last_ts < (CFG.cooldown_ms || 2000)) {
+    // Локальный in-memory флаг на всякий случай, чтобы не выстрелить дважды до reload.
+    if (SEEN[key]) {
       disarm();
       try {
-        console.debug("[DNT] Kanban hard reload skipped (cooldown)", key, reason ? `(${reason})` : "");
+        console.debug("[DNT] Kanban hard reload skipped (seen in this tab before reload)", key, reason ? `(${reason})` : "");
       } catch {}
       return;
     }
 
+    SEEN[key] = true;
+
+    // Ставим флаг "done" ПЕРЕД перезагрузкой, чтобы даже если загрузка долгая,
+    // следующий заход на эту же доску уже не пытался перезагружаться снова.
     try {
-      sessionStorage.setItem(key, String(now));
+      sessionStorage.setItem(done_key, "1");
+      // Можем также сохранить таймштамп чисто для дебага
+      sessionStorage.setItem(key, String(Date.now()));
     } catch {}
 
-    SEEN[key] = true;
     disarm();
 
     try {
