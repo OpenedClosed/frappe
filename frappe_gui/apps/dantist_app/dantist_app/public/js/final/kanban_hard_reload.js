@@ -1,5 +1,5 @@
-/* Dantist Kanban Hard Reload — v1.11
-   — Уникальный ключ на основе точного URL + board + doctype
+/* Dantist Kanban Hard Reload — v1.12
+   — Уникальный ключ на основе doctype + board (без завязки на URL)
    — "route-enter" перезапуск (один раз на настоящий заход в конкретный канбан)
    — Хуки fetch/XHR/frappe.call + гард-таймер
    — Защита от циклов через sessionStorage + блок повторного reload в рамках одной вкладки
@@ -49,68 +49,49 @@
 
   function is_kanban_url() {
     try {
+      if (window.frappe && typeof frappe.get_route === "function") {
+        const r = frappe.get_route() || [];
+        // List / <Doctype> / Kanban
+        if (r[0] === "List" && (r[2] === "Kanban" || r[2] === "Kanban Board")) return true;
+      }
+    } catch {}
+    // Дополнительные фолбэки по URL (на всякий случай)
+    try {
       const p = location.pathname || "";
       const q = location.search || "";
+      const h = location.hash || "";
       if (p.includes("/view/kanban/")) return true;
       if (p.includes("/app/kanban-board/")) return true;
       if (/([?&#])view=Kanban(\+Board)?(&|$)/i.test(q)) return true;
-    } catch {}
-    try {
-      const h = location.hash || "";
       if (/\/view\/kanban\//.test(h)) return true;
       if (/([?&#])view=Kanban(\+Board)?(&|$)/i.test(h)) return true;
-    } catch {}
-    try {
-      const r = frappe.get_route?.() || [];
-      if (r[0] === "List" && (r[2] === "Kanban" || r[2] === "Kanban Board")) return true;
     } catch {}
     return false;
   }
 
   function route_bits() {
-    let board = "", dt = "Unknown";
+    let board = "";
+    let dt = "Unknown";
+
     try {
       const r = frappe.get_route?.() || [];
       board = r?.[3] ? decodeURIComponent(r[3]) : (window.cur_list?.board?.name || "");
       dt = window.cur_list?.doctype || window.cur_list?.board?.reference_doctype || "Unknown";
     } catch {}
-    const p = location.pathname || "";
-    const h = location.hash || "";
-    const q = location.search || "";
-    return { board: CLEAN(board) || "all", dt: CLEAN(dt), p, h, q };
+
+    return { board: CLEAN(board) || "all", dt: CLEAN(dt) || "Unknown" };
   }
 
+  // ВАЖНО: ключ больше не зависит от query/hash — только от doctype + board
   function key_for_current() {
-    const { board, dt, p, h, q } = route_bits();
-    const url_fingerprint = [p, q, h].join("|");
-    return `dnt_kanban_hard_reload:${dt}:${board}:${url_fingerprint}`;
+    const { board, dt } = route_bits();
+    return `dnt_kanban_hard_reload:${dt}:${board}`;
   }
 
   let armed_key = null;
   let guard_timer = null;
   let debounce_timer = null;
   let enter_timer = null;
-
-  function arm() {
-    if (!CFG.enabled) return;
-    if (!is_kanban_url()) { disarm(); return; }
-    const key = key_for_current();
-    if (armed_key === key) return;
-    armed_key = key;
-
-    clearTimeout(enter_timer);
-    enter_timer = setTimeout(() => {
-      maybe_reload_once("route-enter");
-    }, CFG.route_enter_ms);
-
-    clearTimeout(guard_timer);
-    guard_timer = setTimeout(() => {
-      if (!armed_key) return;
-      maybe_reload_once("guard");
-    }, CFG.guard_ms);
-
-    try { console.debug("[DNT] Kanban HR armed for", armed_key); } catch {}
-  }
 
   function disarm() {
     armed_key = null;
@@ -163,14 +144,41 @@
     } catch {}
 
     SEEN[key] = true;
-
     disarm();
+
     try {
       console.debug("[DNT] Kanban hard reload:", key, reason ? `(${reason})` : "");
     } catch {}
     setTimeout(() => {
       location.reload();
     }, Math.max(0, CFG.delay_ms | 0));
+  }
+
+  function arm() {
+    if (!CFG.enabled) return;
+    if (!is_kanban_url()) {
+      disarm();
+      return;
+    }
+
+    const key = key_for_current();
+    if (armed_key === key) return;
+    armed_key = key;
+
+    clearTimeout(enter_timer);
+    enter_timer = setTimeout(() => {
+      maybe_reload_once("route-enter");
+    }, CFG.route_enter_ms);
+
+    clearTimeout(guard_timer);
+    guard_timer = setTimeout(() => {
+      if (!armed_key) return;
+      maybe_reload_once("guard");
+    }, CFG.guard_ms);
+
+    try {
+      console.debug("[DNT] Kanban HR armed for", armed_key);
+    } catch {}
   }
 
   function url_is_get_kanban_board(url) {
@@ -180,21 +188,26 @@
       const u = new URL(url, location.origin);
       const dt = (u.searchParams.get("doctype") || "").toLowerCase();
       return dt === "kanban board" || dt === "kanban%20board";
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 
   (function hook_frappe_call() {
     if (!window.frappe || !frappe.call || frappe.call.__dntHooked) return;
     const orig = frappe.call.bind(frappe);
 
-    const wrapped = function(...args) {
-      const m = (typeof args[0] === "string")
-        ? args[0]
-        : (args[0] && typeof args[0] === "object" ? (args[0].method || "") : "");
+    const wrapped = function (...args) {
+      const m =
+        typeof args[0] === "string"
+          ? args[0]
+          : args[0] && typeof args[0] === "object"
+          ? args[0].method || ""
+          : "";
 
       if (typeof args[0] === "string" && typeof args[2] === "function") {
         const cb = args[2];
-        args[2] = function(res) {
+        args[2] = function (res) {
           try {
             if (is_kanban_url() && CFG.watch_methods.has(m)) {
               debounce(() => maybe_reload_once("frappe.call(cb):" + m), CFG.debounce_ms);
@@ -207,13 +220,16 @@
       const ret = orig.apply(this, args);
       try {
         if (ret && typeof ret.then === "function") {
-          ret.then(() => {
-            if (is_kanban_url() && CFG.watch_methods.has(m)) {
-              debounce(() => maybe_reload_once("frappe.call(then):" + m), CFG.debounce_ms);
-            }
-          }).catch(() => {});
+          ret
+            .then(() => {
+              if (is_kanban_url() && CFG.watch_methods.has(m)) {
+                debounce(() => maybe_reload_once("frappe.call(then):" + m), CFG.debounce_ms);
+              }
+            })
+            .catch(() => {});
         }
       } catch {}
+
       return ret;
     };
 
@@ -225,9 +241,10 @@
     if (!window.fetch || window.fetch.__dntHooked) return;
     const orig = window.fetch.bind(window);
 
-    const wrapped = async function(input, init) {
-      const url = typeof input === "string" ? input : (input?.url || "");
+    const wrapped = async function (input, init) {
+      const url = typeof input === "string" ? input : input?.url || "";
       const res = await orig(input, init);
+
       try {
         if (
           is_kanban_url() &&
@@ -240,6 +257,7 @@
           debounce(() => maybe_reload_once("fetch:" + tag), CFG.debounce_ms);
         }
       } catch {}
+
       return res;
     };
 
@@ -257,13 +275,15 @@
       const o_open = xhr.open;
       const o_send = xhr.send;
 
-      xhr.open = function(method, url) {
-        try { req_url = url || ""; } catch {}
+      xhr.open = function (method, url) {
+        try {
+          req_url = url || "";
+        } catch {}
         return o_open.apply(xhr, arguments);
       };
 
-      xhr.send = function(body) {
-        xhr.addEventListener("load", function() {
+      xhr.send = function (body) {
+        xhr.addEventListener("load", function () {
           try {
             if (
               is_kanban_url() &&
@@ -301,7 +321,10 @@
     }
   });
 
-  try { arm(); } catch {}
+  try {
+    arm();
+  } catch {}
+
   setTimeout(arm, 0);
   if (frappe?.router?.on) frappe.router.on("change", arm);
   window.addEventListener?.("load", arm);

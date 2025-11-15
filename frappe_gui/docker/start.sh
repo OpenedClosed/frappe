@@ -53,8 +53,8 @@ BENCH_BIN="${BENCH_BIN:-bench}"
 
 # ===== Тумблер тяжёлых шагов =====
 HEAVY="${HEAVY:-1}"
-HEAVY=1
-# HEAVY=0
+# HEAVY=1
+HEAVY=0
 
 # mysql client без SSL (устраняет sporadic HY000/2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
