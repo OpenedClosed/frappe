@@ -115,7 +115,7 @@ app_include_js = [
     "/assets/dantist_app/js/add/engagement_case_list.js",
 
     "/assets/dantist_app/js/edit/kanban_filters_and_search.js",
-    "/assets/dantist_app/js/final/kanban_hard_reload.js",
+    # "/assets/dantist_app/js/final/kanban_hard_reload.js",
 
 
     "/assets/dantist_app/js/edit/kanban_skin.js",
