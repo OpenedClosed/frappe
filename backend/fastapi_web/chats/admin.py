@@ -547,7 +547,7 @@ class ChatSessionAdmin(BaseAdmin):
 
     async def get_updated_at(self, obj: dict, current_user=None) -> datetime:
         def role_en(msg_role) -> str:
-            try:
+            try: 
                 return json.loads(msg_role)["en"] if isinstance(msg_role, str) else msg_role.en_value
             except Exception:
                 return "Unknown"
