@@ -172,3 +172,7 @@ class BotSettings(BaseValidatedModel):
     ai_model: AIModelEnum
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+    frappe_doctype: Optional[str] = None
+    frappe_name: Optional[str] = None
+    frappe_modified: Optional[datetime] = None
+

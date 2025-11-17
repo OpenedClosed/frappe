@@ -271,7 +271,11 @@ doc_events = {
     },
     "Engagement Case": {
         "before_save": "dantist_app.api.engagement.handlers.set_display_name",
-    }
+    },
+    "Bot Settings": {
+        "on_update": "dantist_app.api.bot_settings.handlers.on_bot_settings_changed",
+        "after_insert": "dantist_app.api.bot_settings.handlers.on_bot_settings_changed",
+    },
 }
 
 
