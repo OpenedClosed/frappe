@@ -95,6 +95,8 @@ add_to_apps_screen = [
 app_include_js = [
     "/assets/dantist_app/js/other/ec_board_colors.js",
     "/assets/dantist_app/js/other/ec_colors.js",  
+    "/assets/dantist_app/js/other/dnt_cascade_delete.js",  
+    
 
     "/assets/dantist_app/js/hide/topbar.js",
     "/assets/dantist_app/js/hide/workspace.js",
@@ -122,7 +124,7 @@ app_include_js = [
     "/assets/dantist_app/js/edit/kanban_skin.js",
     "/assets/dantist_app/js/edit/dnt_kanban_plus.js",
     "/assets/dantist_app/js/edit/user_creation.js",
-    # "/assets/dantist_app/js/final/autosave.js",
+    "/assets/dantist_app/js/final/autosave.js",
 ]
 
 # app_include_css = [

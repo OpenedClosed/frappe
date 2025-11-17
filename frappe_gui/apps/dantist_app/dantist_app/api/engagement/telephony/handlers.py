@@ -43,6 +43,62 @@ def make_naive_datetime(value):
     return dt
 
 
+def apply_default_kanban_state(engagement):
+    """Поставить первый этап канбана и включить флаги досок, если поля есть."""
+
+    meta = engagement.meta
+
+    # 1) Общий статус (если у тебя есть статус кейса как такового)
+    status_field = None
+    for fname in ("status", "case_status", "workflow_state"):
+        f = meta.get_field(fname)
+        if f:
+            status_field = f
+            break
+
+    if status_field:
+        current_val = getattr(engagement, status_field.fieldname, None)
+        if not current_val:
+            options = (status_field.options or "").splitlines()
+            for opt in options:
+                opt = opt.strip()
+                if opt:
+                    setattr(engagement, status_field.fieldname, opt)
+                    break
+
+    def ensure_flag(flag_fieldname: str):
+        f = meta.get_field(flag_fieldname)
+        if not f:
+            return
+        current_val = getattr(engagement, flag_fieldname, None)
+        if current_val in (None, "", 0, False):
+            setattr(engagement, flag_fieldname, 1)
+
+    def ensure_status(status_fieldname: str, fallback: str | None = None):
+        f = meta.get_field(status_fieldname)
+        if not f:
+            return
+        current_val = getattr(engagement, status_fieldname, None)
+        if current_val:
+            return
+        options = (f.options or "").splitlines()
+        for opt in options:
+            opt = opt.strip()
+            if opt:
+                setattr(engagement, status_fieldname, opt)
+                return
+        if fallback:
+            setattr(engagement, status_fieldname, fallback)
+
+    # 2) CRM board: включаем показ и, при необходимости, первый статус
+    ensure_flag("show_board_crm")
+    ensure_status("status_crm_board")
+
+    # 3) Leads board: включаем показ и первый статус
+    ensure_flag("show_board_leads")
+    ensure_status("status_leads")
+    
+
 def upsert_call(call_id):
     """Найти или создать Call по call_id (идемпотентность)."""
     existing_name = frappe.db.exists("Call", {"call_id": call_id})
@@ -87,6 +143,8 @@ def get_or_create_engagement_case_by_phone(phone, event_ts):
             "last_event_at": event_ts,
         }
     )
+
+    apply_default_kanban_state(doc)
 
     doc.insert(ignore_permissions=True)
     return doc

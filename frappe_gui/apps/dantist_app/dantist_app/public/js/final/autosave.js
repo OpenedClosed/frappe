@@ -12,8 +12,13 @@
 
   const CFG = {
     exclude: new Set([
-      "DocType","Customize Form","Report","Print Format",
-      "Dashboard","Dashboard Chart","Workspace"
+      "DocType",
+      "Customize Form",
+      "Report",
+      "Print Format",
+      "Dashboard",
+      "Dashboard Chart",
+      "Workspace"
     ]),
     debounce_ms: 700,
     min_gap_ms: 1100,
@@ -97,7 +102,7 @@
         try {
           if (!is_form_route()) return orig.apply(this, arguments);
           const frm = window.cur_frm;
-          if (frm && this === frm.page && !is_new_doc(frm)) {
+          if (frm && this === frm.page && !is_new_doc(frm) && !CFG.exclude.has(frm.doctype)) {
             const lbl = (typeof label === "string" ? label : (label?.toString?.() || "")).toLowerCase();
             if (lbl.includes("save") || lbl.includes("сохран")) {
               try { this.clear_primary_action?.(); } catch {}
@@ -135,6 +140,7 @@
     function kill_save_in(container){
       const frm = window.cur_frm;
       if (!frm || !is_form_route() || is_new_doc(frm)) return;
+      if (CFG.exclude.has(frm.doctype)) return;
       container.querySelectorAll('.primary-action').forEach(btn => {
         const label = ((btn.getAttribute("data-label") || btn.textContent || "") + "").toLowerCase();
         if (label.includes("save") || label.includes("сохран")) {
