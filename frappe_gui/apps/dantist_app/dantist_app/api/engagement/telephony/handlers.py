@@ -45,10 +45,9 @@ def make_naive_datetime(value):
 
 def apply_default_kanban_state(engagement):
     """Поставить первый этап канбана и включить флаги досок, если поля есть."""
-
     meta = engagement.meta
 
-    # 1) Общий статус (если у тебя есть статус кейса как такового)
+    # Общий статус кейса, если есть
     status_field = None
     for fname in ("status", "case_status", "workflow_state"):
         f = meta.get_field(fname)
@@ -90,14 +89,54 @@ def apply_default_kanban_state(engagement):
         if fallback:
             setattr(engagement, status_fieldname, fallback)
 
-    # 2) CRM board: включаем показ и, при необходимости, первый статус
+    # CRM board: включаем показ и первый статус
     ensure_flag("show_board_crm")
     ensure_status("status_crm_board")
 
-    # 3) Leads board: включаем показ и первый статус
+    # Leads board: включаем показ и первый статус
     ensure_flag("show_board_leads")
     ensure_status("status_leads")
-    
+
+
+def publish_realtime_call_update(call_doc, engagement, event_type, phone_for_case, event_ts):
+    """Отправить realtime-событие для фронта (popup-звонилка)."""
+    try:
+        payload = {
+            "event": event_type,
+            "call_id": call_doc.call_id,
+            "call_name": call_doc.name,
+            "status": call_doc.status,
+            "direction": call_doc.direction,
+            "from_number": call_doc.from_number,
+            "to_number": call_doc.to_number,
+            "did": call_doc.did,
+            "queue": call_doc.queue,
+            "ivr_language": call_doc.ivr_language,
+            "agent_extension": call_doc.agent_extension,
+            "ticket": engagement.name if engagement else None,
+            "ticket_display_name": getattr(engagement, "display_name", None)
+            if engagement
+            else None,
+            "ticket_title": getattr(engagement, "title", None) if engagement else None,
+            "phone_for_case": phone_for_case,
+            "start_ts": str(call_doc.start_ts) if call_doc.start_ts else None,
+            "event_ts": str(event_ts) if event_ts else None,
+        }
+
+        # отладка: видно сайт и юзера контекста, откуда шлём
+        print(
+            "[DNT-CALL-RT] publish",
+            {"site": frappe.local.site, "user": frappe.session.user, **payload},
+        )
+
+        # без user/room → Frappe сам отправит в room "all" (всем System User)
+        frappe.publish_realtime(
+            "dnt_telephony_call",
+            payload,
+            # after_commit=False — шлём сразу, нам не критичен момент коммита
+        )
+    except Exception:
+        frappe.log_error("Failed to publish realtime telephony update", "Telephony Realtime")
 
 def upsert_call(call_id):
     """Найти или создать Call по call_id (идемпотентность)."""
@@ -272,6 +311,17 @@ def process_pbx_event(payload):
 
     call_doc.flags.ignore_permissions = True
     call_doc.save()
+
+    try:
+        publish_realtime_call_update(
+            call_doc=call_doc,
+            engagement=engagement,
+            event_type=event_type,
+            phone_for_case=phone_for_case,
+            event_ts=event_ts,
+        )
+    except Exception:
+        frappe.log_error("Failed to publish realtime PBX event", "Telephony Realtime")
 
     return {
         "ok": True,
