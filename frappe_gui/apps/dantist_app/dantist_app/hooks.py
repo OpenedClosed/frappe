@@ -114,6 +114,7 @@ app_include_js = [
     "/assets/dantist_app/js/add/profile_tasks.js",
     "/assets/dantist_app/js/add/engagement_case_form.js",
     "/assets/dantist_app/js/add/engagement_case_tasks.js",
+    "/assets/dantist_app/js/add/engagement_case_last_call.js",
     "/assets/dantist_app/js/add/engagement_case_list.js",
     "/assets/dantist_app/js/add/dnt_telephony_popup.js",
 

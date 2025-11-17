@@ -120,20 +120,19 @@ def publish_realtime_call_update(call_doc, engagement, event_type, phone_for_cas
             "ticket_title": getattr(engagement, "title", None) if engagement else None,
             "phone_for_case": phone_for_case,
             "start_ts": str(call_doc.start_ts) if call_doc.start_ts else None,
+            "answer_ts": str(call_doc.answer_ts) if getattr(call_doc, "answer_ts", None) else None,
+            "end_ts": str(call_doc.end_ts) if getattr(call_doc, "end_ts", None) else None,
             "event_ts": str(event_ts) if event_ts else None,
         }
 
-        # отладка: видно сайт и юзера контекста, откуда шлём
         print(
             "[DNT-CALL-RT] publish",
             {"site": frappe.local.site, "user": frappe.session.user, **payload},
         )
 
-        # без user/room → Frappe сам отправит в room "all" (всем System User)
         frappe.publish_realtime(
             "dnt_telephony_call",
             payload,
-            # after_commit=False — шлём сразу, нам не критичен момент коммита
         )
     except Exception:
         frappe.log_error("Failed to publish realtime telephony update", "Telephony Realtime")
@@ -248,8 +247,11 @@ def process_pbx_event(payload):
 
     call_doc = upsert_call(call_id)
 
-    if not call_doc.start_ts:
-        call_doc.start_ts = event_ts
+    if event_ts:
+        if event_type == "CALL_NEW":
+            call_doc.start_ts = event_ts
+        elif not call_doc.start_ts:
+            call_doc.start_ts = event_ts
 
     if direction:
         call_doc.direction = direction
