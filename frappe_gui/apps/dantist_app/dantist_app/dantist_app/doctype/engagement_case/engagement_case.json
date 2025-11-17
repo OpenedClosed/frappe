@@ -35,21 +35,6 @@
   "portal_appointment_datetime",
   "specialist",
   "portal_card_link",
-  "telephony_section",
-  "telephony_last_call_id",
-  "telephony_last_direction",
-  "telephony_last_status",
-  "telephony_last_did",
-  "telephony_last_queue",
-  "telephony_last_agent_extension",
-  "telephony_last_ivr_language",
-  "telephony_last_raw_payload",
-  "column_break_gwpg",
-  "telephony_last_from_number",
-  "telephony_last_to_number",
-  "telephony_last_timestamp",
-  "telephony_last_billsec",
-  "telephony_last_recording_url",
   "link_section",
   "linked_engagements",
   "boards_status_section",
@@ -61,6 +46,8 @@
   "status_deals",
   "show_board_patients",
   "status_patients",
+  "telephony_section",
+  "calls",
   "signals_section",
   "first_event_at",
   "last_event_at",
@@ -405,102 +392,22 @@
    "options": "URL"
   },
   {
-   "collapsible": 1,
    "fieldname": "telephony_section",
    "fieldtype": "Section Break",
    "label": "Telephony"
   },
   {
-   "fieldname": "telephony_last_call_id",
-   "fieldtype": "Data",
-   "label": "Last Call ID",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_direction",
-   "fieldtype": "Select",
-   "label": "Last Direction",
-   "options": "in\nout",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_status",
-   "fieldtype": "Select",
-   "label": "Last Call Status",
-   "options": "ringing\nanswered\nmissed\nvoicemail\nhangup\nfailed",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_gwpg",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "telephony_last_from_number",
-   "fieldtype": "Data",
-   "label": "From Number",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_to_number",
-   "fieldtype": "Data",
-   "label": "To Number",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_did",
-   "fieldtype": "Data",
-   "label": "Last DID",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_queue",
-   "fieldtype": "Data",
-   "label": "Last Queue",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_agent_extension",
-   "fieldtype": "Data",
-   "label": "Agent Extension",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_ivr_language",
-   "fieldtype": "Data",
-   "label": "IVR Language",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_raw_payload",
-   "fieldtype": "JSON",
-   "label": "Last Raw Payload (JSON)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_timestamp",
-   "fieldtype": "Datetime",
-   "label": "Last Call Timestamp",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_billsec",
-   "fieldtype": "Int",
-   "label": "Billsec",
-   "read_only": 1
-  },
-  {
-   "fieldname": "telephony_last_recording_url",
-   "fieldtype": "Data",
-   "label": "Recording URL",
-   "options": "URL",
-   "read_only": 1
+   "fieldname": "calls",
+   "fieldtype": "Table",
+   "label": "Calls",
+   "options": "Engagement Call Item"
   }
  ],
  "grid_page_length": 50,
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-16 15:58:54.725854",
+ "modified": "2025-11-17 11:24:24.073311",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",

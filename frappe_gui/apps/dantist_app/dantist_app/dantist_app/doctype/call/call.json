@@ -1,0 +1,234 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:call_id",
+ "creation": "2025-11-17 10:33:56.352234",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "call_id",
+  "direction",
+  "status",
+  "parties_section",
+  "from_number",
+  "to_number",
+  "did",
+  "cb_parties_right",
+  "queue",
+  "ivr_language",
+  "agent_extension",
+  "agent_user",
+  "timing_section",
+  "start_ts",
+  "answer_ts",
+  "end_ts",
+  "cb_timing_right",
+  "billsec",
+  "recording_url",
+  "links_section",
+  "contact",
+  "ticket",
+  "raw_section",
+  "raw_payload"
+ ],
+ "fields": [
+  {
+   "__unsaved": 1,
+   "description": "Unique call identifier from PBX (uniqueid).",
+   "fieldname": "call_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Call ID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "__unsaved": 1,
+   "description": "Call direction (inbound or outbound).",
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Direction",
+   "options": "in\nout"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Current status mapped from PBX disposition/events.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "ringing\nanswered\nmissed\nvoicemail\nhangup\nfailed"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "parties_section",
+   "fieldtype": "Section Break",
+   "label": "Parties"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Caller number (E.164).",
+   "fieldname": "from_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "From Number"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Callee or agent number (E.164 or extension).",
+   "fieldname": "to_number",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "To Number"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Dialed DID number (E.164).",
+   "fieldname": "did",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "DID"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "cb_parties_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "__unsaved": 1,
+   "description": "PBX queue name.",
+   "fieldname": "queue",
+   "fieldtype": "Data",
+   "label": "Queue"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Language code selected in IVR.",
+   "fieldname": "ivr_language",
+   "fieldtype": "Data",
+   "label": "IVR Language"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Extension of the serving agent.",
+   "fieldname": "agent_extension",
+   "fieldtype": "Data",
+   "label": "Agent Extension"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Mapped Frappe User for this agent.",
+   "fieldname": "agent_user",
+   "fieldtype": "Link",
+   "label": "Agent User",
+   "options": "User"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "timing_section",
+   "fieldtype": "Section Break",
+   "label": "Timing"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Call start time (UTC).",
+   "fieldname": "start_ts",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Start Timestamp"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Call answer time (UTC).",
+   "fieldname": "answer_ts",
+   "fieldtype": "Datetime",
+   "label": "Answer Timestamp"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Call end time (UTC).",
+   "fieldname": "end_ts",
+   "fieldtype": "Datetime",
+   "label": "End Timestamp"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "cb_timing_right",
+   "fieldtype": "Column Break"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Billed duration in seconds.",
+   "fieldname": "billsec",
+   "fieldtype": "Int",
+   "label": "Billsec"
+  },
+  {
+   "__unsaved": 1,
+   "description": "URL to call recording (if available).",
+   "fieldname": "recording_url",
+   "fieldtype": "Data",
+   "label": "Recording URL",
+   "options": "URL"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "links_section",
+   "fieldtype": "Section Break",
+   "label": "Links"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Linked contact (optional).",
+   "fieldname": "contact",
+   "fieldtype": "Link",
+   "label": "Contact",
+   "options": "Contact"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Parent engagement case.",
+   "fieldname": "ticket",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Engagement Case",
+   "options": "Engagement Case"
+  },
+  {
+   "__unsaved": 1,
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Payload"
+  },
+  {
+   "__unsaved": 1,
+   "description": "Raw webhook payload from PBX.",
+   "fieldname": "raw_payload",
+   "fieldtype": "JSON",
+   "label": "Raw Payload (JSON)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-11-17 10:33:56.352234",
+ "modified_by": "Administrator",
+ "module": "Dantist App",
+ "name": "Call",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "call_id, from_number, to_number, did, queue, agent_extension, agent_user",
+ "sort_field": "start_ts",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "call_id",
+ "track_changes": 1
+}

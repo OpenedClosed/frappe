@@ -1,0 +1,177 @@
+{
+  "doctype": "DocType",
+  "name": "Call",
+  "module": "Dantist App",
+  "issingle": 0,
+  "track_changes": 1,
+  "autoname": "field:call_id",
+  "title_field": "call_id",
+  "row_format": "Dynamic",
+  "search_fields": "call_id, from_number, to_number, did, queue, agent_extension, agent_user",
+  "sort_field": "start_ts",
+  "sort_order": "DESC",
+  "fields": [
+    {
+      "fieldtype": "Data",
+      "fieldname": "call_id",
+      "label": "Call ID",
+      "reqd": 1,
+      "unique": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Unique call identifier from PBX (uniqueid)."
+    },
+
+    {
+      "fieldtype": "Select",
+      "fieldname": "direction",
+      "label": "Direction",
+      "options": "in\nout",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Call direction (inbound or outbound)."
+    },
+    {
+      "fieldtype": "Select",
+      "fieldname": "status",
+      "label": "Status",
+      "options": "ringing\nanswered\nmissed\nvoicemail\nhangup\nfailed",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Current status mapped from PBX disposition/events."
+    },
+
+    {
+      "fieldtype": "Section Break",
+      "fieldname": "parties_section",
+      "label": "Parties"
+    },
+    {
+      "fieldtype": "Data",
+      "fieldname": "from_number",
+      "label": "From Number",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Caller number (E.164)."
+    },
+    {
+      "fieldtype": "Data",
+      "fieldname": "to_number",
+      "label": "To Number",
+      "in_standard_filter": 1,
+      "description": "Callee or agent number (E.164 or extension)."
+    },
+    {
+      "fieldtype": "Data",
+      "fieldname": "did",
+      "label": "DID",
+      "in_standard_filter": 1,
+      "description": "Dialed DID number (E.164)."
+    },
+    {
+      "fieldtype": "Column Break",
+      "fieldname": "cb_parties_right"
+    },
+    {
+      "fieldtype": "Data",
+      "fieldname": "queue",
+      "label": "Queue",
+      "description": "PBX queue name."
+    },
+    {
+      "fieldtype": "Data",
+      "fieldname": "ivr_language",
+      "label": "IVR Language",
+      "description": "Language code selected in IVR."
+    },
+    {
+      "fieldtype": "Data",
+      "fieldname": "agent_extension",
+      "label": "Agent Extension",
+      "description": "Extension of the serving agent."
+    },
+    {
+      "fieldtype": "Link",
+      "fieldname": "agent_user",
+      "label": "Agent User",
+      "options": "User",
+      "description": "Mapped Frappe User for this agent."
+    },
+
+    {
+      "fieldtype": "Section Break",
+      "fieldname": "timing_section",
+      "label": "Timing"
+    },
+    {
+      "fieldtype": "Datetime",
+      "fieldname": "start_ts",
+      "label": "Start Timestamp",
+      "in_list_view": 1,
+      "description": "Call start time (UTC)."
+    },
+    {
+      "fieldtype": "Datetime",
+      "fieldname": "answer_ts",
+      "label": "Answer Timestamp",
+      "description": "Call answer time (UTC)."
+    },
+    {
+      "fieldtype": "Datetime",
+      "fieldname": "end_ts",
+      "label": "End Timestamp",
+      "description": "Call end time (UTC)."
+    },
+    {
+      "fieldtype": "Column Break",
+      "fieldname": "cb_timing_right"
+    },
+    {
+      "fieldtype": "Int",
+      "fieldname": "billsec",
+      "label": "Billsec",
+      "description": "Billed duration in seconds."
+    },
+    {
+      "fieldtype": "Data",
+      "fieldname": "recording_url",
+      "label": "Recording URL",
+      "options": "URL",
+      "description": "URL to call recording (if available)."
+    },
+
+    {
+      "fieldtype": "Section Break",
+      "fieldname": "links_section",
+      "label": "Links"
+    },
+    {
+      "fieldtype": "Link",
+      "fieldname": "contact",
+      "label": "Contact",
+      "options": "Contact",
+      "description": "Linked contact (optional)."
+    },
+    {
+      "fieldtype": "Link",
+      "fieldname": "ticket",
+      "label": "Engagement Case",
+      "options": "Engagement Case",
+      "in_standard_filter": 1,
+      "description": "Parent engagement case."
+    },
+
+    {
+      "fieldtype": "Section Break",
+      "fieldname": "raw_section",
+      "label": "Raw Payload"
+    },
+    {
+      "fieldtype": "JSON",
+      "fieldname": "raw_payload",
+      "label": "Raw Payload (JSON)",
+      "description": "Raw webhook payload from PBX."
+    }
+  ],
+  "permissions": []
+}

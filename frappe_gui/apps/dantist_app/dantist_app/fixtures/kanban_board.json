@@ -167,7 +167,7 @@
   "fields": "[\"display_name\", \"phone\", \"channel_type\", \"portal_service\", \"specialist\", \"modified\"]",
   "filters": null,
   "kanban_board_name": "Leads – Contact Center",
-  "modified": "2025-11-15 18:13:46.728900",
+  "modified": "2025-11-17 10:06:41.094295",
   "name": "Leads – Contact Center",
   "private": 0,
   "reference_doctype": "Engagement Case",
