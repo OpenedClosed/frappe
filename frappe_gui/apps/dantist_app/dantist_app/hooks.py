@@ -56,6 +56,8 @@ fixtures = [
             "name": ["in", [
                 "Bot Settings",
                 "Engagement Case",
+                "Call",
+                "Engagement Call Item"
                 "ToDo",
             ]]
         },

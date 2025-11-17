@@ -407,6 +407,7 @@ step "🧩 Актуализация site_config.json из ENV"
 python3 - <<PY
 import os, json, pathlib
 from urllib.parse import urlparse
+
 def good_origin(v: str) -> bool:
     try:
         u = urlparse(v or "")
@@ -442,20 +443,29 @@ cfg["socketio_port"] = 443 if proto=="https" else 80
 cfg["socketio_path"] = "/socket.io"
 
 secret_env = os.getenv("FRAPPE_SHARED_SECRET")
-if secret_env: cfg["dantist_shared_secret"] = secret_env
+if secret_env:
+    cfg["dantist_shared_secret"] = secret_env
 
 aud_env = os.getenv("DANTIST_INTEGRATION_AUD")
-if aud_env: cfg["dantist_integration_aud"] = aud_env
+if aud_env:
+    cfg["dantist_integration_aud"] = aud_env
 
 devmode = os.getenv("DEVELOPER_MODE")
 if devmode is not None:
     cfg["developer_mode"] = 1 if str(devmode).strip().lower() in {"1","true","yes","on"} else 0
 
 log_level = os.getenv("LOG_LEVEL")
-if log_level: cfg["log_level"] = log_level
+if log_level:
+    cfg["log_level"] = log_level
 
 enc = os.getenv("ENCRYPTION_KEY")
-if enc: cfg["encryption_key"] = enc
+if enc:
+    cfg["encryption_key"] = enc
+
+# 🔑 PBX webhook token из ENV → в site_config.json
+pbx_token = os.getenv("PBX_WEBHOOK_TOKEN")
+if pbx_token:
+    cfg["pbx_webhook_token"] = pbx_token
 
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 print(f"OK {p}")
