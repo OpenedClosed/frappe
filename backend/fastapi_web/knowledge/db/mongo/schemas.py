@@ -154,7 +154,7 @@ class BotSettings(BaseValidatedModel):
             "pl": "Do widzenia! Jeśli będziesz czegoś potrzebować, śmiało pytaj.",
             "uk": "До побачення! Якщо потрібно буде щось ще — звертайтесь.",
             "ru": "До свидания! Если вам что-то понадобится, обращайтесь.",
-            "ka": "ნახვამდის! თუ კიდევ დაგჭირდებათ რაიმე — დაწერეთ."
+            "ka": "ნახვამდис! თუ კიდევ დაგჭირდებათ რაიმე — დაწერეთ."
         }
     )
     fallback_ai_error_message: Dict[str, str] = Field(
@@ -168,11 +168,8 @@ class BotSettings(BaseValidatedModel):
     )
 
     app_name: Optional[str] = None
+    is_active: bool = False
 
     ai_model: AIModelEnum
     created_at: datetime = Field(default_factory=datetime.utcnow)
-
-    frappe_doctype: Optional[str] = None
-    frappe_name: Optional[str] = None
-    frappe_modified: Optional[datetime] = None
 

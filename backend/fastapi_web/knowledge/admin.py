@@ -1,5 +1,6 @@
 """Админ-панель приложения Знания."""
 from typing import List, Optional
+
 from admin_core.base_admin import BaseAdmin
 from .utils.help_functions import get_app_name_by_user_data
 from crud_core.registry import admin_registry
@@ -30,25 +31,34 @@ class BotSettingsAdmin(BaseAdmin):
 
     list_display = [
         "project_name",
+        "app_name",
+        "is_active",
         "created_at",
     ]
 
     detail_fields = [
-        "project_name", "employee_name", "mention_name", "avatar", "bot_color",
+        "project_name", "app_name", "employee_name", "mention_name", "avatar", "bot_color",
         "communication_tone", "personality_traits", "additional_instructions", "role", "target_action",
         "core_principles", "special_instructions", "forbidden_topics",
         "greeting", "error_message", "farewell_message", "fallback_ai_error_message",
-        "ai_model", "created_at"
+        "ai_model", "is_active",
+        "frappe_doctype", "frappe_name", "frappe_modified",
+        "created_at",
     ]
 
     computed_fields = []
-    read_only_fields = ["created_at"]
+    read_only_fields = ["created_at", "frappe_doctype", "frappe_name", "frappe_modified"]
 
     field_titles = {
         "project_name": {
             "en": "Project Name", "pl": "Nazwa projektu",
             "uk": "Назва проєкту", "ru": "Название проекта",
             "ka": "პროექტის სახელი"
+        },
+        "app_name": {
+            "en": "App Name", "pl": "Nazwa aplikacji",
+            "uk": "Назва застосунку", "ru": "Имя приложения",
+            "ka": "აპის სახელი"
         },
         "employee_name": {
             "en": "Employee Name", "pl": "Imię pracownika",
@@ -102,7 +112,7 @@ class BotSettingsAdmin(BaseAdmin):
         "core_principles": {
             "en": "Core Principles", "pl": "Podstawowe zasady",
             "uk": "Основні принципи", "ru": "Ключевые принципы",
-            "ka": "ძირითადი პრინციპები"
+            "ka": "ძირითად პრინციპები"
         },
         "special_instructions": {
             "en": "Special Instructions", "pl": "Specjalne instrukcje",
@@ -139,6 +149,34 @@ class BotSettingsAdmin(BaseAdmin):
             "uk": "Модель ІІ", "ru": "Выбор модели",
             "ka": "AI მოდელი"
         },
+        "is_active": {
+            "en": "Active Bot",
+            "pl": "Aktywny bot",
+            "uk": "Активний бот",
+            "ru": "Активный бот",
+            "ka": "აქტიური ბოტი",
+        },
+        "frappe_doctype": {
+            "en": "Frappe DocType",
+            "pl": "DocType Frappe",
+            "uk": "DocType Frappe",
+            "ru": "DocType Frappe",
+            "ka": "Frappe DocType",
+        },
+        "frappe_name": {
+            "en": "Frappe Name",
+            "pl": "Nazwa w Frappe",
+            "uk": "Назва в Frappe",
+            "ru": "Имя в Frappe",
+            "ka": "სახელი Frappe-ში",
+        },
+        "frappe_modified": {
+            "en": "Frappe Modified",
+            "pl": "Modyfikacja w Frappe",
+            "uk": "Дата змін у Frappe",
+            "ru": "Дата изменения в Frappe",
+            "ka": "ცვლილების დრო Frappe-ში",
+        },
         "created_at": {
             "en": "Created At", "pl": "Data utworzenia",
             "uk": "Дата створення", "ru": "Дата создания",
@@ -153,6 +191,13 @@ class BotSettingsAdmin(BaseAdmin):
             "uk": "Коротка назва проєкту, в якому використовується бот.",
             "ru": "Короткое название проекта, в котором используется бот.",
             "ka": "მოკლე სახელი პროექტისა, სადაც გამოიყენება ბოტი."
+        },
+        "app_name": {
+            "en": "Internal application identifier used for routing.",
+            "pl": "Wewnętrzny identyfikator aplikacji używany do routingu.",
+            "uk": "Внутрішній ідентифікатор застосунку для маршрутизації.",
+            "ru": "Внутренний идентификатор приложения для роутинга.",
+            "ka": "შიდა აპის იდენტიფიკატორი როუტინგისთვის."
         },
         "employee_name": {
             "en": "The name of the employee that the bot represents.",
@@ -273,6 +318,34 @@ class BotSettingsAdmin(BaseAdmin):
             "ru": "Модель ИИ, которую использует бот.",
             "ka": "AI მოდელი, რომელსაც ბოტი იყენებს."
         },
+        "is_active": {
+            "en": "If enabled, this bot will be used as the primary one.",
+            "pl": "Jeśli włączone, ten bot będzie używany jako główny.",
+            "uk": "Якщо увімкнено, цей бот буде основним.",
+            "ru": "Если включено, этот бот будет использоваться как основной.",
+            "ka": "თუ ჩართულია, ეს ბოტი იქნება ძირითადი."
+        },
+        "frappe_doctype": {
+            "en": "Linked Frappe DocType (read-only).",
+            "pl": "Powiązany DocType Frappe (tylko do odczytu).",
+            "uk": "Пов'язаний DocType Frappe (тільки для читання).",
+            "ru": "Связанный DocType Frappe (только для чтения).",
+            "ka": "დაკავშირებული Frappe DocType (მხოლოდ კითხვისთვის)."
+        },
+        "frappe_name": {
+            "en": "Linked Frappe record name (read-only).",
+            "pl": "Powiązana nazwa rekordu Frappe (tylko do odczytu).",
+            "uk": "Назва пов'язаного запису Frappe (тільки для читання).",
+            "ru": "Имя связанной записи Frappe (только для чтения).",
+            "ka": "დაკავშირებული Frappe ჩანაწერის სახელი (მხოლოდ კითხვისთვის)."
+        },
+        "frappe_modified": {
+            "en": "Last modification time in Frappe (read-only).",
+            "pl": "Czas ostatniej zmiany w Frappe (tylko do odczytu).",
+            "uk": "Час останньої зміни у Frappe (тільки для читання).",
+            "ru": "Время последнего изменения в Frappe (только для чтения).",
+            "ka": "ბოლო ცვლილების დრო Frappe-ში (მხოლოდ კითხვისთვის)."
+        },
         "created_at": {
             "en": "Timestamp when the bot settings were created.",
             "pl": "Znacznik czasu utworzenia ustawień bota.",
@@ -289,7 +362,7 @@ class BotSettingsAdmin(BaseAdmin):
                 "uk": "Базові налаштування", "ru": "Основные настройки",
                 "ka": "ძირითადი პარამეტრები"
             },
-            "fields": ["project_name", "employee_name", "mention_name", "avatar", "bot_color"],
+            "fields": ["project_name", "app_name", "employee_name", "mention_name", "avatar", "bot_color", "is_active"],
             "help_text": {
                 "en": "Define basic bot information",
                 "pl": "Zdefiniuj podstawowe informacje o bocie",
@@ -357,6 +430,21 @@ class BotSettingsAdmin(BaseAdmin):
                 "ru": "Выберите модель ИИ для вашего бота",
                 "ka": "აირჩიეთ ბოტისთვის AI მოდელი"
             }
+        },
+        {
+            "title": {
+                "en": "Frappe Link", "pl": "Powiązanie z Frappe",
+                "uk": "Зв'язок з Frappe", "ru": "Связь с Frappe",
+                "ka": "კავშირი Frappe-სთან"
+            },
+            "fields": ["frappe_doctype", "frappe_name", "frappe_modified", "created_at"],
+            "help_text": {
+                "en": "Technical link to the corresponding Frappe record (read-only).",
+                "pl": "Techniczne powiązanie z odpowiadającym rekordem Frappe (tylko do odczytu).",
+                "uk": "Технічний зв'язок з відповідним записом Frappe (тільки для читання).",
+                "ru": "Техническая связь с соответствующей записью Frappe (только для чтения).",
+                "ka": "ტექნიკური კავშირი შესაბამის Frappe ჩანაწერთან (მხოლოდ კითხვისთვის)."
+            }
         }
     ]
 
@@ -395,7 +483,6 @@ class BotSettingsAdmin(BaseAdmin):
             format=format
         )
 
-
     async def create(self, data: dict, current_user=None):
         """
         Создание настроек бота.
@@ -406,5 +493,6 @@ class BotSettingsAdmin(BaseAdmin):
             data["app_name"] = app_name
 
         return await super().create(data, current_user)
+
 
 admin_registry.register("bot_settings", BotSettingsAdmin(mongo_db))

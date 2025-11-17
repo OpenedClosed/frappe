@@ -1,5 +1,3 @@
-from typing import List, Optional
-from pydantic import BaseModel
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 
@@ -10,6 +8,7 @@ class SessionRequest(BaseModel):
     nonce: str
     sig: str
     aud: str | None = None
+
 
 class SessionResponse(BaseModel):
     """Ответ с access-токеном."""
@@ -23,6 +22,7 @@ class EnsureMongoAdminUserRequest(BaseModel):
     full_name: Optional[str] = None
     role: Optional[str] = None  # RoleEnum.value
     frappe_roles: Optional[List[str]] = None
+
 
 class BotSettingsSyncRequest(BaseModel):
     project_name: str
@@ -51,3 +51,5 @@ class BotSettingsSyncRequest(BaseModel):
     frappe_doctype: Optional[str] = None
     frappe_name: Optional[str] = None
     frappe_modified: Optional[str] = None
+
+    is_active: bool = False

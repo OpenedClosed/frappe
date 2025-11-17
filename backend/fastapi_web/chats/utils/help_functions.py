@@ -986,7 +986,6 @@ def parse_weather_data(data: Dict[str, Any]) -> Dict[str, Any]:
 # ==============================
 # БЛОК: Контекст бота
 # ==============================
-
 def get_default_bot_settings(app_name: str) -> BotSettings:
     """Дефолтные настройки бота для указанного app_name."""
     return BotSettings(
@@ -1013,7 +1012,7 @@ def get_default_bot_settings(app_name: str) -> BotSettings:
         },
         error_message={
             "en": "Please wait for a consultant.",
-            "pl": "Proszę poczekać na konsultanta.",
+            "pl": "Proszę poczekać на konsultанта.",
             "uk": "Будь ласка, зачекайте на консультанта.",
             "ru": "Пожалуйста, подождите, консультант скоро ответит.",
             "ka": "გთხოვთ, დაელოდოთ კონსულტანტს.",
@@ -1023,7 +1022,7 @@ def get_default_bot_settings(app_name: str) -> BotSettings:
             "pl": "Do widzenia! Jeśli masz pytania, śmiało pytaj.",
             "uk": "До побачення! Звертайтесь, якщо виникнуть питання.",
             "ru": "До свидания! Если вам что-то понадобится, обращайтесь.",
-            "ka": "ნახვამდის! თავისუფლად შეგიძლიათ კიდევ რაღაც მკითხოთ.",
+            "ka": "ნახვამდис! თავისუფლად შეგიძლიათ კიდევ რაღაც მკითხოთ.",
         },
         fallback_ai_error_message={
             "en": "Unfortunately, I'm having trouble generating a response right now. Please try again later.",
@@ -1033,21 +1032,24 @@ def get_default_bot_settings(app_name: str) -> BotSettings:
             "ka": "სამწუხაროდ, ახლა ვერ ვქმნი პასუხს. გთხოვთ, სცადეთ მოგვიანებით.",
         },
         ai_model=AIModelEnum.GPT_4_O,
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
+        is_active=False,
     )
 
 
 async def get_bot_context(app_name: Optional[str] = None) -> Dict[str, Any]:
-    """Загружает настройки бота по app_name, либо отдаёт дефолтные/последние."""
+    """Загружает настройки бота по app_name, либо активного/последнего."""
     app_name = app_name or settings.APP_NAME
 
-    data = await mongo_db.bot_settings.find_one({"app_name": app_name})
+    data = await mongo_db.bot_settings.find_one({"is_active": True})
 
     if not data:
         if app_name.startswith("demo_"):
             bot_settings_obj = get_default_bot_settings(app_name)
         else:
-            data = await mongo_db.bot_settings.find_one({}, sort=[("_id", DESCENDING)])
+            data = await mongo_db.bot_settings.find_one({"is_active": True})
+            if not data:
+                data = await mongo_db.bot_settings.find_one({}, sort=[("_id", DESCENDING)])
             bot_settings_obj = BotSettings(**data) if data else get_default_bot_settings(app_name)
     else:
         bot_settings_obj = BotSettings(**data)

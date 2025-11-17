@@ -1,7 +1,7 @@
 {
  "actions": [],
  "autoname": "field:project_name",
- "creation": "2025-10-07 18:43:21.419601",
+ "creation": "2025-10-24 23:41:51.960127",
  "default_view": "Image",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -11,6 +11,7 @@
   "basic_settings_section",
   "project_name",
   "employee_name",
+  "is_active",
   "mention_name",
   "cb_basic_right",
   "avatar",
@@ -237,14 +238,20 @@
    "fieldtype": "Datetime",
    "label": "Created At",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-23 20:22:55.804421",
- "modified_by": "opendoor200179@gmail.com",
+ "modified": "2025-11-17 21:39:50.893290",
+ "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Bot Settings",
  "naming_rule": "By fieldname",

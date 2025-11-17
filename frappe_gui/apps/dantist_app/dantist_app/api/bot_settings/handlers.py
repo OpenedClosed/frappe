@@ -22,7 +22,6 @@ def extract_multiselect_values(child_table) -> List[str]:
     """Вытащить значения из таблиц-мультиселектов как список строк."""
     values: List[str] = []
     for row in child_table or []:
-        # пробуем несколько типичных имён полей
         for key in ("value", "code", "key", "name"):
             try:
                 val = getattr(row, key, None)
@@ -74,6 +73,7 @@ def serialize_bot_settings_internal(doc) -> Dict[str, Any]:
         "frappe_doctype": doc.doctype,
         "frappe_name": doc.name,
         "frappe_modified": str(getattr(doc, "modified", "") or "") or None,
+        "is_active": bool(getattr(doc, "is_active", 0)),
     }
     return payload
 
@@ -104,10 +104,42 @@ def sync_bot_settings_to_backend_internal(doc) -> None:
         logger.warning("Bot Settings sync failed: %s %s", r.status_code, r.text)
 
 
+def deactivate_other_bot_settings(doc) -> None:
+    """Снять флаг активности у всех остальных Bot Settings в Frappe."""
+    try:
+        if not bool(getattr(doc, "is_active", 0)):
+            return
+
+        if getattr(frappe.local, "bot_settings_bulk_update", None):
+            return
+
+        frappe.local.bot_settings_bulk_update = True
+        try:
+            others = frappe.get_all(
+                "Bot Settings",
+                filters={"name": ["!=", doc.name]},
+                pluck="name",
+                limit_page_length=100000,
+            )
+            for name in others or []:
+                frappe.db.set_value(
+                    "Bot Settings",
+                    name,
+                    "is_active",
+                    0,
+                    update_modified=False,
+                )
+        finally:
+            frappe.local.bot_settings_bulk_update = False
+    except Exception:
+        logger.exception("Failed to deactivate other Bot Settings")
+
+
 @frappe.whitelist()
 def on_bot_settings_changed(doc, method=None):
     """Хук: при создании/обновлении Bot Settings пушим в Mongo через backend."""
     try:
+        deactivate_other_bot_settings(doc)
         sync_bot_settings_to_backend_internal(doc)
     except Exception:
         logger.exception("on_bot_settings_changed failed")
