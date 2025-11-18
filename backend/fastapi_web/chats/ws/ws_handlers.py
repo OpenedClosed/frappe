@@ -13,8 +13,13 @@ from notifications.utils.help_functions import create_notifications
 import httpx
 from chats.integrations.constructor_chat.handlers import push_to_constructor
 from chats.utils.commands import COMMAND_HANDLERS, command_handler
-from chats.utils.help_functions import (calculate_chat_status,
-                                        get_master_client_by_id, get_translation, safe_float)
+from chats.utils.help_functions import (
+    calculate_chat_status,
+    get_master_client_by_id,
+    get_translation,
+    safe_float,
+    should_skip_message_for_ai,
+)
 from db.mongo.db_init import mongo_client, mongo_db
 from db.redis.db_init import redis_db
 from infra import settings
@@ -256,14 +261,30 @@ async def handle_new_message(
     metadata = data.get("metadata", {})
 
     if is_superuser:
-        await handle_superuser_message(manager, client_id, chat_id, msg_text, metadata, reply_to, redis_key_session, user_language)
+        await handle_superuser_message(
+            manager,
+            client_id,
+            chat_id,
+            msg_text,
+            metadata,
+            reply_to,
+            redis_key_session,
+            user_language
+        )
         return
 
     chat_session = await load_chat_data(manager, client_id, chat_id, user_language)
     if not chat_session:
         return
 
-    if not await validate_chat_status(manager, client_id, chat_session, redis_key_session, chat_id, user_language):
+    if not await validate_chat_status(
+        manager,
+        client_id,
+        chat_session,
+        redis_key_session,
+        chat_id,
+        user_language
+    ):
         return
 
     if not msg_text or not msg_text.strip():
@@ -278,7 +299,7 @@ async def handle_new_message(
             external_id=external_id,
             metadata=metadata,
         )
-    except ValidationError as e:
+    except ValidationError:
         await broadcast_error(
             manager,
             client_id,
@@ -287,19 +308,67 @@ async def handle_new_message(
         )
         return
 
-    if await handle_command(manager, redis_key_session, client_id, chat_id, chat_session, new_msg, user_language):
+    # 1) Команды (/manual, /auto и т.п.) обрабатываем как раньше
+    if await handle_command(
+        manager,
+        redis_key_session,
+        client_id,
+        chat_id,
+        chat_session,
+        new_msg,
+        user_language
+    ):
         return
 
-    if not await check_flood_control(manager, client_id, chat_session, redis_key_flood,
-                                     chat_session.calculate_mode(BRIEF_QUESTIONS), user_language):
+    # 2) Фильтр «мусорных» сообщений: emoji-реакции, <Content>, слишком короткий текст
+    if should_skip_message_for_ai(new_msg.message):
+        await save_and_broadcast_new_message(
+            manager,
+            chat_session,
+            new_msg,
+            redis_key_session,
+            user_data,
+        )
         return
 
-    if not await validate_choice(manager, client_id, chat_session, chat_id, msg_text, user_language):
+    # 3) Дальше — стандартная логика (flood, strict choice, brief, AI)
+    if not await check_flood_control(
+        manager,
+        client_id,
+        chat_session,
+        redis_key_flood,
+        chat_session.calculate_mode(BRIEF_QUESTIONS),
+        user_language
+    ):
         return
 
-    await save_and_broadcast_new_message(manager, chat_session, new_msg, redis_key_session, user_data)
+    if not await validate_choice(
+        manager,
+        client_id,
+        chat_session,
+        chat_id,
+        msg_text,
+        user_language
+    ):
+        return
 
-    if await handle_brief_mode(manager, client_id, chat_session, msg_text, chat_id, redis_key_session, user_language):
+    await save_and_broadcast_new_message(
+        manager,
+        chat_session,
+        new_msg,
+        redis_key_session,
+        user_data
+    )
+
+    if await handle_brief_mode(
+        manager,
+        client_id,
+        chat_session,
+        msg_text,
+        chat_id,
+        redis_key_session,
+        user_language
+    ):
         return
 
     if not chat_session.manual_mode:

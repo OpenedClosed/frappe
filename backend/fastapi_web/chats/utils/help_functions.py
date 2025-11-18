@@ -1155,6 +1155,128 @@ def format_value(field_name: str, value: Any) -> str:
 # ==============================
 # БЛОК: Текстовые утилиты (чистка/разбиение/переводы)
 # ==============================
+# Короткие слова-исключения (<= 2 символов), которые считаем осмысленными
+SHORT_ACTIVATION_WORDS = {
+    # RU
+    "да",
+    "ок",
+    # EN
+    "hi",
+    "ok",
+    "yo",
+    # UA
+    "ні",
+    # PL
+    "ok",
+    # KA (Georgian)
+    "კი",
+    "ოკ",
+}
+
+EMOJI_ONLY_PATTERN = re.compile(
+    "["  # основные диапазоны emoji
+    "\U0001F300-\U0001F5FF"
+    "\U0001F600-\U0001F64F"
+    "\U0001F680-\U0001F6FF"
+    "\U0001F700-\U0001F77F"
+    "\U0001F780-\U0001F7FF"
+    "\U0001F800-\U0001F8FF"
+    "\U0001F900-\U0001F9FF"
+    "\U0001FA00-\U0001FAFF"
+    "\U00002600-\U000026FF"
+    "\U00002700-\U000027BF"
+    "\U0001F1E6-\U0001F1FF"  # флаги
+    "]+"
+)
+
+CONTENT_PLACEHOLDER_PATTERN = re.compile(
+    r"^<\s*content[^>]*>$",
+    re.IGNORECASE,
+)
+
+
+def strip_emojis(text: str) -> str:
+    """Удаляет все emoji из строки."""
+    if not text:
+        return ""
+    return EMOJI_ONLY_PATTERN.sub("", text)
+
+
+def is_emoji_only_text(text: str) -> bool:
+    """Проверяет, состоит ли текст только из emoji/реакций (без «реальных» символов)."""
+    if not text:
+        return False
+
+    raw = text.strip()
+    if not raw:
+        return False
+
+    without_emoji = strip_emojis(raw)
+    # Убираем пробелы, знаки препинания, цифры и служебный мусор
+    cleaned = re.sub(r"[\s.,!?:;\"'()\[\]{}<>+\-=/\\|_0-9]", "", without_emoji)
+
+    # Если после вырезания emoji и мусора ничего не осталось, а emoji в строке были —
+    # считаем строку чисто emoji-реакцией.
+    return not cleaned and bool(EMOJI_ONLY_PATTERN.search(raw))
+
+
+def is_content_placeholder(text: str) -> bool:
+    """Проверяет, является ли текст заглушкой <Content> / <content ...>."""
+    if not text:
+        return False
+    return bool(CONTENT_PLACEHOLDER_PATTERN.match(text.strip()))
+
+
+def is_short_activation_text(text: str) -> bool:
+    """Проверяет, можно ли короткий текст (<=2 символов без emoji) считать осмысленным."""
+    if not text:
+        return False
+
+    raw = text.strip()
+    if not raw:
+        return False
+
+    base = strip_emojis(raw)
+    compact = re.sub(r"\s+", "", base)
+
+    # Если после удаления emoji вообще ничего не осталось — это не осмысленный текст.
+    if not compact:
+        return False
+
+    if len(compact) <= 2:
+        return compact.lower() in SHORT_ACTIVATION_WORDS
+
+    return True
+
+
+def should_skip_message_for_ai(message_text: str) -> bool:
+    """
+    Возвращает True, если сообщение:
+    • пустое;
+    • служебная заглушка <Content>;
+    • состоит только из emoji / реакций;
+    • содержит после удаления emoji <= 2 символов, не входящих в SHORT_ACTIVATION_WORDS.
+    Такие сообщения НЕ должны уходить в обработку ИИ.
+    """
+    text = (message_text or "").strip()
+    if not text:
+        return True
+
+    if is_content_placeholder(text):
+        return True
+
+    base = strip_emojis(text)
+    compact = re.sub(r"\s+", "", base)
+
+    # Только emoji (или emoji + пробелы/мусор) → скипаем
+    if not compact:
+        return True
+
+    # Очень короткий текст (<=2 символов без emoji), не из списка исключений → скипаем
+    if len(compact) <= 2 and compact.lower() not in SHORT_ACTIVATION_WORDS:
+        return True
+
+    return False
 
 def split_text_into_chunks(text: str, max_length: int = 998) -> List[str]:
     """Делит текст на части по предложениям, не обрывая числовые списки и не теряя хвост."""

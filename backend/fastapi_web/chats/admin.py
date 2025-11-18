@@ -7,7 +7,14 @@ from typing import Any, Dict, List, Optional
 from admin_core.base_admin import BaseAdmin, InlineAdmin
 from crud_core.decorators import admin_route
 from chats.db.mongo.enums import SenderRole
-from chats.utils.help_functions import build_sender_data_map, calculate_chat_status, get_master_client_by_id
+from chats.utils.help_functions import (
+    calculate_chat_status,
+    build_sender_data_map,
+    get_master_client_by_id,
+    get_translation,
+    safe_float,
+    should_skip_message_for_ai,
+)
 from crud_core.permissions import OperatorPermission
 from crud_core.registry import admin_registry
 from db.mongo.db_init import mongo_db
@@ -452,6 +459,7 @@ class ChatSessionAdmin(BaseAdmin):
         "Closed by Operator": "📪🔒"
     }
 
+
     # -------- computed --------
     async def get_status_display(self, obj: dict, current_user=None) -> dict:
         chat_session = ChatSession(**obj)
@@ -646,10 +654,95 @@ class ChatSessionAdmin(BaseAdmin):
             ])
             raw_docs = [d for d, ok in zip(raw_docs, flags) if ok]
 
+        # Убираем чаты без осмысленных клиентских сообщений
+        meaningful_flags = await asyncio.gather(*[
+            self.has_meaningful_client_messages(d, current_user=current_user) for d in raw_docs
+        ])
+        raw_docs = [d for d, ok in zip(raw_docs, meaningful_flags) if ok]
+
         flags = await asyncio.gather(*[self.get_is_unanswered(d) for d in raw_docs])
         count = sum(1 for x in flags if x)
         return {"count": count}
+    
+    async def has_meaningful_client_messages(self, obj: dict, current_user=None) -> bool:
+        """
+        Есть ли в чате хотя бы одно осмысленное сообщение клиента
+        (по тем же правилам, что и фильтр для ИИ).
+        """
+        messages = obj.get("messages") or []
 
+        def role_en(msg_role) -> str:
+            try:
+                return json.loads(msg_role)["en"] if isinstance(msg_role, str) else msg_role.en_value
+            except Exception:
+                return "Unknown"
+
+        for msg in messages:
+            if not isinstance(msg, dict):
+                continue
+
+            if role_en(msg.get("sender_role")) != SenderRole.CLIENT.en_value:
+                continue
+
+            text = (msg.get("message") or "").strip()
+            if not should_skip_message_for_ai(text):
+                return True
+
+        return False
+    
+    async def _filter_meaningful_chats(self, raw_docs: List[dict], current_user=None) -> List[dict]:
+        """
+        Пост-фильтр для queryset'а:
+        оставляем только те чаты, где есть хотя бы одно осмысленное
+        клиентское сообщение (по правилам should_skip_message_for_ai).
+        """
+        if not raw_docs:
+            return []
+
+        flags = await asyncio.gather(*[
+            self.has_meaningful_client_messages(d, current_user=current_user)
+            for d in raw_docs
+        ])
+        return [d for d, ok in zip(raw_docs, flags) if ok]
+    
+    async def get_queryset(
+        self,
+        filters: Optional[dict] = None,
+        sort_by: Optional[str] = None,
+        order: int = 1,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        current_user=None,
+    ) -> List[dict]:
+        """
+        Базовый queryset для админки чатов:
+        берём стандартный список из BaseAdmin (сырые документы, format=False),
+        выкидываем чаты без осмысленных клиентских сообщений
+        и форматируем через format_document.
+        """
+        # 1) Берём сырые документы из базового админа
+        raw_docs: List[dict] = await super().get_queryset(
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            page=page,
+            page_size=page_size,
+            current_user=current_user,
+            format=False,
+        )
+
+        if not raw_docs:
+            return []
+
+        # 2) Режем мусорные чаты
+        filtered_docs = await self._filter_meaningful_chats(raw_docs, current_user=current_user)
+
+        if not filtered_docs:
+            return []
+
+        # 3) Форматируем так же, как это обычно делает BaseAdmin
+        formatted = [await self.format_document(d, current_user) for d in filtered_docs]
+        return formatted
 
 
 
