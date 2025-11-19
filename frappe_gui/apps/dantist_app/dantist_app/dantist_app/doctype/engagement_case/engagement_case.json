@@ -35,6 +35,8 @@
   "portal_appointment_datetime",
   "specialist",
   "portal_card_link",
+  "column_break_tosz",
+  "portal_iframe_path",
   "link_section",
   "linked_engagements",
   "boards_status_section",
@@ -401,13 +403,23 @@
    "fieldtype": "Table",
    "label": "Calls",
    "options": "Engagement Call Item"
+  },
+  {
+   "fieldname": "column_break_tosz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "portal_iframe_path",
+   "fieldtype": "Data",
+   "label": "Portal iFrame Path",
+   "options": "[IFRAME]\nTITLE=Client Portal\nDEV=https://u5505.pink.elasticweb.org/\nSTAGING=https://dev.pana-services.pl/\nPRODUCTION=https://panel.panamedica.pl/"
   }
  ],
  "grid_page_length": 50,
  "image_field": "avatar",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-17 11:24:24.073311",
+ "modified": "2025-11-19 08:56:33.546842",
  "modified_by": "Administrator",
  "module": "Dantist App",
  "name": "Engagement Case",

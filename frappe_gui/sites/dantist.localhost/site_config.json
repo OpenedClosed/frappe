@@ -23,6 +23,8 @@
   "dantist_integration_aud": "frappe",
   "dantist_iframe_origin": "http://localhost:3000",
 
+  "iframe_mode": "DEV",
+
   "pbx_webhook_token": "PBX_DEMO_123",
   "pbx_default_channel_type": "Call",
   "pbx_default_channel_platform": "Telephony"

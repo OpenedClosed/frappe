@@ -5,6 +5,8 @@ app_description = "dantist_admin"
 app_email = "opendoor200179@gmail.com"
 app_license = "mit"
 
+boot_session = "dantist_app.boot.boot_session.boot_session"
+
 # Apps
 # ------------------
 
@@ -126,8 +128,11 @@ app_include_js = [
 
 
     "/assets/dantist_app/js/edit/kanban_skin.js",
+    "/assets/dantist_app/js/edit/dnt_iframe_launcher.js",
+
     "/assets/dantist_app/js/edit/dnt_kanban_plus.js",
     "/assets/dantist_app/js/edit/user_creation.js",
+    
     "/assets/dantist_app/js/final/autosave.js",
 ]
 
