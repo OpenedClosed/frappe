@@ -10,7 +10,7 @@ from collections import defaultdict
 from bson import ObjectId
 from db.mongo.db_init import mongo_db
 from integrations.frappe.client import get_frappe_client, FrappeError
-from chats.utils.help_functions import should_skip_message_for_ai
+from chats.utils.help_functions import has_meaningful_client_messages, should_skip_message_for_ai
 
 TIME_FIELDS = [
     "updated_at", "last_message_at", "last_event_at", "last_activity_at",
@@ -219,29 +219,6 @@ def _extract_messages(chat: Dict[str, Any]) -> List[Dict[str, Any]]:
         except Exception:
             msgs = []
     return msgs if isinstance(msgs, list) else []
-
-def has_meaningful_client_messages(chat: Dict[str, Any]) -> bool:
-    """
-    Есть ли в чате хотя бы одно осмысленное сообщение клиента
-    (по тем же правилам, что и фильтр should_skip_message_for_ai).
-    """
-    msgs = _extract_messages(chat)
-    if not msgs:
-        return False
-
-    for m in msgs:
-        if not isinstance(m, dict):
-            continue
-
-        role = m.get("sender_role")
-        if _role_en(role) != "Client":
-            continue
-
-        text = _to_plain_str(m.get("message"))
-        if not should_skip_message_for_ai(text):
-            return True
-
-    return False
 
 
 def _extract_ts(chat: Dict[str, Any]) -> float:

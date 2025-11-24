@@ -53,6 +53,12 @@ from telegram_bot.infra import settings as bot_settings
 from users.db.mongo.enums import RoleEnum
 from users.db.mongo.schemas import UserWithData
 
+from typing import Any, Dict, List, Union
+
+from users.db.mongo.enums import RoleEnum  # если уже импортирован – не дублируем
+# from chats.db.mongo.enums import SenderRole  # если нужно, можно использовать, но не обязательно
+import json
+
 # ==============================
 # БЛОК: Генерация идентификаторов
 # ==============================
@@ -1275,6 +1281,82 @@ def should_skip_message_for_ai(message_text: str) -> bool:
     # Очень короткий текст (<=2 символов без emoji), не из списка исключений → скипаем
     if len(compact) <= 2 and compact.lower() not in SHORT_ACTIVATION_WORDS:
         return True
+
+    return False
+
+
+
+def to_plain_str_for_chat(val: Any) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, dict):
+        for k in ("en", "ru", "pl", "uk", "ka", "be", "value", "name"):
+            v = val.get(k)
+            if isinstance(v, str) and v.strip():
+                return v
+        for _, v in val.items():
+            if isinstance(v, str) and v.strip():
+                return v
+        return ""
+    s = str(val).strip()
+    if not s:
+        return ""
+    if s.startswith("{") and s.endswith("}"):
+        try:
+            j = json.loads(s)
+            return to_plain_str_for_chat(j)
+        except Exception:
+            pass
+    return s
+
+
+def role_en_for_chat(val: Any) -> str:
+    s = to_plain_str_for_chat(val).lower()
+    if not s:
+        return ""
+    if s in {"client", "клиент"}:
+        return "Client"
+    if s in {"ai assistant", "ai", "бот", "assistant", "ии-помощник"}:
+        return "AI Assistant"
+    if s in {"consultant", "консультант", "operator", "agent", "админ"}:
+        return "Consultant"
+    return s.title()
+
+
+def extract_messages_from_chat(chat: Dict[str, Any]) -> List[Any]:
+    msgs = chat.get("messages") or []
+    if isinstance(msgs, str):
+        try:
+            msgs = json.loads(msgs)
+        except Exception:
+            msgs = []
+    return msgs if isinstance(msgs, list) else []
+
+
+def has_meaningful_client_messages(chat: Dict[str, Any]) -> bool:
+    """Есть ли в чате хотя бы одно осмысленное сообщение клиента."""
+    msgs = extract_messages_from_chat(chat)
+    if not msgs:
+        return False
+
+    for m in msgs:
+        # Поддерживаем и dict, и Pydantic-модели ChatMessage
+        if isinstance(m, dict):
+            role_raw = m.get("sender_role")
+            text_raw = m.get("message")
+        else:
+            role_raw = getattr(m, "sender_role", None)
+            text_raw = getattr(m, "message", None)
+
+        role = role_en_for_chat(
+            role_raw.value if hasattr(role_raw, "value") else role_raw
+        )
+        if role != "Client":
+            continue
+
+        text = to_plain_str_for_chat(text_raw)
+        if not should_skip_message_for_ai(text):
+            return True
 
     return False
 

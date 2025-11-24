@@ -46,7 +46,7 @@ from ..utils.help_functions import (build_sender_data_map, chat_generate_any,
                                     get_weather_by_address,
                                     send_message_to_bot,
                                     split_text_into_chunks,
-                                    update_read_state_for_client)
+                                    update_read_state_for_client, has_meaningful_client_messages)
 from ..utils.knowledge_base import BRIEF_QUESTIONS
 from ..utils.prompts import AI_PROMPT_PARTS, AI_PROMPTS
 from .ws_helpers import (ConnectionManager, TypingManager, custom_json_dumps,
@@ -873,7 +873,9 @@ async def save_and_broadcast_new_message(
         await replicate_message_to_external_channel(chat_session, new_msg)
 
     try:
-        await push_to_constructor(chat_session, [new_msg])
+        chat_dict = chat_session.model_dump(mode="python")
+        if has_meaningful_client_messages(chat_dict):
+            await push_to_constructor(chat_session, [new_msg])
     except Exception:
         pass
 
