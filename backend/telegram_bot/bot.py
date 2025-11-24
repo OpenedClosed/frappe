@@ -107,3 +107,4 @@ if __name__ == '__main__':
         logging.info("Работа бота остановлена с клавиатуры.")
     except Exception as e:
         logging.error(f"Ошибка при запуске: {e}")
+ 
