@@ -8,8 +8,8 @@ set -Eeuo pipefail
 ts() { date +'%F %T'; }
 say(){ echo -e "[$(ts)] $*"; }
 ok(){  say "✅ $*"; }
-warn(){ say "⚠️  $*">&2; }
-err(){  say "❌ $*">&2; }
+warn(){ say "⚠️  $*" >&2; }
+err(){  say "❌ $*" >&2; }
 step(){ echo -e "\n[$(ts)] ── $*"; }
 fatal(){ err "$*"; exit 1; }
 mask(){
@@ -43,7 +43,7 @@ PROTO=$([[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]] && echo http || e
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
-# Явное имя/пароль БД сайта (можно НЕ задавать — bench сам создаст)
+# Явное имя/пароль БД сайта (опционально, bench сам может придумать)
 SITE_DB_NAME="${SITE_DB_NAME:-}"
 SITE_DB_PASSWORD="${SITE_DB_PASSWORD:-}"
 
@@ -56,8 +56,9 @@ SOCKETIO_NODE_BIN="${SOCKETIO_NODE_BIN:-/usr/bin/node}"
 BENCH_BIN="${BENCH_BIN:-bench}"
 
 # ===== тумблер тяжёлых шагов =====
+# HEAVY=1 (по умолчанию) — migrate + install-app + full bench build
+# HEAVY=0 — только конфиги + fixtures + умная сборка ассетов при необходимости
 HEAVY="${HEAVY:-1}"
-HEAVY=1  # можно руками поменять на 0 при желании
 
 # mysql client без SSL (устраняет HY000/2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
@@ -302,7 +303,8 @@ link_app_public_files(){
 
   shopt -s nullglob dotglob
   for item in "${APP_FILES_DIR}/"*; do
-    local name="$(basename "$item")"
+    local name
+    name="$(basename "$item")"
     local target="${SITE_FILES_DIR}/${name}"
     if [[ -e "$target" && ! -L "$target" ]]; then
       say "skip (exists real): /files/${name}"
@@ -313,6 +315,16 @@ link_app_public_files(){
   done
 
   chmod -R a+rX "$SITE_FILES_DIR" || true
+}
+
+# ==== sync fixtures ====
+do_fixtures(){
+  step "📥 Синхронизация фикстур"
+  if site_cmd execute "frappe.utils.fixtures.sync_fixtures"; then
+    ok "фикстуры синхронизированы"
+  else
+    warn "sync_fixtures завершился с ошибкой"
+  fi
 }
 
 # ==== Проверка Administrator через root-SQL ====
@@ -370,7 +382,7 @@ create_site(){
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
   [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
 
-  # Frappe как фреймворк ставится автоматически, install-app frappe не делаем
+  # Frappe ставится как основа, install-app frappe не делаем
   local install_apps=()
   if has_app erpnext; then
     install_apps+=("erpnext")
@@ -384,29 +396,36 @@ create_site(){
   done
   say "• install on create apps: ${install_apps[*]:-<none>}"
 
-  local extra_db_args=()
+  # Собираем bench new-site в массив, чтобы не получить пустых аргументов
+  local cmd=(bench new-site "${SITE}"
+    --mariadb-root-username root
+    --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}"
+    --admin-password "${FRAPPE_ADMIN_PASSWORD}"
+    --db-host "${DB_HOST}"
+    --db-port "${DB_PORT}"
+    --mariadb-user-host-login-scope=%
+  )
+
   if [[ -n "${SITE_DB_NAME:-}" ]]; then
-    extra_db_args+=(--db-name "${SITE_DB_NAME}")
+    cmd+=(--db-name "${SITE_DB_NAME}")
   fi
   if [[ -n "${SITE_DB_PASSWORD:-}" ]]; then
-    extra_db_args+=(--db-password "${SITE_DB_PASSWORD}")
+    cmd+=(--db-password "${SITE_DB_PASSWORD}")
   fi
 
-  local install_args=()
-  for a in "${install_apps[@]:-}"; do
-    install_args+=(--install-app "$a")
-  done
+  if ((${#install_apps[@]})); then
+    for a in "${install_apps[@]}"; do
+      cmd+=(--install-app "$a")
+    done
+  fi
 
-  bench new-site "${SITE}" \
-    --mariadb-root-username root \
-    --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
-    --admin-password "${FRAPPE_ADMIN_PASSWORD}" \
-    --db-host "${DB_HOST}" \
-    --db-port "${DB_PORT}" \
-    --mariadb-user-host-login-scope='%' \
-    "${extra_db_args[@]:-}" \
-    "${install_args[@]:-}" \
-    --force
+  cmd+=(--force)
+
+  say "• bench new-site команда:"
+  printf '    %q' "${cmd[@]}"
+  echo
+
+  "${cmd[@]}"
 
   ensure_site_logs
   ok "Сайт создан"
@@ -570,21 +589,24 @@ for app in ${APP_LIST}; do
   ensure_app_present_and_registered "$app"
 done
 
-# ===== 5) миграции и установка приложений =====
+# ===== 5) миграции и установка приложений (по HEAVY) =====
 do_migrate
 do_install_apps
 do_migrate
 
-# ===== 6) ассеты =====
+# ===== 6) фикстуры (всегда, чтобы HEAVY=0 работал для sync fixtures) =====
+do_fixtures
+
+# ===== 7) ассеты =====
 do_assets
 
-# ===== 7) файлы приложения в /files =====
+# ===== 8) файлы приложения в /files =====
 link_app_public_files
 
-# ===== 8) пароль Administrator (если задан) =====
+# ===== 9) пароль Administrator (если задан) =====
 do_admin_password
 
-# ===== 9) Procfile =====
+# ===== 10) Procfile =====
 step "🗂️  Procfile генерация"
 PROCFILE_PATH="/workspace/Procfile"
 if [[ "${PROCFILE_MODE}" == "local" ]]; then
@@ -605,7 +627,7 @@ PROC
 fi
 ok "Procfile готов (${PROCFILE_MODE})"
 
-# ===== 10) Сводки =====
+# ===== 11) Сводки =====
 print_env_summary
 print_configs
 step "📄 Procfile (print)"
