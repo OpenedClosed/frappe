@@ -641,4 +641,4 @@ say "• get_url(): $(site_cmd execute 'frappe.utils.get_url' 2>/dev/null || ech
 ensure_site_logs
 ok "Bootstrap завершён. Запускаю процессы…"
 
-exec bench start 
+exec bench start  
