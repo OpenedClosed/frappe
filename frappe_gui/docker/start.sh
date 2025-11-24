@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
-# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink+public-url-no-port+auto-new-site-on-empty-db)
+# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink+public-url-no-port+auto-new-site-on-empty-db+logs-ensure)
 
 set -Eeuo pipefail
 
@@ -64,7 +64,16 @@ HEAVY=1
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
 bench(){ (cd "$BENCH_DIR" && command bench "$@"); }
-site_cmd(){ (cd "$BENCH_DIR" && command bench --site "$SITE" "$@"); }
+
+ensure_site_logs(){
+  mkdir -p "$SITE_DIR/logs" || true
+  touch "$SITE_DIR/logs/frappe.log" "$SITE_DIR/logs/database.log" || true
+}
+
+site_cmd(){
+  ensure_site_logs
+  (cd "$BENCH_DIR" && command bench --site "$SITE" "$@")
+}
 
 # ------ helpers ------
 has_app(){ [[ -d "$BENCH_DIR/apps/$1" ]]; }
@@ -382,6 +391,7 @@ create_site(){
     $(for a in ${INSTALL_APPS_ON_CREATE}; do printf -- " --install-app %s" "$a"; done) \
     --force
 
+  ensure_site_logs
   ok "Сайт создан"
 }
 
@@ -432,8 +442,7 @@ ok "common_site_config.json записан"
 
 mkdir -p "$SITE_DIR" || true
 # гарантируем каталог логов сайта, чтобы не падали логгеры Frappe
-mkdir -p "$SITE_DIR/logs" || true
-touch "$SITE_DIR/logs/frappe.log" "$SITE_DIR/logs/database.log" || true
+ensure_site_logs
 
 # ===== 2) создание сайта (если его ещё нет) или пересоздание, если БД пустая =====
 if [[ ! -f "$SITE_CFG" ]]; then
@@ -591,6 +600,7 @@ say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
 # Быстрая самопроверка публичного URL (логируем, не фейлим)
 say "• get_url(): $(site_cmd execute 'frappe.utils.get_url' 2>/dev/null || echo '<error>')"
 
+ensure_site_logs
 ok "Bootstrap завершён. Запускаю процессы…"
 
 # долговременные процессы
