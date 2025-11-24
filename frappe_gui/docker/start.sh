@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
-# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink+public-url-no-port+auto-new-site-on-empty-db+logs-ensure)
+# Lean bootstrap for Frappe 15 + ERPNext + dantist_app в Docker
+# Продовый сценарий, с авто-созданием/пересозданием сайта при проблемах с БД
 
 set -Eeuo pipefail
 
@@ -8,8 +8,8 @@ set -Eeuo pipefail
 ts() { date +'%F %T'; }
 say(){ echo -e "[$(ts)] $*"; }
 ok(){  say "✅ $*"; }
-warn(){ say "⚠️  $*" >&2; }
-err(){  say "❌ $*" >&2; }
+warn(){ say "⚠️  $*">&2; }
+err(){  say "❌ $*">&2; }
 step(){ echo -e "\n[$(ts)] ── $*"; }
 fatal(){ err "$*"; exit 1; }
 mask(){
@@ -43,24 +43,23 @@ PROTO=$([[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]] && echo http || e
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 
-# Явное имя/пароль БД сайта (опционально, если хочешь одинаковые dev/prod)
+# Явное имя/пароль БД сайта (можно НЕ задавать — bench сам создаст)
 SITE_DB_NAME="${SITE_DB_NAME:-}"
 SITE_DB_PASSWORD="${SITE_DB_PASSWORD:-}"
 
 # По умолчанию ставим ERPNext и твой dantist_app
-APP_LIST="${FRAPPE_INSTALL_APPS:-"erpnext dantist_app"}"   # список через пробел
-APP_ENV="${APP_ENV:-prod}"                                # prod|dev
-PROCFILE_MODE="${PROCFILE_MODE:-container}"               # container|local
+APP_LIST="${FRAPPE_INSTALL_APPS:-"erpnext dantist_app"}"
+APP_ENV="${APP_ENV:-prod}"
+PROCFILE_MODE="${PROCFILE_MODE:-container}"
 WEB_PORT="${WEB_PORT:-8001}"
 SOCKETIO_NODE_BIN="${SOCKETIO_NODE_BIN:-/usr/bin/node}"
 BENCH_BIN="${BENCH_BIN:-bench}"
 
-# ===== Тумблер тяжёлых шагов =====
+# ===== тумблер тяжёлых шагов =====
 HEAVY="${HEAVY:-1}"
-HEAVY=1
-# HEAVY=0
+HEAVY=1  # можно руками поменять на 0 при желании
 
-# mysql client без SSL (устраняет sporadic HY000/2026)
+# mysql client без SSL (устраняет HY000/2026)
 printf "[client]\nssl=0\nprotocol=tcp\n" > /root/.my.cnf
 
 bench(){ (cd "$BENCH_DIR" && command bench "$@"); }
@@ -75,7 +74,7 @@ site_cmd(){
   (cd "$BENCH_DIR" && command bench --site "$SITE" "$@")
 }
 
-# ------ helpers ------
+# ===== helpers =====
 has_app(){ [[ -d "$BENCH_DIR/apps/$1" ]]; }
 
 read_db_creds(){
@@ -95,28 +94,27 @@ PY
 }
 
 core_tables_ok(){
-  [[ -f "$SITE_CFG" ]] || return 1
+  [[ -f "$SITE_CFG" ]] || return 0
   local DB_NAME
   DB_NAME="$(python3 - "$SITE_CFG" <<'PY'
 import json,sys
 try: d=json.load(open(sys.argv[1])) or {}
-except: d={}
+except Exception: d={}
 print(d.get("db_name",""))
 PY
 )"
-  [[ -z "$DB_NAME" ]] && return 1
+  [[ -z "$DB_NAME" ]] && return 0
   mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" \
     -Nse "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME='tabDefaultValue' LIMIT 1;" 2>/dev/null | grep -q 1
 }
 
-# сколько таблиц всего в БД сайта (для понимания: база пустая/нет)
 db_tables_count(){
   [[ -f "$SITE_CFG" ]] || { echo 0; return 0; }
   local DB_NAME
   DB_NAME="$(python3 - "$SITE_CFG" <<'PY'
 import json,sys
 try: d=json.load(open(sys.argv[1])) or {}
-except: d={}
+except Exception: d={}
 print(d.get("db_name",""))
 PY
 )"
@@ -160,7 +158,11 @@ quick_diag(){
   if [[ -f "$SITE_CFG" ]]; then
     read -r DB_NAME DB_PASS DBH DENV < <(read_db_creds || echo "    ")
     say "• db_name: ${DB_NAME:-<none>}  db_pass: $(mask "${DB_PASS:-}")  db_host: ${DBH:-<unset>}  dantist_env: ${DENV:-<none>}"
-    core_tables_ok && ok "таблицы ядра на месте (tabDefaultValue)" || warn "таблицы ядра не найдены root-проверкой"
+    if core_tables_ok; then
+      ok "таблицы ядра на месте (tabDefaultValue)"
+    else
+      warn "таблицы ядра не найдены root-проверкой"
+    fi
   else
     warn "site_config.json отсутствует"
   fi
@@ -180,23 +182,23 @@ ensure_app_present_and_registered(){
   if has_app "$app"; then
     ensure_apps_txt_has "$app"
   else
-    warn "Приложение $app не найдено в /workspace/apps/$app — пропускаю установку (проверь образ/том)."
+    warn "Приложение $app не найдено в /workspace/apps/$app — пропускаю регистрацию."
   fi
 }
 
 need_assets_rebuild(){
   ls /workspace/sites/assets/frappe/dist/js/desk.bundle.*.js  >/dev/null 2>&1 || return 0
   ls /workspace/sites/assets/frappe/dist/css/desk.bundle.*.css >/dev/null 2>&1 || return 0
-  if ls /workspace/sites/assets/dantist_app/dist/css >/dev/null 2>&1; then
+  if [[ -d /workspace/sites/assets/dantist_app/dist/css ]]; then
     ls /workspace/sites/assets/dantist_app/dist/css/*.css >/dev/null 2>&1 || return 0
   fi
   return 1
 }
 
-# ==== socket.io: принудительно без внешнего порта, только 443 и путь /socket.io ====
+# ==== Socket.IO в site_config.json ====
 ensure_socketio_settings(){
   step "🧷 Socket.IO настройки в site_config.json"
-  python3 - <<PY
+  python3 - <<'PY'
 import os,json,pathlib
 site=os.getenv("SITE_NAME","dantist.localhost")
 host=os.getenv("HOST","localhost")
@@ -227,7 +229,11 @@ do_install_apps(){
       say "• $app уже установлен"
     else
       say "• install-app $app"
-      site_cmd install-app "$app" && ok "установлен $app" || warn "install-app $app не прошёл"
+      if site_cmd install-app "$app"; then
+        ok "установлен $app"
+      else
+        warn "install-app $app не прошёл"
+      fi
     fi
   done
 }
@@ -238,30 +244,29 @@ do_migrate(){
     return 0
   fi
   step "🔁 Migrate (HEAVY=1)"
-  site_cmd migrate || warn "migrate завершился с предупреждением"
-}
-
-do_fixtures(){
-  step "📥 Синхронизация фикстур"
-  site_cmd execute "frappe.utils.fixtures.sync_fixtures" \
-    && ok "фикстуры синхронизированы" \
-    || warn "sync_fixtures вернул ненулевой код"
+  if site_cmd migrate; then
+    ok "migrate завершился успешно"
+  else
+    warn "migrate завершился с предупреждением (см. лог bench)"
+  fi
 }
 
 do_assets(){
   if [[ "$HEAVY" == "1" ]]; then
     step "🧱 Сборка ассетов (HEAVY=1)"
-    if ! bench build --apps "frappe ${APP_LIST}"; then
-      warn "scoped build вернул ошибку — пробую полную сборку"
-      bench build || true
+    if bench build; then
+      ok "bench build завершился успешно"
+    else
+      warn "bench build завершился с ошибкой"
     fi
   else
     step "🧱 Сборка ассетов (умная проверка, HEAVY=0)"
     if need_assets_rebuild; then
-      say "• ключевых бандлов нет → запускаю bench build (apps: frappe ${APP_LIST})"
-      if ! bench build --apps "frappe ${APP_LIST}"; then
-        warn "scoped build вернул ошибку — пробую полную сборку"
-        bench build || true
+      say "• ключевых бандлов нет → bench build"
+      if bench build; then
+        ok "bench build завершился успешно"
+      else
+        warn "bench build завершился с ошибкой"
       fi
     else
       say "• ассеты на месте — сборка не требуется"
@@ -270,7 +275,7 @@ do_assets(){
   chmod -R a+rX /workspace/sites/assets || true
 }
 
-# ==== 🔗 Публикация файлов приложения в /files (symlink) ====
+# ==== Публикация файлов dantist_app в /files ====
 link_app_public_files(){
   step "🔗 Публикация файлов dantist_app в ${SITE}/public/files (symlink)"
   local APP="dantist_app"
@@ -310,7 +315,7 @@ link_app_public_files(){
   chmod -R a+rX "$SITE_FILES_DIR" || true
 }
 
-# ==== Надёжная проверка существования Administrator (root SQL) ====
+# ==== Проверка Administrator через root-SQL ====
 admin_exists_mysql(){
   read -r DB_NAME _ _ < <(read_db_creds || echo "   ")
   [[ -z "${DB_NAME:-}" ]] && return 2
@@ -327,11 +332,11 @@ do_admin_password(){
 
   step "🔐 Проверка/установка пароля Administrator"
   if admin_exists_mysql; then
-    ok "Administrator уже существует — смена пароля НЕ нужна, пропускаю."
+    ok "Administrator уже существует — смена пароля не требуется"
     return 0
   fi
 
-  say "• Пользователь Administrator не найден — выставляю пароль через bench."
+  say "• Administrator не найден — выставляю пароль через bench"
   if site_cmd set-admin-password "$PASS"; then
     ok "Пароль Administrator установлен"
   else
@@ -359,18 +364,25 @@ print_configs(){
   dump_config_masked "$SITE_CFG" || true
 }
 
-# ===== Создание/пересоздание сайта (вынесено в функцию) =====
+# ===== Создание/пересоздание сайта =====
 create_site(){
   step "🏗️  Создание сайта: ${SITE}"
   [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
   [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
 
-  local INSTALL_APPS_ON_CREATE="frappe"
-  has_app erpnext && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} erpnext"
+  # Frappe как фреймворк ставится автоматически, install-app frappe не делаем
+  local install_apps=()
+  if has_app erpnext; then
+    install_apps+=("erpnext")
+  fi
+  # Остальные из APP_LIST (кроме erpnext, чтобы не дублировать)
   for app in ${APP_LIST}; do
-    has_app "$app" && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} ${app}"
+    [[ "$app" == "erpnext" ]] && continue
+    if has_app "$app"; then
+      install_apps+=("$app")
+    fi
   done
-  say "• install on create: ${INSTALL_APPS_ON_CREATE}"
+  say "• install on create apps: ${install_apps[*]:-<none>}"
 
   local extra_db_args=()
   if [[ -n "${SITE_DB_NAME:-}" ]]; then
@@ -380,6 +392,11 @@ create_site(){
     extra_db_args+=(--db-password "${SITE_DB_PASSWORD}")
   fi
 
+  local install_args=()
+  for a in "${install_apps[@]:-}"; do
+    install_args+=(--install-app "$a")
+  done
+
   bench new-site "${SITE}" \
     --mariadb-root-username root \
     --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
@@ -387,8 +404,8 @@ create_site(){
     --db-host "${DB_HOST}" \
     --db-port "${DB_PORT}" \
     --mariadb-user-host-login-scope='%' \
-    "${extra_db_args[@]}" \
-    $(for a in ${INSTALL_APPS_ON_CREATE}; do printf -- " --install-app %s" "$a"; done) \
+    "${extra_db_args[@]:-}" \
+    "${install_args[@]:-}" \
     --force
 
   ensure_site_logs
@@ -404,9 +421,9 @@ for i in $(seq 1 "$DB_WAIT"); do
 done
 mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" -e "SELECT VERSION();" >/dev/null 2>&1 \
   && ok "root-доступ к MariaDB подтверждён" \
-  || warn "root-доступ не проверился (new-site потребует root пароль в ENV)"
+  || warn "root-доступ не подтвердился (new-site потребует корректный root-пароль в ENV)"
 
-# ===== 1) common_site_config.json (+ node) =====
+# ===== 1) common_site_config.json (+ redis/node/db_host) =====
 step "🛠️  Общий конфиг: $COMMON_CFG"
 python3 - <<'PY'
 import os, json, pathlib
@@ -420,8 +437,6 @@ if p.exists():
         cfg = {}
 redis = os.getenv("REDIS_URL","redis://redis:6379")
 redis_base = f"{redis.split('/',3)[0]}//{redis.split('/',3)[2]}"
-# ВАЖНО: webserver_port=443 (внешний публичный порт для генерации ссылок),
-# внутренний bench serve остаётся на 8001 (см. Procfile).
 cfg.update({
     "default_site": os.getenv("SITE_NAME","dantist.localhost"),
     "webserver_port": 443,
@@ -435,16 +450,16 @@ cfg.update({
     "frappe_user": "root",
     "node": "/usr/bin/node",
 })
+cfg["db_host"] = os.getenv("DB_HOST","mariadb")
 p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 print(f"OK {p}")
 PY
 ok "common_site_config.json записан"
 
 mkdir -p "$SITE_DIR" || true
-# гарантируем каталог логов сайта, чтобы не падали логгеры Frappe
 ensure_site_logs
 
-# ===== 2) создание сайта (если его ещё нет) или пересоздание, если БД пустая =====
+# ===== 2) создание / пересоздание сайта =====
 if [[ ! -f "$SITE_CFG" ]]; then
   create_site
 else
@@ -456,17 +471,29 @@ else
     tables_cnt="$(db_tables_count || echo 0)"
     say "• db_tables_count=${tables_cnt}"
     if [[ "${tables_cnt:-0}" -eq 0 ]]; then
-      warn "База отсутствует или пустая — пересоздаю сайт ${SITE} по ENV/конфигу"
+      warn "База пустая/отсутствует — пересоздаю сайт ${SITE}"
       create_site
     else
-      fatal "База сайта неконсистентна и уже содержит таблицы — автоматическая пересоздача отключена (разберись вручную)."
+      warn "База содержит таблицы (${tables_cnt}) — считаю её битой, дропаю и пересоздаю"
+      read -r DB_NAME _ _ _ < <(read_db_creds || echo "    ")
+      if [[ -n "${DB_NAME:-}" ]]; then
+        say "• DROP DATABASE \`${DB_NAME}\` и пользователя '${DB_NAME}'@'%'"
+        mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" \
+          -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; DROP USER IF EXISTS '${DB_NAME}'@'%';" \
+          || warn "Не удалось дропнуть БД/пользователя — bench new-site сам попробует создать заново"
+      fi
+      if [[ -d "$SITE_DIR" && "$SITE_DIR" == /workspace/sites/* ]]; then
+        rm -rf "$SITE_DIR"
+        mkdir -p "$SITE_DIR"
+      fi
+      create_site
     fi
   fi
 fi
 
-# ===== 3) патчим site_config из ENV (host_name/use_ssl/https) + socket.io =====
+# ===== 3) Актуализация site_config.json из ENV + socket.io =====
 step "🧩 Актуализация site_config.json из ENV"
-python3 - <<PY
+python3 - <<'PY'
 import os, json, pathlib
 from urllib.parse import urlparse
 
@@ -487,7 +514,6 @@ cfg = json.loads(p.read_text() or "{}") if p.exists() else {}
 
 cfg["db_host"] = os.getenv("DB_HOST","mariadb")
 
-# ПУБЛИЧНЫЙ URL для всех ссылок / писем:
 cfg["host_name"] = public_origin
 cfg["use_ssl"] = (proto == "https")
 cfg["preferred_url_protocol"] = proto
@@ -524,7 +550,6 @@ enc = os.getenv("ENCRYPTION_KEY")
 if enc:
     cfg["encryption_key"] = enc
 
-# 🔑 PBX webhook token из ENV → в site_config.json
 pbx_token = os.getenv("PBX_WEBHOOK_TOKEN")
 if pbx_token:
     cfg["pbx_webhook_token"] = pbx_token
@@ -534,10 +559,7 @@ print(f"OK {p}")
 PY
 ok "site_config.json обновлён"
 
-# страховка: socket.io ключи
 ensure_socketio_settings
-
-# Быстрая диагностика (только лог, без fatal)
 quick_diag
 
 # ===== 4) регистрация приложений в sites/apps.txt =====
@@ -548,21 +570,18 @@ for app in ${APP_LIST}; do
   ensure_app_present_and_registered "$app"
 done
 
-# ===== 5) тяжёлые шаги (по флагу HEAVY) =====
+# ===== 5) миграции и установка приложений =====
 do_migrate
 do_install_apps
 do_migrate
 
-# ===== 6) фикстуры (всегда) =====
-do_fixtures
-
-# ===== 7) ассеты (смарт-сборка для HEAVY=0) =====
+# ===== 6) ассеты =====
 do_assets
 
-# ===== 7.5) публикуем файлы приложения в /files (symlink) =====
+# ===== 7) файлы приложения в /files =====
 link_app_public_files
 
-# ===== 8) пароль Administrator (если задан, но только если пользователя ещё нет) =====
+# ===== 8) пароль Administrator (если задан) =====
 do_admin_password
 
 # ===== 9) Procfile =====
@@ -586,22 +605,18 @@ PROC
 fi
 ok "Procfile готов (${PROCFILE_MODE})"
 
-# ===== 10) Сводки для отладки =====
+# ===== 10) Сводки =====
 print_env_summary
 print_configs
 step "📄 Procfile (print)"
 sed 's/^/    /' "$PROCFILE_PATH" || true
 
-# ===== 11) финал и старт =====
 step "📋 Финальная сводка"
 (site_cmd list-apps || true) | sed 's/^/• /'
 say "assets: $(du -sh /workspace/sites/assets 2>/dev/null | awk '{print $1}')"
-
-# Быстрая самопроверка публичного URL (логируем, не фейлим)
 say "• get_url(): $(site_cmd execute 'frappe.utils.get_url' 2>/dev/null || echo '<error>')"
 
 ensure_site_logs
 ok "Bootstrap завершён. Запускаю процессы…"
 
-# долговременные процессы
 exec bench start
