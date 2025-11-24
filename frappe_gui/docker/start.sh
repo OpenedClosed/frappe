@@ -431,6 +431,9 @@ PY
 ok "common_site_config.json записан"
 
 mkdir -p "$SITE_DIR" || true
+# гарантируем каталог логов сайта, чтобы не падали логгеры Frappe
+mkdir -p "$SITE_DIR/logs" || true
+touch "$SITE_DIR/logs/frappe.log" "$SITE_DIR/logs/database.log" || true
 
 # ===== 2) создание сайта (если его ещё нет) или пересоздание, если БД пустая =====
 if [[ ! -f "$SITE_CFG" ]]; then
@@ -475,7 +478,6 @@ cfg = json.loads(p.read_text() or "{}") if p.exists() else {}
 
 cfg["db_host"] = os.getenv("DB_HOST","mariadb")
 
-# ВАЖНО: db_name/db_password НЕ трогаем — они задаются только при new-site
 # ПУБЛИЧНЫЙ URL для всех ссылок / писем:
 cfg["host_name"] = public_origin
 cfg["use_ssl"] = (proto == "https")
