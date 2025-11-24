@@ -32,6 +32,7 @@ from openai_base.openai_init import openai_client
 from utils.help_functions import split_prompt_parts
 
 from .knowledge_base import KNOWLEDGE_BASE
+from zipfile import BadZipFile 
 
 # ==============================
 # КОНСТАНТЫ
@@ -201,10 +202,37 @@ async def parse_docx(file: UploadFile) -> str:
     return "\n".join(parts).strip()
 
 
+# async def parse_excel(file: UploadFile) -> str:
+#     """Возвращает текст из Excel-файла (все листы, ячейки через пробел)."""
+#     data = await file.read()
+#     wb = openpyxl.load_workbook(io.BytesIO(data))
+#     return "\n".join(
+#         " ".join(str(c) if c else "" for c in row)
+#         for sh in wb.worksheets
+#         for row in sh.iter_rows(values_only=True)
+#     ).strip()
+
 async def parse_excel(file: UploadFile) -> str:
     """Возвращает текст из Excel-файла (все листы, ячейки через пробел)."""
     data = await file.read()
-    wb = openpyxl.load_workbook(io.BytesIO(data))
+    print(
+        "[DEBUG parse_excel] filename=%s size=%s"
+        % (getattr(file, "filename", None), len(data))
+    )
+    if data:
+        print("[DEBUG parse_excel] first_bytes=%r" % data[:16])
+    else:
+        print("[DEBUG parse_excel] file data is empty")
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(data))
+    except BadZipFile as exc:
+        print(
+            "[DEBUG parse_excel] BadZipFile for filename=%s: %s"
+            % (getattr(file, "filename", None), exc)
+        )
+        raise
+
     return "\n".join(
         " ".join(str(c) if c else "" for c in row)
         for sh in wb.worksheets
@@ -212,9 +240,25 @@ async def parse_excel(file: UploadFile) -> str:
     ).strip()
 
 
+# async def parse_file(upload_file: UploadFile) -> Optional[str]:
+#     """Определяет парсер по расширению и извлекает текст."""
+#     ext = Path(upload_file.filename).suffix.lower()
+#     parsers = {
+#         ".pdf": parse_pdf,
+#         ".docx": parse_docx,
+#         # ".doc":  parse_doc,
+#         ".xlsx": parse_excel,
+#         ".xls": parse_excel,
+#     }
+#     return await parsers[ext](upload_file) if ext in parsers else None
+
 async def parse_file(upload_file: UploadFile) -> Optional[str]:
     """Определяет парсер по расширению и извлекает текст."""
     ext = Path(upload_file.filename).suffix.lower()
+    print(
+        "[DEBUG parse_file] filename=%s ext=%s"
+        % (upload_file.filename, ext)
+    )
     parsers = {
         ".pdf": parse_pdf,
         ".docx": parse_docx,
@@ -222,17 +266,63 @@ async def parse_file(upload_file: UploadFile) -> Optional[str]:
         ".xlsx": parse_excel,
         ".xls": parse_excel,
     }
-    return await parsers[ext](upload_file) if ext in parsers else None
 
+    if ext not in parsers:
+        print(
+            "[DEBUG parse_file] no parser for filename=%s ext=%s"
+            % (upload_file.filename, ext)
+        )
+        return None
+
+    result = await parsers[ext](upload_file)
+    print(
+        "[DEBUG parse_file] parsed filename=%s ext=%s has_text=%s"
+        % (upload_file.filename, ext, bool(result))
+    )
+    return result
+
+
+# async def parse_file_from_path(path: str) -> str:
+#     """Читает файл по пути и извлекает текст (DOC/PDF/Excel)."""
+#     ext = Path(path).suffix.lower()
+#     if ext not in DOC_EXT:
+#         return ""
+#     async with aiofiles.open(path, "rb") as f:
+#         fake = UploadFile(filename=Path(path).name, file=io.BytesIO(await f.read()))
+#     return await parse_file(fake) or ""
 
 async def parse_file_from_path(path: str) -> str:
     """Читает файл по пути и извлекает текст (DOC/PDF/Excel)."""
     ext = Path(path).suffix.lower()
     if ext not in DOC_EXT:
+        print(
+            "[DEBUG parse_file_from_path] skip path=%s ext=%s (not in DOC_EXT)"
+            % (path, ext)
+        )
         return ""
+
     async with aiofiles.open(path, "rb") as f:
-        fake = UploadFile(filename=Path(path).name, file=io.BytesIO(await f.read()))
-    return await parse_file(fake) or ""
+        data = await f.read()
+
+    print(
+        "[DEBUG parse_file_from_path] path=%s ext=%s size=%s"
+        % (path, ext, len(data))
+    )
+    if data:
+        print("[DEBUG parse_file_from_path] first_bytes=%r" % data[:16])
+    else:
+        print("[DEBUG parse_file_from_path] file data is empty on disk")
+
+    fake = UploadFile(
+        filename=Path(path).name,
+        file=io.BytesIO(data),
+    )
+    text = await parse_file(fake) or ""
+    print(
+        "[DEBUG parse_file_from_path] path=%s ext=%s text_len=%s"
+        % (path, ext, len(text))
+    )
+    return text
 
 
 async def parse_url(url: str, timeout: int = 10) -> str:
@@ -276,13 +366,34 @@ async def cache_url_snapshot(url: str, ttl: int = settings.CONTEXT_TTL) -> str:
 
 # ---------- Сохранение загруженных файлов ----------
 
+# async def save_uploaded_file(file: UploadFile, uid: str) -> Path:
+#     """Сохраняет UploadFile на диск и возвращает путь."""
+#     dst_dir = Path(settings.CONTEXT_PATH) / uid
+#     dst_dir.mkdir(parents=True, exist_ok=True)
+#     dst_path = dst_dir / file.filename
+#     async with aiofiles.open(dst_path, "wb") as f:
+#         await f.write(await file.read())
+#     return dst_path
+
 async def save_uploaded_file(file: UploadFile, uid: str) -> Path:
     """Сохраняет UploadFile на диск и возвращает путь."""
     dst_dir = Path(settings.CONTEXT_PATH) / uid
     dst_dir.mkdir(parents=True, exist_ok=True)
     dst_path = dst_dir / file.filename
+
+    data = await file.read()
+    print(
+        "[DEBUG save_uploaded_file] uid=%s filename=%s size=%s dst_path=%s"
+        % (uid, file.filename, len(data), str(dst_path))
+    )
+    if data:
+        print("[DEBUG save_uploaded_file] first_bytes=%r" % data[:16])
+    else:
+        print("[DEBUG save_uploaded_file] WARNING: uploaded file data is empty")
+
     async with aiofiles.open(dst_path, "wb") as f:
-        await f.write(await file.read())
+        await f.write(data)
+
     return dst_path
 
 # ==============================
