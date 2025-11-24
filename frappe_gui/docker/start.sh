@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lean bootstrap for Frappe in Docker (prod-first) + HEAVY toggle
-# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink+public-url-no-port)
+# Версия: 2025-10-25 (final+admin-check+secrets+files-symlink+public-url-no-port+auto-new-site-on-empty-db)
 
 set -Eeuo pipefail
 
@@ -42,6 +42,10 @@ PROTO=$([[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]] && echo http || e
 
 FRAPPE_DB_ROOT_PASSWORD="${FRAPPE_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:-}}"
 FRAPPE_ADMIN_PASSWORD="${FRAPPE_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
+
+# Явное имя/пароль БД сайта (опционально, если хочешь одинаковые dev/prod)
+SITE_DB_NAME="${SITE_DB_NAME:-}"
+SITE_DB_PASSWORD="${SITE_DB_PASSWORD:-}"
 
 # По умолчанию ставим ERPNext и твой dantist_app
 APP_LIST="${FRAPPE_INSTALL_APPS:-"erpnext dantist_app"}"   # список через пробел
@@ -94,6 +98,24 @@ PY
   [[ -z "$DB_NAME" ]] && return 1
   mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" \
     -Nse "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME='tabDefaultValue' LIMIT 1;" 2>/dev/null | grep -q 1
+}
+
+# сколько таблиц всего в БД сайта (для понимания: база пустая/нет)
+db_tables_count(){
+  [[ -f "$SITE_CFG" ]] || { echo 0; return 0; }
+  local DB_NAME
+  DB_NAME="$(python3 - "$SITE_CFG" <<'PY'
+import json,sys
+try: d=json.load(open(sys.argv[1])) or {}
+except: d={}
+print(d.get("db_name",""))
+PY
+)"
+  [[ -z "$DB_NAME" ]] && { echo 0; return 0; }
+  local cnt
+  cnt="$(mysql -h "$DB_HOST" -P "$DB_PORT" -uroot -p"$FRAPPE_DB_ROOT_PASSWORD" \
+           -Nse "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='${DB_NAME}';" 2>/dev/null || echo 0)"
+  echo "${cnt:-0}"
 }
 
 dump_config_masked(){
@@ -328,6 +350,41 @@ print_configs(){
   dump_config_masked "$SITE_CFG" || true
 }
 
+# ===== Создание/пересоздание сайта (вынесено в функцию) =====
+create_site(){
+  step "🏗️  Создание сайта: ${SITE}"
+  [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
+  [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
+
+  local INSTALL_APPS_ON_CREATE="frappe"
+  has_app erpnext && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} erpnext"
+  for app in ${APP_LIST}; do
+    has_app "$app" && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} ${app}"
+  done
+  say "• install on create: ${INSTALL_APPS_ON_CREATE}"
+
+  local extra_db_args=()
+  if [[ -n "${SITE_DB_NAME:-}" ]]; then
+    extra_db_args+=(--db-name "${SITE_DB_NAME}")
+  fi
+  if [[ -n "${SITE_DB_PASSWORD:-}" ]]; then
+    extra_db_args+=(--db-password "${SITE_DB_PASSWORD}")
+  fi
+
+  bench new-site "${SITE}" \
+    --mariadb-root-username root \
+    --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
+    --admin-password "${FRAPPE_ADMIN_PASSWORD}" \
+    --db-host "${DB_HOST}" \
+    --db-port "${DB_PORT}" \
+    --mariadb-user-host-login-scope='%' \
+    "${extra_db_args[@]}" \
+    $(for a in ${INSTALL_APPS_ON_CREATE}; do printf -- " --install-app %s" "$a"; done) \
+    --force
+
+  ok "Сайт создан"
+}
+
 # ===== 0) ждём MariaDB =====
 step "⏳ Ожидание MariaDB ${DB_HOST}:${DB_PORT} (до ${DB_WAIT}s)"
 for i in $(seq 1 "$DB_WAIT"); do
@@ -375,31 +432,24 @@ ok "common_site_config.json записан"
 
 mkdir -p "$SITE_DIR" || true
 
-# ===== 2) создание сайта (если его ещё нет) =====
+# ===== 2) создание сайта (если его ещё нет) или пересоздание, если БД пустая =====
 if [[ ! -f "$SITE_CFG" ]]; then
-  step "🏗️  Создание сайта: ${SITE}"
-  [[ -n "${FRAPPE_DB_ROOT_PASSWORD:-}" ]] || fatal "Нужен FRAPPE_DB_ROOT_PASSWORD/DB_ROOT_PASSWORD"
-  [[ -n "${FRAPPE_ADMIN_PASSWORD:-}"   ]] || fatal "Нужен FRAPPE_ADMIN_PASSWORD/ADMIN_PASSWORD"
-
-  INSTALL_APPS_ON_CREATE="frappe"
-  has_app erpnext && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} erpnext"
-  for app in ${APP_LIST}; do
-    has_app "$app" && INSTALL_APPS_ON_CREATE="${INSTALL_APPS_ON_CREATE} ${app}"
-  done
-  say "• install on create: ${INSTALL_APPS_ON_CREATE}"
-
-  bench new-site "${SITE}" \
-    --mariadb-root-username root \
-    --mariadb-root-password "${FRAPPE_DB_ROOT_PASSWORD}" \
-    --admin-password "${FRAPPE_ADMIN_PASSWORD}" \
-    --db-host "${DB_HOST}" \
-    --db-port "${DB_PORT}" \
-    --mariadb-user-host-login-scope='%' \
-    $(for a in ${INSTALL_APPS_ON_CREATE}; do printf -- " --install-app %s" "$a"; done) \
-    --force
-  ok "Сайт создан"
+  create_site
 else
-  step "♻️  Сайт уже существует — пропускаю создание"
+  step "♻️  Сайт уже существует — проверяю базу"
+  if core_tables_ok; then
+    ok "База сайта консистентна (таблицы ядра найдены)"
+  else
+    warn "База сайта неконсистентна (нет tabDefaultValue)"
+    tables_cnt="$(db_tables_count || echo 0)"
+    say "• db_tables_count=${tables_cnt}"
+    if [[ "${tables_cnt:-0}" -eq 0 ]]; then
+      warn "База отсутствует или пустая — пересоздаю сайт ${SITE} по ENV/конфигу"
+      create_site
+    else
+      fatal "База сайта неконсистентна и уже содержит таблицы — автоматическая пересоздача отключена (разберись вручную)."
+    fi
+  fi
 fi
 
 # ===== 3) патчим site_config из ENV (host_name/use_ssl/https) + socket.io =====
@@ -475,9 +525,8 @@ ok "site_config.json обновлён"
 # страховка: socket.io ключи
 ensure_socketio_settings
 
-# Быстрая диагностика
+# Быстрая диагностика (только лог, без fatal)
 quick_diag
-core_tables_ok || fatal "База сайта неконсистентна (нет tabDefaultValue)"
 
 # ===== 4) регистрация приложений в apps.txt =====
 step "🗂️ Регистрация приложений в sites/apps.txt"
