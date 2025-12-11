@@ -133,8 +133,16 @@ frappe.views.KanbanView = class KanbanView extends frappe.views.ListView {
 		// pass
 	}
 
+	// toggle_result_area() {
+	// 	this.$result.toggle(this.data.length > 0);
+	// }
+
+	// Исправил: Чтобы пустые доски отображали колонки
 	toggle_result_area() {
-		this.$result.toggle(this.data.length > 0);
+		// Для Kanban доску нужно показывать всегда, даже при 0 карточках
+		if (this.$result && this.$result.length) {
+			this.$result.show();
+		}
 	}
 
 	get_board() {
